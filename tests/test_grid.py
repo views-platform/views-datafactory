@@ -1,0 +1,478 @@
+"""Tests for datafactory_grid -- PRIO-GRID spatial backbone.
+
+Ported from views-metric-lab/tests/test_grid.py with adaptations:
+- GridConfig no longer has path/URL fields (SRP redesign)
+- Provenance tests use datafactory_core utilities
+- harvester.py signature takes explicit paths instead of GridConfig
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from datafactory_grid.config import GridConfig
+from datafactory_grid.generator import (
+    generate_bounding_boxes,
+    generate_grid,
+    latlon_to_pgid,
+    pgid_to_latlon,
+)
+from datafactory_grid.validation import ParityResult, validate_parity
+
+# ---------------------------------------------------------------------------
+# GridConfig
+# ---------------------------------------------------------------------------
+
+
+def test_config_defaults() -> None:
+    cfg = GridConfig()
+    assert cfg.resolution == 0.5
+    assert cfg.nrow == 360
+    assert cfg.ncol == 720
+    assert cfg.n_cells == 259_200
+    assert cfg.crs == "EPSG:4326"
+
+
+def test_config_has_no_path_fields() -> None:
+    """GridConfig should be pure spatial -- no data_dir, provenance_dir, or URL."""
+    cfg = GridConfig()
+    assert not hasattr(cfg, "data_dir")
+    assert not hasattr(cfg, "provenance_dir")
+    assert not hasattr(cfg, "shapefile_url")
+
+
+def test_config_custom_resolution() -> None:
+    cfg = GridConfig(resolution=0.25)
+    assert cfg.nrow == 720
+    assert cfg.ncol == 1440
+    assert cfg.n_cells == 720 * 1440
+
+
+def test_config_rejects_zero_resolution() -> None:
+    with pytest.raises(ValueError, match="[Rr]esolution"):
+        GridConfig(resolution=0.0)
+
+
+def test_config_rejects_negative_resolution() -> None:
+    with pytest.raises(ValueError, match="[Rr]esolution"):
+        GridConfig(resolution=-1.0)
+
+
+def test_config_rejects_inverted_bbox() -> None:
+    with pytest.raises(ValueError, match="[Ww]est.*[Ee]ast|[Bb]ound"):
+        GridConfig(west=10.0, east=-10.0)
+
+
+def test_config_rejects_inverted_lat_bbox() -> None:
+    with pytest.raises(ValueError, match="[Ss]outh.*[Nn]orth|[Bb]ound"):
+        GridConfig(south=10.0, north=-10.0)
+
+
+def test_config_rejects_indivisible_resolution() -> None:
+    with pytest.raises(ValueError, match="[Dd]ivide|[Rr]esolution"):
+        GridConfig(resolution=7.0)
+
+
+# ---------------------------------------------------------------------------
+# Cell ID scheme -- canonical cells from PRIO-GRID R source
+# ---------------------------------------------------------------------------
+
+
+def test_cell_1_is_bottom_left() -> None:
+    """Cell 1 should be at the south pole, date line."""
+    pgids, lats, lons = generate_grid()
+    idx = np.where(pgids == 1)[0][0]
+    assert lats[idx] == pytest.approx(-89.75)
+    assert lons[idx] == pytest.approx(-179.75)
+
+
+def test_cell_720_is_bottom_right() -> None:
+    """Cell 720 should be at the end of the first (southernmost) row."""
+    pgids, lats, lons = generate_grid()
+    idx = np.where(pgids == 720)[0][0]
+    assert lats[idx] == pytest.approx(-89.75)
+    assert lons[idx] == pytest.approx(179.75)
+
+
+def test_cell_721_is_second_row() -> None:
+    """Cell 721 should be start of second row from bottom."""
+    pgids, lats, lons = generate_grid()
+    idx = np.where(pgids == 721)[0][0]
+    assert lats[idx] == pytest.approx(-89.25)
+    assert lons[idx] == pytest.approx(-179.75)
+
+
+def test_cell_259200_is_top_right() -> None:
+    """Cell 259200 should be at the north pole, east edge."""
+    pgids, lats, lons = generate_grid()
+    idx = np.where(pgids == 259_200)[0][0]
+    assert lats[idx] == pytest.approx(89.75)
+    assert lons[idx] == pytest.approx(179.75)
+
+
+def test_all_ids_unique() -> None:
+    pgids, _, _ = generate_grid()
+    assert len(np.unique(pgids)) == 259_200
+
+
+def test_ids_contiguous() -> None:
+    pgids, _, _ = generate_grid()
+    assert pgids.min() == 1
+    assert pgids.max() == 259_200
+
+
+def test_id_formula() -> None:
+    """Verify the formula: pgid = row_from_south * 720 + col_from_west + 1."""
+    pgids, lats, lons = generate_grid()
+    cfg = GridConfig()
+
+    rows_from_south = (lats - cfg.south - cfg.resolution / 2) / cfg.resolution
+    cols_from_west = (lons - cfg.west - cfg.resolution / 2) / cfg.resolution
+    expected = (rows_from_south * cfg.ncol + cols_from_west + 1).astype(np.int32)
+
+    np.testing.assert_array_equal(pgids, expected)
+
+
+# ---------------------------------------------------------------------------
+# Centroid bounds
+# ---------------------------------------------------------------------------
+
+
+def test_lat_bounds() -> None:
+    _, lats, _ = generate_grid()
+    assert lats.min() == pytest.approx(-89.75)
+    assert lats.max() == pytest.approx(89.75)
+
+
+def test_lon_bounds() -> None:
+    _, _, lons = generate_grid()
+    assert lons.min() == pytest.approx(-179.75)
+    assert lons.max() == pytest.approx(179.75)
+
+
+# ---------------------------------------------------------------------------
+# Bounding boxes
+# ---------------------------------------------------------------------------
+
+
+def test_bounding_boxes_shape() -> None:
+    pgids, w, s, e, n = generate_bounding_boxes()
+    assert len(pgids) == 259_200
+    assert len(w) == len(s) == len(e) == len(n) == 259_200
+
+
+def test_bounding_boxes_cell_size() -> None:
+    """Each cell should be 0.5 x 0.5 degrees."""
+    _, w, s, e, n = generate_bounding_boxes()
+    np.testing.assert_allclose(e - w, 0.5)
+    np.testing.assert_allclose(n - s, 0.5)
+
+
+def test_bounding_boxes_centroid_consistency() -> None:
+    """Bounding box midpoints should match centroids."""
+    _, w, s, e, n = generate_bounding_boxes()
+    _, lats, lons = generate_grid()
+    np.testing.assert_allclose((s + n) / 2, lats)
+    np.testing.assert_allclose((w + e) / 2, lons)
+
+
+# ---------------------------------------------------------------------------
+# Coordinate <-> ID conversion
+# ---------------------------------------------------------------------------
+
+
+def test_pgid_to_latlon_cell_1() -> None:
+    lat, lon = pgid_to_latlon(1)
+    assert float(lat) == pytest.approx(-89.75)
+    assert float(lon) == pytest.approx(-179.75)
+
+
+def test_pgid_to_latlon_cell_259200() -> None:
+    lat, lon = pgid_to_latlon(259_200)
+    assert float(lat) == pytest.approx(89.75)
+    assert float(lon) == pytest.approx(179.75)
+
+
+def test_pgid_to_latlon_vectorised() -> None:
+    lats, lons = pgid_to_latlon(np.array([1, 720, 721, 259_200]))
+    np.testing.assert_allclose(lats, [-89.75, -89.75, -89.25, 89.75])
+    np.testing.assert_allclose(lons, [-179.75, 179.75, -179.75, 179.75])
+
+
+def test_latlon_to_pgid_centroid() -> None:
+    """Centroid coordinates should round-trip to the same cell ID."""
+    pgid = latlon_to_pgid(-89.75, -179.75)
+    assert int(pgid) == 1
+
+
+def test_latlon_to_pgid_vectorised() -> None:
+    pgids = latlon_to_pgid(
+        np.array([-89.75, 89.75]),
+        np.array([-179.75, 179.75]),
+    )
+    np.testing.assert_array_equal(pgids, [1, 259_200])
+
+
+def test_roundtrip_pgid_latlon() -> None:
+    """All 259,200 cells should round-trip through pgid->latlon->pgid."""
+    original, _, _ = generate_grid()
+    lats, lons = pgid_to_latlon(original)
+    recovered = latlon_to_pgid(lats, lons)
+    np.testing.assert_array_equal(original, recovered)
+
+
+# ---------------------------------------------------------------------------
+# Custom resolution
+# ---------------------------------------------------------------------------
+
+
+def test_quarter_degree_grid() -> None:
+    """0.25 degree grid should have 4x as many cells."""
+    cfg = GridConfig(resolution=0.25)
+    pgids, lats, lons = generate_grid(cfg)
+    assert len(pgids) == 720 * 1440
+    assert lats.min() == pytest.approx(-89.875)
+    assert lons.min() == pytest.approx(-179.875)
+
+
+# ---------------------------------------------------------------------------
+# Harvester (unit tests, no network) -- uses core provenance
+# ---------------------------------------------------------------------------
+
+
+def test_harvester_uses_core_provenance_functions() -> None:
+    """Harvester must use datafactory_core provenance, not private reimplementations."""
+    import datafactory_core
+    import datafactory_grid.harvester as h
+
+    # The harvester's provenance functions should be the SAME objects
+    # as the ones in core, not reimplementations.
+    assert h.compute_content_digest is datafactory_core.compute_content_digest
+    assert h.append_ledger_entry is datafactory_core.append_ledger_entry
+    assert h.last_digest is datafactory_core.last_digest
+
+
+# ---------------------------------------------------------------------------
+# Parity validation (unit tests, mock reader)
+# ---------------------------------------------------------------------------
+
+
+def test_parity_result_structure() -> None:
+    result = ParityResult(
+        valid=True,
+        n_cells_ours=259_200,
+        n_cells_reference=259_200,
+        n_matched=259_200,
+    )
+    assert result.valid
+    assert result.n_matched == 259_200
+
+
+class _MockReader:
+    """Mock ReferenceGeometryReader that returns known centroids."""
+
+    def __init__(self, cells: list[tuple[int, float, float]]) -> None:
+        self._cells = cells
+
+    def read(self, path: Path) -> list[tuple[int, float, float]]:
+        return self._cells
+
+
+def test_parity_perfect_match() -> None:
+    """Validation should pass when reference matches our grid exactly."""
+    cfg = GridConfig(resolution=90.0)
+    pgids, lats, lons = generate_grid(cfg)
+    ref_cells = [
+        (int(p), float(la), float(lo))
+        for p, la, lo in zip(pgids, lats, lons, strict=True)
+    ]
+
+    reader = _MockReader(ref_cells)
+    result = validate_parity(reader, Path("/fake"), cfg)
+
+    assert result.valid
+    assert result.n_matched == len(pgids)
+    assert result.max_centroid_error_deg == 0.0
+    assert len(result.errors) == 0
+
+
+def test_parity_detects_offset() -> None:
+    """Validation should fail when reference centroids are shifted."""
+    cfg = GridConfig(resolution=90.0)
+    pgids, lats, lons = generate_grid(cfg)
+    ref_cells = [
+        (int(p), float(la) + 1.0, float(lo))
+        for p, la, lo in zip(pgids, lats, lons, strict=True)
+    ]
+
+    reader = _MockReader(ref_cells)
+    result = validate_parity(reader, Path("/fake"), cfg)
+
+    assert not result.valid
+    assert result.max_centroid_error_deg >= 1.0
+
+
+def test_parity_detects_missing_cell() -> None:
+    """Validation should flag cells present in reference but not in our grid."""
+    cfg = GridConfig(resolution=90.0)
+    ref_cells = [(999_999, 0.0, 0.0)]
+
+    reader = _MockReader(ref_cells)
+    result = validate_parity(reader, Path("/fake"), cfg)
+
+    assert not result.valid
+    assert any("999999" in e for e in result.errors)
+
+
+# ---------------------------------------------------------------------------
+# PyShpReader (unit tests with synthetic shapefiles, no network)
+# ---------------------------------------------------------------------------
+
+
+def _write_synthetic_shapefile(
+    directory: Path,
+    cells: list[tuple[int, float, float]],
+    *,
+    field_names: tuple[str, str, str] = ("gid", "ycoord", "xcoord"),
+) -> Path:
+    """Write a minimal shapefile with polygon geometry and attribute fields."""
+    import shapefile as shp
+
+    shp_path = directory / "test_grid"
+    with shp.Writer(str(shp_path)) as w:
+        w.field(field_names[0], "N", decimal=0)
+        w.field(field_names[1], "N", decimal=4)
+        w.field(field_names[2], "N", decimal=4)
+
+        half = 0.25  # 0.5 degree cell
+        for gid, lat, lon in cells:
+            w.poly([
+                [
+                    (lon - half, lat - half),
+                    (lon + half, lat - half),
+                    (lon + half, lat + half),
+                    (lon - half, lat + half),
+                    (lon - half, lat - half),
+                ]
+            ])
+            w.record(gid, lat, lon)
+
+    return directory
+
+
+def test_pyshp_reader_roundtrip(tmp_path: Path) -> None:
+    """PyShpReader should recover the same (gid, lat, lon) we wrote."""
+    from datafactory_grid.readers import PyShpReader
+
+    cells = [
+        (1, -89.75, -179.75),
+        (720, -89.75, 179.75),
+        (129_961, 0.25, 0.25),
+        (259_200, 89.75, 179.75),
+    ]
+    shp_dir = _write_synthetic_shapefile(tmp_path, cells)
+
+    reader = PyShpReader()
+    result = reader.read(shp_dir)
+
+    assert len(result) == 4
+    for (exp_gid, exp_lat, exp_lon), (got_gid, got_lat, got_lon) in zip(
+        cells, result, strict=True
+    ):
+        assert got_gid == exp_gid
+        assert got_lat == pytest.approx(exp_lat)
+        assert got_lon == pytest.approx(exp_lon)
+
+
+def test_pyshp_reader_alternative_field_names(tmp_path: Path) -> None:
+    """Reader should discover fields regardless of naming convention."""
+    from datafactory_grid.readers import PyShpReader
+
+    cells = [(42, 10.25, 30.75)]
+    shp_dir = _write_synthetic_shapefile(
+        tmp_path, cells, field_names=("pgid", "latitude", "longitude")
+    )
+
+    reader = PyShpReader()
+    result = reader.read(shp_dir)
+
+    assert len(result) == 1
+    assert result[0][0] == 42
+    assert result[0][1] == pytest.approx(10.25)
+    assert result[0][2] == pytest.approx(30.75)
+
+
+def test_pyshp_reader_geometry_fallback(tmp_path: Path) -> None:
+    """When centroid fields are missing, reader should use bounding box."""
+    import shapefile as shp
+
+    from datafactory_grid.readers import PyShpReader
+
+    shp_path = tmp_path / "no_coords"
+    with shp.Writer(str(shp_path)) as w:
+        w.field("gid", "N", decimal=0)
+        half = 0.25
+        lat, lon = 5.25, 10.75
+        w.poly([
+            [
+                (lon - half, lat - half),
+                (lon + half, lat - half),
+                (lon + half, lat + half),
+                (lon - half, lat + half),
+                (lon - half, lat - half),
+            ]
+        ])
+        w.record(99)
+
+    reader = PyShpReader()
+    result = reader.read(tmp_path)
+
+    assert len(result) == 1
+    assert result[0][0] == 99
+    assert result[0][1] == pytest.approx(5.25)
+    assert result[0][2] == pytest.approx(10.75)
+
+
+def test_pyshp_reader_parity_integration(tmp_path: Path) -> None:
+    """Full integration: write synthetic shapefile, read it, validate parity."""
+    from datafactory_grid.readers import PyShpReader
+
+    cfg = GridConfig(resolution=90.0)
+    pgids, lats, lons = generate_grid(cfg)
+    cells = [
+        (int(p), float(la), float(lo))
+        for p, la, lo in zip(pgids, lats, lons, strict=True)
+    ]
+    shp_dir = _write_synthetic_shapefile(tmp_path, cells)
+
+    reader = PyShpReader()
+    result = validate_parity(reader, shp_dir, cfg)
+
+    assert result.valid
+    assert result.n_matched == len(pgids)
+    assert result.max_centroid_error_deg == 0.0
+
+
+def test_parity_provenance_recording(tmp_path: Path) -> None:
+    """record_parity_result should write valid JSONL via core provenance."""
+    from datafactory_grid.validation import record_parity_result
+
+    ledger = tmp_path / "parity_validation.jsonl"
+    result = ParityResult(
+        valid=True,
+        n_cells_ours=8,
+        n_cells_reference=8,
+        n_matched=8,
+    )
+
+    record_parity_result(result, ledger)
+    assert ledger.exists()
+
+    entry = json.loads(ledger.read_text().strip())
+    assert entry["valid"] is True
+    assert entry["n_matched"] == 8
+    assert "timestamp" in entry  # auto-added by core

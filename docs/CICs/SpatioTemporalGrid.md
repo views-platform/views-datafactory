@@ -1,0 +1,110 @@
+# Class Intent Contract: SpatioTemporalGrid
+
+**Status:** Active
+**Owner:** Simon Polichinel von der Maase
+**Last reviewed:** 2026-03-17
+**Related ADRs:** ADR-001, ADR-002
+
+---
+
+## 1. Purpose
+
+> Composed spatiotemporal index that pairs a spatial grid (GridConfig) and temporal range (TemporalConfig), lazily generating coordinate arrays for downstream data cubes.
+
+This is the index that compiled grids and ExperimentFrames align to.
+
+---
+
+## 2. Non-Goals (Explicit Exclusions)
+
+- This class does **not** contain data values (event counts, fatalities, features)
+- This class does **not** perform compilation or event-to-grid placement
+- This class does **not** depend on any specific data source
+- This class does **not** modify its composed configs (delegation, not duplication)
+
+---
+
+## 3. Responsibilities and Guarantees
+
+- Guarantees immutability (frozen dataclass)
+- Guarantees composition by delegation: delegates `n_cells` to `grid_config.n_cells`, `n_steps` to `temporal_config.n_steps`
+- Guarantees lazy, cached coordinate generation via `functools.cached_property`
+- Guarantees consistency between coordinate arrays and config dimensions
+- Provides `shape` as `(n_cells, n_steps)` for data cube alignment
+
+---
+
+## 4. Inputs and Assumptions
+
+- `grid_config`: a valid `GridConfig` (default: standard PRIO-GRID)
+- `temporal_config`: a valid `TemporalConfig` (default: 1989-2024)
+
+Both configs are validated at their own construction time. SpatioTemporalGrid does not re-validate them.
+
+---
+
+## 5. Outputs and Side Effects
+
+- `pgids`: 1-D int32 array of cell IDs (lazily generated, cached)
+- `lats`, `lons`: 1-D float64 arrays of centroids (lazily generated, cached)
+- `time_steps`: 1-D datetime64[M] array (lazily generated, cached)
+- `shape`: tuple `(n_cells, n_steps)`
+- No side effects beyond caching.
+
+---
+
+## 6. Failure Modes and Loudness
+
+- Invalid configs are caught at config construction time, not here
+- `AttributeError` on mutation attempt (frozen)
+- No silent failures possible — all coordinate generation is deterministic numpy
+
+---
+
+## 7. Boundaries and Interactions
+
+- Composes `GridConfig` and `TemporalConfig` as peers (neither is subordinate)
+- Calls `generate_grid` and `generate_time_steps` for lazy coordinate generation
+- May be consumed by any downstream module that needs the index
+- Must not depend on harvester, compiler, or synthetic modules
+
+---
+
+## 8. Examples of Correct Usage
+
+```python
+grid = SpatioTemporalGrid()  # Standard: 259,200 cells x 432 months
+grid.shape  # (259200, 432)
+grid.pgids  # lazily generated on first access
+```
+
+---
+
+## 9. Examples of Incorrect Usage
+
+```python
+# WRONG: storing data in the grid object
+grid.data = my_array  # AttributeError — frozen
+
+# WRONG: assuming grid generates data
+values = grid.compile(events)  # No such method — compilation is separate
+```
+
+---
+
+## 10. Test Alignment
+
+- **Green:** Shape matches config dimensions, coordinate arrays consistent with configs
+- **Beige:** Not directly tested in isolation (tested through generate_grid and config tests)
+- **Red:** Mutation attempt (frozen enforcement)
+
+Tests in `tests/test_grid.py` (indirectly via generate_grid and config tests).
+
+---
+
+## End of Contract
+
+This document defines the **intended meaning** of `SpatioTemporalGrid`.
+
+Changes to behavior that violate this intent are bugs.
+Changes to intent must update this contract.

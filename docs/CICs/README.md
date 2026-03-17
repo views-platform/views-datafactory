@@ -50,12 +50,11 @@ Contracts must be clear enough that:
 
 ## Active Contracts
 
-No contracts yet. Create intent contracts as non-trivial classes emerge during migration from views-metric-lab.
+- `GridConfig.md` -- immutable spatial grid configuration (resolution, bounds, CRS)
+- `TemporalConfig.md` -- immutable temporal backbone configuration (year/month range)
+- `SpatioTemporalGrid.md` -- composed spatiotemporal index with lazy coordinate generation
 
-**Priority candidates for first CICs:**
-- `GridConfig` -- defines the spatial coordinate system for all consumers
-- `TemporalConfig` -- defines the temporal coordinate system
-- `SpatioTemporalGrid` -- composed spatial + temporal backbone
+**Future candidates (create when implemented):**
 - `HarvesterConfig` -- governs external API interaction
 - `ValidationResult` -- determines data acceptance/rejection
 - `CompilationConfig` -- governs compilation behavior

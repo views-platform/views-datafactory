@@ -17,6 +17,7 @@ dev = [
     "pytest>=8,<10",
     "ruff>=0.4,<1",
     "mypy>=1.8,<2",
+    "types-requests>=2.28,<3",
 ]
 
 [build-system]
@@ -46,6 +47,9 @@ ignore = []
 [tool.mypy]
 strict = true
 ignore_missing_imports = true
+# numpy's ndarray is generic but parameterising it everywhere is noisy
+# and deviates from community convention.
+disallow_any_generics = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

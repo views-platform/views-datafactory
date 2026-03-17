@@ -146,6 +146,18 @@ These costs are accepted intentionally.
 
 ---
 
+## Implementation Convention
+
+Test categories are organized by **class naming convention**, not by pytest markers:
+
+- `TestXxxGreen` -- green team (correctness, resilience)
+- `TestXxxBeige` -- beige team (realistic misuse)
+- `TestXxxRed` -- red team (adversarial)
+
+This keeps categories visible in test output without requiring marker infrastructure.
+
+---
+
 ## Notes
 
 Testing in this repository is not merely about correctness.

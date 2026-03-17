@@ -30,15 +30,15 @@ PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate 
 
 ## Key Concepts
 
-| Concept | Origin (metric lab) | Description |
-|---------|---------------------|-------------|
-| GridConfig | `lab_grid/config.py` | Frozen dataclass: resolution, bounds, CRS. Validated in `__post_init__`. Default: 0.5 deg, global extent, 360x720 grid. |
-| TemporalConfig | `lab_grid/temporal_config.py` | Frozen dataclass: start_year, end_year. Validates range constraints. VIEWS month_id adapter (month_id 1 = January 1980). |
-| SpatioTemporalGrid | `lab_grid/spatiotemporal.py` | Composes GridConfig + TemporalConfig. Lazy coordinate generation via `cached_property`. |
-| generate_grid | `lab_grid/generator.py` | Pure numpy: generates pgid array, bounding box arrays, lat/lon coordinate arrays. |
-| generate_time_steps | `lab_grid/temporal_generator.py` | Generates `datetime64[M]` array. Converts to/from VIEWS month_id. |
-| ReferenceGeometryReader | `lab_grid/readers.py` | Protocol for pluggable shapefile readers. Decouples validation from pyshp. |
-| validate_parity | `lab_grid/validation.py` | Validates generated grid against PRIO reference shapefile. Records result to provenance ledger. |
+| Concept | Description |
+|---------|-------------|
+| GridConfig | Frozen dataclass: resolution, bounds, CRS. Validated in `__post_init__`. Default: 0.5 deg, global extent, 360x720 grid. |
+| TemporalConfig | Frozen dataclass: start/end year and month. Validates range constraints. VIEWS month_id adapter (month_id 1 = January 1980). |
+| SpatioTemporalGrid | Composes GridConfig + TemporalConfig. Lazy coordinate generation via `cached_property`. |
+| generate_grid | Pure numpy: generates pgid array, bounding box arrays, lat/lon coordinate arrays. |
+| generate_time_steps | Generates `datetime64[M]` array. Converts to/from VIEWS month_id. |
+| ReferenceGeometryReader | Protocol for pluggable shapefile readers. Decouples validation from pyshp. |
+| validate_parity | Validates generated grid against PRIO reference shapefile. Records result to provenance ledger. |
 
 ## Invariants
 
@@ -60,7 +60,7 @@ PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate 
 ### TemporalConfig
 **Purpose:** Immutable temporal backbone configuration defining year range and month_id mapping.
 **Non-goals:** Does not generate time step arrays (that's `generate_time_steps`). Does not know about spatial coordinates.
-**Key guarantees:** Frozen after construction. `__post_init__` validates start_year <= end_year, both within reasonable bounds. Step count is derivable: `(end_year - start_year + 1) * 12`.
+**Key guarantees:** Frozen after construction. `__post_init__` validates start_year <= end_year, months in [1, 12]. Step count is derivable: `(end_year - start_year) * 12 + (end_month - start_month) + 1`.
 
 ### SpatioTemporalGrid
 **Purpose:** Composed spatiotemporal backbone providing coordinate arrays for both spatial and temporal dimensions.

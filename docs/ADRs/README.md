@@ -54,7 +54,8 @@ These ADRs form the architectural constitution of the repository.
 
 ## Project-Specific ADRs
 
-No project-specific ADRs yet. Create ADRs numbered 010+ as architectural decisions arise.
+- **ADR-010** -- GridConfig Contains Only Spatial Parameters
+  Paths and URLs removed from GridConfig (SRP). Injected at call sites.
 
 These must comply with the constitutional ADRs above.
 
