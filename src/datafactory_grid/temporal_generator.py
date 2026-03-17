@@ -16,17 +16,17 @@ logger = logging.getLogger(__name__)
 # VIEWS epoch: month_id 1 = January 1980
 _VIEWS_EPOCH = np.datetime64("1980-01", "M")
 
+DEFAULT_TEMPORAL_CONFIG = TemporalConfig()
+
 
 def generate_time_steps(
-    config: TemporalConfig | None = None,
+    config: TemporalConfig = DEFAULT_TEMPORAL_CONFIG,
 ) -> np.ndarray:
     """Generate monthly time step array for the configured range.
 
     Returns:
         1-D array of datetime64[M] values, length config.n_steps.
     """
-    if config is None:
-        config = TemporalConfig()
 
     start = config.start_dt
     # np.arange end is exclusive, so add 1 month

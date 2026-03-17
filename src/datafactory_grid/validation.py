@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Protocol
 
 from datafactory_core import append_ledger_entry
-from datafactory_grid.config import GridConfig
+from datafactory_grid.config import DEFAULT_GRID_CONFIG, GridConfig
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class ParityResult:
 def validate_parity(
     reader: ReferenceGeometryReader,
     reference_path: Path,
-    config: GridConfig | None = None,
+    config: GridConfig = DEFAULT_GRID_CONFIG,
     *,
     centroid_tolerance_deg: float = 0.01,
 ) -> ParityResult:
@@ -71,9 +71,6 @@ def validate_parity(
         ParityResult with match details.
     """
     from datafactory_grid.generator import generate_grid
-
-    if config is None:
-        config = GridConfig()
 
     # Generate our grid
     pgids, lats, lons = generate_grid(config)

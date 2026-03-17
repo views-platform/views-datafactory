@@ -240,6 +240,115 @@ def test_quarter_degree_grid() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Temporal generators
+# ---------------------------------------------------------------------------
+
+
+def test_generate_time_steps_default_length() -> None:
+    from datafactory_grid.temporal_generator import generate_time_steps
+
+    steps = generate_time_steps()
+    assert len(steps) == 432
+
+
+def test_generate_time_steps_dtype() -> None:
+    from datafactory_grid.temporal_generator import generate_time_steps
+
+    steps = generate_time_steps()
+    assert steps.dtype == np.dtype("datetime64[M]")
+
+
+def test_generate_time_steps_custom_range() -> None:
+    from datafactory_grid.temporal_config import TemporalConfig
+    from datafactory_grid.temporal_generator import generate_time_steps
+
+    cfg = TemporalConfig(start_year=2020, end_year=2020)
+    steps = generate_time_steps(cfg)
+    assert len(steps) == 12
+
+
+def test_views_month_id_epoch() -> None:
+    """January 1980 = month_id 1 (VIEWS convention)."""
+    from datafactory_grid.temporal_generator import to_views_month_id
+
+    result = to_views_month_id(np.datetime64("1980-01", "M"))
+    assert int(result) == 1
+
+
+def test_views_month_id_1989() -> None:
+    """January 1989 = month_id 109."""
+    from datafactory_grid.temporal_generator import to_views_month_id
+
+    result = to_views_month_id(np.datetime64("1989-01", "M"))
+    assert int(result) == 109
+
+
+def test_from_views_month_id_epoch() -> None:
+    from datafactory_grid.temporal_generator import from_views_month_id
+
+    result = from_views_month_id(1)
+    assert result == np.datetime64("1980-01", "M")
+
+
+def test_views_month_id_roundtrip() -> None:
+    from datafactory_grid.temporal_generator import (
+        from_views_month_id,
+        to_views_month_id,
+    )
+
+    dt = np.datetime64("2024-06", "M")
+    recovered = from_views_month_id(to_views_month_id(dt))
+    assert recovered == dt
+
+
+# ---------------------------------------------------------------------------
+# SpatioTemporalGrid
+# ---------------------------------------------------------------------------
+
+
+def test_spatiotemporal_default_shape() -> None:
+    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+
+    grid = SpatioTemporalGrid()
+    assert grid.shape == (259_200, 432)
+
+
+def test_spatiotemporal_delegates_n_cells() -> None:
+    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+
+    grid = SpatioTemporalGrid()
+    assert grid.n_cells == grid.grid_config.n_cells
+
+
+def test_spatiotemporal_delegates_n_steps() -> None:
+    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+
+    grid = SpatioTemporalGrid()
+    assert grid.n_steps == grid.temporal_config.n_steps
+
+
+def test_spatiotemporal_pgids_length() -> None:
+    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+
+    grid = SpatioTemporalGrid()
+    assert len(grid.pgids) == grid.n_cells
+
+
+def test_spatiotemporal_time_steps_length() -> None:
+    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+
+    grid = SpatioTemporalGrid()
+    assert len(grid.time_steps) == grid.n_steps
+
+
+def test_spatiotemporal_custom_config() -> None:
+    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+
+    grid = SpatioTemporalGrid(grid_config=GridConfig(resolution=90.0))
+    assert grid.shape == (8, 432)
+
+
+# ---------------------------------------------------------------------------
 # Harvester (unit tests, no network) -- uses core provenance
 # ---------------------------------------------------------------------------
 
@@ -249,11 +358,140 @@ def test_harvester_uses_core_provenance_functions() -> None:
     import datafactory_core
     import datafactory_grid.harvester as h
 
-    # The harvester's provenance functions should be the SAME objects
-    # as the ones in core, not reimplementations.
     assert h.compute_content_digest is datafactory_core.compute_content_digest
     assert h.append_ledger_entry is datafactory_core.append_ledger_entry
     assert h.last_digest is datafactory_core.last_digest
+
+
+def _make_fake_zip() -> bytes:
+    """Create a minimal in-memory ZIP with a fake .shp file."""
+    import io as _io
+    import zipfile as _zf
+
+    buf = _io.BytesIO()
+    with _zf.ZipFile(buf, "w") as zf:
+        zf.writestr("test.shp", "fake shapefile content")
+        zf.writestr("test.dbf", "fake dbf content")
+    return buf.getvalue()
+
+
+def test_fetch_shapefile_full_flow(tmp_path: Path) -> None:
+    """Mock download: extracts ZIP, writes provenance entry."""
+    from unittest.mock import MagicMock, patch
+
+    from datafactory_grid.harvester import fetch_shapefile
+
+    fake_zip = _make_fake_zip()
+    mock_resp = MagicMock()
+    mock_resp.content = fake_zip
+    mock_resp.raise_for_status = MagicMock()
+
+    ledger = tmp_path / "provenance" / "ledger.jsonl"
+
+    with patch("datafactory_grid.harvester.requests.get", return_value=mock_resp):
+        result = fetch_shapefile(
+            url="http://example.com/test.zip",
+            data_dir=tmp_path / "data",
+            ledger_path=ledger,
+        )
+
+    assert result.exists()
+    assert any(result.glob("*.shp"))
+    assert ledger.exists()
+    entry = json.loads(ledger.read_text().strip().splitlines()[-1])
+    assert entry["dataset"] == "priogrid_shapefile"
+    assert entry["changed"] is True
+    assert "content_digest" in entry
+
+
+def test_fetch_shapefile_unchanged_content(tmp_path: Path) -> None:
+    """When digest matches previous, record heartbeat without extraction."""
+    from unittest.mock import MagicMock, patch
+
+    from datafactory_core import append_ledger_entry, compute_content_digest
+    from datafactory_grid.harvester import fetch_shapefile
+
+    fake_zip = _make_fake_zip()
+    digest = compute_content_digest(fake_zip)
+
+    # Pre-populate ledger with matching digest
+    ledger = tmp_path / "provenance" / "ledger.jsonl"
+    append_ledger_entry(ledger, {"content_digest": digest})
+
+    mock_resp = MagicMock()
+    mock_resp.content = fake_zip
+    mock_resp.raise_for_status = MagicMock()
+
+    with patch("datafactory_grid.harvester.requests.get", return_value=mock_resp):
+        fetch_shapefile(
+            url="http://example.com/test.zip",
+            data_dir=tmp_path / "data",
+            ledger_path=ledger,
+        )
+
+    lines = ledger.read_text().strip().splitlines()
+    assert len(lines) == 2  # original + heartbeat
+    heartbeat = json.loads(lines[1])
+    assert heartbeat["changed"] is False
+
+
+def test_fetch_shapefile_existing_files(tmp_path: Path) -> None:
+    """When .shp files already exist, return without downloading."""
+    from unittest.mock import patch
+
+    from datafactory_grid.harvester import fetch_shapefile
+
+    # Create existing shapefile
+    shp_dir = tmp_path / "data" / "shapefile"
+    shp_dir.mkdir(parents=True)
+    (shp_dir / "existing.shp").write_text("fake")
+
+    with patch("datafactory_grid.harvester.requests.get") as mock_get:
+        result = fetch_shapefile(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+    mock_get.assert_not_called()
+    assert result == shp_dir
+
+
+def test_download_retries_on_failure() -> None:
+    """_download should retry on transient errors with exponential backoff."""
+    from unittest.mock import MagicMock, patch
+
+    from datafactory_grid.harvester import _download
+
+    mock_resp = MagicMock()
+    mock_resp.content = b"success"
+    mock_resp.raise_for_status = MagicMock()
+
+    with patch("datafactory_grid.harvester.requests.get") as mock_get, \
+         patch("datafactory_grid.harvester.time.sleep") as mock_sleep:
+        import requests as _req
+
+        mock_get.side_effect = [
+            _req.ConnectionError("fail 1"),
+            _req.ConnectionError("fail 2"),
+            mock_resp,
+        ]
+        result = _download("http://example.com", max_retries=3)
+
+    assert result == b"success"
+    assert mock_get.call_count == 3
+    assert mock_sleep.call_count == 2
+    mock_sleep.assert_any_call(1)   # 2^0
+    mock_sleep.assert_any_call(2)   # 2^1
+
+
+def test_extract_zip_rejects_corrupt_content() -> None:
+    """_extract_zip should raise BadZipFile on non-ZIP bytes."""
+    import zipfile as _zf
+
+    from datafactory_grid.harvester import _extract_zip
+
+    with pytest.raises(_zf.BadZipFile):
+        _extract_zip(b"this is not a zip file", Path("/tmp/should_not_exist"))
 
 
 # ---------------------------------------------------------------------------

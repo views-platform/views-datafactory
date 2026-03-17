@@ -50,19 +50,10 @@ PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate 
 - Coordinate arrays are generated lazily but are deterministic
 - Pure numpy: no heavy geospatial libraries (NF-6)
 
-## CIC Stubs
+## Intent Contracts
 
-### GridConfig
-**Purpose:** Immutable spatial grid configuration defining resolution, bounds, and coordinate reference system.
-**Non-goals:** Does not generate coordinates (that's `generate_grid`). Does not store data values. Does not know about time.
-**Key guarantees:** Frozen after construction. `__post_init__` validates resolution > 0, west < east, south < north, resolution evenly divides extent. Cell count is derivable: `n_rows * n_cols`.
+Formal CICs for this module's non-trivial classes:
 
-### TemporalConfig
-**Purpose:** Immutable temporal backbone configuration defining year range and month_id mapping.
-**Non-goals:** Does not generate time step arrays (that's `generate_time_steps`). Does not know about spatial coordinates.
-**Key guarantees:** Frozen after construction. `__post_init__` validates start_year <= end_year, months in [1, 12]. Step count is derivable: `(end_year - start_year) * 12 + (end_month - start_month) + 1`.
-
-### SpatioTemporalGrid
-**Purpose:** Composed spatiotemporal backbone providing coordinate arrays for both spatial and temporal dimensions.
-**Non-goals:** Does not contain data values. Does not perform compilation. Does not depend on any specific data source.
-**Key guarantees:** Lazy generation via `cached_property`. Coordinate arrays are consistent with GridConfig and TemporalConfig. Shape of coordinate arrays matches grid dimensions.
+- [GridConfig](../../docs/CICs/GridConfig.md)
+- [TemporalConfig](../../docs/CICs/TemporalConfig.md)
+- [SpatioTemporalGrid](../../docs/CICs/SpatioTemporalGrid.md)

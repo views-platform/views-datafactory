@@ -76,3 +76,6 @@ class GridConfig:
     @property
     def n_cells(self) -> int:
         return self.nrow * self.ncol
+
+
+DEFAULT_GRID_CONFIG = GridConfig()

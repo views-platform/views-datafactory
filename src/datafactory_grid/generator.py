@@ -8,13 +8,13 @@ import logging
 
 import numpy as np
 
-from datafactory_grid.config import GridConfig
+from datafactory_grid.config import DEFAULT_GRID_CONFIG, GridConfig
 
 logger = logging.getLogger(__name__)
 
 
 def generate_grid(
-    config: GridConfig | None = None,
+    config: GridConfig = DEFAULT_GRID_CONFIG,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Generate cell IDs and centroid coordinates for the full grid.
 
@@ -23,8 +23,6 @@ def generate_grid(
         pgids are 1-based int32 matching PRIO-GRID's numbering.
         lats/lons are float64 cell centroids in decimal degrees.
     """
-    if config is None:
-        config = GridConfig()
 
     nrow, ncol = config.nrow, config.ncol
     half = config.resolution / 2
@@ -48,7 +46,7 @@ def generate_grid(
 
 
 def generate_bounding_boxes(
-    config: GridConfig | None = None,
+    config: GridConfig = DEFAULT_GRID_CONFIG,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Generate cell IDs and bounding boxes for the full grid.
 
@@ -56,8 +54,6 @@ def generate_bounding_boxes(
         (pgids, west, south, east, north) -- five 1-D arrays.
         Each cell's bounding box is (west, south, east, north) in degrees.
     """
-    if config is None:
-        config = GridConfig()
 
     pgids, lats, lons = generate_grid(config)
     half = config.resolution / 2
@@ -73,14 +69,12 @@ def generate_bounding_boxes(
 
 def pgid_to_latlon(
     pgid: int | np.ndarray,
-    config: GridConfig | None = None,
+    config: GridConfig = DEFAULT_GRID_CONFIG,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Convert cell ID(s) to centroid (lat, lon).
 
     Works for scalar or array input. Returns float64 arrays.
     """
-    if config is None:
-        config = GridConfig()
 
     pgid = np.asarray(pgid, dtype=np.int32)
     idx = pgid - 1
@@ -96,15 +90,13 @@ def pgid_to_latlon(
 def latlon_to_pgid(
     lat: float | np.ndarray,
     lon: float | np.ndarray,
-    config: GridConfig | None = None,
+    config: GridConfig = DEFAULT_GRID_CONFIG,
 ) -> np.ndarray:
     """Convert (lat, lon) coordinates to the enclosing cell ID(s).
 
     Points exactly on a cell boundary are assigned to the cell
     to the north/east (matching standard raster convention).
     """
-    if config is None:
-        config = GridConfig()
 
     lat = np.asarray(lat, dtype=np.float64)
     lon = np.asarray(lon, dtype=np.float64)
