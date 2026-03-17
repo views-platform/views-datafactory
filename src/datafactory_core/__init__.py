@@ -1,8 +1,20 @@
-"""Shared foundations — base configs, provenance utilities.
+"""Shared foundations — provenance utilities and content digests.
 
 No outbound imports to other datafactory_* packages.
 """
 
-__all__: list[str] = []
+from datafactory_core.provenance import (
+    append_ledger_entry,
+    compute_content_digest,
+    last_digest,
+    last_digest_for_version,
+)
+
+__all__ = [
+    "append_ledger_entry",
+    "compute_content_digest",
+    "last_digest",
+    "last_digest_for_version",
+]
 
 __version__ = "0.1.0"

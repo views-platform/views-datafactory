@@ -2,16 +2,19 @@
 
 ## Purpose
 
-Shared foundations for all datafactory packages. Contains provenance utilities, configuration base patterns, content digest computation, and common types. This is Layer 0 of the dependency DAG (ADR-002): every other `datafactory_*` package may import from core, but core imports nothing internal.
+Shared foundations for all datafactory packages. Contains provenance utilities and content digest computation. This is Layer 0 of the dependency DAG (ADR-002): every other `datafactory_*` package may import from core, but core imports nothing internal.
 
 ## Responsibility Boundary
 
 **Owns:**
 - Provenance ledger writing (JSONL append-only)
-- Content digest computation (SHA-256)
-- Configuration validation patterns (frozen dataclasses with `__post_init__`)
-- Common type definitions shared across packages
+- Provenance ledger reading (last digest lookup, version-filtered queries)
+- Content digest computation (SHA-256, truncated hex)
 - Version declaration
+
+**Future (not yet implemented):**
+- Configuration validation patterns (frozen dataclasses with `__post_init__`) — if shared patterns emerge
+- Common type definitions — if multiple packages need them
 
 **Does NOT own:**
 - Grid coordinate generation (datafactory_grid)
@@ -30,9 +33,9 @@ Shared foundations for all datafactory packages. Contains provenance utilities, 
 
 | Concept | Description |
 |---------|-------------|
-| ProvenanceLedger | JSONL append-only writer. Each entry: timestamp, operation type, input references + digests, config snapshot, output path + digest, validation results. |
-| ContentDigest | SHA-256 digest computation for staleness detection and provenance tracking. Deterministic and order-independent. |
-| BaseConfig pattern | Frozen dataclass with `__post_init__` validation. Fail-loud on missing or invalid fields. No hidden defaults. |
+| `append_ledger_entry` | JSONL append-only writer. Auto-generates UTC timestamp. Caller defines entry structure. |
+| `last_digest` / `last_digest_for_version` | Ledger readers for digest lookup. Tolerate malformed trailing lines. |
+| `compute_content_digest` | SHA-256 digest computation, truncated to 16 hex chars by default. Deterministic: same bytes = same digest. |
 
 ## Invariants
 
@@ -47,9 +50,9 @@ Shared foundations for all datafactory packages. Contains provenance utilities, 
 ### ProvenanceLedger
 **Purpose:** Append structured JSONL entries to ledger files for harvest, compilation, and synthetic generation operations.
 **Non-goals:** Does not query, aggregate, or visualize ledger data. Does not validate that referenced source files exist.
-**Key guarantees:** Entries are always appended (never overwritten). Every entry includes a timestamp and operation type. Failure to write raises immediately (ADR-008).
+**Key guarantees:** Entries are always appended (never overwritten). Every entry includes an auto-generated UTC timestamp. Entry structure is caller-defined. Failure to write is both logged and raised (ADR-008).
 
 ### ContentDigest
 **Purpose:** Compute SHA-256 content digests for data files and configuration snapshots to enable staleness detection and provenance verification.
 **Non-goals:** Does not store or cache digests. Does not compare digests (that's the caller's responsibility).
-**Key guarantees:** Deterministic: same bytes = same digest. Returns hex string (or truncated hex per convention). Raises on I/O errors.
+**Key guarantees:** Deterministic: same bytes = same digest. Callers are responsible for consistent serialization order. Returns truncated hex string (16 chars by default). Raises on invalid input (ADR-008).

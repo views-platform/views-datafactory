@@ -27,12 +27,16 @@ ALL_PACKAGES = set(ALLOWED_INTERNAL_IMPORTS.keys())
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 
 
-def _collect_imports(filepath: Path) -> list[str]:
-    """Extract all imported module names from a Python file."""
+def _collect_imports(filepath: Path) -> tuple[list[str], str | None]:
+    """Extract all imported module names from a Python file.
+
+    Returns:
+        Tuple of (import names, error message or None).
+    """
     try:
         tree = ast.parse(filepath.read_text())
-    except SyntaxError:
-        return []
+    except SyntaxError as exc:
+        return [], f"SyntaxError: {exc}"
 
     imports: list[str] = []
     for node in ast.walk(tree):
@@ -41,7 +45,7 @@ def _collect_imports(filepath: Path) -> list[str]:
                 imports.append(alias.name.split(".")[0])
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             imports.append(node.module.split(".")[0])
-    return imports
+    return imports, None
 
 
 def test_no_forbidden_internal_imports() -> None:
@@ -56,7 +60,11 @@ def test_no_forbidden_internal_imports() -> None:
         forbidden = ALL_PACKAGES - allowed - {package_name}
 
         for py_file in package_dir.rglob("*.py"):
-            imported = _collect_imports(py_file)
+            imported, parse_error = _collect_imports(py_file)
+            if parse_error is not None:
+                rel = py_file.relative_to(SRC_DIR)
+                violations.append(f"{rel} could not be parsed: {parse_error}")
+                continue
             for mod in imported:
                 if mod in forbidden:
                     rel = py_file.relative_to(SRC_DIR)
