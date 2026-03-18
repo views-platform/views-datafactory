@@ -47,6 +47,10 @@ def to_views_month_id(dt: np.datetime64 | np.ndarray) -> np.ndarray:
 
     VIEWS convention: month_id = (year - 1980) * 12 + month.
     January 1980 = 1.
+
+    Note: Returns 0 for December 1979 and negative values for earlier
+    dates. If the VIEWS convention requires month_id >= 1, callers
+    should validate the result.
     """
     dt = np.asarray(dt, dtype="datetime64[M]")
     # Months since epoch (0-based), then +1 for 1-based VIEWS convention

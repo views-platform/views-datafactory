@@ -74,9 +74,18 @@ def pgid_to_latlon(
     """Convert cell ID(s) to centroid (lat, lon).
 
     Works for scalar or array input. Returns float64 arrays.
-    """
 
+    Raises:
+        ValueError: If any pgid is outside [1, config.n_cells].
+    """
     pgid = np.asarray(pgid, dtype=np.int32)
+    if np.any(pgid < 1) or np.any(pgid > config.n_cells):
+        err_msg = (
+            f"pgid must be in [1, {config.n_cells}], "
+            f"got range [{int(pgid.min())}, {int(pgid.max())}]"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
     idx = pgid - 1
     rows = idx // config.ncol
     cols = idx % config.ncol

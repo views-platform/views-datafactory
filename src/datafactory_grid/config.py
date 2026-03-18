@@ -4,7 +4,10 @@ Pure spatial parameters only. No storage paths, no remote URLs —
 those are runtime concerns injected at call sites.
 """
 
+import logging
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -45,24 +48,30 @@ class GridConfig:
 
     def __post_init__(self) -> None:
         if self.resolution <= 0:
-            raise ValueError(f"Resolution must be positive, got {self.resolution}")
+            err_msg = f"Resolution must be positive, got {self.resolution}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         if self.west >= self.east:
-            raise ValueError(
-                f"West bound ({self.west}) must be less than east ({self.east})"
-            )
+            err_msg = f"West bound ({self.west}) must be less than east ({self.east})"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         if self.south >= self.north:
-            raise ValueError(
+            err_msg = (
                 f"South bound ({self.south}) must be less than north ({self.north})"
             )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         lat_extent = self.north - self.south
         lon_extent = self.east - self.west
         nrow = lat_extent / self.resolution
         ncol = lon_extent / self.resolution
         if abs(nrow - round(nrow)) > 1e-9 or abs(ncol - round(ncol)) > 1e-9:
-            raise ValueError(
+            err_msg = (
                 f"Resolution {self.resolution} does not evenly divide "
                 f"lat extent ({lat_extent}) or lon extent ({lon_extent})"
             )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
 
     # Derived grid dimensions (at default 0.5 deg: 360 x 720 = 259,200 cells)
     @property

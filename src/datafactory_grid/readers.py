@@ -62,10 +62,12 @@ class PyShpReader:
             lon_field = _find_field(field_names, _LON_NAMES)
 
             if id_field is None:
-                raise ValueError(
+                err_msg = (
                     f"No cell ID field found in {field_names}. "
                     f"Expected one of: {_ID_NAMES}"
                 )
+                logger.error(err_msg)
+                raise ValueError(err_msg)
 
             use_geometry = lat_field is None or lon_field is None
             if use_geometry:

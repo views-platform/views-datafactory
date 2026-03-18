@@ -225,6 +225,26 @@ def test_roundtrip_pgid_latlon() -> None:
     np.testing.assert_array_equal(original, recovered)
 
 
+def test_pgid_to_latlon_rejects_zero() -> None:
+    with pytest.raises(ValueError, match="pgid"):
+        pgid_to_latlon(0)
+
+
+def test_pgid_to_latlon_rejects_above_range() -> None:
+    with pytest.raises(ValueError, match="pgid"):
+        pgid_to_latlon(259_201)
+
+
+def test_pgid_to_latlon_rejects_negative() -> None:
+    with pytest.raises(ValueError, match="pgid"):
+        pgid_to_latlon(-1)
+
+
+def test_pgid_to_latlon_rejects_mixed_array() -> None:
+    with pytest.raises(ValueError, match="pgid"):
+        pgid_to_latlon(np.array([1, 0, 259_200]))
+
+
 # ---------------------------------------------------------------------------
 # Custom resolution
 # ---------------------------------------------------------------------------
@@ -492,6 +512,75 @@ def test_extract_zip_rejects_corrupt_content() -> None:
 
     with pytest.raises(_zf.BadZipFile):
         _extract_zip(b"this is not a zip file", Path("/tmp/should_not_exist"))
+
+
+# ---------------------------------------------------------------------------
+# ADR-008 compliance: log before raise
+# ---------------------------------------------------------------------------
+
+
+class TestGridADR008Compliance:
+    """ADR-008: structural failures must be both logged and raised."""
+
+    _grid_logger = "datafactory_grid.config"
+    _temporal_logger = "datafactory_grid.temporal_config"
+
+    def test_gridconfig_invalid_resolution_logged(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        import logging
+
+        with (
+            caplog.at_level(logging.ERROR, logger=self._grid_logger),
+            pytest.raises(ValueError),
+        ):
+            GridConfig(resolution=-1.0)
+        assert len([r for r in caplog.records if r.levelno >= logging.ERROR]) >= 1
+
+    def test_temporalconfig_invalid_year_logged(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        import logging
+
+        from datafactory_grid.temporal_config import TemporalConfig
+
+        with (
+            caplog.at_level(logging.ERROR, logger=self._temporal_logger),
+            pytest.raises(ValueError),
+        ):
+            TemporalConfig(start_year=-1)
+        assert len([r for r in caplog.records if r.levelno >= logging.ERROR]) >= 1
+
+    def test_pgid_out_of_range_logged(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        import logging
+
+        with (
+            caplog.at_level(logging.ERROR, logger="datafactory_grid.generator"),
+            pytest.raises(ValueError),
+        ):
+            pgid_to_latlon(0)
+        assert len([r for r in caplog.records if r.levelno >= logging.ERROR]) >= 1
+
+
+# ---------------------------------------------------------------------------
+# VIEWS month_id pre-epoch behavior (documented, not guarded)
+# ---------------------------------------------------------------------------
+
+
+def test_views_month_id_pre_epoch_returns_zero() -> None:
+    """December 1979 is month_id 0 — documented behavior."""
+    from datafactory_grid.temporal_generator import to_views_month_id
+
+    assert int(to_views_month_id(np.datetime64("1979-12", "M"))) == 0
+
+
+def test_views_month_id_pre_epoch_returns_negative() -> None:
+    """January 1970 is month_id -119 — documented behavior."""
+    from datafactory_grid.temporal_generator import to_views_month_id
+
+    assert int(to_views_month_id(np.datetime64("1970-01", "M"))) == -119
 
 
 # ---------------------------------------------------------------------------

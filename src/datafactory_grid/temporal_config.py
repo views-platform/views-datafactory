@@ -1,8 +1,11 @@
 """Temporal configuration for the PRIO-GRID spatiotemporal backbone."""
 
+import logging
 from dataclasses import dataclass
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -28,26 +31,32 @@ class TemporalConfig:
 
     def __post_init__(self) -> None:
         if self.start_year < 1:
-            raise ValueError(f"Year must be >= 1, got start_year={self.start_year}")
+            err_msg = f"Year must be >= 1, got start_year={self.start_year}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         if self.end_year < 1:
-            raise ValueError(f"Year must be >= 1, got end_year={self.end_year}")
+            err_msg = f"Year must be >= 1, got end_year={self.end_year}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         if not (1 <= self.start_month <= 12):
-            raise ValueError(
-                f"Month must be in [1, 12], got start_month={self.start_month}"
-            )
+            err_msg = f"Month must be in [1, 12], got start_month={self.start_month}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         if not (1 <= self.end_month <= 12):
-            raise ValueError(
-                f"Month must be in [1, 12], got end_month={self.end_month}"
-            )
+            err_msg = f"Month must be in [1, 12], got end_month={self.end_month}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         # Ordinal comparison: year * 12 + month gives a monotonic ordering
         # for start-before-end validation. Not related to VIEWS month_id.
         start_ordinal = self.start_year * 12 + self.start_month
         end_ordinal = self.end_year * 12 + self.end_month
         if start_ordinal > end_ordinal:
-            raise ValueError(
+            err_msg = (
                 f"start ({self.start_year}-{self.start_month:02d}) is after "
                 f"end ({self.end_year}-{self.end_month:02d})"
             )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
 
     @property
     def start_dt(self) -> np.datetime64:
