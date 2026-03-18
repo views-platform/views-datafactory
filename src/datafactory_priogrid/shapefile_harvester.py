@@ -146,6 +146,8 @@ def fetch_shapefile(
         "size_bytes": len(content),
         "content_digest": digest,
         "previous_digest": previous,
+        "ledger_version": 1,
+        "digest_algorithm": "sha256_16",
     }
 
     if not changed and not force_refresh:

@@ -41,6 +41,7 @@ PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate 
 | validate_parity | Validates generated grid against PRIO reference shapefile. Records result to provenance ledger. |
 
 ## Invariants
+- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
 
 - Default configuration produces exactly 259,200 cells (360 x 720)
 - pgid numbering: row-major from bottom-left, 1-indexed (pgid 1 is southwest corner)

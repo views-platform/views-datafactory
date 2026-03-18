@@ -318,6 +318,8 @@ def fetch_ucdp_annual(
         "n_events": validation.n_events,
         "fetch_duration_s": round(fetch_duration, 1),
         "content_digest": validation.content_digest,
+        "ledger_version": 1,
+        "digest_algorithm": "sha256_16",
     }
 
     if not validation.valid:

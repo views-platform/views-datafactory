@@ -221,6 +221,8 @@ def compile_grid(config: CompilationConfig) -> Path:
         "feature_names": feature_names,
         "output_dir": str(output_dir),
         "output_digest": output_digest,
+        "ledger_version": 1,
+        "digest_algorithm": "sha256_16",
     })
 
     logger.info(

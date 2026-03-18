@@ -26,6 +26,8 @@ Shared foundations for all datafactory packages. Contains provenance utilities a
 
 ## Dependency Rules
 
+Per ADR-002 (topology and dependency direction):
+
 **May import:** Python standard library, numpy
 **Must never import:** Any other `datafactory_*` package
 
@@ -38,6 +40,7 @@ Shared foundations for all datafactory packages. Contains provenance utilities a
 | `compute_content_digest` | SHA-256 digest computation, truncated to 16 hex chars by default. Deterministic: same bytes = same digest. |
 
 ## Invariants
+- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
 
 - Zero imports from any other `datafactory_*` package (ADR-002, Layer 0)
 - All public symbols declared in `__all__` (ADR-001)

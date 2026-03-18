@@ -57,6 +57,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-010** -- GridConfig Contains Only Spatial Parameters
   Paths and URLs removed from GridConfig (SRP). Injected at call sites.
 
+- **ADR-011** -- Fail Loud, No Stale Data Serving
+  System crashes on failure. No automatic fallback. Future ADR for graceful degradation.
+
 These must comply with the constitutional ADRs above.
 
 ---

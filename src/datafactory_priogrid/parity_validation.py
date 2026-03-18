@@ -168,6 +168,7 @@ def record_parity_result(
             "max_centroid_error_deg": round(result.max_centroid_error_deg, 6),
             "errors": result.errors[:10],
             "warnings": result.warnings,
+            "ledger_version": 1,
         },
     )
     logger.info("Parity result recorded to %s", ledger_path)

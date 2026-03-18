@@ -68,6 +68,7 @@ Each source module provides:
 Adding a new source means adding `sources/<name>.py`. No changes to existing sources.
 
 ## Invariants
+- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
 
 - Raw data is stored unaltered (all source fields preserved in Parquet)
 - Content digest (via `datafactory_provenance.compute_content_digest`) on every harvest
@@ -75,6 +76,7 @@ Adding a new source means adding `sources/<name>.py`. No changes to existing sou
 - Provenance ledger entry appended for every harvest operation, success or failure (ADR-008)
 - Sources are independent: no source module imports from another source module
 - Digest-based short-circuit: if snapshot exists and ledger has a digest, skip fetch
+- **Archive retention:** Snapshot archives are kept indefinitely. No automatic cleanup.
 - All error paths log before raising (ADR-008)
 
 ## Intent Contracts

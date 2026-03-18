@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: import-enforcement
+        name: ADR-002 import enforcement
+        entry: uv run pytest tests/test_import_enforcement.py -x -q
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -58,12 +58,14 @@ Deferring this decision preserves design freedom while maintaining architectural
 
 This ADR should be revisited when one or more of the following become true:
 
-- The metric lab formally depends on views-datafactory (import dependency, not just filesystem reads)
-- Other VIEWS repos (views-hydranet, views-pipeline-core) depend on this repository
-- Reproducibility across time becomes a contractual requirement
-- Breaking changes begin to incur real coordination or migration costs
-- Multiple versions of the same concept must be supported concurrently
+- The metric lab adds `views-datafactory` to its `pyproject.toml` dependencies (import dependency, not just filesystem reads)
+- views-hydranet or views-pipeline-core depend on `datafactory_priogrid` or `datafactory_compilation`
+- Reproducibility across time becomes a contractual requirement (e.g., OCHA requires versioned data)
+- The screaming architecture rename (c9d8cf9) causes downstream breakage — evidence that stability guarantees are needed
+- Multiple versions of the same compiled grid must be supported concurrently
 - Contributors express uncertainty about what is safe to change
+
+**Governance audit note (2026-03-18):** Reviewed post-DoD005. Trigger conditions not yet met. Metric lab integration is the most likely near-term trigger.
 
 At that point, a new ADR should supersede this one.
 

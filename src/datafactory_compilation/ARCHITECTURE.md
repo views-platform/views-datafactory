@@ -46,6 +46,7 @@ datafactory_compilation/
 | FeatureSpec | Tuple of `(feature_name, strategy_name)`. Declared in config, never inferred from Parquet columns (ADR-003). |
 
 ## Invariants
+- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
 
 - **Dimension order:** Always `(n_cells, n_steps, n_features)` -- the zarr-ready contract
 - **Coordinate sidecars:** `pgids.npy` (int32), `time_steps.npy` (datetime64[M]), `feature_names.json` always shipped alongside `grid.npy`

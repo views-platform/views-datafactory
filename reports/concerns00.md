@@ -2,17 +2,17 @@
 
 **Date:** 2026-03-17
 **Source:** Multi-expert engineering review of views-datafactory
-**Status:** Updated post-expert-review-5. 15 of 35 concerns resolved. 4 of 4 disagreements resolved.
+**Status:** Updated post-governance-audit. 27 of 35 concerns resolved. 4 of 4 disagreements resolved. 2 deferred by design.
 
 ---
 
 ## Architecture & Design
 
-### C-01: No enforcement mechanism for the DAG beyond tests
+### C-01: ~~No enforcement mechanism for the DAG beyond tests~~ RESOLVED
 ADR-002 declares strict import rules but the only enforcement is the import-enforcement test added in `tests/test_import_enforcement.py`. There is no linting rule (e.g., `import-linter` config) or pre-commit hook. A contributor who doesn't run tests locally can still merge violations.
 **Source:** Martin, Feathers
 
-### C-02: Dual version source
+### C-02: ~~Dual version source~~ RESOLVED
 `pyproject.toml:3` declares `version = "0.1.0"` and `src/datafactory_provenance/__init__.py:8` declares `__version__ = "0.1.0"`. These can diverge silently. Consider `hatch-vcs` or dynamic version reading.
 **Source:** Martin
 
@@ -26,11 +26,11 @@ Dict-based source registry implemented in `datafactory_harvester/sources/__init_
 ### C-05: ~~SpatioTemporalGrid composition contract unclear~~ RESOLVED
 Formal CIC created at `docs/CICs/SpatioTemporalGrid.md` (DoD002). Section 3 explicitly states delegation, not duplication.
 
-### C-06: Provenance logic should be a composable utility, not distributed
+### C-06: Provenance logic should be a composable utility — DEFERRED
 ARCHITECTURE.md files specify every module must write provenance. This distributes the concern. A context manager or decorator in `datafactory_provenance` would be simpler.
 **Source:** Hickey
 
-### C-07: Frozen dataclass pattern repeated without shared base
+### C-07: Frozen dataclass pattern repeated — DEFERRED
 GridConfig, TemporalConfig, HarvesterConfig, CompilationConfig, SyntheticConfig all follow the same frozen-dataclass-with-`__post_init__` pattern. No shared Protocol or base class captures this. Consider a `ValidatedConfig` Protocol in core.
 **Source:** Hickey
 
@@ -41,7 +41,7 @@ GridConfig, TemporalConfig, HarvesterConfig, CompilationConfig, SyntheticConfig 
 ### C-08: ~~Documentation complexity exceeds code complexity~~ RESOLVED
 Ratio improved from ~7:1 (words per LOC) to ~3:1 as codebase grew to ~4,500 LOC. Governance has proven itself: ADR-008 caught bugs in 3 consecutive audits, ADR-002 enforced by import test, ADR-010 guided GridConfig redesign.
 
-### C-09: ARCHITECTURE.md files duplicate ADR content
+### C-09: ~~ARCHITECTURE.md files duplicate ADR content~~ RESOLVED
 Each per-module ARCHITECTURE.md restates dependency rules from ADR-002, invariants from ADR-003, and boundary contracts from ADR-009. Changes to ADRs require updating 5 ARCHITECTURE.md files. Consider referencing ADRs by number rather than restating.
 **Source:** Ousterhout
 
@@ -49,9 +49,8 @@ Each per-module ARCHITECTURE.md restates dependency rules from ADR-002, invarian
 Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add a conceptual layer every contributor must internalize. For a 5-package Python project, this may be heavy governance.
 **Source:** Ousterhout
 
-### C-11: Governance should prove itself
-If an ADR hasn't prevented a mistake or resolved a disagreement within 3 months of active development, question whether it's load-bearing. Supersede or deprecate unused ADRs.
-**Source:** Ousterhout, Hickey, long-term regret test
+### C-11: ~~Governance should prove itself~~ RESOLVED (audit completed)
+Audit conducted post-DoD005. **Tier 1 (proven):** ADR-008 (15 bugs found), ADR-003 (silent garbage caught), ADR-002 (DAG enforced), ADR-010 (SRP guided), ADR-009 (validation patterns). **Tier 2 (background):** ADR-001, 005, 006, 011. **Tier 3 (low evidence):** ADR-000 (meta), ADR-004 (deferred), ADR-007 (weakest but justified). **No ADRs deprecated.** Cost is low; ADR-008 alone exceeds total governance cost.
 
 ---
 
@@ -67,19 +66,19 @@ Exponential backoff (`2**attempt`) implemented in both `grid/harvester.py:_downl
 `provenance/harvester_ledger.jsonl` grows indefinitely. Over years of monthly harvesting this could become unwieldy. No rotation, compaction, or archival strategy is planned.
 **Source:** Nygard
 
-### C-15: No graceful degradation path
+### C-15: ~~No graceful degradation path~~ RESOLVED (ADR-011)
 ADR-008 mandates fail-loud everywhere. No discussion of what happens operationally when a harvest fails: serve stale data with a warning, or block entirely? The operational response is undefined.
 **Source:** Nygard
 
-### C-16: No concurrency model
+### C-16: ~~No concurrency model~~ DOCUMENTED
 Simultaneous harvester runs could produce partial Parquet writes or interleaved JSONL appends. Neither ADRs nor ARCHITECTURE.md files address concurrent access. At minimum, document "single-writer, enforced by convention."
 **Source:** Kleppmann
 
-### C-17: ~~Revision storage semantics underspecified~~ PARTIALLY RESOLVED
+### C-17: ~~Revision storage semantics~~ RESOLVED
 `archive_snapshot` in `storage.py` renames old snapshots with UTC timestamps before overwriting. `ComparisonResult` tracks added/removed/revised events. Candidate monthly uses per-version snapshots. Full resolution: document archival retention policy.
 **Source:** Kleppmann
 
-### C-18: Schema evolution of provenance ledgers unplanned (deferred 6 times)
+### C-18: ~~Schema evolution of provenance ledgers unplanned~~ RESOLVED
 Ledger entries will need new fields as the system matures. No versioning scheme (e.g., `"ledger_schema_version": 1`) is defined for forward/backward compatibility. Deferred in DoD001, DoD002, DoD003, DoD004, DoD005, and expert review 5. Trivial fix (1 line per call site) with unbounded future value.
 **Source:** Kleppmann
 
@@ -100,7 +99,7 @@ The metric lab code being migrated has its own tests, but this repo has no "gold
 ### C-22: ~~No test structure for red/beige/green taxonomy~~ RESOLVED
 Test categories organized by class naming convention (`TestXxxGreen`, `TestXxxBeige`, `TestXxxRed`). Documented in ADR-005 Implementation Convention section.
 
-### C-23: `network` marker defined but unused
+### C-23: ~~`network` marker defined but unused~~ RESOLVED
 `pyproject.toml:50-51` declares the `network` marker but no test uses it. Dead configuration.
 **Source:** Beck
 
@@ -154,7 +153,7 @@ The 60-second performance target (NF-5: 259,200 cells × 432 months) has no test
 ### C-34: ~~Global mutable source registry — test pollution~~ RESOLVED
 `_SOURCES` dict is module-level mutable state. Fixed: added `_clear_registry()` and conftest.py fixture that removes test-registered sources after each test.
 
-### C-35: Digest algorithm not recorded in provenance entries
+### C-35: ~~Digest algorithm not recorded in provenance entries~~ RESOLVED
 Entries contain `content_digest` but not the algorithm ("sha256") or truncation length (16). If the algorithm changes, old digests become incomparable. Fix: add `"digest_algorithm": "sha256_16"` to provenance entries.
 **Source:** Kleppmann (expert review 5)
 

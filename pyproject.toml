@@ -54,6 +54,4 @@ disallow_any_generics = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -q"
-markers = [
-    "network: tests that require network access (deselected by default)",
-]
+markers = []
