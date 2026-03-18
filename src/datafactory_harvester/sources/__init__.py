@@ -53,3 +53,8 @@ def fetch_source(name: str, **kwargs: Any) -> Any:
 def list_sources() -> list[str]:
     """Return sorted list of registered source names."""
     return sorted(_SOURCES.keys())
+
+
+def _clear_registry() -> None:
+    """Clear all registered sources. For test isolation only."""
+    _SOURCES.clear()

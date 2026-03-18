@@ -152,6 +152,7 @@ def discover_versions(
             logger.info(
                 "Discovered version %s (%d events)", version, total
             )
+            time.sleep(0.5)  # Rate-limit discovery probes
         except Exception:
             logger.info(
                 "Version %s not available — stopping discovery", version

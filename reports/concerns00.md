@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17
 **Source:** Multi-expert engineering review of views-datafactory
-**Status:** Updated post-MVP. 11 of 23 concerns resolved. 4 of 4 disagreements resolved or evaluable.
+**Status:** Updated post-expert-review-5. 15 of 35 concerns resolved. 4 of 4 disagreements resolved.
 
 ---
 
@@ -75,12 +75,12 @@ ADR-008 mandates fail-loud everywhere. No discussion of what happens operational
 Simultaneous harvester runs could produce partial Parquet writes or interleaved JSONL appends. Neither ADRs nor ARCHITECTURE.md files address concurrent access. At minimum, document "single-writer, enforced by convention."
 **Source:** Kleppmann
 
-### C-17: Revision storage semantics underspecified
-When UCDP revises past months, does the system keep both snapshots or overwrite? `ComparisonResult` exists conceptually but storage semantics are undefined.
+### C-17: ~~Revision storage semantics underspecified~~ PARTIALLY RESOLVED
+`archive_snapshot` in `storage.py` renames old snapshots with UTC timestamps before overwriting. `ComparisonResult` tracks added/removed/revised events. Candidate monthly uses per-version snapshots. Full resolution: document archival retention policy.
 **Source:** Kleppmann
 
-### C-18: Schema evolution of provenance ledgers unplanned
-Ledger entries will need new fields as the system matures. No versioning scheme (e.g., `"ledger_schema_version": 1`) is defined for forward/backward compatibility.
+### C-18: Schema evolution of provenance ledgers unplanned (deferred 6 times)
+Ledger entries will need new fields as the system matures. No versioning scheme (e.g., `"ledger_schema_version": 1`) is defined for forward/backward compatibility. Deferred in DoD001, DoD002, DoD003, DoD004, DoD005, and expert review 5. Trivial fix (1 line per call site) with unbounded future value.
 **Source:** Kleppmann
 
 ### C-19: ~~Deterministic compilation untested~~ RESOLVED
@@ -106,10 +106,64 @@ Test categories organized by class naming convention (`TestXxxGreen`, `TestXxxBe
 
 ---
 
+## Performance & Scaling (from repo assimilation post-DoD005)
+
+### C-24: Compiler loads entire Parquet into list-of-dicts
+`compiler.py:161-163` converts Parquet columnar data to row-oriented `list[dict]` via `table.to_pydict()` + list comprehension. For 384K events × 49 fields this creates ~19M Python objects. Works at current scale; will not scale to millions of events.
+**Source:** Repo assimilation, Kleppmann
+
+### C-25: Source digest reads entire file into memory
+`compiler.py:147` calls `config.source_path.read_bytes()` to compute SHA-256. For a 50MB Parquet file this doubles memory usage. Chunked hashing would be better.
+**Source:** Repo assimilation, Nygard
+
+### C-26: `_read_ledger_entries` reads entire JSONL file
+`provenance.py:136` reads all lines to find the last entry. O(n) for every `last_digest` call. Fine for hundreds of entries; slow for thousands.
+**Source:** Repo assimilation, Kleppmann
+
+### C-27: Retry pattern duplicated in 2 modules
+`grid/harvester.py:52-75` and `ucdp_annual.py:132-163` implement the same exponential backoff loop. Deferred per "third use" DRY rule — extract to core when a third module needs it.
+**Source:** Repo assimilation, expert review 4
+
+### C-28: Candidate source uses fake annual config workaround
+`ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated`. Sends unnecessary 100-year date range to API. Works correctly but is architecturally inelegant.
+**Source:** Falsification audit DoD005 (observation P4)
+
+### C-29: No end-to-end integration test
+No test runs the full harvest → compile pipeline with real (or realistic) Parquet data. Individual modules are well-tested in isolation but the integration boundary is untested.
+**Source:** Repo assimilation, Feathers
+
+### C-30: No performance test for full-scale compilation
+The 60-second performance target (NF-5: 259,200 cells × 432 months) has no test. Compilation is only tested with 8-cell synthetic grids. Full-scale behavior is unverified.
+**Source:** Repo assimilation, Nygard
+
+---
+
+## Coupling & Typing (from expert review 5)
+
+### C-31: Candidate source depends on annual source
+`ucdp_candidate.py:25-31` imports 5 symbols from `ucdp_annual.py` including `UcdpAnnualConfig`. Changing annual's API client could break candidate. Extract `_ucdp_common.py` when a third shared function is needed.
+**Source:** Martin (expert review 5)
+
+### C-32: Source registry returns `Any` — no typed interface
+`fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Consumers can't rely on the return type without reading the source module. Accept for now; consider a `SourceResult` union if it causes real problems.
+**Source:** GoF, Hickey (expert review 5)
+
+### C-33: ~~Discovery probes had no rate limiting~~ RESOLVED
+`discover_versions` fired rapid sequential HTTP requests. Fixed: added `time.sleep(0.5)` between probes.
+
+### C-34: ~~Global mutable source registry — test pollution~~ RESOLVED
+`_SOURCES` dict is module-level mutable state. Fixed: added `_clear_registry()` and conftest.py fixture that removes test-registered sources after each test.
+
+### C-35: Digest algorithm not recorded in provenance entries
+Entries contain `content_digest` but not the algorithm ("sha256") or truncation length (16). If the algorithm changes, old digests become incomparable. Fix: add `"digest_algorithm": "sha256_16"` to provenance entries.
+**Source:** Kleppmann (expert review 5)
+
+---
+
 ## Expert Disagreements (Unresolved Tensions)
 
-### D-01: Governance proportionality
-Ousterhout and Hickey see the 10 ADRs + 5 ARCHITECTURE.md as disproportionate overhead for a 50-line codebase. Martin and the ADR structure argue this is insurance against future drift. **Resolution depends on whether the governance prevents real mistakes during migration.**
+### D-01: ~~Governance proportionality~~ RESOLVED
+Governance has proven itself across 5 DoDs: ADR-008 caught bugs in 3 consecutive falsification audits, ADR-002 enforced by import test prevented coupling, ADR-010 guided GridConfig SRP redesign, ADR-003 motivated pgid bounds check and month validation. Docs-to-code ratio improved from 7:1 to ~2:1 as codebase grew to 2,674 LOC.
 
 ### D-02: ~~Early Protocols vs. YAGNI~~ RESOLVED
 Built simplest thing first: aggregation strategies are plain functions, not Protocols. Validated by DoD004 — 3 strategies (count, sum_best, max_best) work without abstraction overhead. Extract Protocol when a second source needs different strategy signatures.
