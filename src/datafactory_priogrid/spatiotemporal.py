@@ -10,10 +10,10 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from datafactory_grid.config import GridConfig
-from datafactory_grid.generator import generate_grid
-from datafactory_grid.temporal_config import TemporalConfig
-from datafactory_grid.temporal_generator import generate_time_steps
+from datafactory_priogrid.cell_generator import generate_grid
+from datafactory_priogrid.grid_config import GridConfig
+from datafactory_priogrid.temporal_config import TemporalConfig
+from datafactory_priogrid.temporal_generator import generate_time_steps
 
 
 @dataclass(frozen=True)

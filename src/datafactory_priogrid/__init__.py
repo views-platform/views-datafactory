@@ -4,31 +4,31 @@ Pure numpy. Zero external data dependencies for grid generation.
 Shapefile used only for one-time parity validation.
 """
 
-from datafactory_grid.config import GridConfig
-from datafactory_grid.generator import (
+from datafactory_priogrid.cell_generator import (
     generate_bounding_boxes,
     generate_grid,
     latlon_to_pgid,
     pgid_to_latlon,
 )
-from datafactory_grid.readers import PyShpReader
-from datafactory_grid.spatiotemporal import SpatioTemporalGrid
-from datafactory_grid.temporal_config import TemporalConfig
-from datafactory_grid.temporal_generator import (
-    from_views_month_id,
-    generate_time_steps,
-    to_views_month_id,
-)
-from datafactory_grid.validation import (
+from datafactory_priogrid.grid_config import GridConfig
+from datafactory_priogrid.parity_validation import (
     ParityResult,
     ReferenceGeometryReader,
     record_parity_result,
     validate_parity,
 )
+from datafactory_priogrid.shapefile_reader import PyShpReader
+from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
+from datafactory_priogrid.temporal_config import TemporalConfig
+from datafactory_priogrid.temporal_generator import (
+    from_views_month_id,
+    generate_time_steps,
+    to_views_month_id,
+)
 
 # harvester.fetch_shapefile is not imported here to avoid pulling
-# 'requests' on every `import datafactory_grid`. Access it via:
-#     from datafactory_grid.harvester import fetch_shapefile
+# 'requests' on every `import datafactory_priogrid`. Access it via:
+#     from datafactory_priogrid.shapefile_harvester import fetch_shapefile
 
 __all__ = [
     "GridConfig",

@@ -38,21 +38,21 @@ Violations are architectural defects.
 ## The Dependency DAG
 
 ```
-Layer 0 (Foundation):    datafactory_core
+Layer 0 (Foundation):    datafactory_provenance
                               ^
                               |
-Layer 1 (Independent):   datafactory_grid    datafactory_harvester    datafactory_synthetic
+Layer 1 (Independent):   datafactory_priogrid    datafactory_harvester    datafactory_synthetic
                               ^
                               |
-Layer 2 (Compilation):   datafactory_compiler
+Layer 2 (Compilation):   datafactory_compilation
 ```
 
 ### Import Rules
 
-- `datafactory_core` imports nothing from any other `datafactory_*` package (Layer 0).
-- `datafactory_grid`, `datafactory_harvester`, and `datafactory_synthetic` each import **only** from `datafactory_core` (Layer 1). They are independent peers with **zero peer-to-peer imports**.
-- `datafactory_compiler` imports from `datafactory_core` and `datafactory_grid` (for coordinate arrays and grid config). It reads harvester and synthetic output as **files on disk** -- never as code imports (Layer 2).
-- No package imports from `datafactory_compiler`. Consumers read its filesystem output.
+- `datafactory_provenance` imports nothing from any other `datafactory_*` package (Layer 0).
+- `datafactory_priogrid`, `datafactory_harvester`, and `datafactory_synthetic` each import **only** from `datafactory_provenance` (Layer 1). They are independent peers with **zero peer-to-peer imports**.
+- `datafactory_compilation` imports from `datafactory_provenance` and `datafactory_priogrid` (for coordinate arrays and grid config). It reads harvester and synthetic output as **files on disk** -- never as code imports (Layer 2).
+- No package imports from `datafactory_compilation`. Consumers read its filesystem output.
 
 ### Data Flow (Filesystem-Mediated)
 
@@ -87,12 +87,12 @@ ADR-009 defines *what must be true at the boundary*.
 
 The following dependency violations are explicitly prohibited:
 
-- `datafactory_harvester` importing from `datafactory_grid` (sources don't know about the grid)
+- `datafactory_harvester` importing from `datafactory_priogrid` (sources don't know about the grid)
 - `datafactory_synthetic` importing from `datafactory_harvester` (sources are independent)
 - `datafactory_harvester` importing from `datafactory_synthetic` (sources are independent)
-- `datafactory_compiler` importing from `datafactory_harvester` or `datafactory_synthetic` (compilation reads files, not source-specific code)
-- `datafactory_grid` importing from `datafactory_compiler` or `datafactory_harvester` (the coordinate system is independent of data)
-- Any package importing from `datafactory_compiler` (consumers read filesystem output, not compiler code)
+- `datafactory_compilation` importing from `datafactory_harvester` or `datafactory_synthetic` (compilation reads files, not source-specific code)
+- `datafactory_priogrid` importing from `datafactory_compilation` or `datafactory_harvester` (the coordinate system is independent of data)
+- Any package importing from `datafactory_compilation` (consumers read filesystem output, not compiler code)
 - Any `datafactory_*` package importing from consumer repositories (e.g., the metric lab)
 - Cross-layer utility shortcuts that bypass the declared DAG
 

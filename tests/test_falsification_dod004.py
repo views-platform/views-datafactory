@@ -19,10 +19,10 @@ def test_get_strategy_logs_before_raising(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """get_strategy must log at ERROR before raising KeyError (ADR-008)."""
-    from datafactory_compiler.strategies import get_strategy
+    from datafactory_compilation.aggregation import get_strategy
 
     with (
-        caplog.at_level(logging.ERROR, logger="datafactory_compiler.strategies"),
+        caplog.at_level(logging.ERROR, logger="datafactory_compilation.aggregation"),
         pytest.raises(KeyError),
     ):
         get_strategy("nonexistent_strategy")
@@ -37,7 +37,7 @@ def test_get_strategy_logs_before_raising(
 
 def test_parse_month_index_rejects_month_13() -> None:
     """Month 13 is invalid — _parse_month_index must return None, not 12."""
-    from datafactory_compiler.compiler import _parse_month_index
+    from datafactory_compilation.grid_compilation import _parse_month_index
 
     result = _parse_month_index("2024-13-01", 2024, 1)
     assert result is None, (
@@ -48,7 +48,7 @@ def test_parse_month_index_rejects_month_13() -> None:
 
 def test_parse_month_index_rejects_month_0() -> None:
     """Month 0 is invalid — verify it returns None."""
-    from datafactory_compiler.compiler import _parse_month_index
+    from datafactory_compilation.grid_compilation import _parse_month_index
 
     result = _parse_month_index("2024-00-01", 2024, 1)
     assert result is None, (

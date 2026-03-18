@@ -1,4 +1,4 @@
-"""Tests for datafactory_core provenance utilities.
+"""Tests for datafactory_provenance provenance utilities.
 
 Covers green (correctness), beige (realistic misuse), and red (adversarial)
 categories per ADR-005.
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from datafactory_core import (
+from datafactory_provenance import (
     append_ledger_entry,
     compute_content_digest,
     last_digest,
@@ -205,7 +205,7 @@ class TestAppendLedgerEntryRed:
 class TestADR008Compliance:
     """ADR-008: structural failures must be both logged and raised."""
 
-    _logger = "datafactory_core.provenance"
+    _logger = "datafactory_provenance.provenance"
 
     def test_digest_type_error_logged(
         self, caplog: pytest.LogCaptureFixture

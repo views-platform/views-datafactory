@@ -1,7 +1,7 @@
 """Concrete shapefile readers for parity validation.
 
 Each reader implements the ReferenceGeometryReader protocol defined in
-validation.py. This module is the only place in datafactory_grid that
+validation.py. This module is the only place in datafactory_priogrid that
 imports a shapefile library -- everything else stays dependency-free.
 
 Current reader: PyShpReader (uses the pure-Python 'pyshp' package).

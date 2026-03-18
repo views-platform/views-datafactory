@@ -1,4 +1,4 @@
-# datafactory_compiler -- Architecture
+# datafactory_compilation -- Architecture
 
 ## Purpose
 
@@ -15,25 +15,25 @@ Compilation edge -- reads source data (Parquet from harvester, npy from syntheti
 
 **Does NOT own:**
 - Data fetching or API interaction (datafactory_harvester)
-- Grid definition or coordinate generation (datafactory_grid, but imports its configs)
+- Grid definition or coordinate generation (datafactory_priogrid, but imports its configs)
 - Synthetic data generation (datafactory_synthetic)
 - Source-specific parsing logic (reads generic Parquet columns declared in config)
 - Consumer-specific post-processing (consumers read compiled output as files)
 
 ## Dependency Rules
 
-**May import:** `datafactory_core`, `datafactory_grid` (for GridConfig, TemporalConfig, coordinate arrays), numpy, pyarrow
+**May import:** `datafactory_provenance`, `datafactory_priogrid` (for GridConfig, TemporalConfig, coordinate arrays), numpy, pyarrow
 **Must never import:** `datafactory_harvester`, `datafactory_synthetic`, or any consumer
 **Data coupling:** Reads harvester/synthetic output as FILES on disk. The filesystem is the decoupling boundary (ADR-002).
 
 ## Package Structure
 
 ```
-datafactory_compiler/
+datafactory_compilation/
     __init__.py        -- public API: CompilationConfig, compile_grid, get_strategy
-    config.py          -- CompilationConfig (frozen, validated)
-    strategies.py      -- built-in aggregation functions (count, sum_best, max_best) + registry
-    compiler.py        -- compile_grid (main function), event placement, aggregation
+    compilation_config.py -- CompilationConfig (frozen, validated)
+    aggregation.py -- built-in aggregation functions (count, sum_best, max_best) + registry
+    grid_compilation.py -- compile_grid (main function), event placement, aggregation
 ```
 
 ## Key Concepts

@@ -13,7 +13,7 @@ ADR-002 declares strict import rules but the only enforcement is the import-enfo
 **Source:** Martin, Feathers
 
 ### C-02: Dual version source
-`pyproject.toml:3` declares `version = "0.1.0"` and `src/datafactory_core/__init__.py:8` declares `__version__ = "0.1.0"`. These can diverge silently. Consider `hatch-vcs` or dynamic version reading.
+`pyproject.toml:3` declares `version = "0.1.0"` and `src/datafactory_provenance/__init__.py:8` declares `__version__ = "0.1.0"`. These can diverge silently. Consider `hatch-vcs` or dynamic version reading.
 **Source:** Martin
 
 ### C-03: Protocol proliferation risk in synthetic module
@@ -27,7 +27,7 @@ Dict-based source registry implemented in `datafactory_harvester/sources/__init_
 Formal CIC created at `docs/CICs/SpatioTemporalGrid.md` (DoD002). Section 3 explicitly states delegation, not duplication.
 
 ### C-06: Provenance logic should be a composable utility, not distributed
-ARCHITECTURE.md files specify every module must write provenance. This distributes the concern. A context manager or decorator in `datafactory_core` would be simpler.
+ARCHITECTURE.md files specify every module must write provenance. This distributes the concern. A context manager or decorator in `datafactory_provenance` would be simpler.
 **Source:** Hickey
 
 ### C-07: Frozen dataclass pattern repeated without shared base

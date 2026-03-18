@@ -11,14 +11,14 @@ Or use the registry:
     fetch_source("ucdp_annual", config=...)
 """
 
-from datafactory_harvester.sources import fetch_source, list_sources, register_source
-from datafactory_harvester.storage import archive_snapshot, save_event_snapshot
-from datafactory_harvester.validation import (
+from datafactory_harvester.event_validation import (
     ComparisonResult,
     ValidationResult,
     compare_snapshots,
     validate_events,
 )
+from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
+from datafactory_harvester.sources import fetch_source, list_sources, register_source
 
 __all__ = [
     "ValidationResult",

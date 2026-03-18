@@ -15,11 +15,11 @@ from pathlib import Path
 import numpy as np
 import pyarrow.parquet as pq
 
-from datafactory_compiler.config import CompilationConfig
-from datafactory_compiler.strategies import get_strategy
-from datafactory_core import append_ledger_entry, compute_content_digest
-from datafactory_grid.generator import generate_grid
-from datafactory_grid.temporal_generator import generate_time_steps
+from datafactory_compilation.aggregation import get_strategy
+from datafactory_compilation.compilation_config import CompilationConfig
+from datafactory_priogrid.cell_generator import generate_grid
+from datafactory_priogrid.temporal_generator import generate_time_steps
+from datafactory_provenance import append_ledger_entry, compute_content_digest
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ def _place_events(
     Returns:
         Dict mapping (pgid_0based_index, time_index) to list of events.
     """
-    from datafactory_grid.generator import latlon_to_pgid
+    from datafactory_priogrid.cell_generator import latlon_to_pgid
 
     bins: dict[tuple[int, int], list[dict]] = defaultdict(list)
     n_skipped_spatial = 0

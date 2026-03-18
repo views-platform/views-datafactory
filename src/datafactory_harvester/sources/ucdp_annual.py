@@ -18,14 +18,14 @@ from pathlib import Path
 
 import requests
 
-from datafactory_core import append_ledger_entry, last_digest
-from datafactory_harvester.sources import register_source
-from datafactory_harvester.storage import archive_snapshot, save_event_snapshot
-from datafactory_harvester.validation import (
+from datafactory_harvester.event_validation import (
     ComparisonResult,
     compare_snapshots,
     validate_events,
 )
+from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
+from datafactory_harvester.sources import register_source
+from datafactory_provenance import append_ledger_entry, last_digest
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ import logging
 
 import numpy as np
 
-from datafactory_grid.config import DEFAULT_GRID_CONFIG, GridConfig
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG, GridConfig
 
 logger = logging.getLogger(__name__)
 

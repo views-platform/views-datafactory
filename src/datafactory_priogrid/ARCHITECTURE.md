@@ -1,4 +1,4 @@
-# datafactory_grid -- Architecture
+# datafactory_priogrid -- Architecture
 
 ## Purpose
 
@@ -25,8 +25,8 @@ PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate 
 
 ## Dependency Rules
 
-**May import:** `datafactory_core`, numpy, pyshp (shapefile reader only)
-**Must never import:** `datafactory_harvester`, `datafactory_compiler`, `datafactory_synthetic`, or any consumer
+**May import:** `datafactory_provenance`, numpy, pyshp (shapefile reader only)
+**Must never import:** `datafactory_harvester`, `datafactory_compilation`, `datafactory_synthetic`, or any consumer
 
 ## Key Concepts
 

@@ -6,18 +6,18 @@ Data factory for the VIEWS conflict forecasting platform.
 
 The system is a **graph, not a pipeline**:
 - **Source nodes** (`datafactory_harvester`, `datafactory_synthetic`) produce raw data independently
-- **Compilation edges** (`datafactory_compiler`) transform source data into consumer formats (grid npy now, others later)
+- **Compilation edges** (`datafactory_compilation`) transform source data into consumer formats (grid npy now, others later)
 - **Consumer nodes** (metric lab, other VIEWS repos) read compiled outputs
 - Sources don't know about consumers. Independence is enforced by the filesystem.
 
 ## Package Layout (Option B)
 
 Multiple top-level packages under `src/` with `datafactory_` prefix:
-- `datafactory_core` — shared foundations, no outbound imports
-- `datafactory_grid` — PRIO-GRID spatial + temporal backbone (imports core only)
-- `datafactory_harvester` — data ingestion with pluggable sources (imports core only)
-- `datafactory_compiler` — source data → grid npy (imports core + grid)
-- `datafactory_synthetic` — grid-native synthetic generation (imports core only)
+- `datafactory_provenance` — provenance utilities (digests, ledgers), no outbound imports
+- `datafactory_priogrid` — PRIO-GRID spatial + temporal backbone (imports provenance only)
+- `datafactory_harvester` — data ingestion with pluggable sources (imports provenance only)
+- `datafactory_compilation` — source data → grid npy (imports provenance + priogrid)
+- `datafactory_synthetic` — grid-native synthetic generation (imports provenance only)
 
 ## Tooling
 

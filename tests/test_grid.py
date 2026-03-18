@@ -1,8 +1,8 @@
-"""Tests for datafactory_grid -- PRIO-GRID spatial backbone.
+"""Tests for datafactory_priogrid -- PRIO-GRID spatial backbone.
 
 Ported from views-metric-lab/tests/test_grid.py with adaptations:
 - GridConfig no longer has path/URL fields (SRP redesign)
-- Provenance tests use datafactory_core utilities
+- Provenance tests use datafactory_provenance utilities
 - harvester.py signature takes explicit paths instead of GridConfig
 """
 
@@ -14,14 +14,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from datafactory_grid.config import GridConfig
-from datafactory_grid.generator import (
+from datafactory_priogrid.cell_generator import (
     generate_bounding_boxes,
     generate_grid,
     latlon_to_pgid,
     pgid_to_latlon,
 )
-from datafactory_grid.validation import ParityResult, validate_parity
+from datafactory_priogrid.grid_config import GridConfig
+from datafactory_priogrid.parity_validation import ParityResult, validate_parity
 
 # ---------------------------------------------------------------------------
 # GridConfig
@@ -265,22 +265,22 @@ def test_quarter_degree_grid() -> None:
 
 
 def test_generate_time_steps_default_length() -> None:
-    from datafactory_grid.temporal_generator import generate_time_steps
+    from datafactory_priogrid.temporal_generator import generate_time_steps
 
     steps = generate_time_steps()
     assert len(steps) == 432
 
 
 def test_generate_time_steps_dtype() -> None:
-    from datafactory_grid.temporal_generator import generate_time_steps
+    from datafactory_priogrid.temporal_generator import generate_time_steps
 
     steps = generate_time_steps()
     assert steps.dtype == np.dtype("datetime64[M]")
 
 
 def test_generate_time_steps_custom_range() -> None:
-    from datafactory_grid.temporal_config import TemporalConfig
-    from datafactory_grid.temporal_generator import generate_time_steps
+    from datafactory_priogrid.temporal_config import TemporalConfig
+    from datafactory_priogrid.temporal_generator import generate_time_steps
 
     cfg = TemporalConfig(start_year=2020, end_year=2020)
     steps = generate_time_steps(cfg)
@@ -289,7 +289,7 @@ def test_generate_time_steps_custom_range() -> None:
 
 def test_views_month_id_epoch() -> None:
     """January 1980 = month_id 1 (VIEWS convention)."""
-    from datafactory_grid.temporal_generator import to_views_month_id
+    from datafactory_priogrid.temporal_generator import to_views_month_id
 
     result = to_views_month_id(np.datetime64("1980-01", "M"))
     assert int(result) == 1
@@ -297,21 +297,21 @@ def test_views_month_id_epoch() -> None:
 
 def test_views_month_id_1989() -> None:
     """January 1989 = month_id 109."""
-    from datafactory_grid.temporal_generator import to_views_month_id
+    from datafactory_priogrid.temporal_generator import to_views_month_id
 
     result = to_views_month_id(np.datetime64("1989-01", "M"))
     assert int(result) == 109
 
 
 def test_from_views_month_id_epoch() -> None:
-    from datafactory_grid.temporal_generator import from_views_month_id
+    from datafactory_priogrid.temporal_generator import from_views_month_id
 
     result = from_views_month_id(1)
     assert result == np.datetime64("1980-01", "M")
 
 
 def test_views_month_id_roundtrip() -> None:
-    from datafactory_grid.temporal_generator import (
+    from datafactory_priogrid.temporal_generator import (
         from_views_month_id,
         to_views_month_id,
     )
@@ -327,42 +327,42 @@ def test_views_month_id_roundtrip() -> None:
 
 
 def test_spatiotemporal_default_shape() -> None:
-    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+    from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 
     grid = SpatioTemporalGrid()
     assert grid.shape == (259_200, 432)
 
 
 def test_spatiotemporal_delegates_n_cells() -> None:
-    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+    from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 
     grid = SpatioTemporalGrid()
     assert grid.n_cells == grid.grid_config.n_cells
 
 
 def test_spatiotemporal_delegates_n_steps() -> None:
-    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+    from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 
     grid = SpatioTemporalGrid()
     assert grid.n_steps == grid.temporal_config.n_steps
 
 
 def test_spatiotemporal_pgids_length() -> None:
-    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+    from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 
     grid = SpatioTemporalGrid()
     assert len(grid.pgids) == grid.n_cells
 
 
 def test_spatiotemporal_time_steps_length() -> None:
-    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+    from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 
     grid = SpatioTemporalGrid()
     assert len(grid.time_steps) == grid.n_steps
 
 
 def test_spatiotemporal_custom_config() -> None:
-    from datafactory_grid.spatiotemporal import SpatioTemporalGrid
+    from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 
     grid = SpatioTemporalGrid(grid_config=GridConfig(resolution=90.0))
     assert grid.shape == (8, 432)
@@ -374,13 +374,13 @@ def test_spatiotemporal_custom_config() -> None:
 
 
 def test_harvester_uses_core_provenance_functions() -> None:
-    """Harvester must use datafactory_core provenance, not private reimplementations."""
-    import datafactory_core
-    import datafactory_grid.harvester as h
+    """Harvester must use datafactory_provenance, not reimplementations."""
+    import datafactory_priogrid.shapefile_harvester as h
+    import datafactory_provenance
 
-    assert h.compute_content_digest is datafactory_core.compute_content_digest
-    assert h.append_ledger_entry is datafactory_core.append_ledger_entry
-    assert h.last_digest is datafactory_core.last_digest
+    assert h.compute_content_digest is datafactory_provenance.compute_content_digest
+    assert h.append_ledger_entry is datafactory_provenance.append_ledger_entry
+    assert h.last_digest is datafactory_provenance.last_digest
 
 
 def _make_fake_zip() -> bytes:
@@ -399,7 +399,7 @@ def test_fetch_shapefile_full_flow(tmp_path: Path) -> None:
     """Mock download: extracts ZIP, writes provenance entry."""
     from unittest.mock import MagicMock, patch
 
-    from datafactory_grid.harvester import fetch_shapefile
+    from datafactory_priogrid.shapefile_harvester import fetch_shapefile
 
     fake_zip = _make_fake_zip()
     mock_resp = MagicMock()
@@ -408,7 +408,8 @@ def test_fetch_shapefile_full_flow(tmp_path: Path) -> None:
 
     ledger = tmp_path / "provenance" / "ledger.jsonl"
 
-    with patch("datafactory_grid.harvester.requests.get", return_value=mock_resp):
+    _target = "datafactory_priogrid.shapefile_harvester.requests.get"
+    with patch(_target, return_value=mock_resp):
         result = fetch_shapefile(
             url="http://example.com/test.zip",
             data_dir=tmp_path / "data",
@@ -428,8 +429,8 @@ def test_fetch_shapefile_unchanged_content(tmp_path: Path) -> None:
     """When digest matches previous, record heartbeat without extraction."""
     from unittest.mock import MagicMock, patch
 
-    from datafactory_core import append_ledger_entry, compute_content_digest
-    from datafactory_grid.harvester import fetch_shapefile
+    from datafactory_priogrid.shapefile_harvester import fetch_shapefile
+    from datafactory_provenance import append_ledger_entry, compute_content_digest
 
     fake_zip = _make_fake_zip()
     digest = compute_content_digest(fake_zip)
@@ -442,7 +443,8 @@ def test_fetch_shapefile_unchanged_content(tmp_path: Path) -> None:
     mock_resp.content = fake_zip
     mock_resp.raise_for_status = MagicMock()
 
-    with patch("datafactory_grid.harvester.requests.get", return_value=mock_resp):
+    _target = "datafactory_priogrid.shapefile_harvester.requests.get"
+    with patch(_target, return_value=mock_resp):
         fetch_shapefile(
             url="http://example.com/test.zip",
             data_dir=tmp_path / "data",
@@ -459,14 +461,14 @@ def test_fetch_shapefile_existing_files(tmp_path: Path) -> None:
     """When .shp files already exist, return without downloading."""
     from unittest.mock import patch
 
-    from datafactory_grid.harvester import fetch_shapefile
+    from datafactory_priogrid.shapefile_harvester import fetch_shapefile
 
     # Create existing shapefile
     shp_dir = tmp_path / "data" / "shapefile"
     shp_dir.mkdir(parents=True)
     (shp_dir / "existing.shp").write_text("fake")
 
-    with patch("datafactory_grid.harvester.requests.get") as mock_get:
+    with patch("datafactory_priogrid.shapefile_harvester.requests.get") as mock_get:
         result = fetch_shapefile(
             data_dir=tmp_path / "data",
             ledger_path=tmp_path / "ledger.jsonl",
@@ -480,14 +482,14 @@ def test_download_retries_on_failure() -> None:
     """_download should retry on transient errors with exponential backoff."""
     from unittest.mock import MagicMock, patch
 
-    from datafactory_grid.harvester import _download
+    from datafactory_priogrid.shapefile_harvester import _download
 
     mock_resp = MagicMock()
     mock_resp.content = b"success"
     mock_resp.raise_for_status = MagicMock()
 
-    with patch("datafactory_grid.harvester.requests.get") as mock_get, \
-         patch("datafactory_grid.harvester.time.sleep") as mock_sleep:
+    with patch("datafactory_priogrid.shapefile_harvester.requests.get") as mock_get, \
+         patch("datafactory_priogrid.shapefile_harvester.time.sleep") as mock_sleep:
         import requests as _req
 
         mock_get.side_effect = [
@@ -508,7 +510,7 @@ def test_extract_zip_rejects_corrupt_content() -> None:
     """_extract_zip should raise BadZipFile on non-ZIP bytes."""
     import zipfile as _zf
 
-    from datafactory_grid.harvester import _extract_zip
+    from datafactory_priogrid.shapefile_harvester import _extract_zip
 
     with pytest.raises(_zf.BadZipFile):
         _extract_zip(b"this is not a zip file", Path("/tmp/should_not_exist"))
@@ -522,8 +524,8 @@ def test_extract_zip_rejects_corrupt_content() -> None:
 class TestGridADR008Compliance:
     """ADR-008: structural failures must be both logged and raised."""
 
-    _grid_logger = "datafactory_grid.config"
-    _temporal_logger = "datafactory_grid.temporal_config"
+    _grid_logger = "datafactory_priogrid.grid_config"
+    _temporal_logger = "datafactory_priogrid.temporal_config"
 
     def test_gridconfig_invalid_resolution_logged(
         self, caplog: pytest.LogCaptureFixture
@@ -542,7 +544,7 @@ class TestGridADR008Compliance:
     ) -> None:
         import logging
 
-        from datafactory_grid.temporal_config import TemporalConfig
+        from datafactory_priogrid.temporal_config import TemporalConfig
 
         with (
             caplog.at_level(logging.ERROR, logger=self._temporal_logger),
@@ -557,7 +559,10 @@ class TestGridADR008Compliance:
         import logging
 
         with (
-            caplog.at_level(logging.ERROR, logger="datafactory_grid.generator"),
+            caplog.at_level(
+                logging.ERROR,
+                logger="datafactory_priogrid.cell_generator",
+            ),
             pytest.raises(ValueError),
         ):
             pgid_to_latlon(0)
@@ -571,14 +576,14 @@ class TestGridADR008Compliance:
 
 def test_views_month_id_pre_epoch_returns_zero() -> None:
     """December 1979 is month_id 0 — documented behavior."""
-    from datafactory_grid.temporal_generator import to_views_month_id
+    from datafactory_priogrid.temporal_generator import to_views_month_id
 
     assert int(to_views_month_id(np.datetime64("1979-12", "M"))) == 0
 
 
 def test_views_month_id_pre_epoch_returns_negative() -> None:
     """January 1970 is month_id -119 — documented behavior."""
-    from datafactory_grid.temporal_generator import to_views_month_id
+    from datafactory_priogrid.temporal_generator import to_views_month_id
 
     assert int(to_views_month_id(np.datetime64("1970-01", "M"))) == -119
 
@@ -693,7 +698,7 @@ def _write_synthetic_shapefile(
 
 def test_pyshp_reader_roundtrip(tmp_path: Path) -> None:
     """PyShpReader should recover the same (gid, lat, lon) we wrote."""
-    from datafactory_grid.readers import PyShpReader
+    from datafactory_priogrid.shapefile_reader import PyShpReader
 
     cells = [
         (1, -89.75, -179.75),
@@ -717,7 +722,7 @@ def test_pyshp_reader_roundtrip(tmp_path: Path) -> None:
 
 def test_pyshp_reader_alternative_field_names(tmp_path: Path) -> None:
     """Reader should discover fields regardless of naming convention."""
-    from datafactory_grid.readers import PyShpReader
+    from datafactory_priogrid.shapefile_reader import PyShpReader
 
     cells = [(42, 10.25, 30.75)]
     shp_dir = _write_synthetic_shapefile(
@@ -737,7 +742,7 @@ def test_pyshp_reader_geometry_fallback(tmp_path: Path) -> None:
     """When centroid fields are missing, reader should use bounding box."""
     import shapefile as shp
 
-    from datafactory_grid.readers import PyShpReader
+    from datafactory_priogrid.shapefile_reader import PyShpReader
 
     shp_path = tmp_path / "no_coords"
     with shp.Writer(str(shp_path)) as w:
@@ -766,7 +771,7 @@ def test_pyshp_reader_geometry_fallback(tmp_path: Path) -> None:
 
 def test_pyshp_reader_parity_integration(tmp_path: Path) -> None:
     """Full integration: write synthetic shapefile, read it, validate parity."""
-    from datafactory_grid.readers import PyShpReader
+    from datafactory_priogrid.shapefile_reader import PyShpReader
 
     cfg = GridConfig(resolution=90.0)
     pgids, lats, lons = generate_grid(cfg)
@@ -786,7 +791,7 @@ def test_pyshp_reader_parity_integration(tmp_path: Path) -> None:
 
 def test_parity_provenance_recording(tmp_path: Path) -> None:
     """record_parity_result should write valid JSONL via core provenance."""
-    from datafactory_grid.validation import record_parity_result
+    from datafactory_priogrid.parity_validation import record_parity_result
 
     ledger = tmp_path / "parity_validation.jsonl"
     result = ParityResult(

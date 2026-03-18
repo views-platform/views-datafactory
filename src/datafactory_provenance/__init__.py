@@ -3,7 +3,7 @@
 No outbound imports to other datafactory_* packages.
 """
 
-from datafactory_core.provenance import (
+from datafactory_provenance.provenance import (
     append_ledger_entry,
     compute_content_digest,
     last_digest,

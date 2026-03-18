@@ -73,7 +73,7 @@ fetch_shapefile(url=..., data_dir=..., ledger_path=...)
 - Aligns with ADR-001 ontology categories
 
 ### Negative
-- Metric lab consumers migrating to datafactory_grid must update call sites to pass paths explicitly
+- Metric lab consumers migrating to datafactory_priogrid must update call sites to pass paths explicitly
 - The default paths (`data/priogrid`, `provenance/priogrid`) now live as constants in `harvester.py`, not in a shared config
 
 These costs are accepted intentionally.
@@ -82,15 +82,15 @@ These costs are accepted intentionally.
 
 ## Implementation Notes
 
-- `datafactory_grid/config.py` contains the slimmed GridConfig
-- `datafactory_grid/harvester.py` accepts `url`, `data_dir`, `ledger_path` as function arguments with sensible defaults
-- `datafactory_grid/validation.py:record_parity_result` accepts `ledger_path` as argument
+- `datafactory_priogrid/grid_config.py` contains the slimmed GridConfig
+- `datafactory_priogrid/shapefile_harvester.py` accepts `url`, `data_dir`, `ledger_path` as function arguments with sensible defaults
+- `datafactory_priogrid/parity_validation.py:record_parity_result` accepts `ledger_path` as argument
 - The metric lab's `lab_grid/config.py` is not modified (it remains as-is for the lab's own use)
 
 ---
 
 ## References
 
-- `src/datafactory_grid/config.py` -- the implementation
+- `src/datafactory_priogrid/grid_config.py` -- the implementation
 - `reports/concerns00.md` -- expert review identified GridConfig overload
 - `docs/CICs/GridConfig.md` -- intent contract for the slimmed config

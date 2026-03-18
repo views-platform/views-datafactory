@@ -1,4 +1,4 @@
-"""Tests for datafactory_compiler -- grid compilation.
+"""Tests for datafactory_compilation -- grid compilation.
 
 Tests use a tiny 8-cell grid (resolution=90 deg) and synthetic
 events to keep tests fast and readable.
@@ -14,11 +14,11 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from datafactory_compiler.compiler import compile_grid
-from datafactory_compiler.config import CompilationConfig
-from datafactory_compiler.strategies import count, get_strategy, max_best, sum_best
-from datafactory_grid.config import GridConfig
-from datafactory_grid.temporal_config import TemporalConfig
+from datafactory_compilation.aggregation import count, get_strategy, max_best, sum_best
+from datafactory_compilation.compilation_config import CompilationConfig
+from datafactory_compilation.grid_compilation import compile_grid
+from datafactory_priogrid.grid_config import GridConfig
+from datafactory_priogrid.temporal_config import TemporalConfig
 
 # ---- Helpers ----
 
@@ -196,7 +196,7 @@ class TestCompileGridGreen:
         grid = np.load(tmp_path / "output" / "grid.npy")
 
         # Find which cell lat=-45, lon=-90 maps to
-        from datafactory_grid.generator import latlon_to_pgid
+        from datafactory_priogrid.cell_generator import latlon_to_pgid
 
         pgid_sw = int(latlon_to_pgid(-45.0, -90.0, TINY_GRID))
         pgid_nw = int(latlon_to_pgid(45.0, -90.0, TINY_GRID))
@@ -222,7 +222,7 @@ class TestCompileGridGreen:
         compile_grid(cfg)
         grid = np.load(tmp_path / "output" / "grid.npy")
 
-        from datafactory_grid.generator import latlon_to_pgid
+        from datafactory_priogrid.cell_generator import latlon_to_pgid
 
         pgid_sw = int(latlon_to_pgid(-45.0, -90.0, TINY_GRID))
         # January: best=10 + best=5 = 15

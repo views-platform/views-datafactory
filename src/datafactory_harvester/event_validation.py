@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from datafactory_core import compute_content_digest
+from datafactory_provenance import compute_content_digest
 
 logger = logging.getLogger(__name__)
 

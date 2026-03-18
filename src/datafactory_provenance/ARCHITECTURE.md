@@ -1,4 +1,4 @@
-# datafactory_core -- Architecture
+# datafactory_provenance -- Architecture
 
 ## Purpose
 
@@ -17,9 +17,9 @@ Shared foundations for all datafactory packages. Contains provenance utilities a
 - Common type definitions — if multiple packages need them
 
 **Does NOT own:**
-- Grid coordinate generation (datafactory_grid)
+- Grid coordinate generation (datafactory_priogrid)
 - Data fetching or API interaction (datafactory_harvester)
-- Compilation logic (datafactory_compiler)
+- Compilation logic (datafactory_compilation)
 - Synthetic data generation (datafactory_synthetic)
 - Domain-specific configuration (each package owns its own config)
 - I/O beyond provenance ledger append and digest computation

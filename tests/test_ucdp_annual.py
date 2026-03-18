@@ -140,7 +140,7 @@ class TestFetchUcdpAnnualGreen:
         snap_path.parent.mkdir(parents=True)
         snap_path.write_text("fake")
 
-        from datafactory_core import append_ledger_entry
+        from datafactory_provenance import append_ledger_entry
 
         append_ledger_entry(config.ledger_path, {"content_digest": "abc123"})
 

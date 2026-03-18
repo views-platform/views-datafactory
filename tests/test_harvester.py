@@ -235,7 +235,7 @@ class TestSaveEventSnapshotBeige:
 class TestArchiveSnapshotGreen:
 
     def test_archives_existing_file(self, tmp_path: Path) -> None:
-        from datafactory_harvester.storage import archive_snapshot
+        from datafactory_harvester.snapshot_storage import archive_snapshot
 
         path = tmp_path / "snap.parquet"
         path.write_text("data")
@@ -245,7 +245,7 @@ class TestArchiveSnapshotGreen:
         assert not path.exists()
 
     def test_returns_none_for_missing_file(self, tmp_path: Path) -> None:
-        from datafactory_harvester.storage import archive_snapshot
+        from datafactory_harvester.snapshot_storage import archive_snapshot
 
         result = archive_snapshot(tmp_path / "nope.parquet")
         assert result is None

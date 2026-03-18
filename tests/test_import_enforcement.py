@@ -1,11 +1,11 @@
 """ADR-002 import enforcement: verify the dependency DAG.
 
 The topology rules (docs/ADRs/002_topology_and_dependency_rules.md):
-- datafactory_core imports nothing from datafactory_*
-- datafactory_grid imports only from datafactory_core
-- datafactory_harvester imports only from datafactory_core
-- datafactory_synthetic imports only from datafactory_core
-- datafactory_compiler imports only from datafactory_core and datafactory_grid
+- datafactory_provenance imports nothing from datafactory_*
+- datafactory_priogrid imports only from datafactory_provenance
+- datafactory_harvester imports only from datafactory_provenance
+- datafactory_synthetic imports only from datafactory_provenance
+- datafactory_compilation imports from datafactory_provenance + datafactory_priogrid
 """
 
 from __future__ import annotations
@@ -15,11 +15,11 @@ from pathlib import Path
 
 # Allowed imports per package (beyond stdlib and external libs)
 ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
-    "datafactory_core": set(),
-    "datafactory_grid": {"datafactory_core"},
-    "datafactory_harvester": {"datafactory_core"},
-    "datafactory_synthetic": {"datafactory_core"},
-    "datafactory_compiler": {"datafactory_core", "datafactory_grid"},
+    "datafactory_provenance": set(),
+    "datafactory_priogrid": {"datafactory_provenance"},
+    "datafactory_harvester": {"datafactory_provenance"},
+    "datafactory_synthetic": {"datafactory_provenance"},
+    "datafactory_compilation": {"datafactory_provenance", "datafactory_priogrid"},
 }
 
 ALL_PACKAGES = set(ALLOWED_INTERNAL_IMPORTS.keys())

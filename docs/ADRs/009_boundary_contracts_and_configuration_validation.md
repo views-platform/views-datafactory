@@ -48,11 +48,11 @@ Every boundary between components must define:
 
 ### Domain-Specific Boundaries
 
-**GridConfig boundary:** `__post_init__` validates resolution > 0, west < east, south < north, resolution evenly divides extent. Violations raise immediately. (Implemented in `datafactory_grid/config.py`.)
+**GridConfig boundary:** `__post_init__` validates resolution > 0, west < east, south < north, resolution evenly divides extent. Violations raise immediately. (Implemented in `datafactory_priogrid/config.py`.)
 
 **UcdpAnnualConfig boundary (implemented):** `__post_init__` validates end_year >= start_year, page_size >= 1, max_retries >= 1, version non-empty. (Implemented in `datafactory_harvester/sources/ucdp_annual.py`.)
 
-**Harvester-to-filesystem boundary (implemented):** ValidationResult checked before `save_event_snapshot`. Content digest computed via `datafactory_core.compute_content_digest`. Schema snapshot captured. Comparison against previous snapshot detects added/removed/revised events.
+**Harvester-to-filesystem boundary (implemented):** ValidationResult checked before `save_event_snapshot`. Content digest computed via `datafactory_provenance.compute_content_digest`. Schema snapshot captured. Comparison against previous snapshot detects added/removed/revised events.
 
 **CompilationConfig boundary (implemented):** `__post_init__` validates features non-empty. Source existence checked at compile time (FileNotFoundError). Feature list declared in config, never inferred from Parquet columns.
 

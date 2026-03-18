@@ -9,7 +9,7 @@ import logging
 
 import numpy as np
 
-from datafactory_grid.temporal_config import TemporalConfig
+from datafactory_priogrid.temporal_config import TemporalConfig
 
 logger = logging.getLogger(__name__)
 

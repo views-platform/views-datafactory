@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from importlib.metadata import version
 
-from datafactory_compiler import __all__ as compiler_all
-from datafactory_core import __all__ as core_all
-from datafactory_core import __version__
-from datafactory_grid import __all__ as grid_all
+from datafactory_compilation import __all__ as compiler_all
 from datafactory_harvester import __all__ as harvester_all
+from datafactory_priogrid import __all__ as grid_all
+from datafactory_provenance import __all__ as core_all
+from datafactory_provenance import __version__
 from datafactory_synthetic import __all__ as synthetic_all
 
 

@@ -17,10 +17,11 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from datafactory_core import (
-    append_ledger_entry,
-    last_digest_for_version,
+from datafactory_harvester.event_validation import (
+    compare_snapshots,
+    validate_events,
 )
+from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
 from datafactory_harvester.sources import register_source
 from datafactory_harvester.sources.ucdp_annual import (
     FIELD_TYPES,
@@ -29,10 +30,9 @@ from datafactory_harvester.sources.ucdp_annual import (
     fetch_paginated,
     request_with_retry,
 )
-from datafactory_harvester.storage import archive_snapshot, save_event_snapshot
-from datafactory_harvester.validation import (
-    compare_snapshots,
-    validate_events,
+from datafactory_provenance import (
+    append_ledger_entry,
+    last_digest_for_version,
 )
 
 logger = logging.getLogger(__name__)

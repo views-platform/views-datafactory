@@ -17,18 +17,18 @@ Grid-native synthetic data generation with controllable covariance structure. Pr
 - Provenance tracking (config hash + seed + generator version)
 
 **Does NOT own:**
-- Grid coordinate definition (receives grid parameters via config or file, does not import datafactory_grid)
+- Grid coordinate definition (receives grid parameters via config or file, does not import datafactory_priogrid)
 - Data fetching or harvesting (datafactory_harvester)
-- Compilation or format conversion (datafactory_compiler)
+- Compilation or format conversion (datafactory_compilation)
 - Statistical fidelity validation (future validation node, not this module)
 - Model evaluation or calibration (metric lab's domain)
 
 ## Dependency Rules
 
-**May import:** `datafactory_core`, numpy
-**Must never import:** `datafactory_grid`, `datafactory_harvester`, `datafactory_compiler`, or any consumer
+**May import:** `datafactory_provenance`, numpy
+**Must never import:** `datafactory_priogrid`, `datafactory_harvester`, `datafactory_compilation`, or any consumer
 
-**Design note:** The synthetic module needs grid coordinates (cell positions for spatial correlation). These are passed in via configuration or loaded from file, not obtained by importing `datafactory_grid`. This preserves source node independence (ADR-002).
+**Design note:** The synthetic module needs grid coordinates (cell positions for spatial correlation). These are passed in via configuration or loaded from file, not obtained by importing `datafactory_priogrid`. This preserves source node independence (ADR-002).
 
 ## Key Concepts
 
@@ -57,7 +57,7 @@ Grid-native synthetic data generation with controllable covariance structure. Pr
 - **Provenance:** Every generation writes a ledger entry: config hash + seed + generator version -> output digest
 - **Config-driven:** All generation parameters come from SyntheticConfig. No hardcoded statistical parameters.
 - **Pluggable components:** Spatial kernels, temporal processes, and magnitude distributions are Protocol-based (DIP)
-- **No grid import:** Receives grid dimensions/positions via config, not by importing datafactory_grid (ADR-002)
+- **No grid import:** Receives grid dimensions/positions via config, not by importing datafactory_priogrid (ADR-002)
 - **Validated config:** `__post_init__` checks: positive variances, valid correlation ranges (0 <= rho <= 1), seed is int, n_cells > 0, n_steps > 0
 
 ## CIC Stubs

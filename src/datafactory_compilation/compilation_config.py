@@ -6,9 +6,9 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from datafactory_grid.config import DEFAULT_GRID_CONFIG, GridConfig
-from datafactory_grid.temporal_config import TemporalConfig
-from datafactory_grid.temporal_generator import DEFAULT_TEMPORAL_CONFIG
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG, GridConfig
+from datafactory_priogrid.temporal_config import TemporalConfig
+from datafactory_priogrid.temporal_generator import DEFAULT_TEMPORAL_CONFIG
 
 logger = logging.getLogger(__name__)
 

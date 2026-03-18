@@ -67,7 +67,7 @@ All failures are immediate and loud. No silent fallbacks.
 
 ## 7. Boundaries and Interactions
 
-- May be imported by any `datafactory_*` package (via `datafactory_grid`)
+- May be imported by any `datafactory_*` package (via `datafactory_priogrid`)
 - Used by `generate_grid`, `generate_bounding_boxes`, `pgid_to_latlon`, `latlon_to_pgid`
 - Composed into `SpatioTemporalGrid`
 - Must not depend on any other `datafactory_*` class

@@ -14,8 +14,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from datafactory_core import append_ledger_entry
-from datafactory_grid.config import DEFAULT_GRID_CONFIG, GridConfig
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG, GridConfig
+from datafactory_provenance import append_ledger_entry
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ def validate_parity(
     Returns:
         ParityResult with match details.
     """
-    from datafactory_grid.generator import generate_grid
+    from datafactory_priogrid.cell_generator import generate_grid
 
     # Generate our grid
     pgids, lats, lons = generate_grid(config)

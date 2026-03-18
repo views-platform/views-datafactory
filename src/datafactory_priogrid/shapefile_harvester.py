@@ -8,7 +8,7 @@ The shapefile is a one-time critical artifact. If the origin URL goes
 dead, the local copy is the fallback.
 
 All I/O parameters are injected at call sites. Provenance uses
-datafactory_core utilities.
+datafactory_provenance utilities.
 """
 
 import io
@@ -19,7 +19,11 @@ from pathlib import Path
 
 import requests
 
-from datafactory_core import append_ledger_entry, compute_content_digest, last_digest
+from datafactory_provenance import (
+    append_ledger_entry,
+    compute_content_digest,
+    last_digest,
+)
 
 logger = logging.getLogger(__name__)
 

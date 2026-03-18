@@ -15,8 +15,8 @@ Data ingestion framework with pluggable sources. Follows the pattern: config -> 
 - Source plugin registry
 
 **Does NOT own:**
-- Grid coordinate generation or spatial alignment (datafactory_grid)
-- Event-to-grid compilation (datafactory_compiler)
+- Grid coordinate generation or spatial alignment (datafactory_priogrid)
+- Event-to-grid compilation (datafactory_compilation)
 - Data transformation or aggregation (stored raw)
 - Consumer-specific formatting (no knowledge of downstream models)
 - Synthetic data generation (datafactory_synthetic)
@@ -24,16 +24,16 @@ Data ingestion framework with pluggable sources. Follows the pattern: config -> 
 
 ## Dependency Rules
 
-**May import:** `datafactory_core`, requests, pyarrow
-**Must never import:** `datafactory_grid`, `datafactory_compiler`, `datafactory_synthetic`, or any consumer
+**May import:** `datafactory_provenance`, requests, pyarrow
+**Must never import:** `datafactory_priogrid`, `datafactory_compilation`, `datafactory_synthetic`, or any consumer
 
 ## Package Structure
 
 ```
 datafactory_harvester/
     __init__.py          -- public API exports
-    validation.py        -- ValidationResult, ComparisonResult, validate_events, compare_snapshots
-    storage.py           -- save_event_snapshot, archive_snapshot
+    event_validation.py -- ValidationResult, ComparisonResult, validate_events, compare_snapshots
+    snapshot_storage.py -- save_event_snapshot, archive_snapshot
     sources/
         __init__.py      -- source registry (register_source, fetch_source, list_sources)
         ucdp_annual.py   -- UCDP/GED Annual: config, API client, schema, fetch orchestrator
@@ -46,7 +46,7 @@ datafactory_harvester/
 |---------|-------------|
 | ValidationResult | Schema validation outcome: n_events, warnings, errors, schema_snapshot, content_digest. Source-agnostic. |
 | ComparisonResult | Revision detection between snapshots: n_added, n_removed, n_revised, total_revision_magnitude. Source-agnostic. |
-| validate_events | Validates events against injected schema (required_fields, field_types). Uses `datafactory_core.compute_content_digest`. |
+| validate_events | Validates events against injected schema (required_fields, field_types). Uses `datafactory_provenance.compute_content_digest`. |
 | compare_snapshots | Compares new events against previous Parquet snapshot. Injected id_field and key_fields. |
 | save_event_snapshot | Parquet persistence of raw events with snappy compression. All source fields preserved. |
 | Source registry | Dict-based registry. Sources auto-register on import. `fetch_source("ucdp_annual")` dispatches to the right function. |
@@ -70,7 +70,7 @@ Adding a new source means adding `sources/<name>.py`. No changes to existing sou
 ## Invariants
 
 - Raw data is stored unaltered (all source fields preserved in Parquet)
-- Content digest (via `datafactory_core.compute_content_digest`) on every harvest
+- Content digest (via `datafactory_provenance.compute_content_digest`) on every harvest
 - Schema validation on every fetch -- fail-loud on missing required fields (ADR-003)
 - Provenance ledger entry appended for every harvest operation, success or failure (ADR-008)
 - Sources are independent: no source module imports from another source module

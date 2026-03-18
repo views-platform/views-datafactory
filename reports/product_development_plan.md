@@ -131,9 +131,9 @@ An analyst sees an anomalous value in cell 142,301 at month 2024-06. They consul
 ```
 
 **Dependency rules:**
-- `datafactory_core` imports nothing internal
-- `datafactory_grid`, `datafactory_harvester`, `datafactory_synthetic` import only from `datafactory_core`
-- `datafactory_compiler` imports from `datafactory_core` and `datafactory_grid` (for coordinates); reads harvester/synthetic outputs as **files**, not code imports
+- `datafactory_provenance` imports nothing internal
+- `datafactory_priogrid`, `datafactory_harvester`, `datafactory_synthetic` import only from `datafactory_provenance`
+- `datafactory_compilation` imports from `datafactory_provenance` and `datafactory_priogrid` (for coordinates); reads harvester/synthetic outputs as **files**, not code imports
 - No package imports from the compiler or from consumers
 - Independence is enforced by the filesystem: each `datafactory_*` is a separate top-level package
 
@@ -205,11 +205,11 @@ import datafactory_harvester.sources.ucdp_annual  # auto-registers
 fetch_source("ucdp_annual", config=UcdpAnnualConfig())
 
 # Grid
-from datafactory_grid import GridConfig, SpatioTemporalGrid
+from datafactory_priogrid import GridConfig, SpatioTemporalGrid
 grid = SpatioTemporalGrid()   # default: 259,200 cells × 432 months
 
 # Compilation
-from datafactory_compiler import CompilationConfig, compile_grid
+from datafactory_compilation import CompilationConfig, compile_grid
 config = CompilationConfig(
     source_path=Path("data/ucdp_annual/snapshot.parquet"),
     features=(("event_count", "count"), ("fatalities", "sum_best")),
@@ -232,7 +232,7 @@ Each harvest and compilation produces human-readable Markdown + PNG reports in `
 
 The provenance ledgers are queryable JSONL files. A future convenience function may provide:
 ```python
-from datafactory_core.provenance import trace
+from datafactory_provenance.provenance import trace
 trace("data/compiled/abc123/grid.npy")
 # Returns: source snapshots, compilation config, timestamps
 ```
@@ -297,7 +297,7 @@ Provenance ledgers are append-only and tracked in git. If a ledger becomes corru
 
 The metric lab is the first consumer. Integration path:
 1. Add `views-datafactory` as a dependency in the lab's `pyproject.toml`
-2. Update lab imports: `from datafactory_grid import GridConfig, SpatioTemporalGrid`
+2. Update lab imports: `from datafactory_priogrid import GridConfig, SpatioTemporalGrid`
 3. Replace lab's local grid/harvester code with data factory imports
 4. Lab continues to own: ExperimentFrame, evaluation metrics, models, loss functions
 
