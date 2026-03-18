@@ -193,7 +193,7 @@ class TestRequestWithRetryGreen:
 
     def test_retries_on_failure(self) -> None:
         """Retry with exponential backoff on transient errors."""
-        from datafactory_harvester.sources.ucdp_annual import _request_with_retry
+        from datafactory_harvester.sources.ucdp_annual import request_with_retry
 
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
@@ -213,7 +213,7 @@ class TestRequestWithRetryGreen:
                 _req.ConnectionError("fail 2"),
                 mock_resp,
             ]
-            _request_with_retry(
+            request_with_retry(
                 "http://test", {}, {}, max_retries=3, timeout=5
             )
 
@@ -223,7 +223,7 @@ class TestRequestWithRetryGreen:
         mock_sleep.assert_any_call(2)  # 2^1
 
     def test_raises_after_all_retries_exhausted(self) -> None:
-        from datafactory_harvester.sources.ucdp_annual import _request_with_retry
+        from datafactory_harvester.sources.ucdp_annual import request_with_retry
 
         with (
             patch(
@@ -235,7 +235,7 @@ class TestRequestWithRetryGreen:
 
             mock_get.side_effect = _req.ConnectionError("always fails")
             with pytest.raises(_req.ConnectionError):
-                _request_with_retry(
+                request_with_retry(
                     "http://test", {}, {}, max_retries=3, timeout=5
                 )
 
@@ -248,26 +248,26 @@ class TestRequestWithRetryGreen:
 class TestValidateEnvelopeRed:
 
     def test_missing_total_count(self) -> None:
-        from datafactory_harvester.sources.ucdp_annual import _validate_envelope
+        from datafactory_harvester.sources.ucdp_annual import validate_envelope
 
         with pytest.raises(ValueError, match="missing keys"):
-            _validate_envelope({"TotalPages": 1, "Result": []})
+            validate_envelope({"TotalPages": 1, "Result": []})
 
     def test_result_is_string_not_list(self) -> None:
-        from datafactory_harvester.sources.ucdp_annual import _validate_envelope
+        from datafactory_harvester.sources.ucdp_annual import validate_envelope
 
         with pytest.raises(ValueError, match="expected list"):
-            _validate_envelope({
+            validate_envelope({
                 "TotalCount": 0,
                 "TotalPages": 1,
                 "Result": "not a list",
             })
 
     def test_empty_dict(self) -> None:
-        from datafactory_harvester.sources.ucdp_annual import _validate_envelope
+        from datafactory_harvester.sources.ucdp_annual import validate_envelope
 
         with pytest.raises(ValueError, match="missing keys"):
-            _validate_envelope({})
+            validate_envelope({})
 
 
 # ---- Source Registration ----

@@ -54,8 +54,9 @@ Contracts must be clear enough that:
 - `TemporalConfig.md` -- immutable temporal backbone configuration (year/month range)
 - `SpatioTemporalGrid.md` -- composed spatiotemporal index with lazy coordinate generation
 
-**Future candidates (create when implemented):**
-- `HarvesterConfig` -- governs external API interaction
+**Future candidates (create when formalizing):**
+- `UcdpAnnualConfig` -- governs UCDP annual harvest parameters
+- `UcdpCandidateConfig` -- governs UCDP candidate monthly harvest parameters
 - `ValidationResult` -- determines data acceptance/rejection
 - `CompilationConfig` -- governs compilation behavior
 

@@ -8,26 +8,25 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_SOURCES: dict[str, Callable[..., Path]] = {}
+_SOURCES: dict[str, Callable[..., Any]] = {}
 
 
-def register_source(name: str, fetch_fn: Callable[..., Path]) -> None:
+def register_source(name: str, fetch_fn: Callable[..., Any]) -> None:
     """Register a data source fetch function.
 
     Args:
         name: Source identifier (e.g., "ucdp_annual").
-        fetch_fn: Callable that fetches data and returns the snapshot path.
+        fetch_fn: Callable that fetches data. Return type varies by source.
     """
     _SOURCES[name] = fetch_fn
     logger.info("Registered data source: %s", name)
 
 
-def fetch_source(name: str, **kwargs: Any) -> Path:
+def fetch_source(name: str, **kwargs: Any) -> Any:
     """Fetch data from a registered source.
 
     Args:
@@ -35,7 +34,7 @@ def fetch_source(name: str, **kwargs: Any) -> Path:
         **kwargs: Passed to the source's fetch function.
 
     Returns:
-        Path to the fetched data snapshot.
+        Source-specific result (Path for single-source, list[dict] for multi-version).
 
     Raises:
         KeyError: If the source name is not registered.

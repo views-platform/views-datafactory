@@ -116,7 +116,7 @@ class UcdpAnnualConfig:
 # ---- API client ----
 
 
-def _get_token(token: str | None = None) -> str:
+def get_ucdp_token(token: str | None = None) -> str:
     """Resolve API token from argument or environment."""
     resolved = token or os.environ.get("UCDP_API_TOKEN")
     if not resolved:
@@ -129,7 +129,7 @@ def _get_token(token: str | None = None) -> str:
     return resolved
 
 
-def _request_with_retry(
+def request_with_retry(
     url: str,
     headers: dict,
     params: dict,
@@ -163,7 +163,7 @@ def _request_with_retry(
     raise AssertionError(msg)
 
 
-def _validate_envelope(data: dict) -> None:
+def validate_envelope(data: dict) -> None:
     """Validate the API response envelope structure."""
     missing = ENVELOPE_KEYS - set(data.keys())
     if missing:
@@ -181,7 +181,7 @@ def _validate_envelope(data: dict) -> None:
         raise ValueError(err_msg)
 
 
-def _fetch_paginated(
+def fetch_paginated(
     config: UcdpAnnualConfig,
     token: str | None = None,
     *,
@@ -197,7 +197,7 @@ def _fetch_paginated(
     Returns:
         List of raw event dicts.
     """
-    api_token = _get_token(token)
+    api_token = get_ucdp_token(token)
     url = f"{config.base_url}/{config.version}"
     headers = {"x-ucdp-access-token": api_token}
     params: dict = {
@@ -212,7 +212,7 @@ def _fetch_paginated(
 
     while True:
         params["page"] = page
-        response = _request_with_retry(
+        response = request_with_retry(
             url,
             headers,
             params,
@@ -222,7 +222,7 @@ def _fetch_paginated(
         data = response.json()
 
         if page == 1:
-            _validate_envelope(data)
+            validate_envelope(data)
 
         if total_pages is None:
             total_pages = data.get("TotalPages", 1)
@@ -304,7 +304,7 @@ def fetch_ucdp_annual(
 
     # Fetch
     t0 = time.monotonic()
-    events = _fetch_paginated(config, token=token)
+    events = fetch_paginated(config, token=token)
     fetch_duration = time.monotonic() - t0
 
     # Validate

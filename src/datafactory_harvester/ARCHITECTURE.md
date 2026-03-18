@@ -37,6 +37,7 @@ datafactory_harvester/
     sources/
         __init__.py      -- source registry (register_source, fetch_source, list_sources)
         ucdp_annual.py   -- UCDP/GED Annual: config, API client, schema, fetch orchestrator
+        ucdp_candidate.py -- UCDP/GED Candidate Monthly: version discovery, digest caching, multi-version fetch
 ```
 
 ## Key Concepts

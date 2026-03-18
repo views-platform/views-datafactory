@@ -40,6 +40,7 @@ In views-datafactory, the JSONL provenance ledgers (`provenance/`) are the prima
 
 - `provenance/priogrid/ingestion_ledger.jsonl` -- grid shapefile provenance (implemented)
 - `provenance/ucdp_annual/ingestion_ledger.jsonl` -- UCDP annual harvest provenance (implemented)
+- `provenance/ucdp_candidate/ingestion_ledger.jsonl` -- candidate monthly provenance (implemented)
 - `provenance/compiler/compilation_ledger.jsonl` -- one entry per compilation (implemented)
 - `provenance/synthetic_ledger.jsonl` -- one entry per generation (planned)
 
