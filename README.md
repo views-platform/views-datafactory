@@ -37,7 +37,7 @@ The system is designed as a **graph of independent nodes**, not a linear pipelin
 - **PRIO-GRID spatial backbone** — pure-numpy generation of the standard 259,200-cell global grid at 0.5° resolution, validated cell-by-cell against the official PRIO reference shapefile
 - **Temporal backbone** with VIEWS month_id adapters (epoch: January 1980)
 - **Deterministic compilation** of raw event data onto the spatiotemporal grid as npy arrays
-- **Synthetic data generation** with controllable spatiotemporal covariance structure
+- **Synthetic data generation** with controllable spatiotemporal covariance structure (planned)
 - **End-to-end provenance** — every value in a compiled grid is traceable back to the specific source records and compilation config that produced it
 
 ---
@@ -58,9 +58,9 @@ views-datafactory is the upstream data provider for the VIEWS forecasting pipeli
 ```
 UCDP/GED API ──→ datafactory_harvester ──→ Raw Parquet + Provenance
                                                     │
-PRIO-GRID ──────→ datafactory_grid ─────────────────┤
+PRIO-GRID ──────→ datafactory_priogrid ─────────────┤
                                                     │
-                                           datafactory_compiler ──→ Compiled grid.npy
+                                       datafactory_compilation ──→ Compiled grid.npy
                                                     │
                   datafactory_synthetic ────────────→ Synthetic grid.npy
                                                     │
@@ -79,23 +79,23 @@ PRIO-GRID ──────→ datafactory_grid ──────────�
 The architecture is a **graph**, not a pipeline. Each node is a self-contained package with explicit dependencies:
 
 ```
-Level 0 — Foundation (no internal imports):
-  datafactory_core
+Layer 0 — Provenance (no internal imports):
+  datafactory_provenance      Content digests, JSONL ledger operations
 
-Level 1 — Independent nodes (import only core):
-  datafactory_grid          Spatial + temporal backbone
-  datafactory_harvester     Data ingestion with pluggable sources
-  datafactory_synthetic     Grid-native synthetic generation
+Layer 1 — Independent nodes (import only provenance):
+  datafactory_priogrid        PRIO-GRID spatial + temporal backbone
+  datafactory_harvester       Data ingestion with pluggable sources
+  datafactory_synthetic       Grid-native synthetic generation (stub)
 
-Level 2 — Compilation (imports core + grid, reads files from Level 1):
-  datafactory_compiler      Source data → populated grid arrays
+Layer 2 — Compilation (imports provenance + priogrid, reads files from Layer 1):
+  datafactory_compilation     Source data → populated grid arrays
 ```
 
 **Dependency rules:**
-- `datafactory_core` imports nothing internal
-- `datafactory_grid`, `datafactory_harvester`, `datafactory_synthetic` import only from `datafactory_core`
-- `datafactory_compiler` imports `datafactory_core` and `datafactory_grid`; reads harvester/synthetic outputs as **files**, not code imports
-- Independence is enforced by the filesystem — each package is a separate top-level module
+- `datafactory_provenance` imports nothing internal
+- `datafactory_priogrid`, `datafactory_harvester`, `datafactory_synthetic` import only from `datafactory_provenance`
+- `datafactory_compilation` imports `datafactory_provenance` and `datafactory_priogrid`; reads harvester/synthetic outputs as **files**, not code imports
+- Independence is enforced by an import-enforcement test that AST-scans every package
 
 ### Design Principles
 
@@ -105,6 +105,7 @@ Level 2 — Compilation (imports core + grid, reads files from Level 1):
 | **Provenance all the way through** | Every node that produces data writes a JSONL ledger entry. Mission-critical. |
 | **Config-driven, fail-loud** | Frozen dataclasses with `__post_init__` validation. No silent defaults. |
 | **npy now, zarr-ready** | Dimension order: `(cells, time, features)`. Coordinate arrays shipped alongside data. |
+| **Screaming architecture** | Package and file names communicate domain, not programming taxonomy. |
 
 ---
 
@@ -112,11 +113,11 @@ Level 2 — Compilation (imports core + grid, reads files from Level 1):
 
 | Package | Purpose | Status |
 |---------|---------|--------|
-| `datafactory_core` | Shared foundations — base configs, provenance utilities | Scaffold |
-| `datafactory_grid` | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Migrating from metric lab |
-| `datafactory_harvester` | Data harvesting framework with pluggable sources (UCDP/GED) | Migrating from metric lab |
-| `datafactory_compiler` | Compilation node — places source data onto grid, outputs npy | Planned |
-| `datafactory_synthetic` | Synthetic data generation with controlled covariance structure | Planned |
+| `datafactory_provenance` | Content digests and JSONL ledger operations | Done (DoD001) |
+| `datafactory_priogrid` | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done (DoD002) |
+| `datafactory_harvester` | Data harvesting with pluggable sources (UCDP annual + candidate monthly) | Done (DoD003, DoD005) |
+| `datafactory_compilation` | Compilation — places source events onto grid, outputs npy | Done (DoD004) |
+| `datafactory_synthetic` | Synthetic data generation with controlled covariance structure | Planned (v0.2) |
 
 ---
 
@@ -124,28 +125,45 @@ Level 2 — Compilation (imports core + grid, reads files from Level 1):
 
 ```
 views-datafactory/
-├── pyproject.toml                              # hatchling + uv
-├── CLAUDE.md                                   # AI assistant context
+├── pyproject.toml                                    # hatchling + uv
+├── CLAUDE.md                                         # AI assistant context
+├── .github/workflows/ci.yml                          # CI: ruff + mypy + pytest
 ├── src/
-│   ├── datafactory_core/                       # Shared foundations
-│   │   └── __init__.py
-│   ├── datafactory_grid/                       # Spatial + temporal backbone
-│   │   └── __init__.py
-│   ├── datafactory_harvester/                  # Data ingestion framework
-│   │   ├── __init__.py
-│   │   └── sources/                            # One module per data source
-│   │       └── __init__.py
-│   ├── datafactory_compiler/                   # Source data → grid npy
-│   │   └── __init__.py
-│   └── datafactory_synthetic/                  # Synthetic generation
+│   ├── datafactory_provenance/                       # Layer 0 — digests + ledgers
+│   │   └── provenance.py
+│   ├── datafactory_priogrid/                         # Layer 1 — PRIO-GRID backbone
+│   │   ├── grid_config.py                              GridConfig (spatial params)
+│   │   ├── temporal_config.py                          TemporalConfig (year/month range)
+│   │   ├── cell_generator.py                           generate_grid, pgid_to_latlon
+│   │   ├── temporal_generator.py                       generate_time_steps, VIEWS month_id
+│   │   ├── spatiotemporal.py                           SpatioTemporalGrid (composition)
+│   │   ├── parity_validation.py                        validate_parity (vs. reference shapefile)
+│   │   ├── shapefile_reader.py                         PyShpReader (pluggable Protocol)
+│   │   └── shapefile_harvester.py                      fetch_shapefile (reference data)
+│   ├── datafactory_harvester/                        # Layer 1 — data ingestion
+│   │   ├── event_validation.py                         ValidationResult, compare_snapshots
+│   │   ├── snapshot_storage.py                         save_event_snapshot, archive_snapshot
+│   │   └── sources/                                    Source plugin registry
+│   │       ├── ucdp_annual.py                            UCDP/GED Annual source
+│   │       └── ucdp_candidate.py                         UCDP/GED Candidate Monthly source
+│   ├── datafactory_compilation/                      # Layer 2 — grid compilation
+│   │   ├── compilation_config.py                       CompilationConfig
+│   │   ├── grid_compilation.py                         compile_grid (main function)
+│   │   └── aggregation.py                              count, sum_best, max_best strategies
+│   └── datafactory_synthetic/                        # Layer 1 — stub
 │       └── __init__.py
-├── tests/                                      # Test suite
-│   └── test_core.py
-├── reports/                                    # Strategic documents
-│   ├── rd_roadmap.md                           # R&D roadmap
-│   └── product_development_plan.md             # Product development plan
-├── provenance/                                 # JSONL ledgers (git-tracked)
-└── data/                                       # Raw + compiled data (gitignored)
+├── tests/                                            # 175 tests, 9 test files
+├── docs/                                             # ADRs, CICs, protocols, standards
+│   ├── ADRs/                                           11 constitutional + 1 project-specific
+│   ├── CICs/                                           3 active class intent contracts
+│   ├── contributor_protocols/                          carbon, silicon, hardened
+│   └── standards/                                      logging & observability
+├── reports/                                          # Strategic documents
+│   ├── rd_roadmap.md                                   R&D roadmap
+│   ├── product_development_plan.md                     Product development plan
+│   └── concerns00.md                                   Expert review concerns tracker
+├── provenance/                                       # JSONL ledgers (git-tracked)
+└── data/                                             # Raw + compiled data (gitignored)
 ```
 
 ---
@@ -171,11 +189,23 @@ uv run pytest -v
 ## Quick Start
 
 ```python
-# Import any package directly — they are independent top-level modules
-from datafactory_grid import GridConfig
-from datafactory_harvester import HarvesterConfig
+# Grid backbone
+from datafactory_priogrid import GridConfig, SpatioTemporalGrid
+grid = SpatioTemporalGrid()   # 259,200 cells × 432 months
 
-# Each package's public API is defined in __init__.py via __all__
+# Harvest UCDP data (requires API token)
+from datafactory_harvester.sources.ucdp_annual import fetch_ucdp_annual
+fetch_ucdp_annual()  # fetches, validates, stores, logs provenance
+
+# Compile events onto the grid
+from datafactory_compilation import CompilationConfig, compile_grid
+from pathlib import Path
+
+config = CompilationConfig(
+    source_path=Path("data/ucdp_annual/snapshot.parquet"),
+    features=(("event_count", "count"), ("fatalities", "sum_best")),
+)
+compile_grid(config)  # produces grid.npy + coordinate sidecars + provenance
 ```
 
 ---
@@ -196,8 +226,9 @@ Contributions are welcome. Please consult the [VIEWS Platform contributing guide
 When adding new packages, follow the existing `datafactory_*` naming convention and ensure the new package:
 - Has an `__init__.py` with `__all__` defined
 - Is listed in `pyproject.toml` under `[tool.hatch.build.targets.wheel] packages`
-- Imports only from `datafactory_core` (or core + grid for compilation nodes)
+- Imports only from `datafactory_provenance` (or provenance + priogrid for compilation nodes)
 - Has corresponding tests in `tests/`
+- Has an `ARCHITECTURE.md` describing purpose, boundaries, and invariants
 
 ---
 
