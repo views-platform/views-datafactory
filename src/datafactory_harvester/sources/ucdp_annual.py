@@ -309,19 +309,23 @@ def fetch_ucdp_annual(
 
     # Validate
     validation = validate_events(events, REQUIRED_FIELDS, FIELD_TYPES)
+
+    base_entry = {
+        "dataset": "ucdp_annual",
+        "version": config.version,
+        "start_year": config.start_year,
+        "end_year": config.end_year,
+        "n_events": validation.n_events,
+        "fetch_duration_s": round(fetch_duration, 1),
+        "content_digest": validation.content_digest,
+    }
+
     if not validation.valid:
         err_msg = f"Validation failed: {validation.errors}"
         logger.error(err_msg)
-        # Still record the failed attempt in the ledger
         append_ledger_entry(config.ledger_path, {
-            "dataset": "ucdp_annual",
-            "version": config.version,
-            "start_year": config.start_year,
-            "end_year": config.end_year,
-            "n_events": validation.n_events,
-            "fetch_duration_s": round(fetch_duration, 1),
+            **base_entry,
             "outcome": "failed",
-            "content_digest": validation.content_digest,
             "errors": validation.errors,
             "warnings": validation.warnings,
         })
@@ -344,14 +348,8 @@ def fetch_ucdp_annual(
     # Provenance
     revision_warnings = comparison.warnings if comparison else []
     append_ledger_entry(config.ledger_path, {
-        "dataset": "ucdp_annual",
-        "version": config.version,
-        "start_year": config.start_year,
-        "end_year": config.end_year,
-        "n_events": validation.n_events,
-        "fetch_duration_s": round(fetch_duration, 1),
+        **base_entry,
         "outcome": "success",
-        "content_digest": validation.content_digest,
         "schema_fields": sorted(validation.schema_snapshot.keys()),
         "schema_types": validation.schema_snapshot,
         "warnings": validation.warnings + revision_warnings,

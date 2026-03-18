@@ -196,7 +196,7 @@ class TestCompareSnapshotsGreen:
         save_event_snapshot(old_events, snap)
         result = compare_snapshots(snap, new_events)
         assert result.n_revised == 1
-        assert result.total_revision_magnitude > 0
+        assert result.total_revision_magnitude == 989  # 999 - 10
 
 
 # ---- Storage ----

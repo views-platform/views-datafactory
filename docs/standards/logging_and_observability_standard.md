@@ -39,8 +39,8 @@ Silent degradation is prohibited.
 In views-datafactory, the JSONL provenance ledgers (`provenance/`) are the primary observability mechanism:
 
 - `provenance/priogrid/ingestion_ledger.jsonl` -- grid shapefile provenance (implemented)
-- `provenance/harvester_ledger.jsonl` -- one entry per harvest operation (planned)
-- `provenance/compiler_ledger.jsonl` -- one entry per compilation (planned)
+- `provenance/ucdp_annual/ingestion_ledger.jsonl` -- UCDP annual harvest provenance (implemented)
+- `provenance/compiler/compilation_ledger.jsonl` -- one entry per compilation (implemented)
 - `provenance/synthetic_ledger.jsonl` -- one entry per generation (planned)
 
 Each entry records: timestamp, operation type, input references + digests, config snapshot, output path + digest, validation results (including errors and warnings).

@@ -20,13 +20,11 @@ ADR-002 declares strict import rules but the only enforcement is the import-enfo
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols (SpatialKernel, TemporalProcess, MagnitudeDistribution) before any concrete implementation exists. Premature abstraction — defer Protocols until a second implementation is needed.
 **Source:** GoF, Hickey
 
-### C-04: No factory or registry for harvester sources
-`src/datafactory_harvester/ARCHITECTURE.md` describes a "source plugin pattern" but doesn't define how sources are discovered or instantiated. The product plan shows `fetch_source("ucdp_annual")` which implies a registry that isn't designed.
-**Source:** GoF
+### C-04: ~~No factory or registry for harvester sources~~ RESOLVED
+Dict-based source registry implemented in `datafactory_harvester/sources/__init__.py` (DoD003). `fetch_source("ucdp_annual")` works. UCDP annual auto-registers on import.
 
-### C-05: SpatioTemporalGrid composition contract unclear
-`src/datafactory_grid/ARCHITECTURE.md` says "composes GridConfig + TemporalConfig" but doesn't clarify delegation vs duplication. The CIC stub should explicitly state that it delegates, not duplicates.
-**Source:** GoF
+### C-05: ~~SpatioTemporalGrid composition contract unclear~~ RESOLVED
+Formal CIC created at `docs/CICs/SpatioTemporalGrid.md` (DoD002). Section 3 explicitly states delegation, not duplication.
 
 ### C-06: Provenance logic should be a composable utility, not distributed
 ARCHITECTURE.md files specify every module must write provenance. This distributes the concern. A context manager or decorator in `datafactory_core` would be simpler.

@@ -50,13 +50,13 @@ Every boundary between components must define:
 
 **GridConfig boundary:** `__post_init__` validates resolution > 0, west < east, south < north, resolution evenly divides extent. Violations raise immediately. (Implemented in `datafactory_grid/config.py`.)
 
-**HarvesterConfig boundary (planned):** `__post_init__` validates start_year <= end_year, page_size > 0, max_retries >= 0, version is non-empty, base_url is non-empty.
+**UcdpAnnualConfig boundary (implemented):** `__post_init__` validates end_year >= start_year, page_size >= 1, max_retries >= 1, version non-empty. (Implemented in `datafactory_harvester/sources/ucdp_annual.py`.)
 
-**Harvester-to-filesystem boundary (planned):** ValidationResult must be checked before `save_event_snapshot`. Content digest (SHA-256) must be computed and recorded. Schema snapshot (all field names and types) must be captured. Comparison against previous snapshot (if it exists) must detect revisions.
+**Harvester-to-filesystem boundary (implemented):** ValidationResult checked before `save_event_snapshot`. Content digest computed via `datafactory_core.compute_content_digest`. Schema snapshot captured. Comparison against previous snapshot detects added/removed/revised events.
 
-**Filesystem-to-compiler boundary (planned):** Source Parquet files must exist and their digest must match the provenance ledger. Grid config must match the expected dimensions. Feature list must be explicitly declared in CompilationConfig, not inferred from Parquet columns.
+**CompilationConfig boundary (implemented):** `__post_init__` validates features non-empty. Source existence checked at compile time (FileNotFoundError). Feature list declared in config, never inferred from Parquet columns.
 
-**Compiled output contract (planned):** Shape is always `(n_cells, n_steps, n_features)`. Coordinate arrays (`pgids.npy`, `time_steps.npy`, `feature_names.json`) must be shipped alongside the data array. Provenance JSON must link to source digests and compilation config hash. Dimension order is fixed: cells, time, features.
+**Compiled output contract (implemented):** Shape is always `(n_cells, n_steps, n_features)`. Coordinate arrays (`pgids.npy`, `time_steps.npy`, `feature_names.json`) shipped alongside `grid.npy`. Provenance JSON links source digest to output digest. Dimension order fixed: cells, time, features.
 
 Implicit contracts are prohibited. If a boundary assumption cannot be declared clearly, the boundary is ill-defined and must be redesigned.
 
