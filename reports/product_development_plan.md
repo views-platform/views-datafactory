@@ -65,14 +65,14 @@ An analyst sees an anomalous value in cell 142,301 at month 2024-06. They consul
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| F-1 | Harvest UCDP/GED annual data with schema validation and provenance | Done |
-| F-2 | Harvest UCDP/GED candidate monthly data with revision tracking | Done |
-| F-3 | Generate PRIO-GRID spatial backbone (259,200 cells, 0.5°) | Done |
-| F-4 | Generate temporal backbone (monthly, 1989-2024) with VIEWS month_id adapter | Done |
-| F-5 | Compile harvested events onto spatiotemporal grid as npy | Next |
+| F-1 | Harvest UCDP/GED annual data with schema validation and provenance | Done (DoD003) |
+| F-2 | Harvest UCDP/GED candidate monthly data with revision tracking | Done in metric lab; candidate source not yet migrated to this repo |
+| F-3 | Generate PRIO-GRID spatial backbone (259,200 cells, 0.5°) | Done (DoD002) |
+| F-4 | Generate temporal backbone (monthly, 1989-2024) with VIEWS month_id adapter | Done (DoD002) |
+| F-5 | Compile harvested events onto spatiotemporal grid as npy | Done (DoD004) |
 | F-6 | Generate synthetic grid data with controllable covariance | Next |
-| F-7 | Track provenance through compilation (source digests + config → output digest) | Next |
-| F-8 | Support pluggable aggregation strategies in compilation | Next |
+| F-7 | Track provenance through compilation (source digests + config → output digest) | Done (DoD004) |
+| F-8 | Support pluggable aggregation strategies in compilation | Done (DoD004 — count, sum_best, max_best) |
 | F-9 | Add second data source (ACLED or PRIO static variables) | Future |
 | F-10 | Support zarr output format alongside npy | Future |
 
@@ -196,23 +196,30 @@ The interface contract between the data factory and model consumers is the **com
 
 ```python
 # Harvesting
-from datafactory_harvester import fetch_source
-fetch_source("ucdp_annual")   # fetches, validates, stores, logs provenance
+from datafactory_harvester.sources.ucdp_annual import fetch_ucdp_annual, UcdpAnnualConfig
+fetch_ucdp_annual(UcdpAnnualConfig())  # fetches, validates, stores, logs provenance
+
+# Or via registry:
+from datafactory_harvester.sources import fetch_source
+import datafactory_harvester.sources.ucdp_annual  # auto-registers
+fetch_source("ucdp_annual", config=UcdpAnnualConfig())
 
 # Grid
 from datafactory_grid import GridConfig, SpatioTemporalGrid
 grid = SpatioTemporalGrid()   # default: 259,200 cells × 432 months
 
 # Compilation
-from datafactory_compiler import compile_grid
-compile_grid(sources=["ucdp_annual", "ucdp_candidate"], config=...)
+from datafactory_compiler import CompilationConfig, compile_grid
+config = CompilationConfig(
+    source_path=Path("data/ucdp_annual/snapshot.parquet"),
+    features=(("event_count", "count"), ("fatalities", "sum_best")),
+)
+compile_grid(config)  # produces grid.npy + sidecars + provenance
 
-# Synthetic
-from datafactory_synthetic import generate_synthetic
-generate_synthetic(grid=grid, config=..., seed=42)
+# Synthetic (not yet implemented)
+# from datafactory_synthetic import generate_synthetic
+# generate_synthetic(grid=grid, config=..., seed=42)
 ```
-
-This is illustrative — the actual API will be defined as each module is implemented.
 
 ### 8.2 Audit Reports
 
@@ -234,12 +241,12 @@ trace("data/compiled/abc123/grid.npy")
 
 ## 9. Release Plan
 
-### MVP (current sprint)
+### MVP (complete)
 - [x] Repository scaffold with package structure, tooling, CI config
-- [ ] Grid module (migrated from metric lab, tested)
-- [ ] Harvester module (migrated from metric lab, refactored toward shared skeleton)
-- [ ] Core provenance utilities (extracted from harvesters)
-- [ ] First compiled grid (UCDP events on PRIO-GRID as npy)
+- [x] Core provenance utilities (DoD001 — `03517eb`)
+- [x] Grid module (DoD002 — `da1f7c4`)
+- [x] Harvester module with UCDP annual source (DoD003 — `fc0953f`)
+- [x] First compiled grid — compiler with pluggable strategies (DoD004 — `9cd8536`)
 
 ### v0.2: Synthetic Generation
 - [ ] Grid-native synthetic generator with spatial + temporal covariance

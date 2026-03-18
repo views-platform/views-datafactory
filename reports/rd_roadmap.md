@@ -196,7 +196,7 @@ Research question: can the revision archive be used to estimate the expected rev
 ## 9. Research Milestones
 
 ### Phase 1: Characterise (current → near-term)
-- [ ] Compile authentic UCDP/GED data onto PRIO-GRID as npy (first compiled grid)
+- [x] Compile authentic UCDP/GED data onto PRIO-GRID as npy — code complete (DoD004), ready for real data
 - [ ] Produce statistical profile of authentic data (marginals, spatial, temporal, joint)
 - [ ] Establish calibration targets for synthetic generators
 
