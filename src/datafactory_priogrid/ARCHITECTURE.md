@@ -2,7 +2,7 @@
 
 ## Purpose
 
-PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate system that all compiled data aligns to: 259,200 cells at 0.5 degree resolution, monthly time steps from 1989 to 2024. Pure numpy with zero external data dependencies for grid generation. This is a Layer 1 package in the dependency DAG (ADR-002).
+PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate system that all compiled data aligns to: 259,200 cells at 0.5 degree resolution, monthly time steps from 1989 to 2024. Pure numpy with zero external data dependencies for grid generation. This is a Layer 1 package in the dependency DAG (ADR-012).
 
 **Migration source:** `lab_grid/` in views-metric-lab (868 LOC).
 

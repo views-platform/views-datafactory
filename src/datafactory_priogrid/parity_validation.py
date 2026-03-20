@@ -15,9 +15,11 @@ from pathlib import Path
 from typing import Protocol
 
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG, GridConfig
-from datafactory_provenance import append_ledger_entry
+from datafactory_provenance import LEDGER_VERSION, append_ledger_entry
 
 logger = logging.getLogger(__name__)
+
+_MAX_REPORTED_ERRORS: int = 10
 
 
 class ReferenceGeometryReader(Protocol):
@@ -101,7 +103,7 @@ def validate_parity(
     for ref_id, ref_lat, ref_lon in ref_cells:
         ours = our_lookup.get(ref_id)
         if ours is None:
-            if len(errors) < 10:
+            if len(errors) < _MAX_REPORTED_ERRORS:
                 errors.append(f"Reference cell {ref_id} not in our grid")
             continue
 
@@ -111,7 +113,7 @@ def validate_parity(
 
         if error <= centroid_tolerance_deg:
             n_matched += 1
-        elif len(errors) < 10:
+        elif len(errors) < _MAX_REPORTED_ERRORS:
             errors.append(
                 f"Cell {ref_id}: centroid mismatch "
                 f"ours=({our_lat:.4f},{our_lon:.4f}) "
@@ -166,9 +168,9 @@ def record_parity_result(
             "n_cells_reference": result.n_cells_reference,
             "n_matched": result.n_matched,
             "max_centroid_error_deg": round(result.max_centroid_error_deg, 6),
-            "errors": result.errors[:10],
+            "errors": result.errors[:_MAX_REPORTED_ERRORS],
             "warnings": result.warnings,
-            "ledger_version": 1,
+            "ledger_version": LEDGER_VERSION,
         },
     )
     logger.info("Parity result recorded to %s", ledger_path)

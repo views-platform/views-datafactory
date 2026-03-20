@@ -4,20 +4,24 @@ Data factory for the VIEWS conflict forecasting platform.
 
 ## Architecture
 
-The system is a **graph, not a pipeline**:
+The system is a **graph, not a pipeline** (ADR-012):
 - **Source nodes** (`datafactory_harvester`, `datafactory_synthetic`) produce raw data independently
-- **Compilation edges** (`datafactory_compilation`) transform source data into consumer formats (grid npy now, others later)
+- **Consolidation** (`datafactory_consolidation`) combines raw vintages into lossless event stores
+- **Viewpoints** (`datafactory_viewpoint`) apply opinionated rules to produce materialized views
+- **Compilation** (`datafactory_compilation`) places viewpoint output onto the spatiotemporal grid
 - **Consumer nodes** (metric lab, other VIEWS repos) read compiled outputs
-- Sources don't know about consumers. Independence is enforced by the filesystem.
+- Not all paths traverse all layers. Synthetic data reaches consumers directly (skips consolidation, viewpoint, and compilation).
 
-## Package Layout (Option B)
+## Package Layout
 
 Multiple top-level packages under `src/` with `datafactory_` prefix:
-- `datafactory_provenance` — provenance utilities (digests, ledgers), no outbound imports
-- `datafactory_priogrid` — PRIO-GRID spatial + temporal backbone (imports provenance only)
-- `datafactory_harvester` — data ingestion with pluggable sources (imports provenance only)
-- `datafactory_compilation` — source data → grid npy (imports provenance + priogrid)
-- `datafactory_synthetic` — grid-native synthetic generation (imports provenance only)
+- `datafactory_provenance` — content digests and JSONL ledger operations (Layer 0, no outbound imports)
+- `datafactory_priogrid` — PRIO-GRID spatial + temporal backbone (Layer 1, imports provenance only)
+- `datafactory_harvester` — data ingestion with pluggable sources (Layer 1, imports provenance only)
+- `datafactory_synthetic` — grid-native synthetic generation (Layer 1, imports provenance only)
+- `datafactory_consolidation` — lossless consolidation of raw snapshots (Layer 2, imports provenance only)
+- `datafactory_viewpoint` — opinionated, versioned views over consolidated data (Layer 3, imports provenance only)
+- `datafactory_compilation` — viewpoint output → grid npy (Layer 4, imports provenance + priogrid)
 
 ## Tooling
 
@@ -29,7 +33,7 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 
 ## Design Principles
 
-1. **Graph, not pipeline** — sources don't know about consumers
+1. **Graph, not pipeline** — sources don't know about consumers; not all paths traverse all layers
 2. **Provenance all the way through** — every node writes JSONL ledger entries (mission-critical)
 3. **Config-driven, fail-loud** — frozen dataclasses with `__post_init__` validation
 4. **`__init__.py` always defines `__all__`** — public API is explicit

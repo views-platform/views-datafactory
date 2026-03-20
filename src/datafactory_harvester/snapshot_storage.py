@@ -15,6 +15,8 @@ import pyarrow.parquet as pq
 
 logger = logging.getLogger(__name__)
 
+_PARQUET_COMPRESSION: str = "snappy"
+
 
 def save_event_snapshot(
     events: list[dict],
@@ -52,7 +54,7 @@ def save_event_snapshot(
         pa_columns[name] = pa.array(values, from_pandas=True)
 
     table = pa.table(pa_columns)
-    pq.write_table(table, path, compression="snappy")
+    pq.write_table(table, path, compression=_PARQUET_COMPRESSION)
 
     logger.info(
         "Saved event snapshot to %s (%d events, %d fields)",

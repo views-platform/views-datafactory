@@ -92,6 +92,18 @@ class TestCandidateConfigBeige:
         with pytest.raises(ValueError, match="start_year"):
             UcdpCandidateConfig(start_year=-1)
 
+    def test_rejects_zero_discovery_rate_limit(self) -> None:
+        with pytest.raises(ValueError, match="discovery_rate_limit"):
+            UcdpCandidateConfig(discovery_rate_limit=0)
+
+    def test_rejects_negative_discovery_rate_limit(self) -> None:
+        with pytest.raises(ValueError, match="discovery_rate_limit"):
+            UcdpCandidateConfig(discovery_rate_limit=-0.5)
+
+    def test_rejects_zero_max_versions(self) -> None:
+        with pytest.raises(ValueError, match="max_versions"):
+            UcdpCandidateConfig(max_versions=0)
+
 
 # ---- Version Discovery ----
 

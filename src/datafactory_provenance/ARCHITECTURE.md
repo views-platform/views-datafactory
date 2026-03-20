@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Shared foundations for all datafactory packages. Contains provenance utilities and content digest computation. This is Layer 0 of the dependency DAG (ADR-002): every other `datafactory_*` package may import from core, but core imports nothing internal.
+Provenance tracking — content digests and JSONL ledger operations. Every `datafactory_*` operation that produces output records provenance through this package. This is Layer 0 of the dependency DAG (ADR-012): every other `datafactory_*` package may import from provenance, but provenance imports nothing internal.
 
 ## Responsibility Boundary
 
@@ -10,15 +10,14 @@ Shared foundations for all datafactory packages. Contains provenance utilities a
 - Provenance ledger writing (JSONL append-only)
 - Provenance ledger reading (last digest lookup, version-filtered queries)
 - Content digest computation (SHA-256, truncated hex)
+- Infrastructure constants (LEDGER_VERSION, DIGEST_SCHEME)
 - Version declaration
-
-**Future (not yet implemented):**
-- Configuration validation patterns (frozen dataclasses with `__post_init__`) — if shared patterns emerge
-- Common type definitions — if multiple packages need them
 
 **Does NOT own:**
 - Grid coordinate generation (datafactory_priogrid)
 - Data fetching or API interaction (datafactory_harvester)
+- Consolidation logic (datafactory_consolidation)
+- Viewpoint building (datafactory_viewpoint)
 - Compilation logic (datafactory_compilation)
 - Synthetic data generation (datafactory_synthetic)
 - Domain-specific configuration (each package owns its own config)
@@ -26,7 +25,7 @@ Shared foundations for all datafactory packages. Contains provenance utilities a
 
 ## Dependency Rules
 
-Per ADR-002 (topology and dependency direction):
+Per ADR-012 (topology and dependency direction):
 
 **May import:** Python standard library, numpy
 **Must never import:** Any other `datafactory_*` package
@@ -38,11 +37,13 @@ Per ADR-002 (topology and dependency direction):
 | `append_ledger_entry` | JSONL append-only writer. Auto-generates UTC timestamp. Caller defines entry structure. |
 | `last_digest` / `last_digest_for_version` | Ledger readers for digest lookup. Tolerate malformed trailing lines. |
 | `compute_content_digest` | SHA-256 digest computation, truncated to 16 hex chars by default. Deterministic: same bytes = same digest. |
+| `LEDGER_VERSION` | Centralized constant for ledger schema version. Bump when ledger entry format changes. |
+| `DIGEST_SCHEME` | Centralized constant (`"sha256_16"`) recorded in every ledger entry for forward compatibility. |
 
 ## Invariants
 - **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
 
-- Zero imports from any other `datafactory_*` package (ADR-002, Layer 0)
+- Zero imports from any other `datafactory_*` package (ADR-012, Layer 0)
 - All public symbols declared in `__all__` (ADR-001)
 - Provenance ledger entries are append-only; existing entries are never modified or deleted
 - Content digest computation is deterministic: same input = same digest regardless of call order
@@ -51,7 +52,7 @@ Per ADR-002 (topology and dependency direction):
 ## CIC Stubs
 
 ### ProvenanceLedger
-**Purpose:** Append structured JSONL entries to ledger files for harvest, compilation, and synthetic generation operations.
+**Purpose:** Append structured JSONL entries to ledger files for harvest, consolidation, viewpoint, and compilation operations.
 **Non-goals:** Does not query, aggregate, or visualize ledger data. Does not validate that referenced source files exist.
 **Key guarantees:** Entries are always appended (never overwritten). Every entry includes an auto-generated UTC timestamp. Entry structure is caller-defined. Failure to write is both logged and raised (ADR-008).
 

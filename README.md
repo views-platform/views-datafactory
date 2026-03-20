@@ -56,13 +56,17 @@ views-datafactory is the upstream data provider for the VIEWS forecasting pipeli
 ### Data Flow
 
 ```
-UCDP/GED API ──→ datafactory_harvester ──→ Raw Parquet + Provenance
+UCDP/GED API ──→ datafactory_harvester ──→ Raw Parquet snapshots
+                                                    │
+                                       datafactory_consolidation ──→ Consolidated event store
+                                                    │
+                                         datafactory_viewpoint ──→ Materialized viewpoint
                                                     │
 PRIO-GRID ──────→ datafactory_priogrid ─────────────┤
                                                     │
                                        datafactory_compilation ──→ Compiled grid.npy
                                                     │
-                  datafactory_synthetic ────────────→ Synthetic grid.npy
+                  datafactory_synthetic ─────────────────────────→ Synthetic grid.npy
                                                     │
                                            ┌────────┴────────┐
                                            │   Consumers     │
@@ -72,6 +76,8 @@ PRIO-GRID ──────→ datafactory_priogrid ─────────
                                            └─────────────────┘
 ```
 
+Not all paths traverse all layers. Synthetic data produces npy directly and reaches consumers without passing through consolidation, viewpoint, or compilation.
+
 ---
 
 ## Architecture
@@ -80,21 +86,29 @@ The architecture is a **graph**, not a pipeline. Each node is a self-contained p
 
 ```
 Layer 0 — Provenance (no internal imports):
-  datafactory_provenance      Content digests, JSONL ledger operations
+  datafactory_provenance        Content digests, JSONL ledger operations
 
-Layer 1 — Independent nodes (import only provenance):
-  datafactory_priogrid        PRIO-GRID spatial + temporal backbone
-  datafactory_harvester       Data ingestion with pluggable sources
-  datafactory_synthetic       Grid-native synthetic generation (stub)
+Layer 1 — Source nodes (import only provenance):
+  datafactory_priogrid          PRIO-GRID spatial + temporal backbone
+  datafactory_harvester         Data ingestion with pluggable sources
+  datafactory_synthetic         Grid-native synthetic generation (stub)
 
-Layer 2 — Compilation (imports provenance + priogrid, reads files from Layer 1):
-  datafactory_compilation     Source data → populated grid arrays
+Layer 2 — Consolidation (imports provenance, reads harvester files):
+  datafactory_consolidation     Lossless event store from raw snapshots
+
+Layer 3 — Viewpoint (imports provenance, reads consolidation files):
+  datafactory_viewpoint         Opinionated materialized views
+
+Layer 4 — Compilation (imports provenance + priogrid, reads viewpoint files):
+  datafactory_compilation       Viewpoint output → populated grid arrays
 ```
 
-**Dependency rules:**
+**Dependency rules (ADR-012):**
 - `datafactory_provenance` imports nothing internal
 - `datafactory_priogrid`, `datafactory_harvester`, `datafactory_synthetic` import only from `datafactory_provenance`
-- `datafactory_compilation` imports `datafactory_provenance` and `datafactory_priogrid`; reads harvester/synthetic outputs as **files**, not code imports
+- `datafactory_consolidation` imports only from `datafactory_provenance`; reads harvester output as **files**
+- `datafactory_viewpoint` imports only from `datafactory_provenance`; reads consolidation output as **files**
+- `datafactory_compilation` imports `datafactory_provenance` and `datafactory_priogrid`; reads viewpoint output as **files**
 - Independence is enforced by an import-enforcement test that AST-scans every package
 
 ### Design Principles
@@ -111,13 +125,15 @@ Layer 2 — Compilation (imports provenance + priogrid, reads files from Layer 1
 
 ## Packages
 
-| Package | Purpose | Status |
-|---------|---------|--------|
-| `datafactory_provenance` | Content digests and JSONL ledger operations | Done (DoD001) |
-| `datafactory_priogrid` | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done (DoD002) |
-| `datafactory_harvester` | Data harvesting with pluggable sources (UCDP annual + candidate monthly) | Done (DoD003, DoD005) |
-| `datafactory_compilation` | Compilation — places source events onto grid, outputs npy | Done (DoD004) |
-| `datafactory_synthetic` | Synthetic data generation with controlled covariance structure | Planned (v0.2) |
+| Package | Layer | Purpose | Status |
+|---------|-------|---------|--------|
+| `datafactory_provenance` | 0 | Content digests and JSONL ledger operations | Done (DoD001) |
+| `datafactory_priogrid` | 1 | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done (DoD002) |
+| `datafactory_harvester` | 1 | Data harvesting with pluggable sources (UCDP annual + candidate monthly) | Done (DoD003, DoD005) |
+| `datafactory_synthetic` | 1 | Synthetic data generation with controlled covariance structure | Planned |
+| `datafactory_consolidation` | 2 | Lossless consolidation of raw snapshots into event stores | Scaffold |
+| `datafactory_viewpoint` | 3 | Opinionated, versioned views over consolidated data | Scaffold |
+| `datafactory_compilation` | 4 | Places viewpoint output onto grid, outputs npy | Done (DoD004) |
 
 ---
 
@@ -130,7 +146,7 @@ views-datafactory/
 ├── .github/workflows/ci.yml                          # CI: ruff + mypy + pytest
 ├── src/
 │   ├── datafactory_provenance/                       # Layer 0 — digests + ledgers
-│   │   └── provenance.py
+│   │   └── digests_and_ledgers.py
 │   ├── datafactory_priogrid/                         # Layer 1 — PRIO-GRID backbone
 │   │   ├── grid_config.py                              GridConfig (spatial params)
 │   │   ├── temporal_config.py                          TemporalConfig (year/month range)
@@ -146,15 +162,18 @@ views-datafactory/
 │   │   └── sources/                                    Source plugin registry
 │   │       ├── ucdp_annual.py                            UCDP/GED Annual source
 │   │       └── ucdp_candidate.py                         UCDP/GED Candidate Monthly source
-│   ├── datafactory_compilation/                      # Layer 2 — grid compilation
-│   │   ├── compilation_config.py                       CompilationConfig
-│   │   ├── grid_compilation.py                         compile_grid (main function)
-│   │   └── aggregation.py                              count, sum_best, max_best strategies
-│   └── datafactory_synthetic/                        # Layer 1 — stub
-│       └── __init__.py
-├── tests/                                            # 175 tests, 9 test files
+│   ├── datafactory_synthetic/                        # Layer 1 — synthetic generation (stub)
+│   ├── datafactory_consolidation/                    # Layer 2 — lossless event stores
+│   │   └── consolidators/                              Consolidator plugin registry
+│   ├── datafactory_viewpoint/                        # Layer 3 — opinionated views
+│   │   └── builders/                                   Viewpoint builder plugin registry
+│   └── datafactory_compilation/                      # Layer 4 — grid compilation
+│       ├── compilation_config.py                       CompilationConfig
+│       ├── grid_compilation.py                         compile_grid (main function)
+│       └── aggregation.py                              count, sum_best, max_best strategies
+├── tests/                                            # 179 tests
 ├── docs/                                             # ADRs, CICs, protocols, standards
-│   ├── ADRs/                                           11 constitutional + 1 project-specific
+│   ├── ADRs/                                           12 constitutional + 1 project-specific
 │   ├── CICs/                                           3 active class intent contracts
 │   ├── contributor_protocols/                          carbon, silicon, hardened
 │   └── standards/                                      logging & observability

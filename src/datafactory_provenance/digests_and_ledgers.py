@@ -1,4 +1,4 @@
-"""Shared provenance utilities — content digests and JSONL ledger operations.
+"""Provenance tracking — content digests and JSONL ledger operations.
 
 Every datafactory_* operation that produces output must record provenance.
 This module provides the shared primitives. Each consuming module defines
@@ -27,12 +27,21 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+# ---- Provenance infrastructure constants ----
+# These define the ledger schema and digest scheme used across all modules.
+# Change here = change everywhere. Bump LEDGER_VERSION when ledger schema changes.
+
+LEDGER_VERSION: int = 1
+DIGEST_ALGORITHM: str = "sha256"
+DIGEST_TRUNCATE: int = 16
+DIGEST_SCHEME: str = f"{DIGEST_ALGORITHM}_{DIGEST_TRUNCATE}"
+
 
 def compute_content_digest(
     data: bytes,
     *,
-    algorithm: str = "sha256",
-    truncate: int = 16,
+    algorithm: str = DIGEST_ALGORITHM,
+    truncate: int = DIGEST_TRUNCATE,
 ) -> str:
     """Compute a content digest from raw bytes.
 

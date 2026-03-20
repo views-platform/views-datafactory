@@ -1,9 +1,12 @@
-"""Shared foundations — provenance utilities and content digests.
+"""Provenance tracking — content digests and JSONL ledger operations.
 
+Every datafactory_* operation that produces output records provenance here.
 No outbound imports to other datafactory_* packages.
 """
 
-from datafactory_provenance.provenance import (
+from datafactory_provenance.digests_and_ledgers import (
+    DIGEST_SCHEME,
+    LEDGER_VERSION,
     append_ledger_entry,
     compute_content_digest,
     last_digest,
@@ -11,6 +14,8 @@ from datafactory_provenance.provenance import (
 )
 
 __all__ = [
+    "DIGEST_SCHEME",
+    "LEDGER_VERSION",
     "append_ledger_entry",
     "compute_content_digest",
     "last_digest",

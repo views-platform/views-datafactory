@@ -60,13 +60,15 @@ Domain-specific fail-loud examples:
 
 ### 3. Scope
 
-This ADR applies to:
+This ADR applies to all layers of the data architecture (ADR-012):
 
 - data validation failures (harvest-time schema checks, compilation input validation),
 - configuration inconsistencies (`__post_init__` violations),
 - semantic ambiguity (digest mismatches, version conflicts),
 - broken invariants (wrong cell count, wrong array shape, missing coordinate arrays),
 - provenance integrity failures (ledger corruption, missing entries),
+- consolidation failures (source file missing, append failure, version metadata inconsistency),
+- viewpoint build failures (survivorship rule error, temporal distribution failure, configuration mismatch),
 - and other structural system failures.
 
 It does not prescribe formatting, spacing, or specific logging utilities.

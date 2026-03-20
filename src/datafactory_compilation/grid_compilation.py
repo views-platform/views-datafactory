@@ -1,6 +1,6 @@
-"""Grid compilation: place source events onto the spatiotemporal grid.
+"""Grid compilation: place event data onto the spatiotemporal grid.
 
-Reads harvested Parquet, assigns each event to a (cell, month) bin,
+Reads viewpoint output Parquet, assigns each event to a (cell, month) bin,
 aggregates using declared strategies, and outputs npy arrays with
 sidecar coordinate files and provenance.
 """
@@ -19,9 +19,16 @@ from datafactory_compilation.aggregation import get_strategy
 from datafactory_compilation.compilation_config import CompilationConfig
 from datafactory_priogrid.cell_generator import generate_grid
 from datafactory_priogrid.temporal_generator import generate_time_steps
-from datafactory_provenance import append_ledger_entry, compute_content_digest
+from datafactory_provenance import (
+    DIGEST_SCHEME,
+    LEDGER_VERSION,
+    append_ledger_entry,
+    compute_content_digest,
+)
 
 logger = logging.getLogger(__name__)
+
+DATASET_ID = "compilation"
 
 
 def _parse_month_index(
@@ -214,15 +221,15 @@ def compile_grid(config: CompilationConfig) -> Path:
 
     # Append to compilation ledger
     append_ledger_entry(config.ledger_path, {
-        "dataset": "compilation",
+        "dataset": DATASET_ID,
         "source_path": str(config.source_path),
         "source_digest": source_digest,
         "grid_shape": list(grid_array.shape),
         "feature_names": feature_names,
         "output_dir": str(output_dir),
         "output_digest": output_digest,
-        "ledger_version": 1,
-        "digest_algorithm": "sha256_16",
+        "ledger_version": LEDGER_VERSION,
+        "digest_algorithm": DIGEST_SCHEME,
     })
 
     logger.info(

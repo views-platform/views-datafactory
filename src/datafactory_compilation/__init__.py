@@ -1,6 +1,6 @@
-"""Compilation node -- places source data onto the spatiotemporal grid.
+"""Compilation node -- places event data onto the spatiotemporal grid.
 
-Reads harvester/synthetic outputs as files. Produces populated npy arrays.
+Reads viewpoint output as files. Produces populated npy arrays.
 Tracks provenance: source digests + compilation config -> output digest.
 """
 

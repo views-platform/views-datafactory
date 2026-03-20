@@ -31,11 +31,18 @@ from datafactory_harvester.sources.ucdp_annual import (
     request_with_retry,
 )
 from datafactory_provenance import (
+    DIGEST_SCHEME,
+    LEDGER_VERSION,
     append_ledger_entry,
     last_digest_for_version,
 )
 
 logger = logging.getLogger(__name__)
+
+DATASET_ID = "ucdp_candidate"
+_CANDIDATE_YEAR_OFFSET: int = 2000
+_DISCOVERY_RATE_LIMIT_SECONDS: float = 0.5
+_DISCOVERY_PROBE_PAGE_SIZE: int = 1
 
 
 def _candidate_version_string(year: int, month: int) -> str:
@@ -45,7 +52,7 @@ def _candidate_version_string(year: int, month: int) -> str:
     Caller is responsible for valid year/month ranges
     (validated in UcdpCandidateConfig.__post_init__).
     """
-    return f"{year - 2000}.0.{month}"
+    return f"{year - _CANDIDATE_YEAR_OFFSET}.0.{month}"
 
 
 # ---- Config ----
@@ -68,6 +75,10 @@ class UcdpCandidateConfig:
     page_size: int = 1000
     timeout: int = 30
     max_retries: int = 3
+
+    # Discovery tuning
+    discovery_rate_limit: float = 0.5  # seconds between API probes
+    max_versions: int = 36  # safety cap on version discovery (3 years)
 
     # Storage
     data_dir: Path = Path("data/ucdp_candidate")
@@ -94,6 +105,19 @@ class UcdpCandidateConfig:
             err_msg = f"max_retries must be >= 1, got {self.max_retries}"
             logger.error(err_msg)
             raise ValueError(err_msg)
+        if self.discovery_rate_limit <= 0:
+            err_msg = (
+                f"discovery_rate_limit must be > 0, "
+                f"got {self.discovery_rate_limit}"
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        if self.max_versions < 1:
+            err_msg = (
+                f"max_versions must be >= 1, got {self.max_versions}"
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
 
 
 # ---- Version Discovery ----
@@ -103,7 +127,6 @@ def discover_versions(
     config: UcdpCandidateConfig,
     *,
     token: str | None = None,
-    max_versions: int = 36,
 ) -> list[str]:
     """Discover available candidate monthly versions by probing the API.
 
@@ -113,7 +136,6 @@ def discover_versions(
     Args:
         config: Candidate monthly configuration.
         token: API token (falls back to UCDP_API_TOKEN env var).
-        max_versions: Safety limit on discovery (default 36 months).
 
     Returns:
         Sorted list of available version strings.
@@ -126,11 +148,11 @@ def discover_versions(
     year = config.start_year
     month = config.start_month
 
-    for _ in range(max_versions):
+    for _ in range(config.max_versions):
         version = _candidate_version_string(year, month)
         url = f"{config.base_url}/{version}"
         headers = {"x-ucdp-access-token": api_token}
-        params = {"pagesize": 1}
+        params = {"pagesize": _DISCOVERY_PROBE_PAGE_SIZE}
 
         try:
             resp = request_with_retry(
@@ -152,7 +174,7 @@ def discover_versions(
             logger.info(
                 "Discovered version %s (%d events)", version, total
             )
-            time.sleep(0.5)  # Rate-limit discovery probes
+            time.sleep(config.discovery_rate_limit)
         except Exception:
             logger.info(
                 "Version %s not available — stopping discovery", version
@@ -213,13 +235,13 @@ def _fetch_version(
     validation = validate_events(events, REQUIRED_FIELDS, FIELD_TYPES)
 
     base_entry = {
-        "dataset": "ucdp_candidate",
+        "dataset": DATASET_ID,
         "version": version,
         "n_events": validation.n_events,
         "fetch_duration_s": round(fetch_duration, 1),
         "content_digest": validation.content_digest,
-        "ledger_version": 1,
-        "digest_algorithm": "sha256_16",
+        "ledger_version": LEDGER_VERSION,
+        "digest_algorithm": DIGEST_SCHEME,
     }
 
     if not validation.valid:

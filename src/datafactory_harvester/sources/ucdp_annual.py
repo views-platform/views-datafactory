@@ -25,9 +25,17 @@ from datafactory_harvester.event_validation import (
 )
 from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
 from datafactory_harvester.sources import register_source
-from datafactory_provenance import append_ledger_entry, last_digest
+from datafactory_provenance import (
+    DIGEST_SCHEME,
+    LEDGER_VERSION,
+    append_ledger_entry,
+    last_digest,
+)
 
 logger = logging.getLogger(__name__)
+
+DATASET_ID = "ucdp_annual"
+_LOG_EVERY_N_PAGES: int = 50
 
 # ---- UCDP-specific schema definition ----
 
@@ -241,7 +249,7 @@ def fetch_paginated(
             break
 
         all_events.extend(results)
-        if page % 50 == 0 or page == 1:
+        if page % _LOG_EVERY_N_PAGES == 0 or page == 1:
             logger.info(
                 "Page %d/%d (%d events so far)",
                 page,
@@ -311,15 +319,15 @@ def fetch_ucdp_annual(
     validation = validate_events(events, REQUIRED_FIELDS, FIELD_TYPES)
 
     base_entry = {
-        "dataset": "ucdp_annual",
+        "dataset": DATASET_ID,
         "version": config.version,
         "start_year": config.start_year,
         "end_year": config.end_year,
         "n_events": validation.n_events,
         "fetch_duration_s": round(fetch_duration, 1),
         "content_digest": validation.content_digest,
-        "ledger_version": 1,
-        "digest_algorithm": "sha256_16",
+        "ledger_version": LEDGER_VERSION,
+        "digest_algorithm": DIGEST_SCHEME,
     }
 
     if not validation.valid:

@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Compilation edge -- reads source data (Parquet from harvester, npy from synthetic) and grid definition, produces compiled npy arrays with shape `(n_cells, n_steps, n_features)` plus coordinate metadata and provenance. This is the only Layer 2 package in the dependency DAG (ADR-002): it imports from core and grid, and reads harvester/synthetic output as files.
+Compilation edge -- reads viewpoint output (Parquet) and grid definition, produces compiled npy arrays with shape `(n_cells, n_steps, n_features)` plus coordinate metadata and provenance. This is a Layer 4 package in the dependency DAG (ADR-012): it imports from provenance and priogrid, and reads viewpoint output as files. Synthetic data follows an independent path and does not pass through compilation.
 
 ## Responsibility Boundary
 
 **Owns:**
-- Reading source data files (Parquet snapshots) from disk
+- Reading viewpoint output files (Parquet) from disk
 - Placing events onto the spatiotemporal grid (event-to-cell assignment via `latlon_to_pgid`)
 - Aggregating events per cell-month using declared strategy
 - Producing compiled npy output with sidecar coordinate arrays
@@ -23,8 +23,8 @@ Compilation edge -- reads source data (Parquet from harvester, npy from syntheti
 ## Dependency Rules
 
 **May import:** `datafactory_provenance`, `datafactory_priogrid` (for GridConfig, TemporalConfig, coordinate arrays), numpy, pyarrow
-**Must never import:** `datafactory_harvester`, `datafactory_synthetic`, or any consumer
-**Data coupling:** Reads harvester/synthetic output as FILES on disk. The filesystem is the decoupling boundary (ADR-002).
+**Must never import:** `datafactory_harvester`, `datafactory_consolidation`, `datafactory_viewpoint`, `datafactory_synthetic`, or any consumer
+**Data coupling:** Reads viewpoint output as FILES on disk. The filesystem is the decoupling boundary (ADR-012).
 
 ## Package Structure
 

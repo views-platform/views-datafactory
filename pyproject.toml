@@ -30,6 +30,8 @@ packages = [
     "src/datafactory_priogrid",
     "src/datafactory_harvester",
     "src/datafactory_compilation",
+    "src/datafactory_consolidation",
+    "src/datafactory_viewpoint",
     "src/datafactory_synthetic",
 ]
 

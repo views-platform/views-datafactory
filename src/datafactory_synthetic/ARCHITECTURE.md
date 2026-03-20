@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Grid-native synthetic data generation with controllable covariance structure. Produces npy arrays on the same coordinate system and with the same shape contract as compiled authentic data. Used for development, testing, and controlled experimentation -- not for production forecasting. This is a Source Node in the graph architecture (ADR-001) and a Layer 1 package in the dependency DAG (ADR-002).
+Grid-native synthetic data generation with controllable covariance structure. Produces npy arrays on the same coordinate system and with the same shape contract as compiled authentic data. Used for development, testing, and controlled experimentation -- not for production forecasting. This is a Source Node in the graph architecture (ADR-001) and a Layer 1 package in the dependency DAG (ADR-012).
 
 **Migration source:** `lab_simulation/generators.py` in views-metric-lab (127 LOC). The lab's generators (LatentDataGenerator, EpistemicGenerator) are **panel-native**, not grid-native. This module will be a substantial redesign to operate directly on PRIO-GRID coordinates with more faithful tail distributions.
 
@@ -28,7 +28,7 @@ Grid-native synthetic data generation with controllable covariance structure. Pr
 **May import:** `datafactory_provenance`, numpy
 **Must never import:** `datafactory_priogrid`, `datafactory_harvester`, `datafactory_compilation`, or any consumer
 
-**Design note:** The synthetic module needs grid coordinates (cell positions for spatial correlation). These are passed in via configuration or loaded from file, not obtained by importing `datafactory_priogrid`. This preserves source node independence (ADR-002).
+**Design note:** The synthetic module needs grid coordinates (cell positions for spatial correlation). These are passed in via configuration or loaded from file, not obtained by importing `datafactory_priogrid`. This preserves source node independence (ADR-012).
 
 ## Key Concepts
 
@@ -58,7 +58,7 @@ Grid-native synthetic data generation with controllable covariance structure. Pr
 - **Provenance:** Every generation writes a ledger entry: config hash + seed + generator version -> output digest
 - **Config-driven:** All generation parameters come from SyntheticConfig. No hardcoded statistical parameters.
 - **Pluggable components:** Spatial kernels, temporal processes, and magnitude distributions are Protocol-based (DIP)
-- **No grid import:** Receives grid dimensions/positions via config, not by importing datafactory_priogrid (ADR-002)
+- **No grid import:** Receives grid dimensions/positions via config, not by importing datafactory_priogrid (ADR-012)
 - **Validated config:** `__post_init__` checks: positive variances, valid correlation ranges (0 <= rho <= 1), seed is int, n_cells > 0, n_steps > 0
 
 ## CIC Stubs

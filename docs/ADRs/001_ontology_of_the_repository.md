@@ -47,6 +47,8 @@ Anything that does not clearly belong to one of these categories is considered *
 | **Compilation Edges** (compiler) | Transform source data into consumer-specific formats by placing events onto the grid | Medium -- derived from sources + grid | Evolving (new formats, aggregation strategies expected) | Data fetching, source-specific API logic, model evaluation, consumer-specific post-processing |
 | **Configurations** (frozen dataclasses) | Explicit, validated, immutable parameter sets that govern every operation | Authoritative -- the declared intent for each operation | Stable pattern, evolving instances | Runtime state, mutable fields, inferred defaults, implicit fallbacks |
 | **Provenance Records** (JSONL ledgers, content digests) | Immutable audit trail linking every output to specific inputs + config | Mission-critical -- the system's memory | Append-only, never modified or deleted | Derived analytics, visualization, convenience queries, mutable state |
+| **Consolidated Event Store** (consolidation layer) | Lossless, append-only, version-aware union of all source snapshots. Preserves every version of every event with bitemporal metadata. | Authoritative -- the single source of truth for "what do we know and when did we know it" | Stable (changes when new sources added; existing records never modified) | Survivorship decisions, temporal distribution, uncertainty resolution, aggregation, grid placement |
+| **Viewpoints** (materialized views) | Opinionated, rebuildable, versioned perspectives over the consolidated store. Each viewpoint applies explicit survivorship rules, temporal distribution, and uncertainty handling. Multiple viewpoints coexist. | Derived -- disposable and rebuildable from the consolidated store + configuration | Volatile (changes as research progresses; expected to have multiple coexisting versions) | Raw data storage, consolidation logic, grid placement, output formatting |
 
 ---
 
@@ -57,6 +59,8 @@ Anything that does not clearly belong to one of these categories is considered *
 - **Source Nodes** are explicitly allowed to evolve: new sources are added, existing source schemas may change as upstream providers revise their APIs.
 - **Compilation Edges** evolve as new output formats and aggregation strategies are added.
 - **Provenance Records** are append-only. The ledger format may evolve (new fields), but existing entries are never modified.
+- **Consolidated Event Stores** are append-only and stable. New sources trigger new consolidation logic, but existing records are never modified or deleted (ADR-013).
+- **Viewpoints** are volatile by design. They are rebuilt when rules change. Multiple versions coexist (ADR-014).
 
 Stability is a design constraint, not a preference.
 
@@ -96,4 +100,4 @@ These trade-offs are accepted.
 ## Notes
 
 This ADR defines *what exists*, not *how components depend on each other*.
-Dependency rules are defined separately in ADR-002.
+Dependency rules are defined separately in ADR-012 (superseding ADR-002).

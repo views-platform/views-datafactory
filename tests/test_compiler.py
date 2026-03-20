@@ -328,3 +328,96 @@ class TestCompileGridBeige:
         compile_grid(cfg)
         grid = np.load(tmp_path / "output" / "grid.npy")
         assert grid.sum() == 0.0  # All zeros — event was skipped
+
+
+class TestCompileGridRed:
+    """Adversarial inputs that compilation must handle without silent corruption."""
+
+    def test_nan_coordinates_do_not_corrupt_grid(self, tmp_path: Path) -> None:
+        """Events with NaN lat/lon should not place data into the grid."""
+        events = [
+            {
+                "id": 1,
+                "latitude": float("nan"),
+                "longitude": float("nan"),
+                "date_start": "2024-01-15",
+                "best": 99,
+            },
+        ]
+        src = _make_parquet(tmp_path / "source.parquet", events)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(("event_count", "count"),),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_grid(cfg)
+        grid = np.load(tmp_path / "output" / "grid.npy")
+        assert grid.sum() == 0.0, "NaN coordinates should not place events"
+
+    def test_missing_best_field_does_not_crash(self, tmp_path: Path) -> None:
+        """Events lacking the 'best' field should not crash sum_best."""
+        events = [
+            {
+                "id": 1,
+                "latitude": -45.0,
+                "longitude": -90.0,
+                "date_start": "2024-01-15",
+                # No "best" field
+            },
+        ]
+        src = _make_parquet(tmp_path / "source.parquet", events)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(("fatalities", "sum_best"),),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_grid(cfg)
+        grid = np.load(tmp_path / "output" / "grid.npy")
+        # Event is placed (it has valid coords) but sum_best should be 0
+        assert grid.sum() == 0.0
+
+    def test_empty_parquet_produces_zero_grid(self, tmp_path: Path) -> None:
+        """An empty Parquet with correct schema should produce an all-zero grid."""
+        src = _make_parquet(tmp_path / "source.parquet", [])
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(("event_count", "count"),),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_grid(cfg)
+        grid = np.load(tmp_path / "output" / "grid.npy")
+        assert grid.shape == (8, 12, 1)
+        assert grid.sum() == 0.0
+
+    def test_malformed_date_does_not_corrupt_grid(self, tmp_path: Path) -> None:
+        """Events with unparseable dates should be skipped, not crash."""
+        events = [
+            {
+                "id": 1,
+                "latitude": -45.0,
+                "longitude": -90.0,
+                "date_start": "not-a-date",
+                "best": 10,
+            },
+        ]
+        src = _make_parquet(tmp_path / "source.parquet", events)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(("event_count", "count"),),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_grid(cfg)
+        grid = np.load(tmp_path / "output" / "grid.npy")
+        assert grid.sum() == 0.0, "Malformed date should skip event"

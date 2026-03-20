@@ -20,12 +20,16 @@ from pathlib import Path
 import requests
 
 from datafactory_provenance import (
+    DIGEST_SCHEME,
+    LEDGER_VERSION,
     append_ledger_entry,
     compute_content_digest,
     last_digest,
 )
 
 logger = logging.getLogger(__name__)
+
+DATASET_ID = "priogrid_shapefile"
 
 # Default PRIO-GRID shapefile URL
 DEFAULT_SHAPEFILE_URL = (
@@ -141,13 +145,13 @@ def fetch_shapefile(
     changed = previous is None or previous != digest
 
     base_entry = {
-        "dataset": "priogrid_shapefile",
+        "dataset": DATASET_ID,
         "url": url,
         "size_bytes": len(content),
         "content_digest": digest,
         "previous_digest": previous,
-        "ledger_version": 1,
-        "digest_algorithm": "sha256_16",
+        "ledger_version": LEDGER_VERSION,
+        "digest_algorithm": DIGEST_SCHEME,
     }
 
     if not changed and not force_refresh:

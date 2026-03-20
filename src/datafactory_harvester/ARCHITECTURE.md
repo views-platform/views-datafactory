@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Data ingestion framework with pluggable sources. Follows the pattern: config -> fetch -> validate -> store -> provenance. Raw data is stored unaltered -- no transformation at fetch time. This is a Source Node in the graph architecture (ADR-001) and a Layer 1 package in the dependency DAG (ADR-002).
+Data ingestion framework with pluggable sources. Follows the pattern: config -> fetch -> validate -> store -> provenance. Raw data is stored unaltered -- no transformation at fetch time. This is a Source Node in the graph architecture (ADR-001) and a Layer 1 package in the dependency DAG (ADR-012).
 
 ## Responsibility Boundary
 

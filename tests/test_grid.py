@@ -78,6 +78,42 @@ def test_config_rejects_indivisible_resolution() -> None:
 
 
 # ---------------------------------------------------------------------------
+# CIC-mandated frozen enforcement (Red)
+# ---------------------------------------------------------------------------
+
+
+class TestGridConfigRed:
+    """CIC: GridConfig must be immutable (frozen dataclass)."""
+
+    def test_mutation_rejected(self) -> None:
+        cfg = GridConfig()
+        with pytest.raises(AttributeError):
+            cfg.resolution = 1.0  # type: ignore[misc]
+
+
+class TestTemporalConfigRed:
+    """CIC: TemporalConfig must be immutable (frozen dataclass)."""
+
+    def test_mutation_rejected(self) -> None:
+        from datafactory_priogrid.temporal_config import TemporalConfig
+
+        cfg = TemporalConfig()
+        with pytest.raises(AttributeError):
+            cfg.start_year = 2000  # type: ignore[misc]
+
+
+class TestSpatioTemporalGridRed:
+    """CIC: SpatioTemporalGrid must be immutable (frozen dataclass)."""
+
+    def test_mutation_rejected(self) -> None:
+        from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
+
+        grid = SpatioTemporalGrid()
+        with pytest.raises(AttributeError):
+            grid.grid_config = GridConfig(resolution=1.0)  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
 # Cell ID scheme -- canonical cells from PRIO-GRID R source
 # ---------------------------------------------------------------------------
 

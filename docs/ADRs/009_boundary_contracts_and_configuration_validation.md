@@ -16,12 +16,14 @@ Complex systems fail most often at boundaries:
 - between data producers and consumers,
 - between raw source data and compiled grid output.
 
-views-datafactory has five packages with explicit boundaries, and data flows through the filesystem between them. The most critical boundaries are:
+views-datafactory has seven packages across four layers (ADR-012), with data flowing through the filesystem between them. The most critical boundaries are:
 
 1. **Configuration to runtime** -- frozen dataclasses with `__post_init__` validation must catch invalid parameters before any operation begins.
 2. **Harvester to filesystem** -- raw Parquet snapshots with content digests must be validated before storage.
-3. **Filesystem to compiler** -- the compiler reads source files and must verify their integrity (digest match) before processing.
-4. **Compiler to consumer** -- compiled npy output with sidecar coordinate arrays must conform to the declared shape contract.
+3. **Filesystem to consolidator** -- the consolidator reads source snapshots and must verify their integrity (digest match, expected schema) before appending to the event store.
+4. **Consolidator to viewpoint builder** -- the viewpoint builder reads the consolidated store and must verify its integrity and completeness before applying survivorship rules.
+5. **Viewpoint to compiler** -- the compiler reads the viewpoint output and must verify schema conformance before grid placement.
+6. **Compiler to consumer** -- compiled npy output with sidecar coordinate arrays must conform to the declared shape contract.
 
 Ambiguous configuration, hidden defaults, and implicit contracts introduce silent semantic drift and runtime fragility. To preserve architectural integrity and fail-loud guarantees (ADR-003), all external and internal boundaries must be explicit and validated.
 

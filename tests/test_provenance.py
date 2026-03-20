@@ -205,7 +205,7 @@ class TestAppendLedgerEntryRed:
 class TestADR008Compliance:
     """ADR-008: structural failures must be both logged and raised."""
 
-    _logger = "datafactory_provenance.provenance"
+    _logger = "datafactory_provenance.digests_and_ledgers"
 
     def test_digest_type_error_logged(
         self, caplog: pytest.LogCaptureFixture

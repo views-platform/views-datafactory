@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+_GRID_TOLERANCE: float = 1e-9  # Floating-point tolerance for grid dimension validation
+
 
 @dataclass(frozen=True)
 class GridConfig:
@@ -65,7 +67,9 @@ class GridConfig:
         lon_extent = self.east - self.west
         nrow = lat_extent / self.resolution
         ncol = lon_extent / self.resolution
-        if abs(nrow - round(nrow)) > 1e-9 or abs(ncol - round(ncol)) > 1e-9:
+        nrow_frac = abs(nrow - round(nrow)) > _GRID_TOLERANCE
+        ncol_frac = abs(ncol - round(ncol)) > _GRID_TOLERANCE
+        if nrow_frac or ncol_frac:
             err_msg = (
                 f"Resolution {self.resolution} does not evenly divide "
                 f"lat extent ({lat_extent}) or lon extent ({lon_extent})"
