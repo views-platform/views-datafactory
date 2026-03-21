@@ -288,3 +288,28 @@ This suggests an undocumented version boundary: versions from the prior calendar
 ### 6.4 Audit Verdict
 
 **CONTESTED.** The core finding (13,005 exclusive events, .9 as distinct source) survived the most aggressive probes. But the investigation had significant gaps: .9 availability was understated by 84 versions, and ADR-015 contained a hard-falsified claim. These have been corrected.
+
+---
+
+## 7. Production Parity Results (M6)
+
+**Date:** 2026-03-21
+**Full results:** See `parity_results.md` for detailed methodology and raw numbers.
+
+### Key Finding
+
+Production does NOT consolidate three sources. It fetches ONE .9 version and processes it directly. Our pipeline achieves **100.00% fatality match on all non-expanded events** (27,853/27,853) when given the same .9 input and using the `production_parity` profile.
+
+### Three Categories of Comparison Outcome
+
+1. **Non-expanded events: 100.00% match** (27,853 events, zero discrepancies)
+2. **Filtered events: fully explained** (3,071 events removed by our filters, matching production's filters exactly)
+3. **Expanded events: comparison artifact** (51 events where our post-distribution sum differs from .9's pre-distribution value — both pipelines produce identical per-row values)
+
+### What This Means
+
+When given the same input (.9 data) and applying the same processing (summary distribution, filtering), our pipeline produces output identical to production. The `production_parity` profile correctly replicates every step of the production GedLoader.
+
+### Important Caveat
+
+The `production_parity` profile achieves parity only when the sole input is .9 data. Our three-source consolidation (annual + candidate + .9) with `dot9_wins` survivorship produces different results because survivorship preferences can override .9 data with annual data for overlapping events. This is by design — the three-source consolidation is a different, richer viewpoint that preserves version history.
