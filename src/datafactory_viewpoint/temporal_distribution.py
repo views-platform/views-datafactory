@@ -15,7 +15,7 @@ from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["get_distribution", "even_split"]
+__all__ = ["get_distribution", "even_split", "ceil_split"]
 
 STRATEGIES: dict[str, Callable[[dict], list[dict]]] = {}
 
@@ -134,6 +134,77 @@ def even_split(event: dict) -> list[dict]:
             "best": best,
             "low": low,
             "high": high,
+            "date_month": month_str,
+        }
+        rows.append(row)
+
+    return rows
+
+
+@_register("ceil_split")
+def ceil_split(event: dict) -> list[dict]:
+    """Production-parity summary event distribution.
+
+    Matches the production GedLoader's fix_summary_events logic:
+
+    Detection: event is summary if best > 0, spans > 1 month,
+    AND best >= span (enough fatalities for at least 1 per month).
+    This differs from even_split which uses date_prec == 5.
+
+    Distribution: ceil(fatalities / span) — rounds up to ensure
+    every month gets at least 1 fatality. This may inflate totals
+    (e.g., best=7 over 3 months → 3+3+3=9, not 7).
+
+    Non-summary events get date_month from date_end.
+    """
+    import math
+
+    date_end = event.get("date_end") or event.get("date_start")
+    date_start = event.get("date_start")
+    best = event.get("best") or 0
+
+    # Compute month span for detection
+    if date_start and date_end:
+        months = _months_between(date_start, date_end)
+        summary_period = len(months)
+    else:
+        summary_period = 1
+        months = []
+
+    # Production detection: best>0 AND span>1 AND best>=span
+    is_summary = (
+        best > 0
+        and summary_period > 1
+        and best >= summary_period
+    )
+
+    if not is_summary:
+        # Non-summary: single row, month from date_end
+        row = {**event, "date_month": _month_first_day(date_end)}
+        return [row]
+
+    # Summary event: distribute with ceil
+    if not months:
+        err_msg = (
+            f"Summary event has no month span: "
+            f"date_start={date_start}, date_end={date_end}"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    ceil_best = int(math.ceil(best / summary_period))
+    low = event.get("low") or 0
+    high = event.get("high") or 0
+    ceil_low = int(math.ceil(low / summary_period))
+    ceil_high = int(math.ceil(high / summary_period))
+
+    rows: list[dict] = []
+    for month_str in months:
+        row = {
+            **event,
+            "best": ceil_best,
+            "low": ceil_low,
+            "high": ceil_high,
             "date_month": month_str,
         }
         rows.append(row)

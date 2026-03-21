@@ -88,5 +88,5 @@ def list_profiles() -> list[str]:
 _register(
     "production_parity",
     survivorship_strategy="dot9_wins",
-    distribution_strategy="even_split",
+    distribution_strategy="ceil_split",
 )

@@ -20,6 +20,7 @@ from datafactory_viewpoint.survivorship import (
     get_survivorship,
 )
 from datafactory_viewpoint.temporal_distribution import (
+    ceil_split,
     even_split,
     get_distribution,
 )
@@ -285,6 +286,91 @@ class TestTemporalDistributionRed:
             even_split(event)
 
 
+# ---- Ceil Split (Production Parity): Green ----
+
+
+class TestCeilSplitGreen:
+
+    def test_non_summary_single_row(self) -> None:
+        """best=0 → not summary, single row returned."""
+        event = _make_consolidated_event(
+            date_prec=1,
+            date_start="2023-06-15",
+            date_end="2023-06-15",
+            best=0,
+        )
+        rows = ceil_split(event)
+        assert len(rows) == 1
+        assert rows[0]["date_month"] == "2023-06-01"
+
+    def test_summary_3_months_ceil(self) -> None:
+        """best=7, span=3 → 3 rows with ceil(7/3)=3 each."""
+        event = _make_consolidated_event(
+            date_prec=1,  # NOT date_prec=5 — production ignores it
+            date_start="2023-01-15",
+            date_end="2023-03-31",
+            best=7,
+            low=4,
+            high=10,
+        )
+        rows = ceil_split(event)
+        assert len(rows) == 3
+        assert rows[0]["best"] == 3  # ceil(7/3) = 3
+        assert rows[0]["low"] == 2   # ceil(4/3) = 2
+        assert rows[0]["high"] == 4  # ceil(10/3) = 4
+
+    def test_exact_divisible(self) -> None:
+        """best=300, span=3 → 100 each (ceil agrees with exact)."""
+        event = _make_consolidated_event(
+            date_start="2023-01-01",
+            date_end="2023-03-31",
+            best=300,
+            low=150,
+            high=450,
+        )
+        rows = ceil_split(event)
+        assert len(rows) == 3
+        assert rows[0]["best"] == 100
+        assert rows[1]["low"] == 50
+        assert rows[2]["high"] == 150
+
+    def test_date_prec5_but_zero_best_not_summary(self) -> None:
+        """Production detection: date_prec=5 but best=0 → NOT summary."""
+        event = _make_consolidated_event(
+            date_prec=5,
+            date_start="2023-01-01",
+            date_end="2023-03-31",
+            best=0,
+        )
+        rows = ceil_split(event)
+        assert len(rows) == 1  # NOT expanded — best=0 fails detection
+
+    def test_non_prec5_multi_month_is_summary(self) -> None:
+        """date_prec=1 but span>1 and best>=span → IS summary."""
+        event = _make_consolidated_event(
+            date_prec=1,
+            date_start="2023-01-01",
+            date_end="2023-03-31",
+            best=10,
+        )
+        rows = ceil_split(event)
+        assert len(rows) == 3  # IS expanded — meets production criteria
+
+    def test_best_less_than_span_not_summary(self) -> None:
+        """best=2, span=3 → not summary (best < span)."""
+        event = _make_consolidated_event(
+            date_start="2023-01-01",
+            date_end="2023-03-31",
+            best=2,
+        )
+        rows = ceil_split(event)
+        assert len(rows) == 1  # NOT expanded — best < span
+
+    def test_get_ceil_split_by_name(self) -> None:
+        fn = get_distribution("ceil_split")
+        assert fn is ceil_split
+
+
 # ---- ViewpointConfig: Green ----
 
 
@@ -509,7 +595,7 @@ class TestProfilesGreen:
         )
         assert isinstance(cfg, ViewpointConfig)
         assert cfg.survivorship_strategy == "dot9_wins"
-        assert cfg.distribution_strategy == "even_split"
+        assert cfg.distribution_strategy == "ceil_split"
         assert cfg.version == "production_parity"
 
     def test_load_with_override(self, tmp_path: Path) -> None:
