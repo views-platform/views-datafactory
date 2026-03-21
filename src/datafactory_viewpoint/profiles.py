@@ -89,4 +89,7 @@ _register(
     "production_parity",
     survivorship_strategy="dot9_wins",
     distribution_strategy="ceil_split",
+    min_priogrid_gid=1,
+    max_type_of_violence=3,
+    exclude_where_prec=(4, 6),
 )

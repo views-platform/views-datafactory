@@ -532,6 +532,117 @@ class TestBuildUcdpV1Beige:
         assert result.n_events_output == 3
 
 
+# ---- Filtering: Green ----
+
+
+class TestFilteringGreen:
+
+    def test_no_filters_by_default(self, tmp_path: Path) -> None:
+        """Default config has no filters — all events kept."""
+        events = [
+            _make_consolidated_event(
+                event_id=1, priogrid_gid=0,
+            ),
+            _make_consolidated_event(
+                event_id=2, priogrid_gid=100,
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+        assert result.n_events_output == 2
+        assert result.n_filtered == 0
+
+    def test_filter_priogrid_gid(self, tmp_path: Path) -> None:
+        events = [
+            _make_consolidated_event(
+                event_id=1, priogrid_gid=0,
+            ),
+            _make_consolidated_event(
+                event_id=2, priogrid_gid=100,
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+            min_priogrid_gid=1,
+        )
+
+        result = build_ucdp_v1(cfg)
+        assert result.n_events_output == 1
+        assert result.n_filtered == 1
+
+    def test_filter_type_of_violence(
+        self, tmp_path: Path
+    ) -> None:
+        events = [
+            _make_consolidated_event(event_id=i)
+            for i in range(3)
+        ]
+        # Manually set type_of_violence
+        events[0]["type_of_violence"] = 1
+        events[1]["type_of_violence"] = 3
+        events[2]["type_of_violence"] = 4
+
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+            max_type_of_violence=3,
+        )
+
+        result = build_ucdp_v1(cfg)
+        assert result.n_events_output == 2
+        assert result.n_filtered == 1
+
+    def test_filter_where_prec(self, tmp_path: Path) -> None:
+        events = [
+            _make_consolidated_event(event_id=i)
+            for i in range(4)
+        ]
+        events[0]["where_prec"] = 1
+        events[1]["where_prec"] = 4  # excluded
+        events[2]["where_prec"] = 5
+        events[3]["where_prec"] = 6  # excluded
+
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+            exclude_where_prec=(4, 6),
+        )
+
+        result = build_ucdp_v1(cfg)
+        assert result.n_events_output == 2
+        assert result.n_filtered == 2
+
+    def test_production_parity_profile_has_filters(
+        self, tmp_path: Path
+    ) -> None:
+        from datafactory_viewpoint.profiles import load_profile
+
+        cfg = load_profile(
+            "production_parity",
+            tmp_path / "store.parquet",
+        )
+        assert cfg.min_priogrid_gid == 1
+        assert cfg.max_type_of_violence == 3
+        assert cfg.exclude_where_prec == (4, 6)
+
+
 # ---- Build UCDP v1: Red ----
 
 

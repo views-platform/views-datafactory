@@ -24,5 +24,6 @@ class ViewpointResult:
     n_events_input: int
     n_events_output: int
     n_summary_expanded: int
+    n_filtered: int
     output_digest: str
     version: str

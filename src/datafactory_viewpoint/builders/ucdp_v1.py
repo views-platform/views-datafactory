@@ -162,6 +162,33 @@ def build_ucdp_v1(
         n_summary, config.distribution_strategy,
     )
 
+    # Apply filters (production parity)
+    n_before_filter = len(output_rows)
+    if config.min_priogrid_gid is not None:
+        output_rows = [
+            r for r in output_rows
+            if (r.get("priogrid_gid") or 0)
+            >= config.min_priogrid_gid
+        ]
+    if config.max_type_of_violence is not None:
+        output_rows = [
+            r for r in output_rows
+            if (r.get("type_of_violence") or 0)
+            <= config.max_type_of_violence
+        ]
+    if config.exclude_where_prec:
+        output_rows = [
+            r for r in output_rows
+            if r.get("where_prec")
+            not in config.exclude_where_prec
+        ]
+    n_filtered = n_before_filter - len(output_rows)
+    if n_filtered > 0:
+        logger.info(
+            "Filtered: %d rows removed (%d remaining)",
+            n_filtered, len(output_rows),
+        )
+
     # Strip consolidation metadata from output
     output_cols = [
         c for c in col_names if c not in STRIPPED_FIELDS
@@ -199,6 +226,7 @@ def build_ucdp_v1(
         "n_events_input": n_input,
         "n_events_output": len(output_rows),
         "n_summary_expanded": n_summary,
+        "n_filtered": n_filtered,
         "output_path": str(config.output_path),
         "output_digest": output_digest,
         "ledger_version": LEDGER_VERSION,
@@ -215,6 +243,7 @@ def build_ucdp_v1(
         n_events_input=n_input,
         n_events_output=len(output_rows),
         n_summary_expanded=n_summary,
+        n_filtered=n_filtered,
         output_digest=output_digest,
         version=config.version,
     )

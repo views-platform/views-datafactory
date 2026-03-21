@@ -34,5 +34,11 @@ class ViewpointConfig:
     survivorship_strategy: str = "annual_wins"
     distribution_strategy: str = "even_split"
 
+    # Filtering (applied after survivorship + distribution)
+    # None means no filter; profiles set values for production parity
+    min_priogrid_gid: int | None = None
+    max_type_of_violence: int | None = None
+    exclude_where_prec: tuple[int, ...] = ()
+
     # Version tag for provenance (set by profile or caller)
     version: str = "custom"
