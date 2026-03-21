@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 
 _SMOKE_TEST_CANDIDATE_START: int = 2025  # Recent only — full history is slow
+_SMOKE_TEST_DOT9_START: int = 2025  # Recent only — full history is slow
 
 
 def main() -> int:
@@ -42,9 +43,9 @@ def main() -> int:
     consolidated_path: Path | None = None
 
     # =================================================================
-    # [1/9] Harvest — Fetch UCDP Annual
+    # [1/10] Harvest — Fetch UCDP Annual
     # =================================================================
-    print("[1/9] Harvest — Fetching UCDP/GED Annual 2023...")
+    print("[1/10] Harvest — Fetching UCDP/GED Annual 2023...")
     from datafactory_harvester.sources.ucdp_annual import (
         UcdpAnnualConfig,
         fetch_ucdp_annual,
@@ -66,10 +67,10 @@ def main() -> int:
         print(f"  FAIL: {e}")
 
     # =================================================================
-    # [2/9] Harvest — Fetch UCDP Candidate Monthly
+    # [2/10] Harvest — Fetch UCDP Candidate Monthly
     # =================================================================
     print()
-    print("[2/9] Harvest — Fetching UCDP/GED Candidate Monthly...")
+    print("[2/10] Harvest — Fetching UCDP/GED Candidate Monthly...")
     from datafactory_harvester.sources.ucdp_candidate import (
         UcdpCandidateConfig,
         fetch_ucdp_candidate,
@@ -107,10 +108,52 @@ def main() -> int:
         print(f"  FAIL: {e}")
 
     # =================================================================
-    # [3/9] Harvest — Inspect Raw Data
+    # [3/10] Harvest — Fetch UCDP .9 Consolidated
     # =================================================================
     print()
-    print("[3/9] Harvest — Inspecting raw data...")
+    print("[3/10] Harvest — Fetching UCDP/GED .9 consolidated...")
+    from datafactory_harvester.sources.ucdp_dot9 import (
+        UcdpDot9Config,
+        fetch_ucdp_dot9,
+    )
+
+    dot9_config = UcdpDot9Config(
+        start_year=_SMOKE_TEST_DOT9_START,
+        data_dir=data_dir / "ucdp_dot9",
+        ledger_path=(
+            provenance_dir / "ucdp_dot9" / "ingestion_ledger.jsonl"
+        ),
+    )
+
+    try:
+        dot9_results = fetch_ucdp_dot9(dot9_config)
+        n_dot9_versions = len(dot9_results)
+        n_dot9_success = sum(
+            1 for r in dot9_results
+            if r.get("outcome") == "success"
+        )
+        print(f"  Versions discovered: {n_dot9_versions}")
+        print(f"  Successfully fetched: {n_dot9_success}")
+        for r in dot9_results:
+            print(
+                f"    {r.get('version', '?')}: "
+                f"{r.get('outcome', '?')} "
+                f"({r.get('n_events', '?')} events)"
+            )
+        if n_dot9_versions == 0:
+            skips.append("No .9 versions available")
+            print("  SKIP: No .9 versions available")
+        else:
+            print("  PASS")
+    except Exception as e:
+        failures.append(f".9 fetch failed: {e}")
+        print(f"  FAIL: {e}")
+
+    # =================================================================
+    # [4/10] Harvest — Inspect Raw Data
+    # =================================================================
+    print()
+    print("[4/10] Harvest — Inspecting raw data...")
     import pyarrow.parquet as pq
 
     critical_cols = ("latitude", "longitude", "date_start", "best", "id")
@@ -135,20 +178,33 @@ def main() -> int:
         n_candidate_events += t.num_rows
         print(f"  Candidate: {f.name} ({t.num_rows:,} events)")
 
+    # .9
+    dot9_files = sorted(
+        (data_dir / "ucdp_dot9").glob("*.parquet")
+    ) if (data_dir / "ucdp_dot9").exists() else []
+    n_dot9_events = 0
+    for f in dot9_files:
+        t = pq.read_table(f)
+        n_dot9_events += t.num_rows
+        print(f"  .9: {f.name} ({t.num_rows:,} events)")
+
+    n_total_raw = (
+        n_annual_events + n_candidate_events + n_dot9_events
+    )
     print(
         f"  Total raw: {n_annual_events:,} annual + "
-        f"{n_candidate_events:,} candidate = "
-        f"{n_annual_events + n_candidate_events:,}"
+        f"{n_candidate_events:,} candidate + "
+        f"{n_dot9_events:,} .9 = {n_total_raw:,}"
     )
     if n_annual_events == 0:
         failures.append("Zero annual events")
     print("  PASS" if not any("missing" in f.lower() for f in failures) else "")
 
     # =================================================================
-    # [4/9] Consolidate — Build Event Store
+    # [5/10] Consolidate — Build Event Store
     # =================================================================
     print()
-    print("[4/9] Consolidate — Building lossless event store...")
+    print("[5/10] Consolidate — Building lossless event store...")
     from datafactory_consolidation.consolidators.ucdp import (
         UcdpConsolidationConfig,
         consolidate_ucdp,
@@ -157,6 +213,10 @@ def main() -> int:
     consolidation_config = UcdpConsolidationConfig(
         annual_dir=data_dir / "ucdp_annual",
         candidate_dir=data_dir / "ucdp_candidate",
+        dot9_dir=data_dir / "ucdp_dot9",
+        dot9_ledger_path=(
+            provenance_dir / "ucdp_dot9" / "ingestion_ledger.jsonl"
+        ),
         output_path=data_dir / "consolidated" / "ucdp_store.parquet",
         ledger_path=(
             provenance_dir / "consolidation" / "ucdp_ledger.jsonl"
@@ -179,10 +239,10 @@ def main() -> int:
         print(f"  FAIL: {e}")
 
     # =================================================================
-    # [5/9] Consolidate — Inspect Event Store
+    # [6/10] Consolidate — Inspect Event Store
     # =================================================================
     print()
-    print("[5/9] Consolidate — Inspecting event store...")
+    print("[6/10] Consolidate — Inspecting event store...")
 
     if consolidated_path and consolidated_path.exists():
         store = pq.read_table(consolidated_path)
@@ -221,10 +281,10 @@ def main() -> int:
         print("  FAIL: consolidated store not found")
 
     # =================================================================
-    # [6/9] Viewpoint — Build Materialized View
+    # [7/10] Viewpoint — Build Materialized View
     # =================================================================
     print()
-    print("[6/9] Viewpoint — Building materialized view...")
+    print("[7/10] Viewpoint — Building materialized view...")
     from datafactory_viewpoint.builders import list_builders
 
     viewpoint_path: Path | None = None
@@ -267,10 +327,10 @@ def main() -> int:
         print("  SKIP: No consolidated store available")
 
     # =================================================================
-    # [7/9] Compile — Tiny Grid (8 cells)
+    # [8/10] Compile — Tiny Grid (8 cells)
     # =================================================================
     print()
-    print("[7/9] Compile — Tiny grid (8 cells)...")
+    print("[8/10] Compile — Tiny grid (8 cells)...")
     from datafactory_compilation import CompilationConfig, compile_grid
     from datafactory_priogrid.grid_config import GridConfig
     from datafactory_priogrid.temporal_config import TemporalConfig
@@ -307,10 +367,10 @@ def main() -> int:
             print(f"  FAIL: {e}")
 
     # =================================================================
-    # [8/9] Compile — Real Grid (259,200 cells)
+    # [9/10] Compile — Real Grid (259,200 cells)
     # =================================================================
     print()
-    print("[8/9] Compile — Real grid (259,200 cells × 48 months)...")
+    print("[9/10] Compile — Real grid (259,200 cells × 48 months)...")
 
     if compile_source is not None:
         real_config = CompilationConfig(
@@ -365,17 +425,21 @@ def main() -> int:
             print(f"  FAIL: {e}")
 
     # =================================================================
-    # [9/9] Provenance — End-to-End Chain
+    # [10/10] Provenance — End-to-End Chain
     # =================================================================
     print()
-    print("[9/9] Provenance — Checking end-to-end chain...")
+    print("[10/10] Provenance — Checking end-to-end chain...")
 
     candidate_ledger = (
         provenance_dir / "ucdp_candidate" / "ingestion_ledger.jsonl"
     )
+    dot9_ledger = (
+        provenance_dir / "ucdp_dot9" / "ingestion_ledger.jsonl"
+    )
     ledgers = [
         ("Annual harvest", provenance_dir / "ucdp_annual" / "ingestion_ledger.jsonl"),
         ("Candidate harvest", candidate_ledger),
+        (".9 harvest", dot9_ledger),
         ("Consolidation", provenance_dir / "consolidation" / "ucdp_ledger.jsonl"),
         ("Viewpoint", provenance_dir / "viewpoint" / "ucdp_v1_ledger.jsonl"),
         ("Compilation", provenance_dir / "compiler" / "compilation_ledger.jsonl"),
