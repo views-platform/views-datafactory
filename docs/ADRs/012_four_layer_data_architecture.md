@@ -108,7 +108,7 @@ Each new layer follows the established registry pattern from `datafactory_harves
 datafactory_consolidation/           # Layer 2
     consolidators/                   # Source-specific: one per data source
         ucdp.py                      # UCDP annual + candidate → event store
-    store_io.py                      # Source-agnostic: append-only Parquet, bitemporal queries
+    event_store.py                   # Source-agnostic: append-only Parquet, bitemporal queries
 
 datafactory_viewpoint/               # Layer 3
     builders/                        # Source-specific: one per source × version

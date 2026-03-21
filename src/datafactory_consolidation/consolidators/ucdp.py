@@ -22,7 +22,7 @@ import pyarrow as pa
 
 from datafactory_consolidation.consolidation_result import ConsolidationResult
 from datafactory_consolidation.consolidators import register_consolidator
-from datafactory_consolidation.store_io import read_store, write_store
+from datafactory_consolidation.event_store import read_store, write_store
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,

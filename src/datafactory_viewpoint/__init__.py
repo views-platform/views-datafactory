@@ -13,4 +13,18 @@ Or use the registry:
     build_viewpoint("ucdp_v1", config=...)
 """
 
-__all__: list[str] = []
+from datafactory_viewpoint.builders import (
+    build_viewpoint,
+    list_builders,
+    register_builder,
+)
+from datafactory_viewpoint.viewpoint_config import ViewpointConfig
+from datafactory_viewpoint.viewpoint_result import ViewpointResult
+
+__all__ = [
+    "ViewpointConfig",
+    "ViewpointResult",
+    "build_viewpoint",
+    "list_builders",
+    "register_builder",
+]

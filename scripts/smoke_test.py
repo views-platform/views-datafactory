@@ -224,18 +224,47 @@ def main() -> int:
     # [6/9] Viewpoint — Build Materialized View
     # =================================================================
     print()
-    print("[6/9] Viewpoint — Checking for registered builders...")
+    print("[6/9] Viewpoint — Building materialized view...")
     from datafactory_viewpoint.builders import list_builders
 
+    viewpoint_path: Path | None = None
+
+    # Import builder module to trigger auto-registration
+    import datafactory_viewpoint.builders.ucdp_v1  # noqa: F401
+
     builders = list_builders()
-    if builders:
-        print(f"  Available builders: {builders}")
-        print("  (viewpoint building would run here)")
-        # When implemented: build_viewpoint(builders[0], config=...)
-    else:
+    if builders and consolidated_path:
+        from datafactory_viewpoint.builders.ucdp_v1 import build_ucdp_v1
+        from datafactory_viewpoint.viewpoint_config import ViewpointConfig
+
+        viewpoint_config = ViewpointConfig(
+            consolidated_path=consolidated_path,
+            output_path=data_dir / "viewpoints" / "ucdp_v1.parquet",
+            ledger_path=(
+                provenance_dir / "viewpoint" / "ucdp_v1_ledger.jsonl"
+            ),
+        )
+
+        t0 = time.monotonic()
+        try:
+            vp_result = build_ucdp_v1(viewpoint_config)
+            vp_time = time.monotonic() - t0
+            viewpoint_path = vp_result.output_path
+            print(f"  Events in: {vp_result.n_events_input:,}")
+            print(f"  Rows out: {vp_result.n_events_output:,}")
+            print(f"  Summary events expanded: {vp_result.n_summary_expanded}")
+            print(f"  Output digest: {vp_result.output_digest}")
+            print(f"  Time: {vp_time:.2f}s")
+            print("  PASS")
+        except Exception as e:
+            failures.append(f"Viewpoint build failed: {e}")
+            print(f"  FAIL: {e}")
+    elif not builders:
         skips.append("Viewpoint layer not yet implemented")
         print("  SKIP: No viewpoint builders registered")
-        print("  (Layer 3 not yet implemented — compiling from consolidated store)")
+    else:
+        skips.append("No consolidated store for viewpoint")
+        print("  SKIP: No consolidated store available")
 
     # =================================================================
     # [7/9] Compile — Tiny Grid (8 cells)
@@ -246,8 +275,9 @@ def main() -> int:
     from datafactory_priogrid.grid_config import GridConfig
     from datafactory_priogrid.temporal_config import TemporalConfig
 
-    # Use consolidated store if available, else fall back to annual snapshot
-    compile_source = consolidated_path or annual_snap_path
+    # Prefer viewpoint output, fall back to consolidated, then annual
+    compile_source = viewpoint_path or consolidated_path or annual_snap_path
+    compile_date_field = "date_month" if viewpoint_path else "date_start"
     if compile_source is None:
         failures.append("No source available for compilation")
         print("  FAIL: no source data available")
@@ -259,6 +289,7 @@ def main() -> int:
             features=(("event_count", "count"), ("fatalities", "sum_best")),
             output_dir=data_dir / "compiled_tiny",
             ledger_path=provenance_dir / "compiler" / "compilation_ledger.jsonl",
+            date_field=compile_date_field,
         )
 
         t0 = time.monotonic()
@@ -289,6 +320,7 @@ def main() -> int:
             features=(("event_count", "count"), ("fatalities", "sum_best")),
             output_dir=data_dir / "compiled_real",
             ledger_path=provenance_dir / "compiler" / "compilation_ledger.jsonl",
+            date_field=compile_date_field,
         )
 
         t0 = time.monotonic()
@@ -345,6 +377,7 @@ def main() -> int:
         ("Annual harvest", provenance_dir / "ucdp_annual" / "ingestion_ledger.jsonl"),
         ("Candidate harvest", candidate_ledger),
         ("Consolidation", provenance_dir / "consolidation" / "ucdp_ledger.jsonl"),
+        ("Viewpoint", provenance_dir / "viewpoint" / "ucdp_v1_ledger.jsonl"),
         ("Compilation", provenance_dir / "compiler" / "compilation_ledger.jsonl"),
     ]
 

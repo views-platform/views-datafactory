@@ -1,0 +1,141 @@
+"""Temporal distribution strategy registry for viewpoint building.
+
+Each strategy is a function: dict -> list[dict].
+Given a single event, the strategy returns one or more rows
+depending on whether the event spans multiple months.
+
+Adding a new strategy means adding a function here with the
+@_register decorator — no changes to the builder (OCP).
+"""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Callable
+
+logger = logging.getLogger(__name__)
+
+__all__ = ["get_distribution", "even_split"]
+
+STRATEGIES: dict[str, Callable[[dict], list[dict]]] = {}
+
+_SUMMARY_DATE_PREC: int = 5  # date_prec value indicating multi-month span
+
+
+def _register(name: str) -> Callable:
+    """Decorator to register a temporal distribution strategy."""
+    def decorator(
+        fn: Callable[[dict], list[dict]],
+    ) -> Callable[[dict], list[dict]]:
+        STRATEGIES[name] = fn
+        return fn
+    return decorator
+
+
+def get_distribution(name: str) -> Callable[[dict], list[dict]]:
+    """Look up a temporal distribution strategy by name.
+
+    Raises:
+        KeyError: If the strategy name is not registered.
+    """
+    if name not in STRATEGIES:
+        available = sorted(STRATEGIES.keys())
+        err_msg = (
+            f"Unknown distribution strategy '{name}'. "
+            f"Available: {available}"
+        )
+        logger.error(err_msg)
+        raise KeyError(err_msg)
+    return STRATEGIES[name]
+
+
+def _month_first_day(date_str: str) -> str:
+    """Extract the first day of the month from a YYYY-MM-DD string.
+
+    Example: "2023-03-15" → "2023-03-01"
+    """
+    parts = date_str.split("-")
+    return f"{parts[0]}-{parts[1]}-01"
+
+
+def _months_between(start_str: str, end_str: str) -> list[str]:
+    """Generate first-of-month strings between two dates (inclusive).
+
+    Example: "2023-01-15" to "2023-03-31" → ["2023-01-01",
+    "2023-02-01", "2023-03-01"]
+    """
+    start_parts = start_str.split("-")
+    end_parts = end_str.split("-")
+
+    start_year = int(start_parts[0])
+    start_month = int(start_parts[1])
+    end_year = int(end_parts[0])
+    end_month = int(end_parts[1])
+
+    months: list[str] = []
+    year, month = start_year, start_month
+    while (year, month) <= (end_year, end_month):
+        months.append(f"{year}-{month:02d}-01")
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+
+    return months
+
+
+@_register("even_split")
+def even_split(event: dict) -> list[dict]:
+    """Distribute summary events evenly across spanned months.
+
+    For date_prec=5 events: divides best/low/high evenly across
+    months from date_start to date_end (inclusive). Each output
+    row gets a date_month field.
+
+    For all other events: returns a single row with date_month
+    derived from date_end (matching production GedLoader behavior).
+    """
+    date_prec = event.get("date_prec")
+    date_end = event.get("date_end") or event.get("date_start")
+
+    if date_prec != _SUMMARY_DATE_PREC:
+        # Non-summary: single row, month from date_end
+        row = {**event, "date_month": _month_first_day(date_end)}
+        return [row]
+
+    # Summary event: distribute across months
+    date_start = event.get("date_start")
+    if not date_start or not date_end:
+        err_msg = (
+            f"Summary event (date_prec=5) missing date_start or "
+            f"date_end: id={event.get('id')}"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    months = _months_between(date_start, date_end)
+    if not months:
+        err_msg = (
+            f"Summary event spans zero months: "
+            f"date_start={date_start}, date_end={date_end}"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    n_months = len(months)
+    best = (event.get("best") or 0) / n_months
+    low = (event.get("low") or 0) / n_months
+    high = (event.get("high") or 0) / n_months
+
+    rows: list[dict] = []
+    for month_str in months:
+        row = {
+            **event,
+            "best": best,
+            "low": low,
+            "high": high,
+            "date_month": month_str,
+        }
+        rows.append(row)
+
+    return rows

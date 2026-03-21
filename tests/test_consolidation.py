@@ -20,7 +20,7 @@ from datafactory_consolidation.consolidators.ucdp import (
     _extract_candidate_version,
     consolidate_ucdp,
 )
-from datafactory_consolidation.store_io import read_store, write_store
+from datafactory_consolidation.event_store import read_store, write_store
 
 # ---- Helpers ----
 
