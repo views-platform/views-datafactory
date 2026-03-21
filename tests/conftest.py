@@ -17,10 +17,11 @@ def _clean_source_registry() -> None:  # type: ignore[misc]
     # and only clear if test sources were added
     import datafactory_harvester.sources.ucdp_annual  # noqa: F401
     import datafactory_harvester.sources.ucdp_candidate  # noqa: F401
+    import datafactory_harvester.sources.ucdp_dot9  # noqa: F401
     from datafactory_harvester.sources import _SOURCES
 
     # Remove any test-registered sources by keeping only known ones
-    known = {"ucdp_annual", "ucdp_candidate"}
+    known = {"ucdp_annual", "ucdp_candidate", "ucdp_dot9"}
     test_sources = set(_SOURCES.keys()) - known
     for name in test_sources:
         del _SOURCES[name]
