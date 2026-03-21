@@ -2,14 +2,14 @@
 
 ## Purpose
 
-Lossless consolidation of raw source snapshots into version-aware event stores. Combines multiple vintages (annual releases, candidate versions) from each data source into a single, append-only, queryable store with bitemporal metadata. This is a Layer 2 package in the dependency DAG (ADR-012) implementing the consolidation principles defined in ADR-013.
+Lossless consolidation of raw source snapshots into version-aware event stores. Combines multiple vintages (annual releases, candidate versions, .9 consolidated versions) from each data source into a single, append-only, queryable store with bitemporal metadata. Vintage-aware per ADR-017. This is a Layer 2 package in the dependency DAG (ADR-012) implementing the consolidation principles defined in ADR-013.
 
 ## Responsibility Boundary
 
 **Owns:**
 - Source-specific consolidation logic (one consolidator per data source)
 - Append-only event store I/O (write new vintages, query by version/time)
-- Bitemporal metadata: `_source_type`, `_source_version`, `_ingested_at`
+- Bitemporal metadata: `_source_type` ("annual", "candidate", "dot9"), `_source_version`, `_ingested_at`, `_harvest_digest`, `_harvest_timestamp`
 - Lossless field preservation (no columns dropped)
 - Provenance tracking for consolidation operations
 

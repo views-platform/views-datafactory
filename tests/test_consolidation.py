@@ -18,6 +18,7 @@ from datafactory_consolidation.consolidators.ucdp import (
     UcdpConsolidationConfig,
     _extract_annual_version,
     _extract_candidate_version,
+    _extract_dot9_version,
     consolidate_ucdp,
 )
 from datafactory_consolidation.event_store import read_store, write_store
@@ -75,17 +76,33 @@ def _setup_candidate(
     return candidate_dir
 
 
+def _setup_dot9(
+    tmp_path: Path,
+    events: list[dict],
+    version: str = "25.9.11",
+) -> Path:
+    """Write a .9 snapshot with the harvester naming convention."""
+    dot9_dir = tmp_path / "dot9"
+    _write_parquet(
+        dot9_dir / f"ucdp_ged_dot9_{version}.parquet", events
+    )
+    return dot9_dir
+
+
 def _config(
     tmp_path: Path,
     annual_dir: Path | None = None,
     candidate_dir: Path | None = None,
+    dot9_dir: Path | None = None,
 ) -> UcdpConsolidationConfig:
     """Build a test config pointing to tmp_path locations."""
     return UcdpConsolidationConfig(
         annual_dir=annual_dir or tmp_path / "annual",
         candidate_dir=candidate_dir or tmp_path / "candidate",
+        dot9_dir=dot9_dir or tmp_path / "dot9",
         annual_ledger_path=tmp_path / "prov_annual" / "ledger.jsonl",
         candidate_ledger_path=tmp_path / "prov_cand" / "ledger.jsonl",
+        dot9_ledger_path=tmp_path / "prov_dot9" / "ledger.jsonl",
         output_path=tmp_path / "consolidated" / "store.parquet",
         ledger_path=tmp_path / "provenance" / "ledger.jsonl",
     )
@@ -107,6 +124,14 @@ class TestVersionExtractionGreen:
     def test_candidate_version_double_digit(self) -> None:
         p = Path("ucdp_ged_candidate_25.0.12.parquet")
         assert _extract_candidate_version(p) == "25.0.12"
+
+    def test_dot9_version(self) -> None:
+        p = Path("ucdp_ged_dot9_25.9.11.parquet")
+        assert _extract_dot9_version(p) == "25.9.11"
+
+    def test_dot9_version_single_digit(self) -> None:
+        p = Path("ucdp_ged_dot9_18.9.1.parquet")
+        assert _extract_dot9_version(p) == "18.9.1"
 
 
 class TestVersionExtractionRed:
@@ -368,6 +393,60 @@ class TestConsolidateUcdpBeige:
         table = pq.read_table(cfg.output_path)
         types = set(table.column("_source_type").to_pylist())
         assert types == {"candidate"}
+
+    def test_dot9_only(self, tmp_path: Path) -> None:
+        """.9 dir only — works alone."""
+        events = _make_events(3)
+        dot9_dir = _setup_dot9(tmp_path, events)
+        cfg = _config(tmp_path, dot9_dir=dot9_dir)
+
+        result = consolidate_ucdp(cfg)
+        assert result.n_records_total == 3
+
+        table = pq.read_table(cfg.output_path)
+        types = set(table.column("_source_type").to_pylist())
+        assert types == {"dot9"}
+
+    def test_all_three_sources(self, tmp_path: Path) -> None:
+        """Annual + candidate + .9 → all three source types."""
+        annual_events = _make_events(3, id_start=1)
+        candidate_events = _make_events(2, id_start=100)
+        dot9_events = _make_events(4, id_start=200)
+
+        annual_dir = _setup_annual(tmp_path, annual_events)
+        candidate_dir = _setup_candidate(tmp_path, candidate_events)
+        dot9_dir = _setup_dot9(tmp_path, dot9_events)
+        cfg = _config(
+            tmp_path,
+            annual_dir=annual_dir,
+            candidate_dir=candidate_dir,
+            dot9_dir=dot9_dir,
+        )
+
+        result = consolidate_ucdp(cfg)
+        assert result.n_records_total == 9
+        assert result.n_sources == 3
+
+        table = pq.read_table(cfg.output_path)
+        types = set(table.column("_source_type").to_pylist())
+        assert types == {"annual", "candidate", "dot9"}
+
+    def test_dot9_metadata_correct(self, tmp_path: Path) -> None:
+        """.9 events tagged with correct source_type and version."""
+        events = _make_events(2)
+        dot9_dir = _setup_dot9(
+            tmp_path, events, version="25.9.11"
+        )
+        cfg = _config(tmp_path, dot9_dir=dot9_dir)
+
+        consolidate_ucdp(cfg)
+        table = pq.read_table(cfg.output_path)
+
+        types = table.column("_source_type").to_pylist()
+        assert all(t == "dot9" for t in types)
+
+        versions = table.column("_source_version").to_pylist()
+        assert all(v == "25.9.11" for v in versions)
 
 
 # ---- Consolidation: Red ----

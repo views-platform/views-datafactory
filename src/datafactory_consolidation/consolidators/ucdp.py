@@ -63,6 +63,9 @@ _ANNUAL_PATTERN = re.compile(
 _CANDIDATE_PATTERN = re.compile(
     r"ucdp_ged_candidate_([\d.]+)\.parquet$"
 )
+_DOT9_PATTERN = re.compile(
+    r"ucdp_ged_dot9_([\d.]+)\.parquet$"
+)
 
 
 def _extract_annual_version(path: Path) -> str:
@@ -99,6 +102,26 @@ def _extract_candidate_version(path: Path) -> str:
             f"Cannot extract version from candidate filename: "
             f"{path.name}. Expected pattern: "
             f"ucdp_ged_candidate_<version>.parquet"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+    return match.group(1)
+
+
+def _extract_dot9_version(path: Path) -> str:
+    """Extract version string from .9 snapshot filename.
+
+    Example: ucdp_ged_dot9_25.9.11.parquet → "25.9.11"
+
+    Raises:
+        ValueError: If filename does not match expected pattern.
+    """
+    match = _DOT9_PATTERN.search(path.name)
+    if not match:
+        err_msg = (
+            f"Cannot extract version from .9 filename: "
+            f"{path.name}. Expected pattern: "
+            f"ucdp_ged_dot9_<version>.parquet"
         )
         logger.error(err_msg)
         raise ValueError(err_msg)
@@ -226,11 +249,15 @@ class UcdpConsolidationConfig:
 
     annual_dir: Path = Path("data/ucdp_annual")
     candidate_dir: Path = Path("data/ucdp_candidate")
+    dot9_dir: Path = Path("data/ucdp_dot9")
     annual_ledger_path: Path = Path(
         "provenance/ucdp_annual/ingestion_ledger.jsonl"
     )
     candidate_ledger_path: Path = Path(
         "provenance/ucdp_candidate/ingestion_ledger.jsonl"
+    )
+    dot9_ledger_path: Path = Path(
+        "provenance/ucdp_dot9/ingestion_ledger.jsonl"
     )
     output_path: Path = Path(
         "data/consolidated/ucdp_store.parquet"
@@ -274,6 +301,7 @@ def consolidate_ucdp(
     candidate_index = _build_harvest_index(
         config.candidate_ledger_path
     )
+    dot9_index = _build_harvest_index(config.dot9_ledger_path)
 
     # Discover source files
     annual_files = (
@@ -286,11 +314,17 @@ def consolidate_ucdp(
         if config.candidate_dir.exists()
         else []
     )
+    dot9_files = (
+        sorted(config.dot9_dir.glob("*.parquet"))
+        if config.dot9_dir.exists()
+        else []
+    )
 
-    if not annual_files and not candidate_files:
+    if not annual_files and not candidate_files and not dot9_files:
         err_msg = (
             f"No source Parquet files found in "
-            f"{config.annual_dir} or {config.candidate_dir}"
+            f"{config.annual_dir}, {config.candidate_dir}, "
+            f"or {config.dot9_dir}"
         )
         logger.error(err_msg)
         raise FileNotFoundError(err_msg)
@@ -352,6 +386,34 @@ def consolidate_ucdp(
         })
         logger.info(
             "Read candidate: %s (v%s, %d records, digest %s)",
+            path.name, version, table.num_rows, h_digest,
+        )
+
+    for path in dot9_files:
+        version = _extract_dot9_version(path)
+        h_digest, h_timestamp = _get_harvest_metadata(
+            version, dot9_index, path
+        )
+        table = pa.parquet.read_table(path)
+        tagged = _tag_table(
+            table,
+            source_type="dot9",
+            source_version=version,
+            ingested_at=ingested_at,
+            harvest_digest=h_digest,
+            harvest_timestamp=h_timestamp,
+        )
+        tagged_tables.append(tagged)
+        source_manifest.append({
+            "path": str(path),
+            "source_type": "dot9",
+            "version": version,
+            "n_records": table.num_rows,
+            "harvest_digest": h_digest,
+            "harvest_timestamp": h_timestamp,
+        })
+        logger.info(
+            "Read .9: %s (v%s, %d records, digest %s)",
             path.name, version, table.num_rows, h_digest,
         )
 
