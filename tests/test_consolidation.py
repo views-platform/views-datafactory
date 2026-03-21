@@ -84,6 +84,8 @@ def _config(
     return UcdpConsolidationConfig(
         annual_dir=annual_dir or tmp_path / "annual",
         candidate_dir=candidate_dir or tmp_path / "candidate",
+        annual_ledger_path=tmp_path / "prov_annual" / "ledger.jsonl",
+        candidate_ledger_path=tmp_path / "prov_cand" / "ledger.jsonl",
         output_path=tmp_path / "consolidated" / "store.parquet",
         ledger_path=tmp_path / "provenance" / "ledger.jsonl",
     )
@@ -400,3 +402,91 @@ class TestConsolidatorRegistration:
         from datafactory_consolidation.consolidators import list_consolidators
 
         assert "ucdp" in list_consolidators()
+
+
+# ---- Vintage Awareness (ADR-017) ----
+
+
+class TestVintageAwarenessGreen:
+
+    def test_harvest_digest_column_present(
+        self, tmp_path: Path
+    ) -> None:
+        events = _make_events(3)
+        annual_dir = _setup_annual(tmp_path, events)
+        cfg = _config(tmp_path, annual_dir=annual_dir)
+
+        consolidate_ucdp(cfg)
+        table = pq.read_table(cfg.output_path)
+
+        assert "_harvest_digest" in table.column_names
+        digests = table.column("_harvest_digest").to_pylist()
+        assert all(isinstance(d, str) and len(d) == 16 for d in digests)
+
+    def test_harvest_timestamp_column_present(
+        self, tmp_path: Path
+    ) -> None:
+        events = _make_events(3)
+        annual_dir = _setup_annual(tmp_path, events)
+        cfg = _config(tmp_path, annual_dir=annual_dir)
+
+        consolidate_ucdp(cfg)
+        table = pq.read_table(cfg.output_path)
+
+        assert "_harvest_timestamp" in table.column_names
+        timestamps = table.column("_harvest_timestamp").to_pylist()
+        assert all(isinstance(t, str) and len(t) > 10 for t in timestamps)
+
+    def test_same_digest_deduplicates(
+        self, tmp_path: Path
+    ) -> None:
+        """Re-consolidating identical data skips (same digest)."""
+        events = _make_events(5)
+        annual_dir = _setup_annual(tmp_path, events)
+        cfg = _config(tmp_path, annual_dir=annual_dir)
+
+        r1 = consolidate_ucdp(cfg)
+        r2 = consolidate_ucdp(cfg)
+
+        assert r1.n_records_total == r2.n_records_total
+        assert r2.n_records_new == 0
+
+    def test_different_digest_preserves_both(
+        self, tmp_path: Path
+    ) -> None:
+        """Modified source with different digest → both vintages kept."""
+        events_v1 = _make_events(3, id_start=1)
+        annual_dir = _setup_annual(tmp_path, events_v1)
+        cfg = _config(tmp_path, annual_dir=annual_dir)
+
+        r1 = consolidate_ucdp(cfg)
+        assert r1.n_records_total == 3
+
+        # Modify the source file (same filename, different content)
+        events_v2 = _make_events(3, id_start=1)
+        events_v2[0]["best"] = 999  # Change a value
+        _write_parquet(
+            annual_dir / "ucdp_ged_v25.1_1989_2024.parquet",
+            events_v2,
+        )
+
+        r2 = consolidate_ucdp(cfg)
+
+        # Both vintages preserved: 3 original + 3 updated = 6
+        assert r2.n_records_total == 6
+        assert r2.n_records_new == 3
+
+    def test_fallback_without_ledger(
+        self, tmp_path: Path
+    ) -> None:
+        """Works without harvest ledger — uses file digest."""
+        events = _make_events(3)
+        annual_dir = _setup_annual(tmp_path, events)
+        cfg = _config(tmp_path, annual_dir=annual_dir)
+        # Ledger paths don't exist — should fall back gracefully
+
+        result = consolidate_ucdp(cfg)
+
+        assert result.n_records_total == 3
+        table = pq.read_table(cfg.output_path)
+        assert "_harvest_digest" in table.column_names

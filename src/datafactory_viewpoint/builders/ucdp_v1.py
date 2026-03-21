@@ -46,8 +46,22 @@ logger = logging.getLogger(__name__)
 
 DATASET_ID = "ucdp_viewpoint"
 
-# Columns added by consolidation that are not part of the viewpoint output
-_CONSOLIDATION_METADATA = {"_source_type", "_source_version", "_ingested_at"}
+# ---- Boundary declarations (ADR-009) ----
+# What this layer REQUIRES from the consolidated store
+REQUIRED_CONSOLIDATED_FIELDS: set[str] = {
+    "id", "_source_type", "_source_version",
+    "date_start", "date_end", "date_prec",
+    "best", "low", "high",
+}
+
+# What this layer PRODUCES (columns added to output)
+PRODUCED_FIELDS: tuple[str, ...] = ("date_month",)
+
+# What this layer STRIPS (consolidation metadata not in output)
+STRIPPED_FIELDS: set[str] = {
+    "_source_type", "_source_version", "_ingested_at",
+    "_harvest_digest", "_harvest_timestamp",
+}
 
 
 def build_ucdp_v1(
@@ -150,7 +164,7 @@ def build_ucdp_v1(
 
     # Strip consolidation metadata from output
     output_cols = [
-        c for c in col_names if c not in _CONSOLIDATION_METADATA
+        c for c in col_names if c not in STRIPPED_FIELDS
     ]
     # Add date_month (always present in output)
     output_cols.append("date_month")
@@ -158,7 +172,7 @@ def build_ucdp_v1(
     # Build output table
     all_output_fields = sorted(
         {k for row in output_rows for k in row}
-        - _CONSOLIDATION_METADATA
+        - STRIPPED_FIELDS
     )
     pa_columns = {}
     for field in all_output_fields:
