@@ -19,3 +19,4 @@ This is significant because:
 ## Contents
 
 - [findings.md](findings.md) — Full empirical findings: what we know, what we infer, what we don't know
+- [reproducibility_note.md](reproducibility_note.md) — Observations on candidate data mutability and implications for scientific reproducibility

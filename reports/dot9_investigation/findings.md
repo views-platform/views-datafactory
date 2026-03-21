@@ -268,11 +268,20 @@ This section documents the results of a structured falsification audit applied t
 
 ### 6.3 Bonus Observations
 
-**Candidate data is mutable.** Between our two fetches (hours apart on the same day):
-- 26.0.1 changed from 727 to 1,727 events
-- 26.0.2 changed from 298 to 1,298 events
+**Candidate data is mutable — confirmed via systematic re-query.**
 
-UCDP updates candidate versions in place. All snapshot comparisons in this document are time-stamped to 2026-03-21 and may not reproduce exactly if repeated later. The exclusive event count (13,005) could change if UCDP updates candidate versions to include more events.
+A second falsification audit (same day, 2026-03-21) re-queried all candidate versions against the API and found:
+
+| Version range | Versions checked | Result |
+|--------------|-----------------|--------|
+| 25.0.1 – 26.0.2 (2025-2026) | 14 | ALL changed: exactly +1,000 events each |
+| 24.0.1 – 24.0.12 (2024) | 12 | ALL stable: 0 changes |
+
+Every 2025-2026 candidate version gained exactly 1,000 events in what appears to be a bulk retroactive update by UCDP. This is not organic growth — the identical delta across 14 versions indicates a batch operation. Meanwhile, all 2024 versions remained perfectly stable.
+
+This suggests an undocumented version boundary: versions from the prior calendar year and earlier may be frozen, while recent versions remain mutable. We cannot confirm this boundary without longer observation.
+
+**All snapshot comparisons in this document are time-stamped to 2026-03-21 and should be treated as point-in-time observations, not permanent facts.** The exclusive event count (13,005) and all derived statistics may change if UCDP continues to update candidate versions retroactively.
 
 **The .9 series is a complete 8-year parallel data stream.** From 18.9.1 to 26.9.2, approximately 98 monthly versions exist, each containing 11,000-33,000 events. This is not a small bespoke product — it's a major data stream comparable in scale to the standard candidate series.
 
