@@ -238,7 +238,7 @@ class TestViewpointConfigGreen:
         )
         assert cfg.survivorship_strategy == "annual_wins"
         assert cfg.distribution_strategy == "even_split"
-        assert cfg.version == "v1"
+        assert cfg.version == "custom"
 
     def test_frozen(self, tmp_path: Path) -> None:
         cfg = ViewpointConfig(
@@ -347,7 +347,7 @@ class TestBuildUcdpV1Green:
             cfg.ledger_path.read_text().strip().splitlines()[-1]
         )
         assert entry["dataset"] == "ucdp_viewpoint"
-        assert entry["version"] == "v1"
+        assert entry["version"] == "custom"
         assert "output_digest" in entry
         assert entry["n_events_output"] == 1
 
@@ -436,3 +436,56 @@ class TestBuilderRegistration:
         from datafactory_viewpoint.builders import list_builders
 
         assert "ucdp_v1" in list_builders()
+
+
+# ---- Profiles ----
+
+
+class TestProfilesGreen:
+
+    def test_load_production_parity(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.profiles import load_profile
+
+        cfg = load_profile(
+            "production_parity", tmp_path / "store.parquet"
+        )
+        assert isinstance(cfg, ViewpointConfig)
+        assert cfg.survivorship_strategy == "annual_wins"
+        assert cfg.distribution_strategy == "even_split"
+        assert cfg.version == "production_parity"
+
+    def test_load_with_override(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.profiles import load_profile
+
+        cfg = load_profile(
+            "production_parity",
+            tmp_path / "store.parquet",
+            distribution_strategy="some_other",
+        )
+        assert cfg.survivorship_strategy == "annual_wins"
+        assert cfg.distribution_strategy == "some_other"
+
+    def test_list_profiles(self) -> None:
+        from datafactory_viewpoint.profiles import list_profiles
+
+        profiles = list_profiles()
+        assert "production_parity" in profiles
+
+    def test_freestyle_still_works(self, tmp_path: Path) -> None:
+        """Config without profile — freestyle mode."""
+        cfg = ViewpointConfig(
+            consolidated_path=tmp_path / "store.parquet",
+            survivorship_strategy="custom_strategy",
+            distribution_strategy="custom_dist",
+            version="experiment_42",
+        )
+        assert cfg.version == "experiment_42"
+
+
+class TestProfilesRed:
+
+    def test_unknown_profile_raises(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.profiles import load_profile
+
+        with pytest.raises(KeyError, match="Unknown viewpoint profile"):
+            load_profile("nonexistent", tmp_path / "store.parquet")

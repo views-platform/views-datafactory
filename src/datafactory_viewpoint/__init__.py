@@ -18,6 +18,7 @@ from datafactory_viewpoint.builders import (
     list_builders,
     register_builder,
 )
+from datafactory_viewpoint.profiles import list_profiles, load_profile
 from datafactory_viewpoint.viewpoint_config import ViewpointConfig
 from datafactory_viewpoint.viewpoint_result import ViewpointResult
 
@@ -26,5 +27,7 @@ __all__ = [
     "ViewpointResult",
     "build_viewpoint",
     "list_builders",
+    "list_profiles",
+    "load_profile",
     "register_builder",
 ]

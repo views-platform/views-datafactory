@@ -34,5 +34,5 @@ class ViewpointConfig:
     survivorship_strategy: str = "annual_wins"
     distribution_strategy: str = "even_split"
 
-    # Version tag for provenance
-    version: str = "v1"
+    # Version tag for provenance (set by profile or caller)
+    version: str = "custom"
