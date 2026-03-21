@@ -44,6 +44,14 @@ _CANDIDATE_YEAR_OFFSET: int = 2000
 _DISCOVERY_RATE_LIMIT_SECONDS: float = 0.5
 _DISCOVERY_PROBE_PAGE_SIZE: int = 1
 
+# UCDP candidate monthly data availability (empirically confirmed 2026-03-21)
+CANDIDATE_FIRST_YEAR: int = 2018
+CANDIDATE_FIRST_MONTH: int = 1
+_DEFAULT_MAX_VERSIONS: int = 120  # 10 years of monthly data
+_FETCH_DATE_RANGE_START: int = 2000  # Wide superset for fetch_paginated
+_FETCH_DATE_RANGE_END: int = 2099
+_FETCH_DURATION_PRECISION: int = 1  # Decimal places for fetch_duration_s in ledger
+
 
 def _candidate_version_string(year: int, month: int) -> str:
     """Build a candidate monthly version string.
@@ -67,8 +75,8 @@ class UcdpCandidateConfig:
     """
 
     # Discovery start
-    start_year: int = 2025
-    start_month: int = 1
+    start_year: int = CANDIDATE_FIRST_YEAR
+    start_month: int = CANDIDATE_FIRST_MONTH
 
     # API transport (reuse annual defaults)
     base_url: str = "https://ucdpapi.pcr.uu.se/api/gedevents"
@@ -77,8 +85,8 @@ class UcdpCandidateConfig:
     max_retries: int = 3
 
     # Discovery tuning
-    discovery_rate_limit: float = 0.5  # seconds between API probes
-    max_versions: int = 36  # safety cap on version discovery (3 years)
+    discovery_rate_limit: float = _DISCOVERY_RATE_LIMIT_SECONDS
+    max_versions: int = _DEFAULT_MAX_VERSIONS
 
     # Storage
     data_dir: Path = Path("data/ucdp_candidate")
@@ -214,8 +222,8 @@ def _fetch_version(
     # version string, not by date. The range ensures no events are filtered.
     annual_config = UcdpAnnualConfig(
         version=version,
-        start_year=2000,
-        end_year=2099,
+        start_year=_FETCH_DATE_RANGE_START,
+        end_year=_FETCH_DATE_RANGE_END,
         base_url=config.base_url,
         page_size=config.page_size,
         timeout=config.timeout,
@@ -238,7 +246,7 @@ def _fetch_version(
         "dataset": DATASET_ID,
         "version": version,
         "n_events": validation.n_events,
-        "fetch_duration_s": round(fetch_duration, 1),
+        "fetch_duration_s": round(fetch_duration, _FETCH_DURATION_PRECISION),
         "content_digest": validation.content_digest,
         "ledger_version": LEDGER_VERSION,
         "digest_algorithm": DIGEST_SCHEME,

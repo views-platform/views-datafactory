@@ -69,7 +69,11 @@ class TestCandidateConfigGreen:
 
     def test_defaults(self) -> None:
         cfg = UcdpCandidateConfig()
-        assert cfg.start_year == 2025
+        from datafactory_harvester.sources.ucdp_candidate import (
+            CANDIDATE_FIRST_YEAR,
+        )
+
+        assert cfg.start_year == CANDIDATE_FIRST_YEAR
         assert cfg.start_month == 1
 
     def test_frozen(self) -> None:
@@ -127,7 +131,7 @@ class TestDiscoverVersionsGreen:
             ),
         ]
 
-        config = UcdpCandidateConfig()
+        config = UcdpCandidateConfig(start_year=2025)
         with (
             patch(
                 "datafactory_harvester.sources.ucdp_annual.requests.get",
@@ -145,7 +149,7 @@ class TestDiscoverVersionsGreen:
             raise_for_status=MagicMock(),
         )
 
-        config = UcdpCandidateConfig()
+        config = UcdpCandidateConfig(start_year=2025)
         with (
             patch(
                 "datafactory_harvester.sources.ucdp_annual.requests.get",
@@ -234,6 +238,7 @@ class TestFetchUcdpCandidateGreen:
         fetch_resp.raise_for_status = MagicMock()
 
         config = UcdpCandidateConfig(
+            start_year=2025,
             data_dir=tmp_path / "data",
             ledger_path=tmp_path / "provenance" / "ledger.jsonl",
         )

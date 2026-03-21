@@ -13,7 +13,7 @@
 UCDP/GED (Georeferenced Event Dataset) is the primary conflict event source for the VIEWS platform. It has two data streams:
 
 - **UCDP/GED Annual** — yearly releases covering 1989 to the prior year. Each release is a complete, curated dataset. New releases may revise events from prior years.
-- **UCDP/GED Candidate** — monthly releases covering a trailing 12-month window. Events are preliminary and subject to revision. Multiple candidate versions may exist for the same month.
+- **UCDP/GED Candidate** — monthly releases, each covering a trailing 12-month window of events. Events are preliminary and subject to revision. Multiple candidate versions may exist for the same month. The API retains all historical releases (available from January 2018 onward — empirically confirmed 2026-03-21).
 
 The VIEWS production system uses a custom consolidated version (internally called `.9`) that stitches annual and candidate data using specific rules. This version is produced by UCDP on request and is not reproducible from public API endpoints. To eliminate this dependency, we must reproduce the consolidation independently.
 

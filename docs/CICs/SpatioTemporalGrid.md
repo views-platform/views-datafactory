@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-17
-**Related ADRs:** ADR-001, ADR-002
+**Last reviewed:** 2026-03-20
+**Related ADRs:** ADR-001, ADR-012
 
 ---
 

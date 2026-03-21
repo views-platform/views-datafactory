@@ -13,4 +13,16 @@ Or use the registry:
     consolidate_source("ucdp", config=...)
 """
 
-__all__: list[str] = []
+from datafactory_consolidation.consolidation_result import ConsolidationResult
+from datafactory_consolidation.consolidators import (
+    consolidate_source,
+    list_consolidators,
+    register_consolidator,
+)
+
+__all__ = [
+    "ConsolidationResult",
+    "consolidate_source",
+    "list_consolidators",
+    "register_consolidator",
+]

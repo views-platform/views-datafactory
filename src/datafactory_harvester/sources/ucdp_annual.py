@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 DATASET_ID = "ucdp_annual"
 _LOG_EVERY_N_PAGES: int = 50
+_FETCH_DURATION_PRECISION: int = 1  # Decimal places for fetch_duration_s in ledger
 
 # ---- UCDP-specific schema definition ----
 
@@ -324,7 +325,7 @@ def fetch_ucdp_annual(
         "start_year": config.start_year,
         "end_year": config.end_year,
         "n_events": validation.n_events,
-        "fetch_duration_s": round(fetch_duration, 1),
+        "fetch_duration_s": round(fetch_duration, _FETCH_DURATION_PRECISION),
         "content_digest": validation.content_digest,
         "ledger_version": LEDGER_VERSION,
         "digest_algorithm": DIGEST_SCHEME,
