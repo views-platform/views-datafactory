@@ -15,7 +15,7 @@ from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["get_survivorship", "annual_wins"]
+__all__ = ["get_survivorship", "annual_wins", "dot9_wins"]
 
 STRATEGIES: dict[str, Callable[[list[dict]], dict]] = {}
 
@@ -73,6 +73,37 @@ def annual_wins(versions: list[dict]) -> dict:
         ))
 
     # No annual — pick latest candidate by version number
+    return max(versions, key=lambda v: _parse_version(
+        v.get("_source_version", "0")
+    ))
+
+
+@_register("dot9_wins")
+def dot9_wins(versions: list[dict]) -> dict:
+    """Annual > .9 > candidate. Production-parity survivorship.
+
+    Prefers annual (authoritative, curated) when available.
+    Falls back to .9 (UCDP's own consolidation with exclusive
+    content). Last resort: latest individual candidate version.
+    """
+    annuals = [
+        v for v in versions
+        if v.get("_source_type") == "annual"
+    ]
+    if annuals:
+        return max(annuals, key=lambda v: _parse_version(
+            v.get("_source_version", "0")
+        ))
+
+    dot9s = [
+        v for v in versions
+        if v.get("_source_type") == "dot9"
+    ]
+    if dot9s:
+        return max(dot9s, key=lambda v: _parse_version(
+            v.get("_source_version", "0")
+        ))
+
     return max(versions, key=lambda v: _parse_version(
         v.get("_source_version", "0")
     ))

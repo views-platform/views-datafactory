@@ -14,7 +14,11 @@ import pyarrow.parquet as pq
 import pytest
 
 from datafactory_viewpoint.builders.ucdp_v1 import build_ucdp_v1
-from datafactory_viewpoint.survivorship import annual_wins, get_survivorship
+from datafactory_viewpoint.survivorship import (
+    annual_wins,
+    dot9_wins,
+    get_survivorship,
+)
 from datafactory_viewpoint.temporal_distribution import (
     even_split,
     get_distribution,
@@ -136,6 +140,60 @@ class TestSurvivorshipGreen:
     def test_get_survivorship_invalid(self) -> None:
         with pytest.raises(KeyError, match="Unknown"):
             get_survivorship("nonexistent")
+
+    def test_dot9_wins_picks_annual_over_dot9(self) -> None:
+        versions = [
+            _make_consolidated_event(
+                source_type="dot9", source_version="25.9.11"
+            ),
+            _make_consolidated_event(
+                source_type="annual", source_version="25.1"
+            ),
+        ]
+        winner = dot9_wins(versions)
+        assert winner["_source_type"] == "annual"
+
+    def test_dot9_wins_picks_dot9_over_candidate(self) -> None:
+        versions = [
+            _make_consolidated_event(
+                source_type="candidate", source_version="25.0.6"
+            ),
+            _make_consolidated_event(
+                source_type="dot9", source_version="25.9.6"
+            ),
+        ]
+        winner = dot9_wins(versions)
+        assert winner["_source_type"] == "dot9"
+
+    def test_dot9_wins_picks_latest_dot9(self) -> None:
+        versions = [
+            _make_consolidated_event(
+                source_type="dot9", source_version="25.9.1"
+            ),
+            _make_consolidated_event(
+                source_type="dot9", source_version="25.9.11"
+            ),
+        ]
+        winner = dot9_wins(versions)
+        assert winner["_source_version"] == "25.9.11"
+
+    def test_dot9_wins_falls_back_to_candidate(self) -> None:
+        versions = [
+            _make_consolidated_event(
+                source_type="candidate",
+                source_version="25.0.3",
+            ),
+            _make_consolidated_event(
+                source_type="candidate",
+                source_version="25.0.11",
+            ),
+        ]
+        winner = dot9_wins(versions)
+        assert winner["_source_version"] == "25.0.11"
+
+    def test_get_dot9_wins_by_name(self) -> None:
+        fn = get_survivorship("dot9_wins")
+        assert fn is dot9_wins
 
 
 # ---- Temporal Distribution: Green ----
@@ -450,7 +508,7 @@ class TestProfilesGreen:
             "production_parity", tmp_path / "store.parquet"
         )
         assert isinstance(cfg, ViewpointConfig)
-        assert cfg.survivorship_strategy == "annual_wins"
+        assert cfg.survivorship_strategy == "dot9_wins"
         assert cfg.distribution_strategy == "even_split"
         assert cfg.version == "production_parity"
 
@@ -462,7 +520,7 @@ class TestProfilesGreen:
             tmp_path / "store.parquet",
             distribution_strategy="some_other",
         )
-        assert cfg.survivorship_strategy == "annual_wins"
+        assert cfg.survivorship_strategy == "dot9_wins"
         assert cfg.distribution_strategy == "some_other"
 
     def test_list_profiles(self) -> None:
