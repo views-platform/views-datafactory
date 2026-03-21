@@ -4,7 +4,12 @@ Reads the consolidated event store, applies survivorship rules
 (annual wins) and temporal distribution (even split for summary
 events), and writes a single Parquet with one row per event-month.
 
-Targets parity with UCDP's .9 consolidated version:
+Targets parity with UCDP's .9 version (format YY.9.MM), a distinct
+data source containing exclusive events beyond standard annual and
+candidate releases. Note: full parity requires fetching .9 directly
+— it cannot be reconstructed from annual + candidate alone.
+
+Current strategy:
 - Annual wins for months it covers
 - Latest candidate for the trailing window
 - Summary events (date_prec=5) distributed evenly
