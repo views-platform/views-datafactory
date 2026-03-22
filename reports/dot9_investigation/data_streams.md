@@ -46,38 +46,42 @@ UCDP provides conflict event data through three distinct streams. Each has diffe
 
 ## 2. Candidate Monthly (e.g., 25.0.1 through 25.0.12)
 
-**What it is:** Independent monthly installments of newly-coded conflict events.
+**What it is:** Monthly installments of newly-coded conflict events, primarily covering one calendar month.
 
-**Coverage:** Each version contains ONLY events that became known in that calendar month. There is **zero overlap** between consecutive candidate versions.
+**Coverage:** Each version primarily contains events from one calendar month (~98-99% of events). However, every version checked also includes a small number of events from other months (0.1-1.4%), sometimes from several months earlier. This appears to be by design — UCDP incorporates late-coded or corrected events into the version being released at the time.
 
 **Event count per version:** ~900-2,500 events per month (varies by conflict intensity).
 
 **Update cadence:** Monthly. One new version per month.
 
 **Characteristics:**
-- Each version is an independent, disjoint set of events
-- No event ID appears in more than one candidate version
+- Each version primarily covers one calendar month, with a small number of events from other months
+- Event ID overlap between versions is generally absent (1,952 of 1,953 checked pairs have zero overlap)
+- One known exception: 21.0.4 and 21.0.5 share 606 event IDs — likely a data anomaly from early 2021 when the candidate system was being established
 - To get "all candidate data for 2025," you need ALL 12 monthly versions
 - Versions are additive — like magazine issues, not revised editions
 - Older versions (2018-2020) may return zero events when fetched (possibly expired from the API)
+- Early versions (21.0.1 through 21.0.4) have unusually low event counts, suggesting the system was not fully operational
 
-**Empirically confirmed (zero overlap between versions):**
+**ID overlap (exhaustive check across 63 versions, 1,953 pairs):**
 
-| Version pair | Shared event IDs |
-|-------------|-----------------|
-| 25.0.1 vs 25.0.2 | 0 |
-| 25.0.1 vs 25.0.6 | 0 |
-| 25.0.2 vs 25.0.3 | 0 |
+| Check | Result |
+|-------|--------|
+| Total pairs checked | 1,953 |
+| Pairs with zero overlap | 1,952 (99.95%) |
+| Pairs with overlap | 1 (21.0.4 ∩ 21.0.5 = 606 shared IDs) |
 
-**Date ranges (each covers ~1 month):**
+**Date ranges (each primarily covers ~1 month, with outliers):**
 
-| Version | Date range | Events |
-|---------|-----------|--------|
-| 25.0.1 | 2024-12-30 to 2025-01-31 | 1,159 |
-| 25.0.6 | 2025-05-27 to 2025-06-30 | 1,276 |
-| 25.0.12 | 2025-11-22 to 2025-12-31 | 912 |
+| Version | Primary month | Events from primary month | Events from other months |
+|---------|--------------|--------------------------|-------------------------|
+| 25.0.1 | Jan 2025 | 1,158 (99.9%) | 1 from Dec 2024 |
+| 25.0.6 | Jun 2025 | 1,273 (99.8%) | 3 from May 2025 |
+| 25.0.12 | Dec 2025 | 907 (99.5%) | 5 from Jan/Oct/Nov 2025 |
+| 24.0.11 | Nov 2024 | 1,375 (98.6%) | 19 from Jan/Sep/Oct 2024 |
+| 24.0.12 | Dec 2024 | 1,103 (99.4%) | 7 from Jan/Jun/Jul/Nov 2024 |
 
-**Analogy:** Monthly magazine issues. Each issue has new articles. You collect them all to have the full year.
+**Analogy:** Monthly magazine issues. Each issue primarily has that month's articles, but occasionally includes a correction or late addition from a prior month.
 
 ---
 
@@ -124,9 +128,9 @@ UCDP provides conflict event data through three distinct streams. Each has diffe
 
 ## How They Relate to Each Other
 
-### Annual ↔ Candidate: No Overlap
+### Annual ↔ Candidate: No ID Overlap (Different Time Periods)
 
-The annual covers through 2024. Candidates start at 2025. Different time periods → different event IDs → zero overlap.
+The annual v25.1 covers through 2024. Candidates from 2025+ contain events primarily from 2025 onward. No shared event IDs have been observed. However, some candidate versions contain a small number of events with dates in 2024 (e.g., 25.0.1 has 1 event from Dec 2024), so there is minor temporal overlap even though event IDs are disjoint.
 
 ### Annual ↔ .9: Partial Overlap
 
@@ -135,11 +139,9 @@ The .9 rolling window overlaps with the tail end of the annual's coverage. Empir
 - 2,593 events exclusive to .9 (9.2% of .9 content)
 - 359,372 events only in annual (the historical base)
 
-### Candidate ↔ .9: No Overlap (in current data)
+### Candidate ↔ .9: No ID Overlap in Most Data
 
-Candidates cover 2025+. Available .9 versions cover through mid-2024. Different windows → zero overlap.
-
-However, future .9 versions (25.9.x) would overlap with 25.0.x candidates. We confirmed this with 25.9.11: it overlaps with candidate data from the same period.
+For most of our harvested data, candidates (2025+) and .9 versions (through mid-2024) cover different time windows and share no event IDs. However, .9 versions that cover the same months as candidates (e.g., 25.9.11 covering Nov 2024 – Nov 2025) may share events with candidates from that same period.
 
 ### Visual Timeline
 
@@ -152,8 +154,8 @@ However, future .9 versions (25.9.x) would overlap with 25.0.x candidates. We co
                                  ════════════╗  |    Each .9 slides by 1 month
                                   ════════════╗ |
                                 |       |       |
-                                |  · · · · · · ··    CANDIDATES (monthly, independent)
-                                |  Each dot = 1 month, no overlap
+                                |  · · · · · · ··    CANDIDATES (monthly, mostly independent)
+                                |  Each dot ≈ 1 month, generally no ID overlap
 ```
 
 ---
