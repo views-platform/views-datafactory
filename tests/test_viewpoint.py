@@ -25,7 +25,6 @@ from datafactory_viewpoint.temporal_distribution import (
     get_distribution,
 )
 from datafactory_viewpoint.viewpoint_config import ViewpointConfig
-from datafactory_viewpoint.viewpoint_result import ViewpointResult
 
 # ---- Helpers ----
 
@@ -437,9 +436,9 @@ class TestBuildUcdpV1Green:
 
         result = build_ucdp_v1(cfg)
 
-        assert isinstance(result, ViewpointResult)
         assert result.output_path.exists()
         assert result.n_events_output == 5
+        assert len(result.output_digest) == 16
 
     def test_date_month_column_present(self, tmp_path: Path) -> None:
         events = [_make_consolidated_event()]
@@ -672,6 +671,81 @@ class TestFilteringGreen:
         assert cfg.min_priogrid_gid == 1
         assert cfg.max_type_of_violence == 3
         assert cfg.exclude_where_prec == (4, 6)
+
+
+# ---- Filtering: Beige (boundary conditions) ----
+
+
+class TestFilteringBeige:
+
+    def test_priogrid_gid_zero_filtered(
+        self, tmp_path: Path
+    ) -> None:
+        """gid=0 should be filtered when min_priogrid_gid=1."""
+        from conftest import make_ucdp_event, write_test_parquet
+
+        events = [
+            make_ucdp_event(event_id=1, priogrid_gid=0),
+            make_ucdp_event(event_id=2, priogrid_gid=1),
+        ]
+        store = write_test_parquet(
+            tmp_path / "store.parquet", events
+        )
+        cfg = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+            min_priogrid_gid=1,
+        )
+        result = build_ucdp_v1(cfg)
+        assert result.n_events_output == 1
+        assert result.n_filtered == 1
+
+    def test_type_of_violence_at_boundary(
+        self, tmp_path: Path
+    ) -> None:
+        """tov=3 kept, tov=4 filtered when max=3."""
+        from conftest import make_ucdp_event, write_test_parquet
+
+        events = [
+            make_ucdp_event(event_id=1, type_of_violence=3),
+            make_ucdp_event(event_id=2, type_of_violence=4),
+        ]
+        store = write_test_parquet(
+            tmp_path / "store.parquet", events
+        )
+        cfg = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+            max_type_of_violence=3,
+        )
+        result = build_ucdp_v1(cfg)
+        assert result.n_events_output == 1
+        assert result.n_filtered == 1
+
+    def test_where_prec_at_boundary(
+        self, tmp_path: Path
+    ) -> None:
+        """where_prec=3 kept, where_prec=4 filtered."""
+        from conftest import make_ucdp_event, write_test_parquet
+
+        events = [
+            make_ucdp_event(event_id=1, where_prec=3),
+            make_ucdp_event(event_id=2, where_prec=4),
+        ]
+        store = write_test_parquet(
+            tmp_path / "store.parquet", events
+        )
+        cfg = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+            exclude_where_prec=(4, 6),
+        )
+        result = build_ucdp_v1(cfg)
+        assert result.n_events_output == 1
+        assert result.n_filtered == 1
 
 
 # ---- Build UCDP v1: Red ----

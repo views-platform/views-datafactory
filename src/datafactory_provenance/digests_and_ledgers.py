@@ -10,17 +10,21 @@ No outbound imports to other datafactory_* packages.
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import logging
 import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 __all__ = [
     "compute_content_digest",
+    "compute_file_digest",
     "append_ledger_entry",
+    "file_lock",
     "last_digest",
     "last_digest_for_version",
 ]
@@ -76,6 +80,77 @@ def compute_content_digest(
     return hexdigest
 
 
+def compute_file_digest(
+    path: Path,
+    *,
+    algorithm: str = DIGEST_ALGORITHM,
+    truncate: int = DIGEST_TRUNCATE,
+    chunk_size: int = 65536,
+) -> str:
+    """Compute a content digest from a file without loading it all.
+
+    Reads the file in chunks to avoid doubling memory usage for
+    large files (e.g., 50MB+ Parquet stores).
+
+    Args:
+        path: Path to the file to hash.
+        algorithm: Hash algorithm name (passed to hashlib).
+        truncate: Number of hex characters to keep. 0 for full.
+        chunk_size: Bytes to read per iteration (default 64KB).
+
+    Returns:
+        Hex digest string, truncated to ``truncate`` characters.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+    """
+    h = hashlib.new(algorithm)
+    with open(path, "rb") as f:
+        while chunk := f.read(chunk_size):
+            h.update(chunk)
+    hexdigest = h.hexdigest()
+    return hexdigest[:truncate] if truncate > 0 else hexdigest
+
+
+@contextmanager
+def file_lock(path: Path):
+    """Advisory file lock via fcntl.flock.
+
+    Creates a .lock file alongside the target path and holds an
+    exclusive lock for the duration of the context. Other processes
+    using file_lock on the same path will block until the lock is
+    released.
+
+    Args:
+        path: Path to the file being protected.
+    """
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock_path, "w") as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+
+
+_MAX_LEDGER_BYTES: int = 10 * 1024 * 1024  # 10 MB
+
+
+def _rotate_ledger(ledger_path: Path) -> None:
+    """Rotate ledger: current → .1, .1 → .2, etc. (max 9)."""
+    stem = ledger_path.stem
+    parent = ledger_path.parent
+    suffix = ledger_path.suffix
+    for i in range(9, 0, -1):
+        old = parent / f"{stem}.{i}{suffix}"
+        new_path = parent / f"{stem}.{i + 1}{suffix}"
+        if old.exists():
+            old.rename(new_path)
+    ledger_path.rename(parent / f"{stem}.1{suffix}")
+    logger.info("Rotated ledger %s (exceeded %d bytes)", ledger_path, _MAX_LEDGER_BYTES)
+
+
 def append_ledger_entry(
     ledger_path: Path,
     entry: dict[str, Any],
@@ -120,12 +195,22 @@ def append_ledger_entry(
             tmp.write(line)
             tmp_path = Path(tmp.name)
 
-        with open(ledger_path, "a") as ledger:
-            ledger.write(tmp_path.read_text())
+        with file_lock(ledger_path):
+            with open(ledger_path, "a") as ledger:
+                ledger.write(tmp_path.read_text())
+
+            # Rotate if ledger exceeds size threshold
+            if (
+                ledger_path.exists()
+                and ledger_path.stat().st_size > _MAX_LEDGER_BYTES
+            ):
+                _rotate_ledger(ledger_path)
 
         tmp_path.unlink()
     except OSError as exc:
-        err_msg = f"Failed to write ledger entry to {ledger_path}: {exc}"
+        err_msg = (
+            f"Failed to write ledger entry to {ledger_path}: {exc}"
+        )
         logger.error(err_msg)
         if tmp_path is not None:
             tmp_path.unlink(missing_ok=True)
@@ -153,12 +238,40 @@ def _read_ledger_entries(ledger_path: Path) -> list[dict[str, Any]]:
     return entries
 
 
+def _read_last_line(path: Path) -> str | None:
+    """Read the last non-empty line from a file without loading it all.
+
+    Seeks to the end and reads backwards in 4KB chunks until a
+    complete non-empty line is found. O(1) for typical JSONL files.
+    """
+    with open(path, "rb") as f:
+        f.seek(0, 2)
+        pos = f.tell()
+        if pos == 0:
+            return None
+        buf = b""
+        while pos > 0:
+            read_size = min(4096, pos)
+            pos -= read_size
+            f.seek(pos)
+            buf = f.read(read_size) + buf
+            lines = buf.split(b"\n")
+            for line in reversed(lines):
+                stripped = line.strip()
+                if stripped:
+                    return stripped.decode("utf-8")
+    return None
+
+
 def last_digest(
     ledger_path: Path,
     *,
     digest_field: str = "content_digest",
 ) -> str | None:
     """Return the most recent content digest from a ledger.
+
+    Uses reverse-read for O(1) performance on the common case.
+    Falls back to full read if the last line is malformed.
 
     Args:
         ledger_path: Path to the JSONL ledger file.
@@ -168,10 +281,18 @@ def last_digest(
         The digest string from the last entry, or None if the ledger
         is empty, missing, or the last entry lacks the digest field.
     """
-    entries = _read_ledger_entries(ledger_path)
-    if not entries:
+    if not ledger_path.exists():
         return None
-    return entries[-1].get(digest_field)
+    last_line = _read_last_line(ledger_path)
+    if last_line is None:
+        return None
+    try:
+        entry = json.loads(last_line)
+        return entry.get(digest_field)
+    except json.JSONDecodeError:
+        # Fall back to full read if last line is malformed
+        entries = _read_ledger_entries(ledger_path)
+        return entries[-1].get(digest_field) if entries else None
 
 
 def last_digest_for_version(

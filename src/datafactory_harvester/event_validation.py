@@ -110,6 +110,7 @@ def validate_events(
     # Validate types and values across all events
     negative_best = 0
     bound_violations = 0
+    coord_violations = 0
 
     for i, ev in enumerate(events):
         ev_missing = required_fields - set(ev.keys())
@@ -143,6 +144,28 @@ def validate_events(
             if low is not None and isinstance(low, (int, float)) and low > best:
                 bound_violations += 1
 
+        # Coordinate range checks (warnings)
+        lat = ev.get("latitude")
+        lon = ev.get("longitude")
+        if (
+            lat is not None
+            and isinstance(lat, (int, float))
+            and not (-90 <= lat <= 90)
+        ):
+            coord_violations += 1
+        if (
+            lon is not None
+            and isinstance(lon, (int, float))
+            and not (-180 <= lon <= 180)
+        ):
+            coord_violations += 1
+
+    if coord_violations > 0:
+        warnings.append(
+            f"Coordinate range violations on {coord_violations} "
+            f"field values (lat outside [-90,90] or lon outside "
+            f"[-180,180])"
+        )
     if negative_best > 0:
         warnings.append(f"Negative 'best' values on {negative_best} events")
     if bound_violations > 0:

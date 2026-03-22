@@ -38,8 +38,7 @@ class TestTechDebtResolved:
 
     def test_concerns_header_accuracy(self) -> None:
         """Resolved: concerns00.md header updated to
-        reflect actual counts (24 resolved, 1 documented,
-        2 deferred, 8 open, 2/4 disagreements resolved).
+        reflect actual counts (49 total, 24 resolved).
         """
         from pathlib import Path
 
@@ -49,12 +48,15 @@ class TestTechDebtResolved:
             / "concerns00.md"
         )
         content = concerns.read_text()
-        # Header should NOT claim 27 resolved
+        # Header should NOT claim old counts
         assert "27 of 35" not in content, (
-            "Stale header: actual resolved count is 24"
+            "Stale header from original review"
         )
-        # Header should reflect accurate counts
-        assert "24 of 35" in content
+        assert "24 of 42" not in content, (
+            "Stale header from repo assimilation"
+        )
+        # Header should reflect current counts
+        assert "49 concerns total" in content
 
     def test_maturity_skip_reason_current(self) -> None:
         """Resolved: maturity test for .9 in smoke test

@@ -61,8 +61,8 @@ Assumptions not met cause immediate `ValueError`.
 ## 6. Failure Modes and Loudness
 
 - `ValueError` on empty `version`
-- `ValueError` on unregistered `survivorship_strategy`
-- `ValueError` on unregistered `distribution_strategy`
+- `ValueError` on unregistered `survivorship_strategy` (chained from `KeyError` via `from exc` for debuggability)
+- `ValueError` on unregistered `distribution_strategy` (chained from `KeyError` via `from exc` for debuggability)
 - `AttributeError` on any attempt to mutate fields (frozen)
 
 All failures are immediate and loud. No silent fallbacks.

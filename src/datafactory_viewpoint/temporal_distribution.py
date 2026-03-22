@@ -11,6 +11,7 @@ Adding a new strategy means adding a function here with the
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
@@ -157,8 +158,6 @@ def ceil_split(event: dict) -> list[dict]:
 
     Non-summary events get date_month from date_end.
     """
-    import math
-
     date_end = event.get("date_end") or event.get("date_start")
     date_start = event.get("date_start")
     best = event.get("best") or 0

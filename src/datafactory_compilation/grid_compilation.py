@@ -23,7 +23,7 @@ from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
     append_ledger_entry,
-    compute_content_digest,
+    compute_file_digest,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,38 +54,53 @@ def _parse_month_index(
     return idx if idx >= 0 else None
 
 
-def _place_events(
-    events: list[dict],
+def _place_events_columnar(
+    table: pq.ParquetFile | object,
     config: CompilationConfig,
 ) -> dict[tuple[int, int], list[dict]]:
-    """Assign each event to a (pgid_index, time_index) bin.
+    """Assign events to (pgid_index, time_index) bins using columnar data.
 
-    Events outside the grid bounds or temporal range are skipped
-    with a warning.
+    Extracts only placement columns (lat, lon, date) as lists,
+    computes bin assignments, then materializes full event dicts
+    only for events that land in valid bins. This avoids creating
+    ~19M dict objects upfront for large tables.
+
+    Args:
+        table: A PyArrow Table with event data.
+        config: Compilation configuration.
 
     Returns:
         Dict mapping (pgid_0based_index, time_index) to list of events.
     """
     from datafactory_priogrid.cell_generator import latlon_to_pgid
 
-    bins: dict[tuple[int, int], list[dict]] = defaultdict(list)
+    n_cells = config.grid_config.n_cells
+    n_steps = config.temporal_config.n_steps
+    n_rows = table.num_rows
+
+    # Extract only placement columns as Python lists
+    lats = table[config.lat_field].to_pylist()
+    lons = table[config.lon_field].to_pylist()
+    dates = table[config.date_field].to_pylist()
+
+    # Phase 1: compute bin assignments (row_index → bin key)
+    row_bins: dict[int, tuple[int, int]] = {}
     n_skipped_spatial = 0
     n_skipped_temporal = 0
 
-    n_cells = config.grid_config.n_cells
-    n_steps = config.temporal_config.n_steps
-
-    for ev in events:
-        lat = ev.get(config.lat_field)
-        lon = ev.get(config.lon_field)
-        date_str = ev.get(config.date_field)
+    for i in range(n_rows):
+        lat, lon, date_str = lats[i], lons[i], dates[i]
 
         if lat is None or lon is None:
             n_skipped_spatial += 1
             continue
 
         try:
-            pgid = int(latlon_to_pgid(float(lat), float(lon), config.grid_config))
+            pgid = int(
+                latlon_to_pgid(
+                    float(lat), float(lon), config.grid_config
+                )
+            )
         except (ValueError, TypeError):
             n_skipped_spatial += 1
             continue
@@ -107,9 +122,8 @@ def _place_events(
             n_skipped_temporal += 1
             continue
 
-        # pgid is 1-based; convert to 0-based index
         pgid_idx = pgid - 1
-        bins[(pgid_idx, time_idx)].append(ev)
+        row_bins[i] = (pgid_idx, time_idx)
 
     if n_skipped_spatial > 0:
         logger.warning(
@@ -117,11 +131,28 @@ def _place_events(
             n_skipped_spatial,
         )
     if n_skipped_temporal > 0:
-        logger.warning("Skipped %d events: outside temporal range", n_skipped_temporal)
+        logger.warning(
+            "Skipped %d events: outside temporal range",
+            n_skipped_temporal,
+        )
+
+    # Phase 2: materialize dicts only for placed events
+    if not row_bins:
+        logger.info("Placed 0 events into 0 non-empty bins")
+        return {}
+
+    # Get all column data as dict-of-lists (one pass)
+    col_data = table.to_pydict()
+    col_names = list(col_data.keys())
+
+    bins: dict[tuple[int, int], list[dict]] = defaultdict(list)
+    for row_idx, bin_key in row_bins.items():
+        ev = {col: col_data[col][row_idx] for col in col_names}
+        bins[bin_key].append(ev)
 
     logger.info(
         "Placed %d events into %d non-empty bins",
-        sum(len(v) for v in bins.values()),
+        len(row_bins),
         len(bins),
     )
     return dict(bins)
@@ -150,8 +181,8 @@ def compile_grid(config: CompilationConfig) -> Path:
         logger.error(err_msg)
         raise FileNotFoundError(err_msg)
 
-    # Compute source digest
-    source_digest = compute_content_digest(config.source_path.read_bytes())
+    # Compute source digest (chunked to avoid doubling memory)
+    source_digest = compute_file_digest(config.source_path)
 
     # Read source Parquet
     table = pq.read_table(config.source_path)
@@ -165,16 +196,11 @@ def compile_grid(config: CompilationConfig) -> Path:
         logger.error(err_msg)
         raise ValueError(err_msg)
 
-    # Convert to list of dicts for event processing
-    events = table.to_pydict()
-    n_rows = table.num_rows
-    event_list = [
-        {col: events[col][i] for col in events} for i in range(n_rows)
-    ]
-    logger.info("Read %d events from %s", n_rows, config.source_path)
-
-    # Place events into (cell, month) bins
-    bins = _place_events(event_list, config)
+    # Place events into (cell, month) bins using columnar extraction.
+    # Only placement columns (lat, lon, date) are read as lists;
+    # full event dicts are materialized only for placed events.
+    logger.info("Read %d events from %s", table.num_rows, config.source_path)
+    bins = _place_events_columnar(table, config)
 
     # Build output array
     n_cells = config.grid_config.n_cells
@@ -205,8 +231,8 @@ def compile_grid(config: CompilationConfig) -> Path:
     np.save(output_dir / "time_steps.npy", time_steps)
     (output_dir / "feature_names.json").write_text(json.dumps(feature_names))
 
-    # Compute output digest
-    output_digest = compute_content_digest(grid_path.read_bytes())
+    # Compute output digest (chunked to avoid doubling memory)
+    output_digest = compute_file_digest(grid_path)
 
     # Write provenance JSON
     provenance = {

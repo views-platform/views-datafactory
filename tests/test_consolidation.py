@@ -350,11 +350,10 @@ class TestConsolidateUcdpGreen:
 
         result = consolidate_ucdp(cfg)
 
-        assert isinstance(result.output_path, Path)
-        assert isinstance(result.n_sources, int)
-        assert isinstance(result.n_records_total, int)
-        assert isinstance(result.n_records_new, int)
-        assert isinstance(result.output_digest, str)
+        assert result.output_path.exists()
+        assert result.n_sources == 1
+        assert result.n_records_total == 3
+        assert result.n_records_new == 3
         assert len(result.output_digest) == 16
 
 

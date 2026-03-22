@@ -72,6 +72,7 @@ All failures are immediate and loud. No silent fallbacks.
 - Imported by `grid_compilation.py` (the compiler reads this config)
 - Composes `GridConfig` and `TemporalConfig` (delegates spatial/temporal backbone)
 - References aggregation strategies by name (string), not by import (loose coupling)
+- The compiler uses `compute_file_digest` to hash both source Parquet and output grid npy (chunked, memory-safe)
 - Must not depend on harvester, consolidation, or viewpoint packages (ADR-012)
 
 ---

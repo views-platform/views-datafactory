@@ -9,6 +9,8 @@ from datafactory_provenance.digests_and_ledgers import (
     LEDGER_VERSION,
     append_ledger_entry,
     compute_content_digest,
+    compute_file_digest,
+    file_lock,
     last_digest,
     last_digest_for_version,
 )
@@ -18,6 +20,8 @@ __all__ = [
     "LEDGER_VERSION",
     "append_ledger_entry",
     "compute_content_digest",
+    "compute_file_digest",
+    "file_lock",
     "last_digest",
     "last_digest_for_version",
 ]

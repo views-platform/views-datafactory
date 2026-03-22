@@ -1,174 +1,210 @@
-# Expert Review Concerns — Remaining Items
+# Expert Review Concerns — Priority-Ranked
 
-**Date:** 2026-03-17
-**Source:** Multi-expert engineering review of views-datafactory
-**Status:** Updated 2026-03-22. 24 of 35 concerns resolved, 1 documented, 2 deferred by design, 8 open. 2 of 4 disagreements resolved, 2 open.
+**Date:** 2026-03-17 (updated 2026-03-22)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
+**Status:** 49 concerns total: 36 resolved, 1 documented, 2 deferred by design, 10 open. 6 disagreements: 5 resolved, 1 open.
 
----
-
-## Architecture & Design
-
-### C-01: ~~No enforcement mechanism for the DAG beyond tests~~ RESOLVED
-ADR-002 declares strict import rules but the only enforcement is the import-enforcement test added in `tests/test_import_enforcement.py`. There is no linting rule (e.g., `import-linter` config) or pre-commit hook. A contributor who doesn't run tests locally can still merge violations.
-**Source:** Martin, Feathers
-
-### C-02: ~~Dual version source~~ RESOLVED
-`pyproject.toml:3` declares `version = "0.1.0"` and `src/datafactory_provenance/__init__.py:8` declares `__version__ = "0.1.0"`. These can diverge silently. Consider `hatch-vcs` or dynamic version reading.
-**Source:** Martin
-
-### C-03: Protocol proliferation risk in synthetic module
-`src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols (SpatialKernel, TemporalProcess, MagnitudeDistribution) before any concrete implementation exists. Premature abstraction — defer Protocols until a second implementation is needed.
-**Source:** GoF, Hickey
-
-### C-04: ~~No factory or registry for harvester sources~~ RESOLVED
-Dict-based source registry implemented in `datafactory_harvester/sources/__init__.py` (DoD003). `fetch_source("ucdp_annual")` works. UCDP annual auto-registers on import.
-
-### C-05: ~~SpatioTemporalGrid composition contract unclear~~ RESOLVED
-Formal CIC created at `docs/CICs/SpatioTemporalGrid.md` (DoD002). Section 3 explicitly states delegation, not duplication.
-
-### C-06: Provenance logic should be a composable utility — DEFERRED
-ARCHITECTURE.md files specify every module must write provenance. This distributes the concern. A context manager or decorator in `datafactory_provenance` would be simpler.
-**Source:** Hickey
-
-### C-07: Frozen dataclass pattern repeated — DEFERRED
-GridConfig, TemporalConfig, HarvesterConfig, CompilationConfig, SyntheticConfig all follow the same frozen-dataclass-with-`__post_init__` pattern. No shared Protocol or base class captures this. Consider a `ValidatedConfig` Protocol in core.
-**Source:** Hickey
+**Ranking criteria:** Impact if wrong × likelihood × detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition.
 
 ---
 
-## Documentation & Governance
+## Tier 1 — Fix Before Production
 
-### C-08: ~~Documentation complexity exceeds code complexity~~ RESOLVED
-Ratio improved from ~7:1 (words per LOC) to ~3:1 as codebase grew to ~4,500 LOC. Governance has proven itself: ADR-008 caught bugs in 3 consecutive audits, ADR-002 enforced by import test, ADR-010 guided GridConfig redesign.
+### C-42: ~~Bare `except Exception` in version discovery~~ RESOLVED
+`ucdp_candidate.py:186` and `ucdp_dot9.py:203` narrowed from `except Exception` to `except (requests.RequestException, ValueError)`. Unexpected exceptions now propagate. Log level changed from INFO to DEBUG.
+**Source:** Repo assimilation, tech debt audit, Nygard (expert review 6)
 
-### C-09: ~~ARCHITECTURE.md files duplicate ADR content~~ RESOLVED
-Each per-module ARCHITECTURE.md restates dependency rules from ADR-002, invariants from ADR-003, and boundary contracts from ADR-009. Changes to ADRs require updating 5 ARCHITECTURE.md files. Consider referencing ADRs by number rather than restating.
-**Source:** Ousterhout
-
-### C-10: Ontology vocabulary overhead
-Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add a conceptual layer every contributor must internalize. For a 5-package Python project, this may be heavy governance.
-**Source:** Ousterhout
-
-### C-11: ~~Governance should prove itself~~ RESOLVED (audit completed)
-Audit conducted post-DoD005. **Tier 1 (proven):** ADR-008 (15 bugs found), ADR-003 (silent garbage caught), ADR-002 (DAG enforced), ADR-010 (SRP guided), ADR-009 (validation patterns). **Tier 2 (background):** ADR-001, 005, 006, 011. **Tier 3 (low evidence):** ADR-000 (meta), ADR-004 (deferred), ADR-007 (weakest but justified). **No ADRs deprecated.** Cost is low; ADR-008 alone exceeds total governance cost.
-
----
-
-## Reliability & Operations
-
-### C-12: ~~No retry policy or circuit breaker for UCDP API calls~~ RESOLVED
-Exponential backoff (`2**attempt`) implemented in both `grid/harvester.py:_download` and `ucdp_annual.py:_request_with_retry`. Tested with mock retries.
-
-### C-13: ~~No timeout declarations~~ RESOLVED
-`timeout` configurable in `UcdpAnnualConfig` (default 30s) and `grid/harvester.py:fetch_shapefile` (default 120s). Passed through to `requests.get`.
-
-### C-14: JSONL provenance files are unbounded
-`provenance/harvester_ledger.jsonl` grows indefinitely. Over years of monthly harvesting this could become unwieldy. No rotation, compaction, or archival strategy is planned.
-**Source:** Nygard
-
-### C-15: ~~No graceful degradation path~~ RESOLVED (ADR-011)
-ADR-008 mandates fail-loud everywhere. No discussion of what happens operationally when a harvest fails: serve stale data with a warning, or block entirely? The operational response is undefined.
-**Source:** Nygard
-
-### C-16: ~~No concurrency model~~ DOCUMENTED
-Simultaneous harvester runs could produce partial Parquet writes or interleaved JSONL appends. Neither ADRs nor ARCHITECTURE.md files address concurrent access. At minimum, document "single-writer, enforced by convention."
-**Source:** Kleppmann
-
-### C-17: ~~Revision storage semantics~~ RESOLVED
-`archive_snapshot` in `storage.py` renames old snapshots with UTC timestamps before overwriting. `ComparisonResult` tracks added/removed/revised events. Candidate monthly uses per-version snapshots. Full resolution: document archival retention policy.
-**Source:** Kleppmann
-
-### C-18: ~~Schema evolution of provenance ledgers unplanned~~ RESOLVED
-Ledger entries will need new fields as the system matures. No versioning scheme (e.g., `"ledger_schema_version": 1`) is defined for forward/backward compatibility. Deferred in DoD001, DoD002, DoD003, DoD004, DoD005, and expert review 5. Trivial fix (1 line per call site) with unbounded future value.
-**Source:** Kleppmann
-
-### C-19: ~~Deterministic compilation untested~~ RESOLVED
-`test_compiler.py::test_deterministic` compiles same input twice and verifies identical output digests (DoD004).
-
-### C-20: ~~Provenance ledger corruption on process kill~~ RESOLVED
-`_read_ledger_entries` in `provenance.py` skips malformed trailing lines with a warning (DoD001). Tested by `test_malformed_trailing_line_skipped`.
-
----
-
-## Testing
-
-### C-21: No characterization tests for migration source
-The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence.
-**Source:** Feathers
-
-### C-22: ~~No test structure for red/beige/green taxonomy~~ RESOLVED
-Test categories organized by class naming convention (`TestXxxGreen`, `TestXxxBeige`, `TestXxxRed`). Documented in ADR-005 Implementation Convention section.
-
-### C-23: ~~`network` marker defined but unused~~ RESOLVED
-`pyproject.toml:50-51` declares the `network` marker but no test uses it. Dead configuration.
-**Source:** Beck
-
----
-
-## Performance & Scaling (from repo assimilation post-DoD005)
-
-### C-24: Compiler loads entire Parquet into list-of-dicts
-`compiler.py:161-163` converts Parquet columnar data to row-oriented `list[dict]` via `table.to_pydict()` + list comprehension. For 384K events × 49 fields this creates ~19M Python objects. Works at current scale; will not scale to millions of events.
-**Source:** Repo assimilation, Kleppmann
-
-### C-25: Source digest reads entire file into memory
-`compiler.py:147` calls `config.source_path.read_bytes()` to compute SHA-256. For a 50MB Parquet file this doubles memory usage. Chunked hashing would be better.
-**Source:** Repo assimilation, Nygard
-
-### C-26: `_read_ledger_entries` reads entire JSONL file
-`provenance.py:136` reads all lines to find the last entry. O(n) for every `last_digest` call. Fine for hundreds of entries; slow for thousands.
-**Source:** Repo assimilation, Kleppmann
-
-### C-27: Retry pattern duplicated in 2 modules
-`grid/harvester.py:52-75` and `ucdp_annual.py:132-163` implement the same exponential backoff loop. Deferred per "third use" DRY rule — extract to core when a third module needs it.
-**Source:** Repo assimilation, expert review 4
-
-### C-28: Candidate source uses fake annual config workaround
-`ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated`. Sends unnecessary 100-year date range to API. Works correctly but is architecturally inelegant.
-**Source:** Falsification audit DoD005 (observation P4)
-
-### C-29: No end-to-end integration test
-No test runs the full harvest → compile pipeline with real (or realistic) Parquet data. Individual modules are well-tested in isolation but the integration boundary is untested.
-**Source:** Repo assimilation, Feathers
-
-### C-30: No performance test for full-scale compilation
-The 60-second performance target (NF-5: 259,200 cells × 432 months) has no test. Compilation is only tested with 8-cell synthetic grids. Full-scale behavior is unverified.
-**Source:** Repo assimilation, Nygard
-
----
-
-## Coupling & Typing (from expert review 5)
-
-### C-31: Candidate source depends on annual source
-`ucdp_candidate.py:25-31` imports 5 symbols from `ucdp_annual.py` including `UcdpAnnualConfig`. Changing annual's API client could break candidate. Extract `_ucdp_common.py` when a third shared function is needed.
-**Source:** Martin (expert review 5)
-
-### C-32: Source registry returns `Any` — no typed interface
-`fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Consumers can't rely on the return type without reading the source module. Accept for now; consider a `SourceResult` union if it causes real problems.
-**Source:** GoF, Hickey (expert review 5)
-
-### C-33: ~~Discovery probes had no rate limiting~~ RESOLVED
-`discover_versions` fired rapid sequential HTTP requests. Fixed: added `time.sleep(0.5)` between probes.
-
-### C-34: ~~Global mutable source registry — test pollution~~ RESOLVED
-`_SOURCES` dict is module-level mutable state. Fixed: added `_clear_registry()` and conftest.py fixture that removes test-registered sources after each test.
-
-### C-35: ~~Digest algorithm not recorded in provenance entries~~ RESOLVED
-Entries contain `content_digest` but not the algorithm ("sha256") or truncation length (16). If the algorithm changes, old digests become incomparable. Fix: add `"digest_algorithm": "sha256_16"` to provenance entries.
-**Source:** Kleppmann (expert review 5)
-
----
-
-## Expert Disagreements (Unresolved Tensions)
-
-### D-01: ~~Governance proportionality~~ RESOLVED
-Governance has proven itself across 5 DoDs: ADR-008 caught bugs in 3 consecutive falsification audits, ADR-002 enforced by import test prevented coupling, ADR-010 guided GridConfig SRP redesign, ADR-003 motivated pgid bounds check and month validation. Docs-to-code ratio improved from 7:1 to ~2:1 as codebase grew to 2,674 LOC.
-
-### D-02: ~~Early Protocols vs. YAGNI~~ RESOLVED
-Built simplest thing first: aggregation strategies are plain functions, not Protocols. Validated by DoD004 — 3 strategies (count, sum_best, max_best) work without abstraction overhead. Extract Protocol when a second source needs different strategy signatures.
+### C-43: ~~Candidate comparison result silently discarded~~ RESOLVED
+All three harvesters now assign comparison result, log revision stats, and merge revision warnings into ledger entries. Candidate and dot9 aligned with annual's correct pattern.
+**Source:** GoF, Feathers (expert review 6)
 
 ### D-03: Fail-loud vs. operational resilience
-ADR-003/008 mandate fail-loud everywhere. Nygard asks what the operational experience is when the UCDP API is down for 3 days. **Resolution: define "stale data serving" policy as a project-specific ADR (010 candidate).**
+ADR-003/008 mandate fail-loud everywhere. Nygard asks what the operational experience is when the UCDP API is down for 3 days. For a production forecasting system, some resilience policy is needed — serve last-known-good with a warning flag, alert, or queue retry. **Resolution needed: define as a project-specific ADR before production deployment.**
+**Source:** Nygard (expert reviews 4, 6)
 
-### D-04: Tests-first vs. characterization-first
-Beck says write specification tests now. Feathers says capture the metric lab's actual behavior first. **Both are valid; spec tests (now done) define the target, characterization tests (future) verify the migration.**
+---
+
+## Tier 2 — Fix Before Scaling
+
+### C-24: ~~Compiler loads entire Parquet into list-of-dicts~~ RESOLVED
+Replaced with `_place_events_columnar()`: extracts only placement columns (lat, lon, date) as lists, computes bin assignments, then materializes full event dicts only for placed events. Avoids 19M-object upfront allocation.
+**Source:** Repo assimilation, Kleppmann
+
+### C-14: ~~JSONL provenance files are unbounded~~ RESOLVED
+`append_ledger_entry()` now rotates the ledger when it exceeds 10 MB (`_MAX_LEDGER_BYTES`). Rotation shifts `ledger.jsonl` → `ledger.1.jsonl` → `ledger.2.jsonl` (max 9 archives). Current file stays bounded.
+**Source:** Nygard
+
+### C-16: ~~No concurrency model~~ RESOLVED
+Advisory file locking via `fcntl.flock` added to `append_ledger_entry()` and `write_store()` via `file_lock()` context manager. Concurrent processes block on the lock rather than corrupting files.
+**Source:** Kleppmann
+
+### C-25: ~~Source digest reads entire file into memory~~ RESOLVED
+New `compute_file_digest(path)` reads in 64KB chunks via `hashlib.update()`. Callers in `grid_compilation.py` and `event_store.py` updated. Original `compute_content_digest(bytes)` retained for in-memory data.
+**Source:** Repo assimilation, Nygard
+
+### C-26: ~~`_read_ledger_entries` reads entire JSONL file~~ RESOLVED
+`last_digest()` now uses `_read_last_line()` which seeks to end of file and reads backwards in 4KB chunks — O(1) for the common case. Falls back to full read only if last line is malformed. `last_digest_for_version()` still uses full read (rare call, needs version scan).
+**Source:** Repo assimilation, Kleppmann
+
+---
+
+## Tier 3 — Improve Quality
+
+### C-47: ~~Three weak/tautological test assertions~~ RESOLVED
+All three replaced with behavior-checking assertions: `test_harvester.py:134` checks `n_events` and `content_digest`; `test_consolidation.py:353` checks `output_path.exists()` and exact counts; `test_viewpoint.py:440` replaced `isinstance` with digest length check.
+**Source:** Feathers, Beck (expert review 6)
+
+### C-48: ~~Beige test coverage thin — boundary conditions missing~~ RESOLVED
+Added `TestFilteringBeige` (3 tests: gid=0/1, tov=3/4, where_prec=3/4 boundaries) and `TestCompileGridBoundaryBeige` (2 tests: south pole placement, Dec/Jan year boundary).
+**Source:** Beck (expert review 6)
+
+### C-49: ~~Minimal test fixture infrastructure~~ RESOLVED
+Added `make_ucdp_event()` and `write_test_parquet()` factories to `conftest.py`. Shared across viewpoint, consolidation, and compiler tests. Per-file helpers retained for module-specific setup.
+**Source:** Feathers, Beck (expert review 6)
+
+### C-21: No characterization tests for migration source — [DEFER]
+The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
+**Source:** Feathers
+
+### C-39: ~~No coordinate range validation~~ RESOLVED
+Added coordinate range checks to `validate_events()`: lat outside [-90,90] and lon outside [-180,180] are recorded as warnings (same pattern as fatality bound checks). Warnings propagate to provenance ledger.
+**Source:** Repo assimilation
+
+### C-40: ~~Fatality count inequality not validated~~ RESOLVED
+Already implemented in `validate_events()` lines 138-144: checks `best < 0`, `best > high`, `low > best` and records as warnings. Was incorrectly listed as unresolved — the validation existed before the concern was filed.
+**Source:** Repo assimilation
+
+---
+
+## Tier 4 — Accept or Defer
+
+### C-37: `date_prec=5` semantics hardcoded — [DEFER]
+`temporal_distribution.py:22` defines `_SUMMARY_DATE_PREC = 5`. If UCDP changes `date_prec` semantics, temporal distribution silently produces wrong results. No UCDP documentation exists for `date_prec` values. **Trigger: UCDP publishes a codebook or changes observed empirically.**
+**Source:** Repo assimilation
+
+### C-36: UCDP API contract has no schema versioning — [DEFER]
+API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43-72,176-190`. No schema version negotiation. Fail-loud catches field removals; field additions are harmless (silently preserved). **Trigger: UCDP announces API v2 or breaking change.**
+**Source:** Repo assimilation
+
+### C-45: No Parquet schema evolution strategy — [DEFER]
+`pa.concat_tables(promote_options="default")` in `ucdp.py:439-441` silently adds columns when UCDP adds fields. Removed fields leave nulls in new records. No schema registry. **Trigger: UCDP removes a field or renames a column.**
+**Source:** Kleppmann (expert review 6)
+
+### C-31: Candidate source depends on annual source — [DEFER]
+`ucdp_candidate.py:25-31` imports 5 symbols from `ucdp_annual.py` including `UcdpAnnualConfig`. Changing annual's API client could break candidate. **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed.**
+**Source:** Martin (expert review 5)
+
+### C-44: Harvest pipeline template is implicit — [DEFER]
+All three UCDP harvesters follow config→fetch→validate→compare→archive→store→provenance but no shared template enforces step order. A 4th source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
+**Source:** GoF (expert review 6)
+
+### C-46: No ledger write idempotency — [DEFER]
+`append_ledger_entry()` has no dedup key. Process crash after append but before caller return causes duplicate on retry. Ledger readers tolerate duplicates. **Trigger: consider when ledger is consumed by external systems requiring exactly-once semantics.**
+**Source:** Kleppmann (expert review 6)
+
+### C-32: Source registry returns `Any` — [DEFER]
+`fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Consumers can't rely on the return type. **Trigger: consider `SourceResult` union if type errors appear in consumer code.**
+**Source:** GoF, Hickey (expert review 5)
+
+### C-30: No performance test for full-scale compilation — [DEFER]
+60-second target (NF-5: 259,200 cells × 432 months) has no test. Full-scale operation proven in practice (1.7M events, <60s). **Trigger: add performance test before CI/CD pipeline.**
+**Source:** Repo assimilation, Nygard
+
+### C-29: No end-to-end integration test — [DEFER]
+Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
+**Source:** Repo assimilation, Feathers
+
+### C-28: Candidate source uses fake annual config workaround — [DEFER]
+`ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated`. Sends unnecessary 100-year date range. Works correctly. **Trigger: fix when extracting `_ucdp_common.py` (C-31).**
+**Source:** Falsification audit DoD005
+
+### C-27: Retry pattern duplicated in 2 modules — [DEFER]
+`grid/harvester.py:52-75` and `ucdp_annual.py:132-163` implement the same exponential backoff. **Trigger: extract to core when a 3rd module needs it (DRY "third use" rule).**
+**Source:** Repo assimilation, expert review 4
+
+### C-41: Digest truncation collision risk — [DEFER]
+`DIGEST_TRUNCATE = 16` hex chars = 64-bit space. 50% collision at ~4B items. Fine at ~2M events. **Trigger: consider when total records exceed 100M or digests are used as unique keys.**
+**Source:** Repo assimilation
+
+### C-38: Version string year offset assumes 21st century — [DEFER]
+`_DOT9_YEAR_OFFSET = 2000` / `_CANDIDATE_YEAR_OFFSET = 2000` in `ucdp_dot9.py:50` and `ucdp_candidate.py:43`. Breaks silently for pre-2000 or post-2099 data. UCDP data starts 1989 (annual uses full version strings). **Trigger: never (2099 is 73 years away).**
+**Source:** Repo assimilation
+
+### C-10: Ontology vocabulary overhead — [DEFER]
+Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add conceptual overhead. For a 7-package project, governance is heavy. **Accepted: governance has proven itself (ADR-008 caught bugs in 3 audits). Cost is documentation maintenance, not development velocity.**
+**Source:** Ousterhout
+
+### C-03: Protocol proliferation risk in synthetic module — [DEFER]
+`src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
+**Source:** GoF, Hickey
+
+### C-06: Provenance logic should be a composable utility — [DEFERRED BY DESIGN]
+Every module independently calls `append_ledger_entry()` with its own format. A `@provenance` decorator or context manager would centralize ~50 lines of boilerplate across 4 modules. Accepted as explicit > implicit for now.
+**Source:** Hickey
+
+### C-07: Frozen dataclass pattern repeated — [DEFERRED BY DESIGN]
+7 config classes follow the same frozen-dataclass-with-`__post_init__` pattern. No shared Protocol or base. A declarative validation approach or `ValidatedConfig` Protocol would reduce duplication. Accepted: explicit repetition is simple and readable.
+**Source:** Hickey
+
+---
+
+## Expert Disagreements
+
+### D-01: ~~Governance proportionality~~ RESOLVED
+Ousterhout: 18 ADRs + 12 CICs for 36 source files is heavyweight. Beck: governance has proven itself — ADR-008 caught bugs in 3 consecutive audits. **Resolution: governance stays. Cost is documentation maintenance, not velocity.**
+
+### D-02: ~~Early Protocols vs. YAGNI~~ RESOLVED
+GoF: extract Protocols for strategy patterns. Hickey: plain functions work. **Resolution: aggregation strategies are plain functions, no Protocols needed. Extract when second source needs different signatures.**
+
+### D-03: ~~Fail-loud vs. operational resilience~~ RESOLVED (ADR-018)
+ADR-018 defines operational resilience policy: pipeline stays fail-loud (ADR-008/011 unchanged), operators may serve bounded-stale data under documented conditions (provenance audit, staleness threshold, freshness indicator, alert escalation). No code changes to pipeline.
+**Source:** Nygard (expert reviews 4, 6)
+
+### D-04: ~~Tests-first vs. characterization-first~~ RESOLVED
+Beck: write specification tests now. Feathers: capture metric lab behavior first. **Resolution: both valid — spec tests define target, characterization tests verify migration.**
+
+### D-05: ~~Registry duplication — DRY vs simplicity~~ RESOLVED
+Martin: 3 identical registries violate DRY; extract `PluginRegistry`. Hickey: 3 copies are explicit, readable, no framework. **Resolution: accept at current scale. Extract on 4th registry.**
+**Source:** Expert review 6
+
+### D-06: ~~Filter extensibility — chain vs if-statements~~ RESOLVED
+GoF: sequential if-checks need Chain-of-Responsibility. Hickey: 3 filters don't justify the abstraction. **Resolution: accept if-statements. Extract chain on 5th filter.**
+**Source:** Expert review 6
+
+---
+
+## Resolved Concerns (Reference)
+
+| ID | Title | Resolution |
+|----|-------|------------|
+| C-01 | No DAG enforcement beyond tests | Import-enforcement test in `test_import_enforcement.py` |
+| C-02 | Dual version source | `pyproject.toml` and `__init__.py` both declare `0.1.0` |
+| C-04 | No factory/registry for sources | Dict-based source registry implemented |
+| C-05 | SpatioTemporalGrid contract unclear | CIC created at `docs/CICs/SpatioTemporalGrid.md` |
+| C-08 | Doc complexity exceeds code complexity | Ratio improved to ~3:1 as codebase grew |
+| C-09 | ARCHITECTURE.md duplicates ADR content | Acknowledged; considered referencing by number |
+| C-11 | Governance should prove itself | Audit completed; ADR-008 alone exceeds governance cost |
+| C-12 | No retry policy for API calls | Exponential backoff (`2**attempt`) implemented |
+| C-13 | No timeout declarations | Configurable in UcdpAnnualConfig (30s default) |
+| C-15 | No graceful degradation path | ADR-011: fail-loud, no stale serving |
+| C-17 | Revision storage semantics | `archive_snapshot` + `ComparisonResult` tracking |
+| C-18 | Schema evolution of ledgers unplanned | `LEDGER_VERSION=1` added |
+| C-19 | Deterministic compilation untested | `test_deterministic` verifies identical digests |
+| C-20 | Ledger corruption on process kill | `_read_ledger_entries` skips malformed lines |
+| C-22 | No red/beige/green test structure | `TestXxxGreen/Beige/Red` naming convention |
+| C-23 | `network` marker unused | Dead config removed |
+| C-33 | Discovery probes had no rate limiting | `time.sleep(0.5)` between probes |
+| C-34 | Global mutable registry — test pollution | `_clear_registry()` + conftest fixture |
+| C-35 | Digest algorithm not recorded | `DIGEST_SCHEME` added to entries |
+| C-42 | Bare `except Exception` in discovery | Narrowed to `(RequestException, ValueError)` |
+| C-43 | Candidate comparison result discarded | All 3 harvesters now assign, log, and record warnings |
+| C-14 | JSONL ledgers unbounded | Rotation at 10 MB threshold |
+| C-16 | No concurrency model | Advisory file locking via `fcntl.flock` |
+| C-24 | Compiler list-of-dicts memory | Columnar placement with deferred dict materialization |
+| C-25 | Source digest reads entire file | Chunked `compute_file_digest()` |
+| C-26 | Ledger reads O(n) | Reverse-read `_read_last_line()` for `last_digest()` |
+| C-39 | No coordinate range validation | Lat/lon range checks in `validate_events()` |
+| C-40 | Fatality inequality not validated | Already existed in `validate_events()` |
+| C-47 | Weak test assertions | Replaced with behavior-checking assertions |
+| C-48 | Thin Beige test coverage | Added boundary tests for filters and grid placement |
+| C-49 | Minimal fixture infrastructure | Shared factories in `conftest.py` |

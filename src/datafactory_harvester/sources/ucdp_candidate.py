@@ -17,7 +17,10 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+import requests
+
 from datafactory_harvester.event_validation import (
+    ComparisonResult,
     compare_snapshots,
     validate_events,
 )
@@ -183,8 +186,8 @@ def discover_versions(
                 "Discovered version %s (%d events)", version, total
             )
             time.sleep(config.discovery_rate_limit)
-        except Exception:
-            logger.info(
+        except (requests.RequestException, ValueError):
+            logger.debug(
                 "Version %s not available — stopping discovery", version
             )
             break
@@ -307,18 +310,30 @@ def _fetch_version(
         }
 
     # Compare, archive, store
+    comparison: ComparisonResult | None = None
     if snap_path.exists():
-        compare_snapshots(snap_path, events)
+        comparison = compare_snapshots(snap_path, events)
+        if comparison.has_previous:
+            logger.info(
+                "Version %s: %d added, %d removed, %d revised",
+                version,
+                comparison.n_added,
+                comparison.n_removed,
+                comparison.n_revised,
+            )
         archive_snapshot(snap_path)
 
     save_event_snapshot(events, snap_path)
 
     # Provenance
+    revision_warnings = (
+        comparison.warnings if comparison else []
+    )
     append_ledger_entry(config.ledger_path, {
         **base_entry,
         "outcome": "success",
         "schema_fields": sorted(validation.schema_snapshot.keys()),
-        "warnings": validation.warnings,
+        "warnings": validation.warnings + revision_warnings,
         "errors": validation.errors,
     })
 

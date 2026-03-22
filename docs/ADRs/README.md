@@ -58,7 +58,28 @@ These ADRs form the architectural constitution of the repository.
   Paths and URLs removed from GridConfig (SRP). Injected at call sites.
 
 - **ADR-011** -- Fail Loud, No Stale Data Serving
-  System crashes on failure. No automatic fallback. Future ADR for graceful degradation.
+  System crashes on failure. No automatic fallback.
+
+- **ADR-012** -- Four-Layer Data Architecture
+  Graph topology: provenance (L0) → priogrid/harvester/synthetic (L1) → consolidation (L2) → viewpoint (L3) → compilation (L4). Supersedes ADR-002.
+
+- **ADR-013** -- Consolidation Principles
+  Lossless, append-only, bitemporal. No fields dropped.
+
+- **ADR-014** -- Viewpoints as Derived Views
+  Opinionated, versioned, rebuildable. Multiple viewpoints coexist.
+
+- **ADR-015** -- UCDP Consolidation and Viewpoint Specifics
+  Three-source consolidation (annual + candidate + .9). Survivorship and distribution strategies.
+
+- **ADR-016** -- Viewpoint Profiles
+  Named presets (e.g., production_parity) for strategy + filter combinations.
+
+- **ADR-017** -- Vintage-Aware Consolidation
+  Content-addressed dedup. Mutable versions preserved as distinct vintages.
+
+- **ADR-018** -- Operational Resilience Policy
+  Pipeline stays fail-loud. Operators may serve bounded-stale data under documented conditions.
 
 These must comply with the constitutional ADRs above.
 

@@ -28,7 +28,7 @@ Carries the validation verdict (`valid`), event count, collected warnings and er
 
 - Carries a boolean `valid` flag: True if no fatal schema violations were found
 - Carries `n_events`: the count of events that were validated
-- Collects `warnings`: non-fatal issues (e.g., bound inconsistencies)
+- Collects `warnings`: non-fatal issues including fatality bound violations (`best > high`, `low > best`, `best < 0`), coordinate range violations (lat outside [-90,90], lon outside [-180,180]), and duplicate event IDs
 - Collects `errors`: fatal schema violations (missing required fields, type mismatches)
 - Carries `schema_snapshot`: dict mapping field names to observed types
 - Carries `content_digest`: SHA-256 digest computed from digest fields

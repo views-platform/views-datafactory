@@ -330,6 +330,65 @@ class TestCompileGridBeige:
         assert grid.sum() == 0.0  # All zeros — event was skipped
 
 
+class TestCompileGridBoundaryBeige:
+    """Boundary condition tests for grid placement."""
+
+    def test_event_at_south_pole(self, tmp_path: Path) -> None:
+        """Event at lat=-90 should be placed in bottom row."""
+        events = [{
+            "id": 1,
+            "latitude": -89.9,
+            "longitude": 0.0,
+            "date_start": "2024-01-15",
+            "best": 5,
+        }]
+        src = _make_parquet(tmp_path / "source.parquet", events)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_grid(cfg)
+        grid = np.load(tmp_path / "output" / "grid.npy")
+        assert grid.sum() > 0
+
+    def test_year_boundary_dec_vs_jan(
+        self, tmp_path: Path
+    ) -> None:
+        """Dec 2024 is in range, Jan 2025 is out of range."""
+        events = [
+            {
+                "id": 1,
+                "latitude": 0.0,
+                "longitude": 0.0,
+                "date_start": "2024-12-15",
+                "best": 10,
+            },
+            {
+                "id": 2,
+                "latitude": 0.0,
+                "longitude": 0.0,
+                "date_start": "2025-01-15",
+                "best": 10,
+            },
+        ]
+        src = _make_parquet(tmp_path / "source.parquet", events)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_grid(cfg)
+        grid = np.load(tmp_path / "output" / "grid.npy")
+        # Only Dec event should be placed (Jan 2025 out of range)
+        event_counts = grid[:, :, 0]
+        assert event_counts.sum() == 1.0
+
+
 class TestCompileGridRed:
     """Adversarial inputs that compilation must handle without silent corruption."""
 

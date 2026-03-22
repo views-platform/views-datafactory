@@ -16,9 +16,9 @@ class TestDot9InvestigationFalsifications:
     """Hard and soft falsifications from the .9 investigation audit."""
 
     @pytest.mark.skip(
-        reason="HARD FALSIFICATION: ADR-015 says .9 'stitches annual "
-        "and candidate' but .9 contains 13,005 events not in any "
-        "annual or candidate release. ADR-015 must be updated."
+        reason="HARD FALSIFICATION (resolved in ADR-015): .9 contains "
+        "13,005 exclusive events not in any annual or candidate "
+        "release. ADR-015 updated to document .9 as distinct source."
     )
     def test_adr015_stitching_claim_is_false(self) -> None:
         """ADR-015 line 18 claims .9 'stitches annual and candidate.'

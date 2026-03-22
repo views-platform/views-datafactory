@@ -65,6 +65,8 @@ All fields are required. No defaults.
 
 - Created by consolidator functions (e.g., `consolidate_ucdp`)
 - Consumed by orchestration scripts and provenance logging
+- The `output_digest` is computed post-write by `compute_file_digest` (chunked, memory-safe)
+- Parquet writes are protected by `file_lock` for concurrency safety
 - Must not depend on any `datafactory_*` class
 
 ---

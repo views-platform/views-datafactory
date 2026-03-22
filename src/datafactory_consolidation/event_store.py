@@ -12,7 +12,7 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from datafactory_provenance import compute_content_digest
+from datafactory_provenance import compute_file_digest, file_lock
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,9 @@ def write_store(table: pa.Table, path: Path) -> str:
         Content digest (SHA-256, truncated to 16 hex chars).
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, path, compression=_PARQUET_COMPRESSION)
-    digest = compute_content_digest(path.read_bytes())
+    with file_lock(path):
+        pq.write_table(table, path, compression=_PARQUET_COMPRESSION)
+    digest = compute_file_digest(path)
     logger.info(
         "Wrote consolidated store: %s (%d rows, digest: %s)",
         path,

@@ -20,6 +20,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+import requests
+
 from datafactory_harvester.event_validation import (
     compare_snapshots,
     validate_events,
@@ -200,8 +202,8 @@ def discover_dot9_versions(
                 version, total,
             )
             time.sleep(config.discovery_rate_limit)
-        except Exception:
-            logger.info(
+        except (requests.RequestException, ValueError):
+            logger.debug(
                 "Version %s not available — stopping",
                 version,
             )
@@ -325,26 +327,31 @@ def _fetch_dot9_version(
         }
 
     # Compare + archive + store
+    comparison = None
     if snap_path.exists():
         comparison = compare_snapshots(snap_path, events)
-        logger.info(
-            "Version %s: %d added, %d removed, %d revised",
-            version,
-            comparison.n_added,
-            comparison.n_removed,
-            comparison.n_revised,
-        )
+        if comparison.has_previous:
+            logger.info(
+                "Version %s: %d added, %d removed, %d revised",
+                version,
+                comparison.n_added,
+                comparison.n_removed,
+                comparison.n_revised,
+            )
         archive_snapshot(snap_path)
 
     save_event_snapshot(events, snap_path)
 
+    revision_warnings = (
+        comparison.warnings if comparison else []
+    )
     append_ledger_entry(config.ledger_path, {
         **base_entry,
         "outcome": "success",
         "schema_fields": sorted(
             validation.schema_snapshot.keys()
         ),
-        "warnings": validation.warnings,
+        "warnings": validation.warnings + revision_warnings,
         "errors": validation.errors,
     })
 

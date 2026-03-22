@@ -130,8 +130,10 @@ class TestValidateEventsRed:
     def test_all_none_fields_does_not_crash(self) -> None:
         events = [dict.fromkeys(REQUIRED)]
         result = validate_events(events, REQUIRED, FIELD_TYPES)
-        # Should produce errors (wrong types), not crash
-        assert isinstance(result, type(result))
+        # All fields present but None — type checks skip None values,
+        # so result is valid but content digest covers None values
+        assert result.n_events == 1
+        assert result.content_digest != ""
 
     def test_empty_dicts_detected_as_missing(self) -> None:
         result = validate_events([{}], REQUIRED, FIELD_TYPES)
