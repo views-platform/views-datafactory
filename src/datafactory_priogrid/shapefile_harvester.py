@@ -7,14 +7,16 @@ to a pluggable ReferenceGeometryReader (see validation.py).
 The shapefile is a one-time critical artifact. If the origin URL goes
 dead, the local copy is the fallback.
 
-All I/O parameters are injected at call sites. Provenance uses
-datafactory_provenance utilities.
+Provenance uses datafactory_provenance utilities.
 """
+
+from __future__ import annotations
 
 import io
 import logging
 import time
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 
 import requests
@@ -36,6 +38,38 @@ DEFAULT_SHAPEFILE_URL = (
     "http://file.prio.no/ReplicationData/PRIO-GRID/"
     "priogrid_shapefiles.zip"
 )
+
+
+@dataclass(frozen=True)
+class ShapefileHarvesterConfig:
+    """Configuration for downloading the PRIO-GRID shapefile.
+
+    The shapefile is grid reference geometry (not a data source).
+    Downloaded once and reused for parity validation.
+    """
+
+    url: str = DEFAULT_SHAPEFILE_URL
+    data_dir: Path = Path("data/priogrid")
+    ledger_path: Path = Path(
+        "provenance/priogrid/ingestion_ledger.jsonl"
+    )
+    timeout: int = 120
+    max_retries: int = 3
+
+    def __post_init__(self) -> None:
+        if self.timeout < 1:
+            err_msg = (
+                f"timeout must be >= 1, got {self.timeout}"
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        if self.max_retries < 1:
+            err_msg = (
+                f"max_retries must be >= 1, "
+                f"got {self.max_retries}"
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
 
 
 def _download(
@@ -100,12 +134,8 @@ def _extract_zip(content: bytes, target_dir: Path) -> list[str]:
 
 
 def fetch_shapefile(
-    url: str = DEFAULT_SHAPEFILE_URL,
+    config: ShapefileHarvesterConfig | None = None,
     *,
-    data_dir: Path = Path("data/priogrid"),
-    ledger_path: Path = Path("provenance/priogrid/ingestion_ledger.jsonl"),
-    timeout: int = 120,
-    max_retries: int = 3,
     force_refresh: bool = False,
 ) -> Path:
     """Download and store the PRIO-GRID reference shapefile ZIP.
@@ -115,38 +145,48 @@ def fetch_shapefile(
     Records a heartbeat if content is unchanged.
 
     Args:
-        url: URL to the shapefile ZIP archive.
-        data_dir: Directory to store the downloaded and extracted files.
-        ledger_path: Path to the provenance JSONL ledger.
-        timeout: HTTP request timeout in seconds.
-        max_retries: Maximum download attempts with exponential backoff.
+        config: Harvest configuration. Uses defaults if None.
         force_refresh: If True, re-download even if files exist.
 
     Returns:
         Path to the extraction directory containing .shp files.
     """
-    shp_dir = data_dir / "shapefile"
+    if config is None:
+        config = ShapefileHarvesterConfig()
+
+    shp_dir = config.data_dir / "shapefile"
 
     # Early return: files already on disk
-    if not force_refresh and shp_dir.exists() and any(shp_dir.glob("*.shp")):
+    if (
+        not force_refresh
+        and shp_dir.exists()
+        and any(shp_dir.glob("*.shp"))
+    ):
         logger.info("Using existing shapefile: %s", shp_dir)
         return shp_dir
 
     # Download
-    logger.info("Downloading PRIO-GRID shapefile from %s", url)
-    data_dir.mkdir(parents=True, exist_ok=True)
-    content = _download(url, timeout=timeout, max_retries=max_retries)
+    logger.info(
+        "Downloading PRIO-GRID shapefile from %s",
+        config.url,
+    )
+    config.data_dir.mkdir(parents=True, exist_ok=True)
+    content = _download(
+        config.url,
+        timeout=config.timeout,
+        max_retries=config.max_retries,
+    )
 
     digest = compute_content_digest(content)
     logger.info("Downloaded %d bytes (digest: %s)", len(content), digest)
 
     # Compare with previous
-    previous = last_digest(ledger_path)
+    previous = last_digest(config.ledger_path)
     changed = previous is None or previous != digest
 
     base_entry = {
         "dataset": DATASET_ID,
-        "url": url,
+        "url": config.url,
         "size_bytes": len(content),
         "content_digest": digest,
         "previous_digest": previous,
@@ -156,15 +196,15 @@ def fetch_shapefile(
 
     if not changed and not force_refresh:
         logger.info("Content unchanged (digest: %s), skipping extraction", digest)
-        append_ledger_entry(ledger_path, {**base_entry, "changed": False})
+        append_ledger_entry(config.ledger_path, {**base_entry, "changed": False})
         return shp_dir
 
     # Extract and record
-    (data_dir / "priogrid_shapefiles.zip").write_bytes(content)
+    (config.data_dir / "priogrid_shapefiles.zip").write_bytes(content)
     extracted = _extract_zip(content, shp_dir)
     logger.info("Extracted %d files to %s", len(extracted), shp_dir)
 
-    append_ledger_entry(ledger_path, {
+    append_ledger_entry(config.ledger_path, {
         **base_entry,
         "changed": changed,
         "extracted_files": extracted,

@@ -435,7 +435,10 @@ def test_fetch_shapefile_full_flow(tmp_path: Path) -> None:
     """Mock download: extracts ZIP, writes provenance entry."""
     from unittest.mock import MagicMock, patch
 
-    from datafactory_priogrid.shapefile_harvester import fetch_shapefile
+    from datafactory_priogrid.shapefile_harvester import (
+        ShapefileHarvesterConfig,
+        fetch_shapefile,
+    )
 
     fake_zip = _make_fake_zip()
     mock_resp = MagicMock()
@@ -443,14 +446,15 @@ def test_fetch_shapefile_full_flow(tmp_path: Path) -> None:
     mock_resp.raise_for_status = MagicMock()
 
     ledger = tmp_path / "provenance" / "ledger.jsonl"
+    cfg = ShapefileHarvesterConfig(
+        url="http://example.com/test.zip",
+        data_dir=tmp_path / "data",
+        ledger_path=ledger,
+    )
 
     _target = "datafactory_priogrid.shapefile_harvester.requests.get"
     with patch(_target, return_value=mock_resp):
-        result = fetch_shapefile(
-            url="http://example.com/test.zip",
-            data_dir=tmp_path / "data",
-            ledger_path=ledger,
-        )
+        result = fetch_shapefile(cfg)
 
     assert result.exists()
     assert any(result.glob("*.shp"))
@@ -465,7 +469,10 @@ def test_fetch_shapefile_unchanged_content(tmp_path: Path) -> None:
     """When digest matches previous, record heartbeat without extraction."""
     from unittest.mock import MagicMock, patch
 
-    from datafactory_priogrid.shapefile_harvester import fetch_shapefile
+    from datafactory_priogrid.shapefile_harvester import (
+        ShapefileHarvesterConfig,
+        fetch_shapefile,
+    )
     from datafactory_provenance import append_ledger_entry, compute_content_digest
 
     fake_zip = _make_fake_zip()
@@ -479,13 +486,14 @@ def test_fetch_shapefile_unchanged_content(tmp_path: Path) -> None:
     mock_resp.content = fake_zip
     mock_resp.raise_for_status = MagicMock()
 
+    cfg = ShapefileHarvesterConfig(
+        url="http://example.com/test.zip",
+        data_dir=tmp_path / "data",
+        ledger_path=ledger,
+    )
     _target = "datafactory_priogrid.shapefile_harvester.requests.get"
     with patch(_target, return_value=mock_resp):
-        fetch_shapefile(
-            url="http://example.com/test.zip",
-            data_dir=tmp_path / "data",
-            ledger_path=ledger,
-        )
+        fetch_shapefile(cfg)
 
     lines = ledger.read_text().strip().splitlines()
     assert len(lines) == 2  # original + heartbeat
@@ -497,18 +505,22 @@ def test_fetch_shapefile_existing_files(tmp_path: Path) -> None:
     """When .shp files already exist, return without downloading."""
     from unittest.mock import patch
 
-    from datafactory_priogrid.shapefile_harvester import fetch_shapefile
+    from datafactory_priogrid.shapefile_harvester import (
+        ShapefileHarvesterConfig,
+        fetch_shapefile,
+    )
 
     # Create existing shapefile
     shp_dir = tmp_path / "data" / "shapefile"
     shp_dir.mkdir(parents=True)
     (shp_dir / "existing.shp").write_text("fake")
 
+    cfg = ShapefileHarvesterConfig(
+        data_dir=tmp_path / "data",
+        ledger_path=tmp_path / "ledger.jsonl",
+    )
     with patch("datafactory_priogrid.shapefile_harvester.requests.get") as mock_get:
-        result = fetch_shapefile(
-            data_dir=tmp_path / "data",
-            ledger_path=tmp_path / "ledger.jsonl",
-        )
+        result = fetch_shapefile(cfg)
 
     mock_get.assert_not_called()
     assert result == shp_dir

@@ -63,6 +63,7 @@ Contracts must be clear enough that:
 - `ConsolidationResult.md` -- immutable consolidation result (counts, digest)
 - `ViewpointResult.md` -- immutable viewpoint build result (counts, digest, version)
 - `PriogridStaticConfig.md` -- immutable PRIO-GRID static feature harvest configuration
+- `ShapefileHarvesterConfig.md` -- immutable PRIO-GRID shapefile download configuration
 
 ---
 

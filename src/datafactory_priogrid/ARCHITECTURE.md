@@ -59,3 +59,4 @@ Formal CICs for this module's non-trivial classes:
 - [GridConfig](../../docs/CICs/GridConfig.md)
 - [TemporalConfig](../../docs/CICs/TemporalConfig.md)
 - [SpatioTemporalGrid](../../docs/CICs/SpatioTemporalGrid.md)
+- [ShapefileHarvesterConfig](../../docs/CICs/ShapefileHarvesterConfig.md)
