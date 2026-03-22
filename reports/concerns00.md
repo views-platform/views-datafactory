@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17
 **Source:** Multi-expert engineering review of views-datafactory
-**Status:** Updated post-governance-audit. 27 of 35 concerns resolved. 4 of 4 disagreements resolved. 2 deferred by design.
+**Status:** Updated 2026-03-22. 24 of 35 concerns resolved, 1 documented, 2 deferred by design, 8 open. 2 of 4 disagreements resolved, 2 open.
 
 ---
 

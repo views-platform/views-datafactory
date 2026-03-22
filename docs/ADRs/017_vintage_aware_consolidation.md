@@ -1,7 +1,7 @@
 
 # ADR-017: Vintage-Aware Consolidation
 
-**Status:** Accepted (implementation deferred)
+**Status:** Accepted
 **Date:** 2026-03-21
 **Deciders:** Simon Polichinel von der Maase, Claude Code
 **Extends:** ADR-013 (Consolidation Principles)
@@ -102,22 +102,14 @@ The digest is the dedup key (deterministic, content-addressed). The timestamp is
 
 ## Implementation Status
 
-**Deferred.** The design is accepted. Implementation is deferred pending:
+**Consolidation layer: implemented.** The UCDP consolidator (`src/datafactory_consolidation/consolidators/ucdp.py`) adds `_harvest_digest` and `_harvest_timestamp` columns to every consolidated record and uses the four-field dedup key `(id, _source_type, _source_version, _harvest_digest)`. Identical re-fetches are deduplicated; updated re-fetches create distinct vintages. Tests in `tests/test_consolidation.py` verify vintage-aware deduplication.
 
+**Viewpoint layer: deferred.** Vintage-aware survivorship strategies (latest-vintage, first-vintage, point-in-time) are not yet implemented. Current survivorship strategies (`annual_wins`, `dot9_wins`) do not consider vintages — they select by source type only. This is acceptable while source mutability patterns are still being characterized.
+
+**Open questions (pending UCDP response):**
 1. UCDP clarification on their version mutability policy (email sent 2026-03-21)
 2. Confirmation that the +1,000 bulk update pattern is representative (needs more observation points)
 3. Decision on whether to re-harvest existing data with vintage tracking
-
-When implemented, the changes affect:
-- `src/datafactory_consolidation/consolidators/ucdp.py` — add harvest metadata columns, change dedup key
-- `src/datafactory_consolidation/consolidation_result.py` — add vintage count to result
-- `src/datafactory_viewpoint/survivorship.py` — add vintage-aware strategies
-- `tests/test_consolidation.py` — update dedup tests
-
-No changes needed to:
-- ADR-013 (already requires bitemporal tracking — this ADR is a more faithful implementation)
-- The compilation layer (reads viewpoint output, doesn't care about vintages)
-- The harvester (already computes and records content digests)
 
 ---
 

@@ -115,7 +115,7 @@ These costs are accepted intentionally.
 
 This ADR does not define:
 - what concepts exist (ADR-001),
-- or how components depend on each other (ADR-002).
+- or how components depend on each other (ADR-012).
 
 It defines **who is allowed to say what something means**,
 and mandates **loud failure over silent misinterpretation**.

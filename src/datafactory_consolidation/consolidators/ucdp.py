@@ -1,7 +1,7 @@
-"""UCDP consolidator — annual + candidate snapshots into event store.
+"""UCDP consolidator — annual, candidate, and .9 into event store.
 
-Reads all Parquet snapshots from the harvester's annual and candidate
-directories, tags each with source metadata (_source_type, _source_version,
+Reads all Parquet snapshots from the harvester's annual, candidate,
+and .9 directories, tags each with source metadata (_source_type,
 _ingested_at, _harvest_digest, _harvest_timestamp), and writes a single
 consolidated Parquet store.
 

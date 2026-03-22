@@ -38,6 +38,7 @@ datafactory_harvester/
         __init__.py      -- source registry (register_source, fetch_source, list_sources)
         ucdp_annual.py   -- UCDP/GED Annual: config, API client, schema, fetch orchestrator
         ucdp_candidate.py -- UCDP/GED Candidate Monthly: version discovery, digest caching, multi-version fetch
+        ucdp_dot9.py     -- UCDP/GED .9 Consolidated Monthly: version discovery, digest caching, multi-version fetch
 ```
 
 ## Key Concepts
@@ -51,6 +52,8 @@ datafactory_harvester/
 | save_event_snapshot | Parquet persistence of raw events with snappy compression. All source fields preserved. |
 | Source registry | Dict-based registry. Sources auto-register on import. `fetch_source("ucdp_annual")` dispatches to the right function. |
 | UcdpAnnualConfig | Frozen dataclass with `__post_init__` validation. Harvest-only params (no report params). |
+| UcdpCandidateConfig | Frozen dataclass with `__post_init__` validation. Version discovery + rate limiting. |
+| UcdpDot9Config | Frozen dataclass with `__post_init__` validation. .9 stream version discovery + rate limiting. |
 
 ## Source Plugin Pattern
 
@@ -81,7 +84,11 @@ Adding a new source means adding `sources/<name>.py`. No changes to existing sou
 
 ## Intent Contracts
 
-No formal CICs yet. Priority candidates when formalizing:
+CICs exist for:
 - `UcdpAnnualConfig` -- governs UCDP annual harvest parameters
+- `UcdpCandidateConfig` -- governs UCDP candidate monthly harvest parameters
+- `UcdpDot9Config` -- governs UCDP .9 consolidated monthly harvest parameters
+
+Priority candidates for future CICs:
 - `ValidationResult` -- structured validation outcome
 - `ComparisonResult` -- structured revision detection outcome

@@ -7,11 +7,12 @@ Opinionated, versioned, rebuildable materialized views over consolidated event s
 ## Responsibility Boundary
 
 **Owns:**
-- Survivorship rules (which version of an event wins when sources disagree)
-- Temporal distribution (how summary events spanning multiple months are spread across time)
-- Uncertainty handling (whether and how `date_prec`, `where_prec`, `low`/`high` influence output)
+- Survivorship rules (which version of an event wins when sources disagree — `annual_wins`, `dot9_wins`)
+- Temporal distribution (how summary events spanning multiple months are spread — `even_split`, `ceil_split`)
+- Event filtering (priogrid_gid, type_of_violence, where_prec — configurable per viewpoint)
 - Field selection (which fields from the consolidated store propagate to the viewpoint)
 - Month assignment (whether `date_start` or `date_end` determines the event's month)
+- Named profiles — pre-configured strategy + filter combinations (`production_parity`, etc.)
 - Viewpoint configuration versioning
 
 **Does NOT own:**
@@ -30,14 +31,16 @@ Opinionated, versioned, rebuildable materialized views over consolidated event s
 
 ```
 datafactory_viewpoint/
-    __init__.py                    # Package docstring, empty __all__ until implementation
+    __init__.py                    # Public API: ViewpointConfig, ViewpointResult, registry
     ARCHITECTURE.md                # This file
+    viewpoint_config.py            # Frozen config: strategies, filters, version tag
+    viewpoint_result.py            # Frozen result dataclass
+    survivorship.py                # Strategy registry: annual_wins, dot9_wins
+    temporal_distribution.py       # Strategy registry: even_split, ceil_split
+    profiles.py                    # Named presets: production_parity, etc.
     builders/
-        __init__.py                # Registry: register_builder, build_viewpoint, list_builders
-        (ucdp_v1.py)              # UCDP viewpoint v1 — to be implemented
-    (survivorship.py)              # Strategy registry — to be implemented
-    (temporal_distribution.py)     # Strategy registry — to be implemented
-    (viewpoint_config.py)          # Frozen dataclass — to be implemented
+        __init__.py                # Registry: register_builder, build_viewpoint
+        ucdp_v1.py                 # UCDP viewpoint builder (survivorship + distribution + filters)
 ```
 
 ## Key Concepts

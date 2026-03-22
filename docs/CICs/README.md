@@ -53,12 +53,15 @@ Contracts must be clear enough that:
 - `GridConfig.md` -- immutable spatial grid configuration (resolution, bounds, CRS)
 - `TemporalConfig.md` -- immutable temporal backbone configuration (year/month range)
 - `SpatioTemporalGrid.md` -- composed spatiotemporal index with lazy coordinate generation
-
-**Future candidates (create when formalizing):**
-- `UcdpAnnualConfig` -- governs UCDP annual harvest parameters
-- `UcdpCandidateConfig` -- governs UCDP candidate monthly harvest parameters
-- `ValidationResult` -- determines data acceptance/rejection
-- `CompilationConfig` -- governs compilation behavior
+- `CompilationConfig.md` -- immutable compilation configuration (features, paths, grid/temporal)
+- `UcdpAnnualConfig.md` -- immutable UCDP annual harvest configuration
+- `UcdpCandidateConfig.md` -- immutable UCDP candidate monthly harvest configuration
+- `UcdpDot9Config.md` -- immutable UCDP .9 consolidated monthly harvest configuration
+- `ViewpointConfig.md` -- immutable viewpoint configuration (strategies, filters, version)
+- `ValidationResult.md` -- structured validation outcome (valid, errors, digest)
+- `ComparisonResult.md` -- structured revision detection outcome (added, removed, revised)
+- `ConsolidationResult.md` -- immutable consolidation result (counts, digest)
+- `ViewpointResult.md` -- immutable viewpoint build result (counts, digest, version)
 
 ---
 

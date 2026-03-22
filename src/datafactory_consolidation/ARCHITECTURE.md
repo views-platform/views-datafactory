@@ -30,11 +30,13 @@ Lossless consolidation of raw source snapshots into version-aware event stores. 
 
 ```
 datafactory_consolidation/
-    __init__.py                    # Package docstring, empty __all__ until implementation
+    __init__.py                    # Public API: ConsolidationResult, registry re-exports
     ARCHITECTURE.md                # This file
+    consolidation_result.py        # Frozen result dataclass
+    event_store.py                 # Read/write consolidated Parquet store
     consolidators/
-        __init__.py                # Registry: register_consolidator, consolidate_source, list_consolidators
-        (ucdp.py)                  # UCDP consolidator — to be implemented
+        __init__.py                # Registry: register_consolidator, consolidate_source
+        ucdp.py                    # UCDP consolidator: annual + candidate + .9
 ```
 
 ## Key Concepts

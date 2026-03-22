@@ -4,9 +4,9 @@ Generated 2026-03-21 from re-audit of the claim:
 "The system is mature enough to produce fully consolidated UCDP
 data with a viewpoint corresponding to VIEWS production."
 
-CONTESTED: No hard falsifications. Three soft falsifications:
-smoke test doesn't exercise .9, full-scale consolidation untested,
-and prior falsification stubs are stale.
+CONTESTED: No hard falsifications. One soft falsification:
+full-scale consolidation untested. Two prior soft falsifications
+resolved: smoke test now exercises .9, stale stubs cleaned.
 """
 
 from __future__ import annotations
@@ -16,19 +16,22 @@ import pytest
 
 class TestMaturitySoftFalsifications:
 
-    @pytest.mark.skip(
-        reason="SOFT FALSIFICATION: The smoke test "
-        "(scripts/smoke_test.py) has zero .9 references. "
-        "It exercises annual + candidate but never tests "
-        "the production_parity profile or .9 data path. "
-        "The parity test (scripts/parity_test.py) exists "
-        "but is separate and not part of routine testing."
-    )
     def test_smoke_test_exercises_dot9(self) -> None:
-        """The primary smoke test should exercise the .9
-        data path since production depends on it.
+        """Resolved: smoke test step 3/10 now exercises .9
+        harvest, and step 5/10 consolidates all three sources
+        including .9. The production_parity profile (dot9_wins
+        + ceil_split) is used in step 7/10.
         """
-        pytest.fail("Smoke test does not exercise .9")
+        from pathlib import Path
+
+        smoke_test = Path(__file__).parent.parent / "scripts" / "smoke_test.py"
+        content = smoke_test.read_text()
+        assert "ucdp_dot9" in content, (
+            "Smoke test should reference ucdp_dot9"
+        )
+        assert "production_parity" in content, (
+            "Smoke test should use production_parity profile"
+        )
 
     @pytest.mark.skip(
         reason="SOFT FALSIFICATION: The claim says 'fully "
@@ -45,18 +48,18 @@ class TestMaturitySoftFalsifications:
         """
         pytest.fail("Full-scale consolidation untested")
 
-    @pytest.mark.skip(
-        reason="SOFT FALSIFICATION: All 4 stubs in "
-        "test_falsification_production_readiness.py are "
-        "stale — they claim issues resolved by M1-M4. "
-        "The stubs should be removed or converted to "
-        "passing tests documenting the fix."
-    )
-    def test_stale_falsification_stubs(self) -> None:
-        """test_falsification_production_readiness.py has 4
-        stubs claiming: no .9 harvester, no dot9_dir, no
-        dot9_wins, no ceil_split. All resolved.
+    def test_stale_stubs_cleaned(self) -> None:
+        """Resolved: test_falsification_production_readiness.py
+        was deleted (commit c01b72b) after M1-M4 resolved all
+        4 stubs it contained (.9 harvester, dot9_dir, dot9_wins,
+        ceil_split).
         """
-        pytest.fail(
-            "4 stale falsification stubs mislead readers"
+        import os
+
+        path = os.path.join(
+            os.path.dirname(__file__),
+            "test_falsification_production_readiness.py",
+        )
+        assert not os.path.exists(path), (
+            "Stale file should have been deleted"
         )

@@ -10,12 +10,11 @@
 
 ## Context
 
-UCDP/GED (Georeferenced Event Dataset) is the primary conflict event source for the VIEWS platform. It has two data streams:
+UCDP/GED (Georeferenced Event Dataset) is the primary conflict event source for the VIEWS platform. It has three data streams:
 
 - **UCDP/GED Annual** — yearly releases covering 1989 to the prior year. Each release is a complete, curated dataset. New releases may revise events from prior years.
 - **UCDP/GED Candidate** — monthly releases, each covering a trailing 12-month window of events. Events are preliminary and subject to revision. Multiple candidate versions may exist for the same month. The API retains all historical releases (available from January 2018 onward — empirically confirmed 2026-03-21).
-
-The VIEWS production system uses UCDP's `.9` version (format `YY.9.MM`), a bespoke monthly data product. Empirical investigation (2026-03-21) found that the `.9` is **not** a consolidation of annual + candidate data — it contains exclusive events (count varies by version — from ~350 to ~2,600 per version, 3-12% of content) not available through any standard API endpoint. The `.9` is a distinct data source with exclusive content, available on the public API but undocumented in any UCDP codebook. See `reports/dot9_investigation/` for the full investigation.
+- **UCDP/GED .9 Consolidated** (format `YY.9.MM`) — a bespoke monthly data product. Empirical investigation (2026-03-21) found that the `.9` is **not** a consolidation of annual + candidate data — it contains exclusive events (count varies by version — from ~350 to ~2,600 per version, 3-12% of content) not available through any standard API endpoint. The `.9` is a distinct data source with exclusive content, available on the public API but undocumented in any UCDP codebook. See `reports/dot9_investigation/` for the full investigation.
 
 Investigation of real UCDP data revealed three layers of hidden complexity:
 
@@ -31,7 +30,7 @@ This ADR applies the constitutional principles of ADR-013 and ADR-014 to UCDP sp
 
 ### UCDP Consolidation (Layer 2)
 
-The UCDP consolidator combines all annual releases and all candidate versions into a single event store, following ADR-013 principles.
+The UCDP consolidator combines all annual releases, all candidate versions, and all .9 consolidated versions into a single event store, following ADR-013 principles.
 
 **Entity key:** The `id` field uniquely identifies an event across sources. The same event may appear in both annual and candidate data with different field values.
 
@@ -39,11 +38,13 @@ The UCDP consolidator combines all annual releases and all candidate versions in
 
 | Column | Description | Example |
 |--------|-------------|---------|
-| `_source_type` | `"annual"` or `"candidate"` | `"annual"` |
-| `_source_version` | Version identifier from the source | `"25.1"`, `"25.0.3"` |
+| `_source_type` | `"annual"`, `"candidate"`, or `"dot9"` | `"annual"` |
+| `_source_version` | Version identifier from the source | `"25.1"`, `"25.0.3"`, `"25.9.11"` |
 | `_ingested_at` | UTC timestamp of ingestion | `"2026-03-20T14:30:00Z"` |
+| `_harvest_digest` | Content digest of the source Parquet file (ADR-017) | `"sha256:a1b2c3d4..."` |
+| `_harvest_timestamp` | UTC timestamp of when the source was fetched (ADR-017) | `"2026-03-21T10:00:00Z"` |
 
-**Fields preserved:** All fields from both sources. No columns are dropped. The consolidator adds metadata columns but never removes source columns. Key fields include but are not limited to: `id`, `latitude`, `longitude`, `priogrid_gid`, `date_start`, `date_end`, `date_prec`, `where_prec`, `best`, `low`, `high`, `type_of_violence`, `code_status`, `number_of_sources`.
+**Fields preserved:** All fields from all three sources. No columns are dropped. The consolidator adds metadata columns but never removes source columns. Key fields include but are not limited to: `id`, `latitude`, `longitude`, `priogrid_gid`, `date_start`, `date_end`, `date_prec`, `where_prec`, `best`, `low`, `high`, `type_of_violence`, `code_status`, `number_of_sources`.
 
 **Append-only:** Each harvest run adds records to the store. Existing records are never modified. If UCDP revises an event in a new annual release, the revision appears as a new record with a different `_source_version`.
 
@@ -51,7 +52,10 @@ The UCDP consolidator combines all annual releases and all candidate versions in
 
 The first viewpoint version targets parity with the production `.9` consolidation. This proves the consolidation is correct before evolving the rules.
 
-**Survivorship rule:** For months covered by the annual release, annual wins. For the trailing window not yet covered by annual, the latest candidate version wins. When the same event appears in both annual and candidate with overlapping date coverage, the annual record takes precedence.
+**Survivorship rules:** Two strategies are implemented:
+
+- `annual_wins` — Annual takes precedence. For months not covered by annual, the latest candidate version wins. Does not use `.9` data.
+- `dot9_wins` (production parity) — Annual takes precedence, then `.9`, then candidate. For months covered by the annual release, annual wins. For the trailing window, `.9` wins over candidate. This matches VIEWS production behavior.
 
 **Summary event handling:** Events with `date_prec=5` (spanning `date_start` to `date_end` across multiple months) are distributed across those months. Fatalities (`best`, `low`, `high`) are divided evenly across the spanned months, following the production `fix_summary_events` logic.
 
@@ -63,16 +67,15 @@ The first viewpoint version targets parity with the production `.9` consolidatio
 
 ---
 
-## Validation Oracle
+## The `.9` Dual Role
 
-The `.9` version serves as the validation oracle for viewpoint v1:
+The `.9` version serves two roles in this system:
 
-1. Fetch `.9` for a known year range
-2. Build viewpoint v1 from annual + candidate via our consolidation
-3. Compare event-by-event: counts, fatalities, spatial placement, temporal placement
-4. Parity means our consolidation is correct
+**Validation oracle.** The `.9` was initially used to validate viewpoint v1. 100% parity was achieved on 27,853 non-expanded events when using `.9` as sole input with the `production_parity` profile (see `reports/dot9_investigation/parity_results.md`).
 
-Once parity is proven, the viewpoint builder can evolve independently. If UCDP discontinues `.9`, we are not affected — our consolidation stands on its own.
+**Production data source.** Because `.9` contains exclusive events not available through annual or candidate endpoints, it is also ingested as a distinct Layer 1 source. The `dot9_wins` survivorship strategy (annual > .9 > candidate) consumes `.9` data from the consolidated store. This is the production parity target.
+
+If UCDP discontinues `.9`, we lose access to its exclusive events but our annual + candidate consolidation stands on its own via the `annual_wins` strategy.
 
 ---
 

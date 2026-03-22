@@ -110,7 +110,7 @@ Green team tests are expected to pass continuously and form the backbone of CI.
 This ADR reinforces and operationalizes:
 
 - **ADR-001 (Ontology):** tests must respect declared concepts and stability expectations
-- **ADR-002 (Topology):** tests must not bypass architectural boundaries
+- **ADR-012 (Four-Layer Architecture):** tests must not bypass architectural boundaries
 - **ADR-003 (Authority & Semantics):** tests must fail loudly on semantic ambiguity
 - **ADR-004 (Deferred):** future evolution rules must account for test coverage obligations
 

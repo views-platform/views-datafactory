@@ -4,10 +4,10 @@
 Usage:
     UCDP_API_TOKEN=your_token uv run python scripts/smoke_test.py
 
-Tests the full 4-layer architecture (ADR-012):
-  Layer 1: Harvest annual + candidate data from UCDP API
-  Layer 2: Consolidate into lossless, version-aware event store
-  Layer 3: Build viewpoint (skipped if not yet implemented)
+Tests the full 4-layer architecture (ADR-012) in 10 steps:
+  Layer 1: Harvest annual, candidate, and .9 data from UCDP API
+  Layer 2: Consolidate all three sources into event store
+  Layer 3: Build viewpoint with production_parity profile
   Layer 4: Compile onto PRIO-GRID as npy arrays
 
 Each step reports PASS/FAIL/SKIP independently.
@@ -25,6 +25,10 @@ import numpy as np
 
 _SMOKE_TEST_CANDIDATE_START: int = 2025  # Recent only — full history is slow
 _SMOKE_TEST_DOT9_START: int = 2025  # Recent only — full history is slow
+_SMOKE_TEST_START_YEAR: int = 2023
+_SMOKE_TEST_END_YEAR: int = 2026
+_TINY_GRID_RESOLUTION: float = 90.0
+_EXPECTED_REAL_SHAPE = (259_200, 48, 2)
 
 
 def main() -> int:
@@ -344,8 +348,11 @@ def main() -> int:
     else:
         tiny_config = CompilationConfig(
             source_path=compile_source,
-            grid_config=GridConfig(resolution=90.0),
-            temporal_config=TemporalConfig(start_year=2023, end_year=2026),
+            grid_config=GridConfig(resolution=_TINY_GRID_RESOLUTION),
+            temporal_config=TemporalConfig(
+                start_year=_SMOKE_TEST_START_YEAR,
+                end_year=_SMOKE_TEST_END_YEAR,
+            ),
             features=(("event_count", "count"), ("fatalities", "sum_best")),
             output_dir=data_dir / "compiled_tiny",
             ledger_path=provenance_dir / "compiler" / "compilation_ledger.jsonl",
@@ -376,7 +383,10 @@ def main() -> int:
         real_config = CompilationConfig(
             source_path=compile_source,
             grid_config=GridConfig(),
-            temporal_config=TemporalConfig(start_year=2023, end_year=2026),
+            temporal_config=TemporalConfig(
+                start_year=_SMOKE_TEST_START_YEAR,
+                end_year=_SMOKE_TEST_END_YEAR,
+            ),
             features=(("event_count", "count"), ("fatalities", "sum_best")),
             output_dir=data_dir / "compiled_real",
             ledger_path=provenance_dir / "compiler" / "compilation_ledger.jsonl",
@@ -397,9 +407,9 @@ def main() -> int:
             print(f"  Non-zero (cell, month) bins: {nonzero_cells}")
             print(f"  Total events placed: {total_placed:.0f}")
 
-            if real_grid.shape != (259_200, 48, 2):
+            if real_grid.shape != _EXPECTED_REAL_SHAPE:
                 failures.append(
-                    f"Wrong shape: {real_grid.shape}, expected (259200, 48, 2)"
+                    f"Wrong shape: {real_grid.shape}, expected {_EXPECTED_REAL_SHAPE}"
                 )
             if nonzero_cells == 0:
                 failures.append("All cells are zero")

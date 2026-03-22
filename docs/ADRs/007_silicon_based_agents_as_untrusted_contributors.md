@@ -36,7 +36,7 @@ All silicon-based agent activity is subject to the same (or stricter)
 architectural rules as carbon-based agents, including but not limited to:
 
 - declared ontology (ADR-001),
-- enforced topology (ADR-002),
+- enforced topology (ADR-012),
 - explicit semantic authority and fail-loud behavior (ADR-003),
 - mandatory testing obligations (ADR-005),
 - intent contracts for non-trivial classes (ADR-006),

@@ -392,6 +392,37 @@ class TestViewpointConfigGreen:
             cfg.version = "v2"  # type: ignore[misc]
 
 
+# ---- ViewpointConfig: Beige ----
+
+
+class TestViewpointConfigBeige:
+
+    def test_invalid_survivorship_strategy(
+        self, tmp_path: Path
+    ) -> None:
+        with pytest.raises(ValueError, match="survivorship"):
+            ViewpointConfig(
+                consolidated_path=tmp_path / "store.parquet",
+                survivorship_strategy="nonexistent",
+            )
+
+    def test_invalid_distribution_strategy(
+        self, tmp_path: Path
+    ) -> None:
+        with pytest.raises(ValueError, match="distribution"):
+            ViewpointConfig(
+                consolidated_path=tmp_path / "store.parquet",
+                distribution_strategy="nonexistent",
+            )
+
+    def test_empty_version(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="version"):
+            ViewpointConfig(
+                consolidated_path=tmp_path / "store.parquet",
+                version="",
+            )
+
+
 # ---- Build UCDP v1: Green ----
 
 
@@ -715,10 +746,10 @@ class TestProfilesGreen:
         cfg = load_profile(
             "production_parity",
             tmp_path / "store.parquet",
-            distribution_strategy="some_other",
+            distribution_strategy="even_split",
         )
         assert cfg.survivorship_strategy == "dot9_wins"
-        assert cfg.distribution_strategy == "some_other"
+        assert cfg.distribution_strategy == "even_split"
 
     def test_list_profiles(self) -> None:
         from datafactory_viewpoint.profiles import list_profiles
@@ -727,11 +758,13 @@ class TestProfilesGreen:
         assert "production_parity" in profiles
 
     def test_freestyle_still_works(self, tmp_path: Path) -> None:
-        """Config without profile — freestyle mode."""
+        """Config without profile — freestyle mode with
+        registered strategies.
+        """
         cfg = ViewpointConfig(
             consolidated_path=tmp_path / "store.parquet",
-            survivorship_strategy="custom_strategy",
-            distribution_strategy="custom_dist",
+            survivorship_strategy="dot9_wins",
+            distribution_strategy="ceil_split",
             version="experiment_42",
         )
         assert cfg.version == "experiment_42"
