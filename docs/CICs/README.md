@@ -62,6 +62,7 @@ Contracts must be clear enough that:
 - `ComparisonResult.md` -- structured revision detection outcome (added, removed, revised)
 - `ConsolidationResult.md` -- immutable consolidation result (counts, digest)
 - `ViewpointResult.md` -- immutable viewpoint build result (counts, digest, version)
+- `PriogridStaticConfig.md` -- immutable PRIO-GRID static feature harvest configuration
 
 ---
 

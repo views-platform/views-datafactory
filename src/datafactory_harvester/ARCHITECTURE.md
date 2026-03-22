@@ -39,6 +39,7 @@ datafactory_harvester/
         ucdp_annual.py   -- UCDP/GED Annual: config, API client, schema, fetch orchestrator
         ucdp_candidate.py -- UCDP/GED Candidate Monthly: version discovery, digest caching, multi-version fetch
         ucdp_dot9.py     -- UCDP/GED .9 Consolidated Monthly: version discovery, digest caching, multi-version fetch
+        priogrid_static.py -- PRIO-GRID 2.0 static features: terrain, resources, land cover (64,818 land cells)
 ```
 
 ## Key Concepts
@@ -54,6 +55,7 @@ datafactory_harvester/
 | UcdpAnnualConfig | Frozen dataclass with `__post_init__` validation. Harvest-only params (no report params). |
 | UcdpCandidateConfig | Frozen dataclass with `__post_init__` validation. Version discovery + rate limiting. |
 | UcdpDot9Config | Frozen dataclass with `__post_init__` validation. .9 stream version discovery + rate limiting. |
+| PriogridStaticConfig | Frozen dataclass with `__post_init__` validation. PRIO-GRID 2.0 API, variable selection, timeout. |
 
 ## Source Plugin Pattern
 
@@ -88,6 +90,7 @@ CICs exist for:
 - `UcdpAnnualConfig` -- governs UCDP annual harvest parameters
 - `UcdpCandidateConfig` -- governs UCDP candidate monthly harvest parameters
 - `UcdpDot9Config` -- governs UCDP .9 consolidated monthly harvest parameters
+- `PriogridStaticConfig` -- governs PRIO-GRID static feature harvest parameters
 
 Priority candidates for future CICs:
 - `ValidationResult` -- structured validation outcome

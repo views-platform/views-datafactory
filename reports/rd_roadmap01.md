@@ -118,6 +118,19 @@ With all 98 candidate versions (18.0.1-26.0.2) and all .9 versions (18.9.1-26.9.
 - ~~Document remaining discrepancies~~ `reports/dot9_investigation/parity_results.md`
 - ~~Full pipeline including compilation~~ Done (`full_harvest.py` step 6/6)
 
+### Phase 2a: PRIO-GRID Static Features (production quality)
+
+Second data source. 34 static variables (terrain, resources, land cover) from the PRIO-GRID 2.0 API. Frozen datasets (2009-2015 vintages), 64,818 land cells each.
+
+- P2a-1: CIC for `PriogridStaticConfig` (docs/CICs/)
+- P2a-2: Tests — Green/Beige/Red, ~14 tests matching UCDP pattern
+- P2a-3: Schema validation — type checks, structured validation
+- P2a-4: ARCHITECTURE.md — package structure + key concepts
+- P2a-5: Error handling — narrow exceptions (C-42 pattern)
+- P2a-6: Revision detection — archive old snapshots on overwrite
+
+**DoD:** Falsification audit on "priogrid static harvester is at UCDP quality" survives.
+
 ### Phase 3: Statistical Characterization
 
 - Produce statistical profile of production-parity data (RQ-5)

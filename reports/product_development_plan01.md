@@ -23,12 +23,13 @@
 | 3 | .9-aware survivorship (`dot9_wins`) | Done | — |
 | 3 | Production-parity summary handling (`ceil_split`) | Done | — |
 | 3 | Production filtering rules | Done | — |
+| 1 | Harvester — PRIO-GRID static | Done | 13 |
 | 4 | Grid compilation (columnar placement) | Done | 25 |
 | — | DAG enforcement | Done | 1 |
 | — | Integration tests | Done | 4 |
 | — | Falsification stubs | Documented | 11 (skipped) |
 
-**Total: 295 passed, 11 skipped**
+**Total: 320 passed, 11 skipped**
 
 ### What Was Missing (All Resolved)
 
