@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-VIEWS production forecasting depends on a bespoke UCDP data product called the `.9` version (format `YY.9.MM`). This investigation found that the `.9` contains **42% exclusive content** (13,005 events, 58,159 fatalities) not available through any standard UCDP API endpoint — neither annual releases nor candidate monthly releases.
+VIEWS production forecasting depends on a bespoke UCDP data product called the `.9` version (format `YY.9.MM`). This investigation found that the `.9` contains exclusive events not available through any standard UCDP API endpoint. The exclusive count varies by version and year — from ~350 to ~2,600 per version (3-12% of content). The initial comparison (25.9.11 vs annual v25.1 + candidates) found 13,005 exclusive events (42%) because the .9's time window extends beyond our candidate coverage.
 
 This is significant because:
 1. The `.9` is undocumented — no codebook, no schema specification, no UCDP publication references it

@@ -8,7 +8,7 @@ See reports/dot9_investigation/ for empirical findings.
 
 Key differences from candidate:
 - Version format: YY.9.MM (e.g., "25.9.11") instead of YY.0.MM
-- Contains ~13,000 exclusive events per version (42% of content)
+- Contains exclusive events not in standard releases (count varies by version and year)
 - Undocumented by UCDP — no codebook or specification exists
 - Production VIEWS forecasting depends on this data stream
 """

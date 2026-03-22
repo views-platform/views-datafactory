@@ -87,18 +87,18 @@ UCDP provides conflict event data through three distinct streams. Each has diffe
 
 ## 3. The .9 Consolidated Monthly (e.g., 25.9.11)
 
-**What it is:** A rolling 13-month consolidated window produced by UCDP, containing all events from the trailing ~13 months.
+**What it is:** A rolling consolidated window produced by UCDP, typically covering ~13 months of events.
 
-**Coverage:** Each version is a COMPLETE snapshot of its 13-month window. It is self-contained — you don't need previous .9 versions to use it.
+**Coverage:** Each version is a COMPLETE snapshot of its window. It is self-contained — you don't need previous .9 versions to use it. Window length is typically 13 months (~90% of versions), but ranges from 13 to 25 months across the full history (see falsification results below).
 
 **Event count per version:** 11,000-33,000 events (varies by year and conflict levels).
 
 **Update cadence:** Monthly. Each new version slides the window forward by one month.
 
 **Characteristics:**
-- Each version is a complete 13-month snapshot (NOT additive like candidates)
-- Consecutive .9 versions overlap ~88% (the window slides by 1 month)
-- Contains ~2,600 events per version NOT in the annual release (exclusive content)
+- Each version is a complete snapshot of its window (NOT additive like candidates)
+- Consecutive .9 versions typically overlap ~88-93% in recent years (2022-2024), but overlap varies from 41.5% to 100% across the full history
+- Contains exclusive events not in the annual release — count varies from ~350 to ~2,600 per version (3-12% of content), depending on year and conflict levels
 - Available from 18.9.1 (Jan 2018) through at least 26.9.2 (Feb 2026)
 - Produced by UCDP specifically for VIEWS — undocumented in any codebook
 - This is what VIEWS production uses for monthly forecasting
@@ -119,10 +119,17 @@ UCDP provides conflict event data through three distinct streams. Each has diffe
 | Version pair | Shared IDs | Overlap % |
 |-------------|-----------|-----------|
 | 24.9.1 vs 24.9.2 | 22,915 | ~88% |
+| 18.9.1 vs 18.9.2 | 12,841 | 100% |
+| 21.9.1 vs 21.9.2 | 10,917 | 41.5% |
 | 24.9.2 vs 24.9.3 | 23,498 | ~90% |
 | 24.9.5 vs 24.9.6 | 24,887 | ~88% |
 
-**Analogy:** A security camera with a 13-month recording loop. Each month, the oldest footage drops off and new footage is added. Some footage is exclusive — not in any archive.
+**Known anomalies:**
+- 21.9.1 spans 25 months (Jan 2019 – Jan 2021) instead of ~13 — likely related to the Tigray conflict escalation
+- 5 versions span 14 months, 2 span 15 months — minor boundary variations
+- Window length distribution: 13 months (70 versions), 14 months (5), 15 months (2), 25 months (1)
+
+**Analogy:** A security camera with a recording loop that's usually ~13 months but occasionally stretches longer. Each month, the oldest footage typically drops off and new footage is added. Some footage is exclusive — not in any archive.
 
 ---
 
@@ -150,7 +157,7 @@ For most of our harvested data, candidates (2025+) and .9 versions (through mid-
  |                              |       |       |
  ████████████████████████████████       |       |    ANNUAL v25.1
                                 |       |       |
-                                ════════════╗   |    .9 (rolling 13-month window)
+                                ════════════╗   |    .9 (rolling ~13-month window)
                                  ════════════╗  |    Each .9 slides by 1 month
                                   ════════════╗ |
                                 |       |       |
@@ -162,6 +169,6 @@ For most of our harvested data, candidates (2025+) and .9 versions (through mid-
 
 ## What This Means for Production
 
-VIEWS production fetches ONE .9 version per month and processes it. The .9 is self-contained — it has everything needed for the trailing 13 months. Annual data provides the historical base (before the .9 window). Candidates are not used in production — they're a subset of what the .9 already contains.
+VIEWS production fetches ONE .9 version per month and processes it. The .9 is self-contained — it has everything needed for the trailing ~13 months (typically). Annual data provides the historical base (before the .9 window). Candidates are not used in production — they're a subset of what the .9 already contains.
 
 For our `production_parity` profile: consolidate all three sources, but the `dot9_wins` survivorship will prefer .9 data in its window, falling back to annual for historical data. Candidates are kept for vintage analysis but won't win survivorship in the .9 window.

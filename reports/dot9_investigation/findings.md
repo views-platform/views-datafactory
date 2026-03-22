@@ -93,7 +93,7 @@ No schema feature distinguishes exclusive from non-exclusive events. They look i
 
 ### 1.7 The .9 covers a narrow time window
 
-25.9.11 date range: `date_start` from 2024-11-01 to 2025-11-30 (13 months)
+25.9.11 date range: `date_start` from 2024-11-01 to 2025-11-30 (13 months). Note: window length is typically 13 months (~90% of versions) but ranges from 13 to 25 months across the full history.
 
 This aligns with the production description: "updated data for the last 12 months."
 

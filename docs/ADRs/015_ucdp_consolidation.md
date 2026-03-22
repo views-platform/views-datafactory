@@ -15,7 +15,7 @@ UCDP/GED (Georeferenced Event Dataset) is the primary conflict event source for 
 - **UCDP/GED Annual** — yearly releases covering 1989 to the prior year. Each release is a complete, curated dataset. New releases may revise events from prior years.
 - **UCDP/GED Candidate** — monthly releases, each covering a trailing 12-month window of events. Events are preliminary and subject to revision. Multiple candidate versions may exist for the same month. The API retains all historical releases (available from January 2018 onward — empirically confirmed 2026-03-21).
 
-The VIEWS production system uses UCDP's `.9` version (format `YY.9.MM`), a bespoke monthly data product. Empirical investigation (2026-03-21) found that the `.9` is **not** a consolidation of annual + candidate data — it contains approximately 13,000 exclusive events (42% of its content) not available through any standard API endpoint. The `.9` is a distinct data source with exclusive content, available on the public API but undocumented in any UCDP codebook. See `reports/dot9_investigation/` for the full investigation.
+The VIEWS production system uses UCDP's `.9` version (format `YY.9.MM`), a bespoke monthly data product. Empirical investigation (2026-03-21) found that the `.9` is **not** a consolidation of annual + candidate data — it contains exclusive events (count varies by version — from ~350 to ~2,600 per version, 3-12% of content) not available through any standard API endpoint. The `.9` is a distinct data source with exclusive content, available on the public API but undocumented in any UCDP codebook. See `reports/dot9_investigation/` for the full investigation.
 
 Investigation of real UCDP data revealed three layers of hidden complexity:
 

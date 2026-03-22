@@ -10,7 +10,7 @@
 
 The system harvests UCDP annual and candidate data, consolidates into a lossless event store, builds opinionated viewpoints, and compiles onto the PRIO-GRID. The full 4-layer pipeline (ADR-012) runs end-to-end with 250 tests passing.
 
-But the system **cannot reproduce what VIEWS production uses**. Production depends on UCDP's `.9` data stream — an undocumented, bespoke dataset containing ~13,000 exclusive events (42% of its content, 58K fatalities) not available through any standard API endpoint. Our pipeline has no mechanism to harvest, consolidate, or build viewpoints from `.9` data.
+But the system **cannot reproduce what VIEWS production uses**. Production depends on UCDP's `.9` data stream — an undocumented, bespoke dataset containing exclusive events (count varies by version and year — from ~350 to ~2,600 per version) not available through any standard API endpoint. Our pipeline has no mechanism to harvest, consolidate, or build viewpoints from `.9` data.
 
 Additionally, we discovered that UCDP candidate versions are mutable — the same version number can return different data at different times. This undermines reproducibility assumptions throughout the pipeline.
 
