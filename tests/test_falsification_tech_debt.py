@@ -14,10 +14,9 @@ from __future__ import annotations
 
 class TestTechDebtResolved:
 
-    def test_error_message_uses_shape_constant(self) -> None:
-        """Resolved: smoke_test.py error message now
-        interpolates _EXPECTED_REAL_SHAPE instead of
-        hardcoding (259200, 48, 2).
+    def test_smoke_test_retired(self) -> None:
+        """Resolved: smoke_test.py retired. Its functionality
+        is covered by layer scripts and 320+ tests.
         """
         from pathlib import Path
 
@@ -26,15 +25,9 @@ class TestTechDebtResolved:
             / "scripts"
             / "smoke_test.py"
         )
-        content = smoke_test.read_text()
-        # The error message should reference the constant
-        assert "_EXPECTED_REAL_SHAPE" in content
-        # No hardcoded shape tuple in error messages
-        lines = content.splitlines()
-        for line in lines:
-            if "expected (259200" in line:
-                msg = f"Hardcoded shape in: {line.strip()}"
-                raise AssertionError(msg)
+        assert not smoke_test.exists(), (
+            "smoke_test.py should have been deleted"
+        )
 
     def test_concerns_header_accuracy(self) -> None:
         """Resolved: concerns00.md header updated to
