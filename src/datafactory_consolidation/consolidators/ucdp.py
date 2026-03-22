@@ -348,11 +348,17 @@ def consolidate_ucdp(
             harvest_timestamp=h_timestamp,
         )
         tagged_tables.append(tagged)
+        dates = [
+            d for d in table.column("date_start").to_pylist()
+            if d
+        ] if "date_start" in table.column_names else []
         source_manifest.append({
             "path": str(path),
             "source_type": "annual",
             "version": version,
             "n_records": table.num_rows,
+            "min_date_start": min(dates) if dates else None,
+            "max_date_start": max(dates) if dates else None,
             "harvest_digest": h_digest,
             "harvest_timestamp": h_timestamp,
         })
@@ -376,11 +382,17 @@ def consolidate_ucdp(
             harvest_timestamp=h_timestamp,
         )
         tagged_tables.append(tagged)
+        dates = [
+            d for d in table.column("date_start").to_pylist()
+            if d
+        ] if "date_start" in table.column_names else []
         source_manifest.append({
             "path": str(path),
             "source_type": "candidate",
             "version": version,
             "n_records": table.num_rows,
+            "min_date_start": min(dates) if dates else None,
+            "max_date_start": max(dates) if dates else None,
             "harvest_digest": h_digest,
             "harvest_timestamp": h_timestamp,
         })
@@ -404,11 +416,17 @@ def consolidate_ucdp(
             harvest_timestamp=h_timestamp,
         )
         tagged_tables.append(tagged)
+        dates = [
+            d for d in table.column("date_start").to_pylist()
+            if d
+        ] if "date_start" in table.column_names else []
         source_manifest.append({
             "path": str(path),
             "source_type": "dot9",
             "version": version,
             "n_records": table.num_rows,
+            "min_date_start": min(dates) if dates else None,
+            "max_date_start": max(dates) if dates else None,
             "harvest_digest": h_digest,
             "harvest_timestamp": h_timestamp,
         })

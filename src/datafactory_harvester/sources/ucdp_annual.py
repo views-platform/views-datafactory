@@ -319,13 +319,25 @@ def fetch_ucdp_annual(
     # Validate
     validation = validate_events(events, REQUIRED_FIELDS, FIELD_TYPES)
 
+    # Compute actual date coverage
+    dates = [
+        e.get("date_start") for e in events
+        if e.get("date_start")
+    ]
+    min_date = min(dates) if dates else None
+    max_date = max(dates) if dates else None
+
     base_entry = {
         "dataset": DATASET_ID,
         "version": config.version,
         "start_year": config.start_year,
         "end_year": config.end_year,
         "n_events": validation.n_events,
-        "fetch_duration_s": round(fetch_duration, _FETCH_DURATION_PRECISION),
+        "min_date_start": min_date,
+        "max_date_start": max_date,
+        "fetch_duration_s": round(
+            fetch_duration, _FETCH_DURATION_PRECISION
+        ),
         "content_digest": validation.content_digest,
         "ledger_version": LEDGER_VERSION,
         "digest_algorithm": DIGEST_SCHEME,

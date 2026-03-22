@@ -260,10 +260,20 @@ def _fetch_dot9_version(
         events, REQUIRED_FIELDS, FIELD_TYPES
     )
 
+    # Compute actual date coverage
+    dates = [
+        e.get("date_start") for e in events
+        if e.get("date_start")
+    ]
+    min_date = min(dates) if dates else None
+    max_date = max(dates) if dates else None
+
     base_entry = {
         "dataset": DATASET_ID,
         "version": version,
         "n_events": validation.n_events,
+        "min_date_start": min_date,
+        "max_date_start": max_date,
         "fetch_duration_s": round(
             fetch_duration, _FETCH_DURATION_PRECISION
         ),
