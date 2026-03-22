@@ -20,4 +20,5 @@ This is significant because:
 
 - [findings.md](findings.md) — Full empirical findings: what we know, what we infer, what we don't know
 - [reproducibility_note.md](reproducibility_note.md) — Observations on candidate data mutability and implications for scientific reproducibility
+- [data_streams.md](data_streams.md) — What each UCDP dataset contains: annual, candidate, .9 — coverage, overlap, relationships
 - [parity_results.md](parity_results.md) — Production parity test results: 100% match on non-expanded events, methodology, code path mapping
