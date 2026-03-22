@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Compilation edge -- reads viewpoint output (Parquet) and grid definition, produces compiled npy arrays with shape `(n_cells, n_steps, n_features)` plus coordinate metadata and provenance. This is a Layer 4 package in the dependency DAG (ADR-012): it imports from provenance and priogrid, and reads viewpoint output as files. Synthetic data follows an independent path and does not pass through compilation.
+Compilation edge -- reads viewpoint output (Parquet) and grid definition, produces compiled npy arrays with shape `[T, H, W, C]` (time, height, width, channels) plus coordinate metadata and provenance. This is a Layer 4 package in the dependency DAG (ADR-012): it imports from provenance and priogrid, and reads viewpoint output as files. Synthetic data follows an independent path and does not pass through compilation.
 
 ## Responsibility Boundary
 
@@ -43,13 +43,13 @@ datafactory_compilation/
 | CompilationConfig | Frozen dataclass: source path, grid/temporal configs, feature specs (name + strategy pairs), output dir, column mappings. Validated in `__post_init__`. |
 | Aggregation strategies | Plain functions `list[dict] -> float` registered by name in `strategies.py`. Built-in: `count`, `sum_best`, `max_best`. Adding a strategy means adding a function (OCP). |
 | compile_grid | Main function: reads Parquet -> places events via `latlon_to_pgid` -> aggregates per (cell, month) -> writes npy + sidecars + provenance. Deterministic. |
-| FeatureSpec | Tuple of `(feature_name, strategy_name)`. Declared in config, never inferred from Parquet columns (ADR-003). |
+| FeatureSpec | Frozen dataclass: `name`, `strategy`, optional `filter` dict. Filter enables per-feature disaggregation (e.g., `{"type_of_violence": 1}` for state-based only). Declared in config, never inferred (ADR-003). |
 
 ## Invariants
 - **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
 
-- **Dimension order:** Always `(n_cells, n_steps, n_features)` -- the zarr-ready contract
-- **Coordinate sidecars:** `pgids.npy` (int32), `time_steps.npy` (datetime64[M]), `feature_names.json` always shipped alongside `grid.npy`
+- **Dimension order:** Always `[T, H, W, C]` — time, height (rows), width (columns), channels (features). Canonical z-stack layout.
+- **Coordinate sidecars:** `pgids.npy` (int32, shape `[H, W]`), `time_steps.npy` (datetime64[M]), `feature_names.json` always shipped alongside `grid.npy`
 - **Deterministic:** Same inputs + same config = bit-identical output + identical SHA-256 digest (NF-2)
 - **Source digest computed:** SHA-256 of source file bytes computed and recorded in provenance (not cross-checked against an existing ledger -- the compiler records, it does not verify)
 - **Feature list declared:** Features come from CompilationConfig, never inferred from Parquet columns (ADR-003)
@@ -59,5 +59,4 @@ datafactory_compilation/
 
 ## Intent Contracts
 
-No formal CICs yet. Priority candidate:
-- `CompilationConfig` -- governs compilation behavior, feature declarations, column mappings
+- `CompilationConfig` -- governs compilation behavior, feature declarations, column mappings (CIC at `docs/CICs/CompilationConfig.md`)

@@ -202,23 +202,46 @@ def compile_grid(config: CompilationConfig) -> Path:
     logger.info("Read %d events from %s", table.num_rows, config.source_path)
     bins = _place_events_columnar(table, config)
 
-    # Build output array
-    n_cells = config.grid_config.n_cells
+    # Build output array: [T, H, W, C] — canonical z-stack layout
+    nrow = config.grid_config.nrow
+    ncol = config.grid_config.ncol
     n_steps = config.temporal_config.n_steps
     n_features = len(config.features)
-    grid_array = np.zeros((n_cells, n_steps, n_features), dtype=np.float32)
+    grid_array = np.zeros(
+        (n_steps, nrow, ncol, n_features), dtype=np.float32
+    )
 
     # Resolve strategies
-    strategies = [get_strategy(feat[1]) for feat in config.features]
-    feature_names = [feat[0] for feat in config.features]
+    strategies = [
+        get_strategy(feat.strategy) for feat in config.features
+    ]
+    feature_names = [feat.name for feat in config.features]
 
-    # Aggregate
+    # Aggregate (with optional per-feature filtering)
     for (pgid_idx, time_idx), cell_events in sorted(bins.items()):
-        for feat_idx, strategy_fn in enumerate(strategies):
-            grid_array[pgid_idx, time_idx, feat_idx] = strategy_fn(cell_events)
+        row = pgid_idx // ncol
+        col = pgid_idx % ncol
+        for feat_idx, (spec, strategy_fn) in enumerate(
+            zip(config.features, strategies, strict=True)
+        ):
+            if spec.filter:
+                filtered = [
+                    e
+                    for e in cell_events
+                    if all(
+                        e.get(k) == v
+                        for k, v in spec.filter.items()
+                    )
+                ]
+            else:
+                filtered = cell_events
+            grid_array[time_idx, row, col, feat_idx] = (
+                strategy_fn(filtered)
+            )
 
     # Generate coordinate arrays
-    pgids, _, _ = generate_grid(config.grid_config)
+    pgids_flat, _, _ = generate_grid(config.grid_config)
+    pgids_2d = pgids_flat.reshape(nrow, ncol)
     time_steps = generate_time_steps(config.temporal_config)
 
     # Write output
@@ -227,7 +250,7 @@ def compile_grid(config: CompilationConfig) -> Path:
 
     grid_path = output_dir / "grid.npy"
     np.save(grid_path, grid_array)
-    np.save(output_dir / "pgids.npy", pgids)
+    np.save(output_dir / "pgids.npy", pgids_2d)
     np.save(output_dir / "time_steps.npy", time_steps)
     (output_dir / "feature_names.json").write_text(json.dumps(feature_names))
 

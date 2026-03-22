@@ -39,6 +39,7 @@ PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate 
 | generate_time_steps | Generates `datetime64[M]` array. Converts to/from VIEWS month_id. |
 | ReferenceGeometryReader | Protocol for pluggable shapefile readers. Decouples validation from pyshp. |
 | validate_parity | Validates generated grid against PRIO reference shapefile. Records result to provenance ledger. |
+| land_mask | Fetches land cell pgids from PRIO-GRID API (`landarea` variable, 64,818 cells). Cached to disk. Not auto-imported (avoids pulling `requests`). |
 
 ## Invariants
 - **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)

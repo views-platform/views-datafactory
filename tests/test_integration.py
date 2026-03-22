@@ -15,7 +15,10 @@ from pathlib import Path
 
 import numpy as np
 
-from datafactory_compilation.compilation_config import CompilationConfig
+from datafactory_compilation.compilation_config import (
+    CompilationConfig,
+    FeatureSpec,
+)
 from datafactory_compilation.grid_compilation import compile_grid
 from datafactory_harvester.snapshot_storage import save_event_snapshot
 from datafactory_priogrid.grid_config import GridConfig
@@ -101,7 +104,10 @@ class TestHarvestCompileBoundary:
             source_path=snap_path,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("event_count", "count"), ("fatalities", "sum_best")),
+            features=(
+                FeatureSpec("event_count", "count"),
+                FeatureSpec("fatalities", "sum_best"),
+            ),
             output_dir=tmp_path / "compiled",
             ledger_path=tmp_path / "ledger.jsonl",
         )
@@ -109,9 +115,9 @@ class TestHarvestCompileBoundary:
 
         # Verify output
         grid = np.load(result / "grid.npy")
-        assert grid.shape == (8, 12, 2)  # 8 cells, 12 months, 2 features
-        assert grid[:, :, 0].sum() > 0, "No events placed"
-        assert grid[:, :, 1].sum() > 0, "No fatalities aggregated"
+        assert grid.shape == (12, 2, 4, 2)  # [T=12, H=2, W=4, C=2]
+        assert grid[:, :, :, 0].sum() > 0, "No events placed"
+        assert grid[:, :, :, 1].sum() > 0, "No fatalities aggregated"
 
     def test_all_events_placed(self, tmp_path: Path) -> None:
         """Every event with valid coordinates should be placed."""
@@ -124,14 +130,14 @@ class TestHarvestCompileBoundary:
             source_path=snap_path,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("event_count", "count"),),
+            features=(FeatureSpec("event_count", "count"),),
             output_dir=tmp_path / "compiled",
             ledger_path=tmp_path / "ledger.jsonl",
         )
         compile_grid(config)
         grid = np.load(tmp_path / "compiled" / "grid.npy")
 
-        total_placed = grid[:, :, 0].sum()
+        total_placed = grid[:, :, :, 0].sum()
         assert total_placed == 100, (
             f"Expected 100 events placed, got {total_placed}"
         )
@@ -189,5 +195,5 @@ class TestHarvestCompileBoundary:
         compile_grid(config)
         grid = np.load(tmp_path / "compiled" / "grid.npy")
 
-        assert grid.shape == (259_200, 12, 2)
-        assert grid[:, :, 0].sum() == 50  # All events placed
+        assert grid.shape == (12, 360, 720, 2)  # [T, H, W, C]
+        assert grid[:, :, :, 0].sum() == 50  # All events placed

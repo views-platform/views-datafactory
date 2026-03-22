@@ -13,33 +13,33 @@
 
 | Layer | Component | Status | Tests |
 |-------|-----------|--------|-------|
-| 0 | Provenance (digests, ledgers) | Done | 30 |
+| 0 | Provenance (digests, ledgers, file locking, rotation) | Done | 30 |
 | 1 | PRIO-GRID backbone | Done | 67 |
 | 1 | Harvester — annual | Done | 15 |
 | 1 | Harvester — candidate | Done | 16 |
-| 1 | Harvester — .9 | **Not built** | 0 |
-| 2 | Consolidation (annual + candidate) | Done (vintage-aware) | 30 |
-| 2 | Consolidation (.9 support) | **Not built** | 0 |
-| 3 | Viewpoint builder | Done | 31 |
-| 3 | .9-aware survivorship | **Not built** | 0 |
-| 3 | Production-parity summary handling | **Not built** | 0 |
-| 3 | Production filtering rules | **Not built** | 0 |
-| 4 | Grid compilation | Done | 23 |
+| 1 | Harvester — .9 | Done | 14 |
+| 2 | Consolidation (annual + candidate + .9, vintage-aware) | Done | 35 |
+| 3 | Viewpoint builder | Done | 51 |
+| 3 | .9-aware survivorship (`dot9_wins`) | Done | — |
+| 3 | Production-parity summary handling (`ceil_split`) | Done | — |
+| 3 | Production filtering rules | Done | — |
+| 4 | Grid compilation (columnar placement) | Done | 25 |
 | — | DAG enforcement | Done | 1 |
-| — | Integration tests | Done (partial) | 4 |
-| — | Falsification stubs | Documented | 9 (skipped) |
+| — | Integration tests | Done | 4 |
+| — | Falsification stubs | Documented | 11 (skipped) |
 
-**Total: 250 passed, 14 skipped**
+**Total: 295 passed, 11 skipped**
 
-### What's Missing for Production Parity
+### What Was Missing (All Resolved)
 
-1. **No .9 harvester** — can't fetch the data production depends on
-2. **No .9 in consolidation** — config has no `dot9_dir`
-3. **No .9-aware survivorship** — `annual_wins` treats everything non-annual as candidate
-4. **Summary detection differs** — we use `date_prec==5`, production uses `(best>0 & span>1 & best>=span)`
-5. **Summary distribution differs** — we use exact division, production uses `ceil()`
-6. **No production filters** — we don't filter `priogrid_gid<1`, `type_of_violence>=4`, or `where_prec in (4,6)`
-7. **No .9 in smoke test** — end-to-end pipeline never tested with .9
+1. ~~No .9 harvester~~ — `ucdp_dot9.py` implemented (M1)
+2. ~~No .9 in consolidation~~ — three-source consolidation (M2)
+3. ~~No .9-aware survivorship~~ — `dot9_wins` strategy (M3)
+4. ~~Summary detection differs~~ — `ceil_split` matches production (M4)
+5. ~~Summary distribution differs~~ — `ceil()` rounding implemented (M4)
+6. ~~No production filters~~ — `priogrid_gid`, `type_of_violence`, `where_prec` (M5)
+7. ~~No .9 in smoke test~~ — step 3/10 exercises .9 (M6)
+8. ~~No compilation in full pipeline~~ — `full_harvest.py` step 6/6 compiles to grid
 
 ---
 

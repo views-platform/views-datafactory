@@ -15,7 +15,10 @@ import pyarrow.parquet as pq
 import pytest
 
 from datafactory_compilation.aggregation import count, get_strategy, max_best, sum_best
-from datafactory_compilation.compilation_config import CompilationConfig
+from datafactory_compilation.compilation_config import (
+    CompilationConfig,
+    FeatureSpec,
+)
 from datafactory_compilation.grid_compilation import compile_grid
 from datafactory_priogrid.grid_config import GridConfig
 from datafactory_priogrid.temporal_config import TemporalConfig
@@ -148,14 +151,17 @@ class TestCompileGridGreen:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("event_count", "count"), ("fatalities", "sum_best")),
+            features=(
+                FeatureSpec("event_count", "count"),
+                FeatureSpec("fatalities", "sum_best"),
+            ),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
         result = compile_grid(cfg)
 
         grid = np.load(result / "grid.npy")
-        assert grid.shape == (8, 12, 2)  # 8 cells, 12 months, 2 features
+        assert grid.shape == (12, 2, 4, 2)  # [T=12, H=2, W=4, C=2]
         assert grid.dtype == np.float32
 
     def test_produces_sidecar_arrays(self, tmp_path: Path) -> None:
@@ -171,8 +177,8 @@ class TestCompileGridGreen:
         result = compile_grid(cfg)
 
         pgids = np.load(result / "pgids.npy")
-        assert len(pgids) == 8
-        assert pgids[0] == 1
+        assert pgids.shape == (2, 4)  # [H, W]
+        assert pgids[0, 0] == 1
 
         time_steps = np.load(result / "time_steps.npy")
         assert len(time_steps) == 12
@@ -188,7 +194,7 @@ class TestCompileGridGreen:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("event_count", "count"),),
+            features=(FeatureSpec("event_count", "count"),),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
@@ -200,11 +206,18 @@ class TestCompileGridGreen:
 
         pgid_sw = int(latlon_to_pgid(-45.0, -90.0, TINY_GRID))
         pgid_nw = int(latlon_to_pgid(45.0, -90.0, TINY_GRID))
+        ncol = TINY_GRID.ncol  # 4
 
-        # January (index 0): 2 events in cell pgid_sw
-        assert grid[pgid_sw - 1, 0, 0] == 2.0
-        # March (index 2): 1 event in cell pgid_nw
-        assert grid[pgid_nw - 1, 2, 0] == 1.0
+        # [T, H, W, C] layout
+        row_sw = (pgid_sw - 1) // ncol
+        col_sw = (pgid_sw - 1) % ncol
+        row_nw = (pgid_nw - 1) // ncol
+        col_nw = (pgid_nw - 1) % ncol
+
+        # January (T=0): 2 events in cell pgid_sw
+        assert grid[0, row_sw, col_sw, 0] == 2.0
+        # March (T=2): 1 event in cell pgid_nw
+        assert grid[2, row_nw, col_nw, 0] == 1.0
         # All other cells/months should be 0
         assert grid.sum() == 3.0
 
@@ -215,7 +228,7 @@ class TestCompileGridGreen:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("fatalities", "sum_best"),),
+            features=(FeatureSpec("fatalities", "sum_best"),),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
@@ -225,8 +238,11 @@ class TestCompileGridGreen:
         from datafactory_priogrid.cell_generator import latlon_to_pgid
 
         pgid_sw = int(latlon_to_pgid(-45.0, -90.0, TINY_GRID))
+        ncol = TINY_GRID.ncol
+        row_sw = (pgid_sw - 1) // ncol
+        col_sw = (pgid_sw - 1) % ncol
         # January: best=10 + best=5 = 15
-        assert grid[pgid_sw - 1, 0, 0] == 15.0
+        assert grid[0, row_sw, col_sw, 0] == 15.0
 
     def test_provenance_recorded(self, tmp_path: Path) -> None:
         events = _make_events()
@@ -244,7 +260,7 @@ class TestCompileGridGreen:
         prov = json.loads((result / "provenance.json").read_text())
         assert "source_digest" in prov
         assert "output_digest" in prov
-        assert prov["grid_shape"] == [8, 12, 2]
+        assert prov["grid_shape"] == [12, 2, 4, 2]
 
         # Ledger entry
         assert cfg.ledger_path.exists()
@@ -385,7 +401,7 @@ class TestCompileGridBoundaryBeige:
         compile_grid(cfg)
         grid = np.load(tmp_path / "output" / "grid.npy")
         # Only Dec event should be placed (Jan 2025 out of range)
-        event_counts = grid[:, :, 0]
+        event_counts = grid[:, :, :, 0]
         assert event_counts.sum() == 1.0
 
 
@@ -408,7 +424,7 @@ class TestCompileGridRed:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("event_count", "count"),),
+            features=(FeatureSpec("event_count", "count"),),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
@@ -432,7 +448,7 @@ class TestCompileGridRed:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("fatalities", "sum_best"),),
+            features=(FeatureSpec("fatalities", "sum_best"),),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
@@ -448,13 +464,13 @@ class TestCompileGridRed:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("event_count", "count"),),
+            features=(FeatureSpec("event_count", "count"),),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
         compile_grid(cfg)
         grid = np.load(tmp_path / "output" / "grid.npy")
-        assert grid.shape == (8, 12, 1)
+        assert grid.shape == (12, 2, 4, 1)
         assert grid.sum() == 0.0
 
     def test_malformed_date_does_not_corrupt_grid(self, tmp_path: Path) -> None:
@@ -473,7 +489,7 @@ class TestCompileGridRed:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(("event_count", "count"),),
+            features=(FeatureSpec("event_count", "count"),),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )

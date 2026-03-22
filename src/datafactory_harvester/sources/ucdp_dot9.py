@@ -236,8 +236,31 @@ def _fetch_dot9_version(
 ) -> dict:
     """Fetch a single .9 monthly version.
 
+    Local-first: if the snapshot file exists and the ledger has a
+    matching digest, skip without touching the API. This makes
+    re-runs near-instant for already-fetched versions.
+
     Returns a result dict with version, outcome, digest, and path.
     """
+    snap_path = _snapshot_path(config, version)
+
+    # Local-first skip: file exists + ledger has digest → skip API
+    if not force_refresh and snap_path.exists():
+        previous = last_digest_for_version(
+            config.ledger_path, version
+        )
+        if previous is not None:
+            logger.info(
+                "Version %s already on disk (digest: %s)",
+                version, previous,
+            )
+            return {
+                "version": version,
+                "outcome": "cached",
+                "digest": previous,
+                "path": str(snap_path),
+            }
+
     annual_config = UcdpAnnualConfig(
         version=version,
         start_year=_FETCH_DATE_RANGE_START,
@@ -250,9 +273,7 @@ def _fetch_dot9_version(
         ledger_path=config.ledger_path,
     )
 
-    snap_path = _snapshot_path(config, version)
-
-    # Fetch
+    # Fetch from API
     t0 = time.monotonic()
     events = fetch_paginated(annual_config, token=token)
     fetch_duration = time.monotonic() - t0

@@ -193,23 +193,16 @@ class TestDigestCachingGreen:
 
         assert r1["outcome"] == "success"
 
-        # Second fetch — same events, should be "unchanged"
-        with (
-            patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get",
-                return_value=mock_resp,
-            ),
-            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
-        ):
-            r2 = _fetch_version(config, "25.0.1")
+        # Second fetch — file exists + ledger has digest → "cached"
+        # (local-first skip: doesn't touch API)
+        r2 = _fetch_version(config, "25.0.1")
 
-        assert r2["outcome"] == "unchanged"
+        assert r2["outcome"] == "cached"
 
-        # Verify ledger has 2 entries: success + unchanged
+        # Verify ledger has 1 entry (cached doesn't write)
         lines = config.ledger_path.read_text().strip().splitlines()
-        assert len(lines) == 2
+        assert len(lines) == 1
         assert json.loads(lines[0])["outcome"] == "success"
-        assert json.loads(lines[1])["outcome"] == "unchanged"
 
 
 # ---- Full Flow ----

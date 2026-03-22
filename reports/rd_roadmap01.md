@@ -97,25 +97,26 @@ With all 98 candidate versions (18.0.1-26.0.2) and all .9 versions (18.9.1-26.9.
 
 ## Research Phases
 
-### Phase 0: Clarify (current — blocked on UCDP response)
+### Phase 0: Clarify — COMPLETE (blocked items remain open)
 
-- Send email to Håvard/Angelica about .9 data lifecycle
-- Wait for answers to RQ-1 and RQ-2 open questions
-- Document answers in `reports/dot9_investigation/`
+- ~~Send email to Håvard/Angelica about .9 data lifecycle~~ Email sent 2026-03-21, awaiting response
+- Document answers in `reports/dot9_investigation/` — done
+- RQ-1 and RQ-2 open questions documented but not fully answered
 
-### Phase 1: Build .9 Infrastructure
+### Phase 1: Build .9 Infrastructure — COMPLETE
 
-- Implement .9 harvester (`ucdp_dot9.py`)
-- Extend consolidation to three source types
-- Implement .9-aware survivorship strategy
-- Harvest full .9 history (18.9.1 through latest)
+- ~~Implement .9 harvester (`ucdp_dot9.py`)~~ Done (M1)
+- ~~Extend consolidation to three source types~~ Done (M2)
+- ~~Implement .9-aware survivorship strategy~~ Done (M3, `dot9_wins`)
+- ~~Harvest full .9 history (18.9.1 through latest)~~ 78 of ~98 versions fetched; re-run needed for 25.9.x/26.9.x
 
-### Phase 2: Achieve Production Parity
+### Phase 2: Achieve Production Parity — COMPLETE
 
-- Match production's `fix_summary_events` logic exactly (ceil, detection criteria)
-- Match production's filtering (priogrid_gid, type_of_violence, where_prec)
-- Compare output against production data event-by-event
-- Document remaining discrepancies
+- ~~Match production's `fix_summary_events` logic exactly~~ Done (M4, `ceil_split`)
+- ~~Match production's filtering~~ Done (M5, priogrid_gid/type_of_violence/where_prec)
+- ~~Compare output against production data event-by-event~~ 100% match on 27,853 non-expanded events
+- ~~Document remaining discrepancies~~ `reports/dot9_investigation/parity_results.md`
+- ~~Full pipeline including compilation~~ Done (`full_harvest.py` step 6/6)
 
 ### Phase 3: Statistical Characterization
 

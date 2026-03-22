@@ -78,7 +78,7 @@ Adding a new source means adding `sources/<name>.py`. No changes to existing sou
 - Schema validation on every fetch -- fail-loud on missing required fields (ADR-003)
 - Provenance ledger entry appended for every harvest operation, success or failure (ADR-008)
 - Sources are independent: no source module imports from another source module
-- Digest-based short-circuit: if snapshot exists and ledger has a digest, skip fetch
+- **Local-first skip:** if snapshot file exists on disk AND ledger has a digest for that version, skip without touching the API (outcome: `"cached"`). Other outcomes: `"success"`, `"unchanged"`, `"failed"`
 - **Archive retention:** Snapshot archives are kept indefinitely. No automatic cleanup.
 - All error paths log before raising (ADR-008)
 

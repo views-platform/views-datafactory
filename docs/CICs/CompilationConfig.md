@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-20
+**Last reviewed:** 2026-03-22
 **Related ADRs:** ADR-001, ADR-003, ADR-009, ADR-012
 
 ---
@@ -11,7 +11,7 @@
 
 > Immutable compilation configuration declaring the source file, grid/temporal backbone, features to compute, output location, and source Parquet column mappings.
 
-Features are declared as `(name, strategy)` pairs. The compiler never infers features from Parquet columns (ADR-003).
+Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, `strategy`, and optional `filter` dict). The compiler never infers features from Parquet columns (ADR-003). Per-feature filters enable disaggregation (e.g., by violence type).
 
 ---
 
@@ -32,7 +32,8 @@ Features are declared as `(name, strategy)` pairs. The compiler never infers fea
 - Guarantees features are non-empty (`__post_init__` validation)
 - Guarantees all field names are explicit — column mappings (`lat_field`, `lon_field`, `date_field`) are declared in config, never hardcoded in the compiler
 - Guarantees grid and temporal configs use standard defaults when not overridden
-- Provides default features: `("event_count", "count")` and `("fatalities", "sum_best")`
+- Provides default features: `FeatureSpec("event_count", "count")` and `FeatureSpec("fatalities", "sum_best")`
+- Grid output uses canonical `[T, H, W, C]` dimension order (time, height, width, channels)
 
 ---
 
@@ -41,7 +42,7 @@ Features are declared as `(name, strategy)` pairs. The compiler never infers fea
 - `source_path`: Path to a Parquet file. **Not validated at config time** — existence is checked by `compile_grid` at compile time.
 - `grid_config`: GridConfig instance (defaults to standard PRIO-GRID)
 - `temporal_config`: TemporalConfig instance (defaults to 1989-2024)
-- `features`: Non-empty tuple of `(feature_name, strategy_name)` pairs
+- `features`: Non-empty tuple of `FeatureSpec(name, strategy, filter={})` instances
 - `output_dir`: Path for compiled npy output
 - `ledger_path`: Path for provenance JSONL ledger
 - `lat_field`, `lon_field`, `date_field`: Column names in the source Parquet
@@ -89,10 +90,20 @@ compile_grid(cfg)
 # Custom features and column mapping
 cfg = CompilationConfig(
     source_path=Path("data/acled.parquet"),
-    features=(("event_count", "count"),),
+    features=(FeatureSpec("event_count", "count"),),
     lat_field="lat",
     lon_field="lon",
     date_field="event_date",
+)
+
+# Disaggregated by violence type
+from datafactory_compilation import FeatureSpec
+cfg = CompilationConfig(
+    source_path=path,
+    features=(
+        FeatureSpec("ged_ns_count", "count", {"type_of_violence": 1}),
+        FeatureSpec("ged_ns_best", "sum_best", {"type_of_violence": 1}),
+    ),
 )
 ```
 

@@ -218,8 +218,31 @@ def _fetch_version(
 ) -> dict:
     """Fetch a single candidate monthly version.
 
+    Local-first: if the snapshot file exists and the ledger has a
+    matching digest, skip without touching the API. This makes
+    re-runs near-instant for already-fetched versions.
+
     Returns a result dict with version, outcome, digest, and path info.
     """
+    snap_path = _snapshot_path(config, version)
+
+    # Local-first skip: file exists + ledger has digest → skip API
+    if not force_refresh and snap_path.exists():
+        previous = last_digest_for_version(
+            config.ledger_path, version
+        )
+        if previous is not None:
+            logger.info(
+                "Version %s already on disk (digest: %s)",
+                version, previous,
+            )
+            return {
+                "version": version,
+                "outcome": "cached",
+                "digest": previous,
+                "path": str(snap_path),
+            }
+
     # Build a temporary annual-style config for the shared fetch_paginated.
     # Date range is a wide superset — candidate versions select data by
     # version string, not by date. The range ensures no events are filtered.
@@ -235,9 +258,7 @@ def _fetch_version(
         ledger_path=config.ledger_path,
     )
 
-    snap_path = _snapshot_path(config, version)
-
-    # Fetch events
+    # Fetch events from API
     t0 = time.monotonic()
     events = fetch_paginated(annual_config, token=token)
     fetch_duration = time.monotonic() - t0

@@ -28,7 +28,7 @@ _SMOKE_TEST_DOT9_START: int = 2025  # Recent only — full history is slow
 _SMOKE_TEST_START_YEAR: int = 2023
 _SMOKE_TEST_END_YEAR: int = 2026
 _TINY_GRID_RESOLUTION: float = 90.0
-_EXPECTED_REAL_SHAPE = (259_200, 48, 2)
+_EXPECTED_REAL_SHAPE = (48, 360, 720, 2)
 
 
 def main() -> int:
@@ -335,7 +335,7 @@ def main() -> int:
     # =================================================================
     print()
     print("[8/10] Compile — Tiny grid (8 cells)...")
-    from datafactory_compilation import CompilationConfig, compile_grid
+    from datafactory_compilation import CompilationConfig, FeatureSpec, compile_grid
     from datafactory_priogrid.grid_config import GridConfig
     from datafactory_priogrid.temporal_config import TemporalConfig
 
@@ -353,7 +353,10 @@ def main() -> int:
                 start_year=_SMOKE_TEST_START_YEAR,
                 end_year=_SMOKE_TEST_END_YEAR,
             ),
-            features=(("event_count", "count"), ("fatalities", "sum_best")),
+            features=(
+                FeatureSpec("event_count", "count"),
+                FeatureSpec("fatalities", "sum_best"),
+            ),
             output_dir=data_dir / "compiled_tiny",
             ledger_path=provenance_dir / "compiler" / "compilation_ledger.jsonl",
             date_field=compile_date_field,
@@ -366,8 +369,8 @@ def main() -> int:
             tiny_grid = np.load(tiny_result / "grid.npy")
             print(f"  Shape: {tiny_grid.shape}")
             print(f"  Time: {tiny_time:.2f}s")
-            print(f"  Non-zero cells: {(tiny_grid[:, :, 0] > 0).sum()}")
-            print(f"  Events placed: {tiny_grid[:, :, 0].sum():.0f}")
+            print(f"  Non-zero bins: {(tiny_grid[:, :, :, 0] > 0).sum()}")
+            print(f"  Events placed: {tiny_grid[:, :, :, 0].sum():.0f}")
             print("  PASS")
         except Exception as e:
             failures.append(f"Tiny compile failed: {e}")
@@ -387,7 +390,10 @@ def main() -> int:
                 start_year=_SMOKE_TEST_START_YEAR,
                 end_year=_SMOKE_TEST_END_YEAR,
             ),
-            features=(("event_count", "count"), ("fatalities", "sum_best")),
+            features=(
+                FeatureSpec("event_count", "count"),
+                FeatureSpec("fatalities", "sum_best"),
+            ),
             output_dir=data_dir / "compiled_real",
             ledger_path=provenance_dir / "compiler" / "compilation_ledger.jsonl",
             date_field=compile_date_field,
@@ -401,33 +407,36 @@ def main() -> int:
             print(f"  Shape: {real_grid.shape}")
             print(f"  Time: {real_time:.2f}s")
 
-            event_counts = real_grid[:, :, 0]
-            nonzero_cells = (event_counts > 0).sum()
+            # [T, H, W, C] layout
+            event_counts = real_grid[:, :, :, 0]
+            nonzero_bins = (event_counts > 0).sum()
             total_placed = event_counts.sum()
-            print(f"  Non-zero (cell, month) bins: {nonzero_cells}")
+            print(f"  Non-zero (time, row, col) bins: {nonzero_bins}")
             print(f"  Total events placed: {total_placed:.0f}")
 
             if real_grid.shape != _EXPECTED_REAL_SHAPE:
                 failures.append(
                     f"Wrong shape: {real_grid.shape}, expected {_EXPECTED_REAL_SHAPE}"
                 )
-            if nonzero_cells == 0:
+            if nonzero_bins == 0:
                 failures.append("All cells are zero")
             if total_placed < 100:
                 failures.append(f"Suspiciously few events: {total_placed}")
 
-            # Top 5 cells
+            # Top 5 cells (sum over time)
             from datafactory_priogrid.cell_generator import pgid_to_latlon
 
-            cell_totals = event_counts.sum(axis=1)
-            top_indices = np.argsort(cell_totals)[-5:][::-1]
+            # Sum over time: (H, W)
+            spatial_totals = event_counts.sum(axis=0)
+            flat_totals = spatial_totals.ravel()
+            top_indices = np.argsort(flat_totals)[-5:][::-1]
             print("  Top 5 cells:")
             for idx in top_indices:
                 pgid = idx + 1
                 lat, lon = pgid_to_latlon(pgid)
                 print(
                     f"    pgid={pgid} ({float(lat):.1f}, {float(lon):.1f}): "
-                    f"{cell_totals[idx]:.0f} events"
+                    f"{flat_totals[idx]:.0f} events"
                 )
             print("  PASS")
         except Exception as e:
