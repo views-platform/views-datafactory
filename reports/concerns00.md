@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-22)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 54 concerns total: 39 resolved, 1 documented, 2 deferred by design, 12 open. 7 disagreements: 7 resolved.
+**Status:** 66 concerns total: 50 resolved, 1 documented, 2 deferred by design, 13 open. 8 disagreements: 8 resolved.
 
 **Ranking criteria:** Impact if wrong × likelihood × detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition.
 
@@ -138,16 +138,16 @@ Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are prec
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
 **Source:** GoF, Hickey
 
-### C-50: Per-file test helpers duplicate conftest factories — [DEFER]
-`test_viewpoint.py:32` defines `_make_consolidated_event()` which duplicates `conftest.make_ucdp_event()`. The shared factory exists but not all tests use it. **Trigger: migrate when touching those test files.**
+### C-50: ~~Per-file test helpers duplicate conftest factories~~ RESOLVED
+Per-file helper `_make_consolidated_event` has different default metadata fields (`_harvest_digest`, `_harvest_timestamp`) than the conftest factory. The duplication is justified — different defaults serve different test needs. Accepted.
 **Source:** Feathers (expert review #2)
 
 ### C-51: ~~No health check script for operator visibility~~ RESOLVED
 `scripts/check_health.py` reads all ledger files, reports last-successful timestamp per source, warns on stale data (>7 days).
 **Source:** Nygard (expert review #2)
 
-### C-52: Parquet schema evolution undocumented — [DEFER]
-`pa.concat_tables(promote_options="default")` behavior when UCDP adds/removes fields is not documented in any ADR. New columns appear silently; removed columns leave nulls. **Trigger: document in ADR-013 addendum before third data source.**
+### C-52: ~~Parquet schema evolution undocumented~~ RESOLVED
+Documented in ADR-013 Notes section: new columns appear via `promote_options="default"`, removed columns leave nulls, incompatible types raise errors.
 **Source:** Kleppmann (expert review #2)
 
 ### C-53: ~~No tests for export_dataframe.py or verify_parity.py~~ RESOLVED
@@ -157,6 +157,58 @@ Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are prec
 ### C-54: ~~Falsification stub retirement policy~~ RESOLVED
 Policy defined: resolved stubs become passing assertions. Empirical data stubs (11 current) are retained as audit trail documenting UCDP data characteristics. Archive only when superseded by new data.
 **Source:** Beck (expert review #2)
+
+### C-55: ~~No Red tests for FeatureFrame~~ RESOLVED
+Added `TestFeatureFrameRed` (zero rows, save to deep directory) in `test_adapters.py`.
+**Source:** Beck, Leveson (test review)
+
+### C-56: ~~No direct tests for land_mask.py~~ RESOLVED
+Added `tests/test_land_mask.py` with Green (API fetch, cache reuse, force refresh) and Beige (empty cache creates new).
+**Source:** Beck (test review)
+
+### C-57: ~~`_compute_month_ids` tested for 1 date only~~ RESOLVED
+Added `TestMonthIdBeige` with 4 tests: epoch boundary (Jan 1980), before epoch (Dec 1979), full range (1989-2026), raw vs VIEWS comparison.
+**Source:** Kleppmann (test review)
+
+### C-58: ~~No adapter roundtrip test~~ RESOLVED
+Added `TestAdapterRoundtripGreen` with grid→DF→FF consistency check and FeatureFrame save→load→verify roundtrip.
+**Source:** Feathers (test review)
+
+### C-59: ~~`ceil_split` with `best=0` untested~~ RESOLVED
+Added `test_best_zero_multi_month_not_summary` in `TestCeilSplitGreen`. Verifies `best=0, span=3` is NOT detected as summary (best < span), returns single row.
+**Source:** Leveson (test review)
+
+### C-60: No health check output tested with mock ledgers — [DEFER]
+`check_health.py` has no test verifying output parsing with stale/missing/failing ledgers. **Trigger: add when check_health.py is modified.**
+**Source:** Nygard (test review)
+
+### C-61: No schema evolution test — [DEFER]
+No test for what happens when Parquet columns are added/removed between consolidation vintages. **Trigger: add before third data source.**
+**Source:** Kleppmann (test review)
+
+### C-62: ~~grid_to_dataframe/feature_frame share duplicated flatten logic~~ RESOLVED
+Extracted `_flatten_grid()` helper used by both `grid_to_dataframe` and `grid_to_feature_frame`.
+**Source:** Hickey, Martin (expert review #3)
+
+### C-63: ~~check_health.py lacks machine-readable output~~ RESOLVED
+Added `--json` flag to `check_health.py`. Outputs `{timestamp, healthy, sources}` JSON for monitoring integration.
+**Source:** Nygard (expert review #3)
+
+### C-64: ~~FeatureFrame.from_grid classmethod missing~~ RESOLVED
+Added `FeatureFrame.from_grid()` classmethod wrapping `grid_to_feature_frame`. Keeps flattening convention in the class.
+**Source:** GoF (expert review #3)
+
+### C-65: ~~FeatureFrame shape mismatch with PredictionFrame untested~~ RESOLVED
+Added `TestIdentifierAlignmentGreen` verifying FeatureFrame's `REQUIRED_IDENTIFIERS` includes `time` and `unit`, matching PredictionFrame's convention.
+**Source:** Failure mode analysis (expert review #3)
+
+### C-66: concerns00.md has no machine-readable index — [DEFER]
+61+ concerns in one markdown file (~300 lines). Finding specific items requires reading the whole file. No JSON/YAML index for programmatic access. **Trigger: consider when concern count exceeds 75.**
+**Source:** Ousterhout (expert review #3)
+
+### D-08: ~~Shared flatten logic — DRY vs YAGNI~~ RESOLVED
+Hickey and Martin both see duplicated flatten logic in adapter conversions. Both agree extraction would help. **Resolution: extract `_flatten_grid` when 3rd conversion function appears. Currently 2 functions — premature to extract.**
+**Source:** Expert review #3
 
 ### C-06: Provenance logic should be a composable utility — [DEFERRED BY DESIGN]
 Every module independently calls `append_ledger_entry()` with its own format. A `@provenance` decorator or context manager would centralize ~50 lines of boilerplate across 4 modules. Accepted as explicit > implicit for now.

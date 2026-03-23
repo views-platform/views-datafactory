@@ -302,6 +302,25 @@ class TestCeilSplitGreen:
         assert len(rows) == 1
         assert rows[0]["date_month"] == "2023-06-01"
 
+    def test_best_zero_multi_month_not_summary(
+        self,
+    ) -> None:
+        """best=0, span=3 → NOT detected as summary (best < span).
+        Returns single row from date_end (C-59).
+        """
+        event = _make_consolidated_event(
+            date_prec=1,
+            date_start="2023-01-15",
+            date_end="2023-03-31",
+            best=0,
+            low=0,
+            high=0,
+        )
+        rows = ceil_split(event)
+        # best=0 < span=3 → not summary → single row
+        assert len(rows) == 1
+        assert rows[0]["best"] == 0
+
     def test_summary_3_months_ceil(self) -> None:
         """best=7, span=3 → 3 rows with ceil(7/3)=3 each."""
         event = _make_consolidated_event(

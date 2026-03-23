@@ -32,7 +32,7 @@
 | — | Schema evolution ADR | Done | 0 |
 | — | Script tests (export, parity) | Done | 10 |
 
-**Total: 336 passed, 11 skipped**
+**Total: 367 passed, 11 skipped**
 
 ### What Was Missing (All Resolved)
 

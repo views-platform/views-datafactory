@@ -34,6 +34,7 @@ packages = [
     "src/datafactory_consolidation",
     "src/datafactory_viewpoint",
     "src/datafactory_synthetic",
+    "src/datafactory_adapters",
 ]
 
 [tool.hatch.build.targets.sdist]

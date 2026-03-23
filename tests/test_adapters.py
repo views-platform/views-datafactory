@@ -1,0 +1,446 @@
+"""Tests for datafactory_adapters — FeatureFrame + conversions."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from datafactory_adapters import (
+    FeatureFrame,
+    grid_to_dataframe,
+    grid_to_feature_frame,
+)
+
+# ---- FeatureFrame: Green ----
+
+
+class TestFeatureFrameGreen:
+
+    def test_construction(self) -> None:
+        ff = FeatureFrame(
+            y_features=np.zeros((10, 3)),
+            identifiers={
+                "time": np.arange(10),
+                "unit": np.arange(10),
+            },
+            feature_names=["a", "b", "c"],
+        )
+        assert ff.n_rows == 10
+        assert ff.n_features == 3
+        assert ff.sample_count == 1
+        assert not ff.is_sample
+
+    def test_3d_with_samples(self) -> None:
+        ff = FeatureFrame(
+            y_features=np.zeros((10, 3, 5)),
+            identifiers={
+                "time": np.arange(10),
+                "unit": np.arange(10),
+            },
+            feature_names=["a", "b", "c"],
+        )
+        assert ff.sample_count == 5
+        assert ff.is_sample
+
+    def test_save_load_roundtrip(
+        self, tmp_path: Path
+    ) -> None:
+        original = FeatureFrame(
+            y_features=np.random.rand(10, 3).astype(
+                np.float32
+            ),
+            identifiers={
+                "time": np.arange(10),
+                "unit": np.arange(100, 110),
+            },
+            feature_names=["x", "y", "z"],
+            metadata={"source": "test"},
+        )
+        original.save(tmp_path / "ff")
+        loaded = FeatureFrame.load(tmp_path / "ff")
+
+        np.testing.assert_array_equal(
+            original.y_features, loaded.y_features
+        )
+        assert loaded.feature_names == ["x", "y", "z"]
+        assert loaded.metadata["source"] == "test"
+
+    def test_dtype_coerced_to_float32(self) -> None:
+        ff = FeatureFrame(
+            y_features=np.zeros((5, 2), dtype=np.float64),
+            identifiers={
+                "time": np.arange(5),
+                "unit": np.arange(5),
+            },
+            feature_names=["a", "b"],
+        )
+        assert ff.y_features.dtype == np.float32
+
+
+# ---- FeatureFrame: Beige ----
+
+
+class TestFeatureFrameBeige:
+
+    def test_missing_time_raises(self) -> None:
+        with pytest.raises(ValueError, match="time"):
+            FeatureFrame(
+                y_features=np.zeros((5, 2)),
+                identifiers={"unit": np.arange(5)},
+                feature_names=["a", "b"],
+            )
+
+    def test_missing_unit_raises(self) -> None:
+        with pytest.raises(ValueError, match="unit"):
+            FeatureFrame(
+                y_features=np.zeros((5, 2)),
+                identifiers={"time": np.arange(5)},
+                feature_names=["a", "b"],
+            )
+
+    def test_wrong_feature_names_count(self) -> None:
+        with pytest.raises(ValueError, match="feature_names"):
+            FeatureFrame(
+                y_features=np.zeros((5, 3)),
+                identifiers={
+                    "time": np.arange(5),
+                    "unit": np.arange(5),
+                },
+                feature_names=["a", "b"],  # 2 != 3
+            )
+
+    def test_identifier_length_mismatch(self) -> None:
+        with pytest.raises(ValueError, match="length"):
+            FeatureFrame(
+                y_features=np.zeros((5, 2)),
+                identifiers={
+                    "time": np.arange(3),  # 3 != 5
+                    "unit": np.arange(5),
+                },
+                feature_names=["a", "b"],
+            )
+
+    def test_1d_features_raises(self) -> None:
+        with pytest.raises(ValueError, match="2D"):
+            FeatureFrame(
+                y_features=np.zeros(5),
+                identifiers={
+                    "time": np.arange(5),
+                    "unit": np.arange(5),
+                },
+                feature_names=["a"],
+            )
+
+
+# ---- grid_to_dataframe: Green ----
+
+
+class TestGridToDataframeGreen:
+
+    def test_basic_conversion(self) -> None:
+        grid = np.ones((2, 3, 4, 2), dtype=np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+        features = ["count", "fatalities"]
+
+        df = grid_to_dataframe(
+            grid, pgids, time_steps, features
+        )
+
+        assert list(df.columns) == ["count", "fatalities"]
+        assert df.index.names == [
+            "month_id", "priogrid_gid"
+        ]
+        # 2 months × 12 cells = 24 rows
+        assert len(df) == 24
+
+    def test_land_filter(self) -> None:
+        grid = np.ones((1, 2, 2, 1), dtype=np.float32)
+        pgids = np.array([[1, 2], [3, 4]])
+        time_steps = np.array(
+            ["2024-01"], dtype="datetime64[M]"
+        )
+
+        df = grid_to_dataframe(
+            grid, pgids, time_steps, ["x"],
+            land_pgids={1, 3},
+        )
+        assert len(df) == 2  # Only cells 1 and 3
+
+    def test_sparse_filter(self) -> None:
+        grid = np.zeros((1, 2, 2, 1), dtype=np.float32)
+        grid[0, 0, 0, 0] = 5.0  # One non-zero cell
+        pgids = np.array([[1, 2], [3, 4]])
+        time_steps = np.array(
+            ["2024-01"], dtype="datetime64[M]"
+        )
+
+        df = grid_to_dataframe(
+            grid, pgids, time_steps, ["x"],
+            sparse=True,
+        )
+        assert len(df) == 1
+
+    def test_month_id_epoch(self) -> None:
+        grid = np.ones((1, 1, 1, 1), dtype=np.float32)
+        pgids = np.array([[1]])
+        time_steps = np.array(
+            ["2024-01"], dtype="datetime64[M]"
+        )
+
+        df_raw = grid_to_dataframe(
+            grid, pgids, time_steps, ["x"],
+            month_id_epoch=0,
+        )
+        df_views = grid_to_dataframe(
+            grid, pgids, time_steps, ["x"],
+            month_id_epoch=1980,
+        )
+
+        raw_id = df_raw.index.get_level_values(
+            "month_id"
+        )[0]
+        views_id = df_views.index.get_level_values(
+            "month_id"
+        )[0]
+        # VIEWS month_id = raw - 1980*12
+        assert views_id == raw_id - 1980 * 12
+
+
+# ---- grid_to_feature_frame: Green ----
+
+
+class TestGridToFeatureFrameGreen:
+
+    def test_basic_conversion(self) -> None:
+        grid = np.ones((2, 3, 4, 2), dtype=np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps,
+            ["count", "best"],
+        )
+
+        assert ff.n_rows == 24  # 2 months × 12 cells
+        assert ff.n_features == 2
+        assert ff.feature_names == ["count", "best"]
+        assert "time" in ff.identifiers
+        assert "unit" in ff.identifiers
+
+    def test_land_filter(self) -> None:
+        grid = np.ones((1, 2, 2, 1), dtype=np.float32)
+        pgids = np.array([[1, 2], [3, 4]])
+        time_steps = np.array(
+            ["2024-01"], dtype="datetime64[M]"
+        )
+
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps, ["x"],
+            land_pgids={1, 3},
+        )
+        assert ff.n_rows == 2
+
+
+# ---- FeatureFrame: Red (C-55) ----
+
+
+class TestFeatureFrameRed:
+
+    def test_zero_rows_raises(self) -> None:
+        with pytest.raises(ValueError, match="at least 1"):
+            FeatureFrame(
+                y_features=np.zeros((0, 2)),
+                identifiers={
+                    "time": np.array([]),
+                    "unit": np.array([]),
+                },
+                feature_names=["a", "b"],
+            )
+
+    def test_save_to_nonexistent_parent(
+        self, tmp_path: Path
+    ) -> None:
+        """Save should create directories."""
+        ff = FeatureFrame(
+            y_features=np.ones((3, 2), dtype=np.float32),
+            identifiers={
+                "time": np.arange(3),
+                "unit": np.arange(3),
+            },
+            feature_names=["a", "b"],
+        )
+        deep_path = tmp_path / "a" / "b" / "c"
+        ff.save(deep_path)
+        loaded = FeatureFrame.load(deep_path)
+        assert loaded.n_rows == 3
+
+
+# ---- month_id: Beige (C-57) ----
+
+
+class TestMonthIdBeige:
+
+    def test_epoch_boundary_jan_1980(self) -> None:
+        """Jan 1980 with epoch=1980 should be month_id=1."""
+        from datafactory_adapters.grid_to_dataframe import (
+            _compute_month_ids,
+        )
+
+        ts = np.array(["1980-01"], dtype="datetime64[M]")
+        result = _compute_month_ids(ts, epoch=1980)
+        assert result[0] == 1
+
+    def test_before_epoch(self) -> None:
+        """Dec 1979 with epoch=1980 should be month_id=0."""
+        from datafactory_adapters.grid_to_dataframe import (
+            _compute_month_ids,
+        )
+
+        ts = np.array(["1979-12"], dtype="datetime64[M]")
+        result = _compute_month_ids(ts, epoch=1980)
+        assert result[0] == 0
+
+    def test_full_range_1989_2026(self) -> None:
+        """Verify month_ids for the full operational range."""
+        from datafactory_adapters.grid_to_dataframe import (
+            _compute_month_ids,
+        )
+
+        ts = np.array(
+            ["1989-01", "2024-12", "2026-12"],
+            dtype="datetime64[M]",
+        )
+        result = _compute_month_ids(ts, epoch=1980)
+        assert result[0] == 109
+        assert result[1] == 540
+        assert result[2] == 564
+
+    def test_raw_epoch_zero(self) -> None:
+        """Raw epoch (0) gives large month_ids."""
+        from datafactory_adapters.grid_to_dataframe import (
+            _compute_month_ids,
+        )
+
+        ts = np.array(["2024-01"], dtype="datetime64[M]")
+        raw = _compute_month_ids(ts, epoch=0)
+        views = _compute_month_ids(ts, epoch=1980)
+        assert raw[0] == views[0] + 1980 * 12
+
+
+# ---- Adapter roundtrip: Green (C-58) ----
+
+
+class TestAdapterRoundtripGreen:
+
+    def test_grid_to_df_to_ff_roundtrip(self) -> None:
+        """Full chain: grid → DataFrame → FeatureFrame."""
+        grid = np.random.rand(
+            2, 3, 4, 2
+        ).astype(np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+        features = ["count", "best"]
+
+        df = grid_to_dataframe(
+            grid, pgids, time_steps, features,
+        )
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps, features,
+        )
+
+        assert len(df) == ff.n_rows
+        np.testing.assert_allclose(
+            df.values.sum(), ff.y_features.sum(), rtol=1e-5
+        )
+
+    def test_ff_save_load_preserves_data(
+        self, tmp_path: Path
+    ) -> None:
+        """FeatureFrame save → load roundtrip."""
+        grid = np.random.rand(
+            2, 3, 4, 2
+        ).astype(np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps,
+            ["count", "best"],
+        )
+        ff.save(tmp_path / "roundtrip")
+        loaded = FeatureFrame.load(tmp_path / "roundtrip")
+
+        assert loaded.n_rows == ff.n_rows
+        assert loaded.feature_names == ff.feature_names
+        np.testing.assert_array_equal(
+            loaded.y_features, ff.y_features
+        )
+
+
+# ---- FeatureFrame.from_grid: Green (C-64) ----
+
+
+class TestFeatureFrameFromGridGreen:
+
+    def test_from_grid_classmethod(self) -> None:
+        grid = np.ones((2, 3, 4, 2), dtype=np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+
+        ff = FeatureFrame.from_grid(
+            grid, pgids, time_steps, ["a", "b"]
+        )
+        assert ff.n_rows == 24
+        assert ff.n_features == 2
+
+
+# ---- Identifier alignment: Green (C-65) ----
+
+
+class TestIdentifierAlignmentGreen:
+
+    def test_required_identifiers_match_prediction_frame(
+        self,
+    ) -> None:
+        """FeatureFrame uses same required identifiers
+        as PredictionFrame: 'time' and 'unit'.
+        """
+        from datafactory_adapters.feature_frame import (
+            REQUIRED_IDENTIFIERS,
+        )
+
+        # PredictionFrame requires {"time", "unit"}
+        assert "time" in REQUIRED_IDENTIFIERS
+        assert "unit" in REQUIRED_IDENTIFIERS
+
+    def test_feature_frame_identifiers_present(
+        self,
+    ) -> None:
+        ff = FeatureFrame(
+            y_features=np.ones((5, 2)),
+            identifiers={
+                "time": np.arange(5),
+                "unit": np.arange(5),
+            },
+            feature_names=["a", "b"],
+        )
+        assert "time" in ff.identifiers
+        assert "unit" in ff.identifiers

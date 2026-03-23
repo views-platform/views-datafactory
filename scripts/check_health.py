@@ -132,6 +132,11 @@ def main() -> int:
         default=Path("provenance"),
         help="Base provenance directory",
     )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON (for monitoring integration)",
+    )
     args = parser.parse_args()
 
     now = datetime.now(tz=timezone.utc)
@@ -180,15 +185,33 @@ def main() -> int:
         ),
     }
 
+    results = []
+    any_issues = False
+    for name, path in ledgers.items():
+        result = _report_ledger(name, path, now)
+        results.append(result)
+        if result["status"] not in ("OK", "NO DATA"):
+            any_issues = True
+
+    if args.json:
+        import json as json_mod
+
+        output = {
+            "timestamp": now.isoformat(),
+            "healthy": not any_issues,
+            "sources": results,
+        }
+        print(json_mod.dumps(output, indent=2))
+        return 1 if any_issues else 0
+
     print("=" * 60)
     print(f"DATAFACTORY HEALTH — {now.isoformat()[:19]}Z")
     print("=" * 60)
     print()
 
-    any_issues = False
-    for name, path in ledgers.items():
-        result = _report_ledger(name, path, now)
+    for result in results:
         status = result["status"]
+        name = result["name"]
         detail = result["detail"]
 
         if status == "OK":
@@ -197,7 +220,6 @@ def main() -> int:
             marker = "? "
         else:
             marker = "! "
-            any_issues = True
 
         print(f"{marker}[{status:7s}] {name:20s} {detail}")
 

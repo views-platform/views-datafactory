@@ -24,6 +24,7 @@ ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "datafactory_consolidation": {"datafactory_provenance"},
     "datafactory_viewpoint": {"datafactory_provenance"},
     "datafactory_compilation": {"datafactory_provenance", "datafactory_priogrid"},
+    "datafactory_adapters": set(),  # No datafactory_* imports — extractable
 }
 
 ALL_PACKAGES = set(ALLOWED_INTERNAL_IMPORTS.keys())
