@@ -131,17 +131,39 @@ Second data source. 34 static variables (terrain, resources, land cover) from th
 
 **DoD:** Falsification audit on "priogrid static harvester is at UCDP quality" survives.
 
-### Phase 3: Statistical Characterization
+### Phase 2b: Operational Readiness
 
-- Produce statistical profile of production-parity data (RQ-5)
-- Measure revision dynamics across vintages (RQ-6)
-- Establish calibration targets for synthetic generators
+Prepare the system for production operation. Address operator visibility, documentation gaps, and test coverage for consumer-facing scripts.
 
-### Phase 4: Synthetic Generation + Multi-Source
+- ~~P2b-1: `scripts/check_health.py`~~ Done. Reads all ledger files, reports last-successful timestamp per source, warns on stale data (C-51)
+- ~~P2b-2: Document Parquet schema evolution~~ Done. Added to ADR-013 Notes section (C-52)
+- ~~P2b-3: Tests for scripts~~ Done. `tests/test_scripts.py` validates all scripts have main(), argparse, __name__ guard (C-53)
+- P2b-4: ~~Define falsification stub retirement policy~~ Done. Policy: resolved stubs are converted to passing assertions that verify the fix. Empirical data stubs (11 current) are retained as audit trail — they document UCDP data characteristics, not code bugs. Archive only when the empirical finding is superseded by new data.
+
+**DoD:** All P2b items resolved. No operator-facing scripts without tests.
+
+### Phase 3: Raster Data Sources (blocked on rasterio dependency)
+
+Population, built-up area, nightlights, and other vulnerability proxies require raster-to-grid aggregation. This is blocked on adding `rasterio` (GDAL) as a dependency.
+
+**Investigation findings (2026-03-23):**
+- WorldPop 1km annual (2000-2020): best quality, direct HTTP download, ~1 GB/year
+- GPW v4 at 0.5°: exact grid match but 5-year epochs only, requires SEDAC registration
+- Monthly population data does not exist globally
+- Temporal strategy: back-fill 1989-1999 with 2000, forward-fill 2021-2026 with 2020
+
+**When unblocked:**
+- P3-1: Raster-to-grid aggregation infrastructure (shared capability)
+- P3-2: WorldPop population harvester (annual 2000-2020)
+- P3-3: GHSL built-up area harvester (5-year epochs, primary vulnerability proxy)
+- P3-4: Statistical characterization using combined UCDP + population + built-up data
+
+### Phase 4: Synthetic Generation + Advanced Sources
 
 - Build grid-native synthetic generators calibrated against real data
-- Expand to additional data sources (ACLED, PRIO static variables)
-- Implement uncertainty propagation through the pipeline
+- Nighttime lights (requires flare masking — see vulnerability proxy survey)
+- ACLED conflict data (second conflict source)
+- Uncertainty propagation through the pipeline
 
 ---
 

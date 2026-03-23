@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-22)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 49 concerns total: 36 resolved, 1 documented, 2 deferred by design, 10 open. 6 disagreements: 5 resolved, 1 open.
+**Status:** 54 concerns total: 39 resolved, 1 documented, 2 deferred by design, 12 open. 7 disagreements: 7 resolved.
 
 **Ranking criteria:** Impact if wrong × likelihood × detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition.
 
@@ -138,6 +138,26 @@ Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are prec
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
 **Source:** GoF, Hickey
 
+### C-50: Per-file test helpers duplicate conftest factories — [DEFER]
+`test_viewpoint.py:32` defines `_make_consolidated_event()` which duplicates `conftest.make_ucdp_event()`. The shared factory exists but not all tests use it. **Trigger: migrate when touching those test files.**
+**Source:** Feathers (expert review #2)
+
+### C-51: ~~No health check script for operator visibility~~ RESOLVED
+`scripts/check_health.py` reads all ledger files, reports last-successful timestamp per source, warns on stale data (>7 days).
+**Source:** Nygard (expert review #2)
+
+### C-52: Parquet schema evolution undocumented — [DEFER]
+`pa.concat_tables(promote_options="default")` behavior when UCDP adds/removes fields is not documented in any ADR. New columns appear silently; removed columns leave nulls. **Trigger: document in ADR-013 addendum before third data source.**
+**Source:** Kleppmann (expert review #2)
+
+### C-53: ~~No tests for export_dataframe.py or verify_parity.py~~ RESOLVED
+`tests/test_scripts.py` validates all scripts: existence, syntax (AST parse), `main()` function, `__name__` guard, argparse usage.
+**Source:** Beck (expert review #2)
+
+### C-54: ~~Falsification stub retirement policy~~ RESOLVED
+Policy defined: resolved stubs become passing assertions. Empirical data stubs (11 current) are retained as audit trail documenting UCDP data characteristics. Archive only when superseded by new data.
+**Source:** Beck (expert review #2)
+
 ### C-06: Provenance logic should be a composable utility — [DEFERRED BY DESIGN]
 Every module independently calls `append_ledger_entry()` with its own format. A `@provenance` decorator or context manager would centralize ~50 lines of boilerplate across 4 modules. Accepted as explicit > implicit for now.
 **Source:** Hickey
@@ -170,6 +190,10 @@ Martin: 3 identical registries violate DRY; extract `PluginRegistry`. Hickey: 3 
 ### D-06: ~~Filter extensibility — chain vs if-statements~~ RESOLVED
 GoF: sequential if-checks need Chain-of-Responsibility. Hickey: 3 filters don't justify the abstraction. **Resolution: accept if-statements. Extract chain on 5th filter.**
 **Source:** Expert review 6
+
+### D-07: ~~Distributed provenance vs. centralized decorator~~ RESOLVED
+Hickey: every module calls `append_ledger_entry()` independently. A `@provenance` decorator would centralize. Martin: explicit is better at this scale. **Resolution: accept distributed pattern. Same rationale as C-06 (deferred by design).**
+**Source:** Expert review #2
 
 ---
 

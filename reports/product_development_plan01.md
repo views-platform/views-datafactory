@@ -28,8 +28,11 @@
 | — | DAG enforcement | Done | 1 |
 | — | Integration tests | Done | 4 |
 | — | Falsification stubs | Documented | 11 (skipped) |
+| — | Health check script | Done | 0 |
+| — | Schema evolution ADR | Done | 0 |
+| — | Script tests (export, parity) | Done | 10 |
 
-**Total: 320 passed, 11 skipped**
+**Total: 336 passed, 11 skipped**
 
 ### What Was Missing (All Resolved)
 

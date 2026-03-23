@@ -134,3 +134,13 @@ These costs are accepted. Storage is cheap; lost data is irreplaceable.
 This ADR is **constitutional** — it defines principles that apply to consolidation of any data source, not just UCDP. Source-specific consolidation rules (e.g., how UCDP annual and candidate versions relate) are defined in project-specific ADRs (ADR-015+) that apply these principles to a concrete source.
 
 This ADR does not prescribe storage format (Parquet, DuckDB, etc.), file layout, or specific column names. Those are implementation decisions governed by the source-specific ADRs and the module's ARCHITECTURE.md.
+
+### Schema Evolution (added 2026-03-22)
+
+The consolidated Parquet store uses `pa.concat_tables(promote_options="default")` when merging new records with existing ones. This means:
+
+- **New columns:** If a source adds a field, the column appears silently in the store. Existing records have `null` for the new column.
+- **Removed columns:** If a source removes a field, old records retain it; new records have `null`. The column is never dropped.
+- **Type changes:** PyArrow's type promotion resolves compatible types (e.g., int32 → int64). Incompatible changes (e.g., int → string) will raise an error during concatenation.
+
+This is intentional: the lossless principle means no data is discarded, and schema differences between vintages are preserved rather than resolved. Consumers should handle nullable columns gracefully.

@@ -49,7 +49,7 @@ class TestTechDebtResolved:
             "Stale header from repo assimilation"
         )
         # Header should reflect current counts
-        assert "49 concerns total" in content
+        assert "54 concerns total" in content
 
     def test_maturity_skip_reason_current(self) -> None:
         """Resolved: maturity test for .9 in smoke test
