@@ -4,12 +4,17 @@
 Usage:
     uv run python scripts/assemble_grid.py
     uv run python scripts/assemble_grid.py --ucdp-grid data/full_harvest/compiled
+    uv run python scripts/assemble_grid.py --admin-dir data/gaul_admin
 
 Combines the compiled UCDP conflict grid with PRIO-GRID static
-features into a single array. Static features (terrain, resources,
-land cover) are broadcast across all time steps (they don't change).
+features and GAUL admin boundary codes into a single array. Static
+and admin features are broadcast across all time steps.
 
-Output: grid.npy [T, H, W, F] with F = UCDP channels + static channels.
+Output: grid.npy [T, H, W, F] with F = UCDP + static + admin channels.
+
+Admin channels (gaul0_code, gaul1_code, gaul2_code) are categorical
+integers stored as float32. Downstream models should treat them as
+categorical (embedding / one-hot), not continuous.
 """
 
 from __future__ import annotations
@@ -41,6 +46,12 @@ def main() -> int:
         help="PRIO-GRID static Parquet directory",
     )
     parser.add_argument(
+        "--admin-dir",
+        type=Path,
+        default=Path("data/gaul_admin"),
+        help="GAUL admin boundary Parquet directory",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("data/assembled"),
@@ -63,11 +74,20 @@ def main() -> int:
         print(f"FAIL: {args.static_dir} not found")
         return 1
 
+    has_admin = args.admin_dir.exists()
+    if not has_admin:
+        print(
+            f"NOTE: {args.admin_dir} not found, "
+            "skipping admin channels"
+        )
+
     print("=" * 60)
     print("GRID ASSEMBLY — All Data Sources")
-    print(f"UCDP grid: {args.ucdp_grid}")
+    print(f"UCDP grid:  {args.ucdp_grid}")
     print(f"Static dir: {args.static_dir}")
-    print(f"Output: {args.output_dir}")
+    print(f"Admin dir:  {args.admin_dir}"
+          f"{'' if has_admin else ' (skipped)'}")
+    print(f"Output:     {args.output_dir}")
     print("=" * 60)
     print()
 
@@ -126,11 +146,54 @@ def main() -> int:
             f"  {var_name}: {n_placed:,} cells placed"
         )
 
-    n_static = len(static_names)
-    n_total = n_ucdp + n_static
-    all_features = ucdp_features + static_names
+    # ── Admin boundary channels (GAUL codes) ──
+    # Only numeric variables become grid channels.
+    # String variables (names) are stored separately.
+    admin_numeric = (
+        "gaul0_code", "gaul1_code", "gaul2_code",
+    )
 
-    print()
+    admin_names: list[str] = []
+    admin_spatial: list[np.ndarray] = []
+
+    if has_admin:
+        admin_files = sorted(args.admin_dir.glob("*.parquet"))
+        print(f"Admin variables: {len(admin_files)}")
+
+        for af in admin_files:
+            var_name = af.stem
+            if var_name not in admin_numeric:
+                continue
+
+            table = pq.read_table(af)
+            gids = table.column("gid").to_pylist()
+            values = table.column("value").to_pylist()
+
+            spatial = np.full(
+                (n_h, n_w), -1.0, dtype=np.float32
+            )
+            n_placed = 0
+            for gid, val in zip(gids, values, strict=True):
+                if gid in gid_to_rowcol:
+                    r, c = gid_to_rowcol[gid]
+                    spatial[r, c] = float(val)
+                    n_placed += 1
+
+            admin_spatial.append(spatial)
+            admin_names.append(var_name)
+            n_unmatched = len(gids) - n_placed
+            print(
+                f"  {var_name}: {n_placed:,} cells placed"
+                f" ({n_unmatched:,} unmatched)"
+            )
+
+        print()
+
+    n_static = len(static_names)
+    n_admin = len(admin_names)
+    n_total = n_ucdp + n_static + n_admin
+    all_features = ucdp_features + static_names + admin_names
+
     print(
         f"Assembling [T={n_t}, H={n_h}, "
         f"W={n_w}, F={n_total}]..."
@@ -156,6 +219,12 @@ def main() -> int:
         assembled[:, :, :, n_ucdp + i] = spatial
 
     del static_spatial  # free memory
+
+    # Fill admin channels (broadcast in-place)
+    for i, spatial in enumerate(admin_spatial):
+        assembled[:, :, :, n_ucdp + n_static + i] = spatial
+
+    del admin_spatial  # free memory
 
     print(f"Assembled shape: {assembled.shape}")
     print(f"  [T={assembled.shape[0]}, "
@@ -189,6 +258,8 @@ def main() -> int:
             "ucdp_digest": ucdp_digest,
             "static_dir": str(args.static_dir),
             "static_variables": static_names,
+            "admin_dir": str(args.admin_dir),
+            "admin_variables": admin_names,
         },
         "output_shape": list(assembled.shape),
         "n_features": len(all_features),

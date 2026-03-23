@@ -64,6 +64,7 @@ Contracts must be clear enough that:
 - `ViewpointResult.md` -- immutable viewpoint build result (counts, digest, version)
 - `PriogridStaticConfig.md` -- immutable PRIO-GRID static feature harvest configuration
 - `ShapefileHarvesterConfig.md` -- immutable PRIO-GRID shapefile download configuration
+- `GaulAdminConfig.md` -- immutable GAUL 2024 admin boundary harvest configuration
 
 ---
 

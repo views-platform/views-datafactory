@@ -13,6 +13,7 @@ Narrative arc:
     08-09  Time patterns: "When did it start? Is there a rhythm?"
     10-12  Context: "What does the landscape look like?"
     13-14  Data challenge: "Why is this hard to model?"
+    15     Admin boundaries: "What political units cover the grid?"
 
 Uses memory-mapped grid loading to avoid 18+ GB RAM usage.
 """
@@ -832,6 +833,61 @@ def plot_coverage(d: PrecomputedData, out: Path) -> None:
     save_plot(fig, out, "14_coverage.png")
 
 
+def plot_admin_boundaries(
+    d: PrecomputedData, out: Path,
+) -> None:
+    """15 — GAUL admin boundaries: country, province, district."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    admin_levels = [
+        ("gaul0_code", "tab20", "Admin 0 (Country)"),
+        ("gaul1_code", "nipy_spectral", "Admin 1 (Province)"),
+        ("gaul2_code", "nipy_spectral", "Admin 2 (District)"),
+    ]
+
+    # Graceful skip if admin channels not in grid
+    if admin_levels[0][0] not in d.features:
+        print("  (skipped — no admin channels in grid)")
+        return
+
+    fig, axes = plt.subplots(
+        1, 3, figsize=FIG_PANEL_1x3,
+        gridspec_kw={"wspace": 0.08},
+    )
+
+    for ax, (feat, cmap, label) in zip(
+        axes.flat, admin_levels, strict=True,
+    ):
+        idx = d.features.index(feat)
+        channel = d.grid[0, :, :, idx].copy().astype(
+            np.float64
+        )
+        # Sentinel: -1 (unassigned) and 0 → NaN
+        channel[channel <= 0] = np.nan
+        n_unique = len(set(
+            channel[~np.isnan(channel)].flatten().tolist()
+        ))
+
+        display = np.flipud(channel)
+        ax.imshow(  # type: ignore[union-attr]
+            display, cmap=cmap, aspect="auto",
+            extent=EXTENT, interpolation="nearest",
+        )
+        style_ax(
+            ax, title=f"{label}: {n_unique:,} units",
+            xlabel="Longitude",
+        )
+
+    axes[0].set_ylabel("Latitude", fontsize=FONT_LABEL)  # type: ignore[union-attr]
+
+    fig.suptitle(
+        "GAUL 2024 administrative boundaries on PRIO-GRID",
+        fontsize=FONT_TITLE, fontweight="bold", y=1.02,
+    )
+    save_plot(fig, out, "15_admin_boundaries.png")
+
+
 # ── Orchestrator ─────────────────────────────────────────────
 
 PLOTS: list[tuple[str, object]] = [
@@ -849,6 +905,7 @@ PLOTS: list[tuple[str, object]] = [
     ("Scatter", plot_scatter),
     ("Sparsity", plot_sparsity),
     ("Coverage", plot_coverage),
+    ("Admin Boundaries", plot_admin_boundaries),
 ]
 
 

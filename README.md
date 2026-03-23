@@ -139,7 +139,7 @@ Consumer-facing (no datafactory_* imports):
 |---------|-------|---------|--------|
 | `datafactory_provenance` | 0 | Content digests, JSONL ledgers, file locking, rotation | Done |
 | `datafactory_priogrid` | 1 | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done |
-| `datafactory_harvester` | 1 | Data harvesting: UCDP annual, candidate, .9, PRIO-GRID static | Done |
+| `datafactory_harvester` | 1 | Data harvesting: UCDP annual/candidate/.9, PRIO-GRID static, GAUL admin | Done |
 | `datafactory_synthetic` | 1 | Synthetic data generation with controlled covariance structure | Planned |
 | `datafactory_consolidation` | 2 | Lossless, vintage-aware consolidation of three UCDP sources | Done |
 | `datafactory_viewpoint` | 3 | Opinionated views: survivorship, temporal distribution, profiles | Done |
@@ -174,7 +174,8 @@ views-datafactory/
 │   │       ├── ucdp_annual.py                            UCDP/GED Annual source
 │   │       ├── ucdp_candidate.py                         UCDP/GED Candidate Monthly source
 │   │       ├── ucdp_dot9.py                              UCDP/GED .9 Consolidated Monthly
-│   │       └── priogrid_static.py                        PRIO-GRID static covariates
+│   │       ├── priogrid_static.py                        PRIO-GRID static covariates
+│   │       └── gaul_admin.py                             GAUL 2024 admin boundaries
 │   ├── datafactory_synthetic/                        # Layer 1 — synthetic generation (stub)
 │   ├── datafactory_consolidation/                    # Layer 2 — lossless event stores
 │   │   ├── event_store.py                              Append-only Parquet store
@@ -199,14 +200,15 @@ views-datafactory/
 │   ├── consolidate_ucdp.py                             Three-source consolidation
 │   ├── build_viewpoint.py                              Viewpoint from profile
 │   ├── compile_grid.py                                 Grid compilation
-│   ├── assemble_grid.py                                UCDP + static covariate assembly
+│   ├── harvest_gaul.py                                  GAUL admin boundary harvest + spatial join
+│   ├── assemble_grid.py                                UCDP + static + admin assembly
 │   ├── export_dataframe.py                             Grid → DataFrame export
-│   ├── visualize_audit.py                              14-plot data audit visualization
+│   ├── visualize_audit.py                              15-plot data audit visualization
 │   ├── check_health.py                                 System health check
 │   └── ...                                             harvest_priogrid, verify_parity, etc.
 ├── docs/                                             # ADRs, CICs, protocols, standards
 │   ├── ADRs/                                           10 constitutional + 9 project-specific
-│   ├── CICs/                                           14 active class intent contracts
+│   ├── CICs/                                           15 active class intent contracts
 │   ├── contributor_protocols/                          carbon, silicon, hardened
 │   └── standards/                                      logging & observability
 ├── reports/                                          # Strategic documents + audit outputs
