@@ -31,4 +31,10 @@ Thumbs.db
 
 # ruff
 .ruff_cache/
+
+# Operational artifacts (regenerable)
+provenance/
+reports/audit/
+
+# Session
 resume_session.md

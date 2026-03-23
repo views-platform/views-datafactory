@@ -64,6 +64,8 @@ Layer 4 (Compilation):    datafactory_compilation ──imports──> datafacto
 
 Synthetic data follows an independent path: it produces npy output directly and is consumed without passing through consolidation, viewpoint, or compilation. This is the graph nature of the architecture — not all paths traverse all layers.
 
+`datafactory_adapters` sits alongside the graph, not inside it. It converts compiled grid output into consumer formats (DataFrame, FeatureFrame) and imports nothing from `datafactory_*`. It is designed for eventual extraction to `views-pipeline-core`.
+
 ### Import Rules
 
 | Package | May import from | Reads filesystem output of |
@@ -75,6 +77,7 @@ Synthetic data follows an independent path: it produces npy output directly and 
 | `datafactory_consolidation` | provenance | harvester |
 | `datafactory_viewpoint` | provenance | consolidation |
 | `datafactory_compilation` | provenance, priogrid | viewpoint |
+| `datafactory_adapters` | nothing | compilation (reads grid npy) |
 
 ### Data Flow (Filesystem-Mediated)
 

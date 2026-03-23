@@ -4,7 +4,7 @@
 
 # views-datafactory
 
-**Data factory for the VIEWS conflict forecasting platform — harvesting, grid construction, compilation, and synthetic generation.**
+**Data factory for the VIEWS conflict forecasting platform — harvesting, consolidation, viewpoint building, grid compilation, and synthetic generation.**
 
 Part of the [VIEWS Platform](https://github.com/views-platform) ecosystem.
 
@@ -33,10 +33,13 @@ The system is designed as a **graph of independent nodes**, not a linear pipelin
 
 ### Key Capabilities
 
-- **Auditable data harvesting** with schema validation, drift detection, and JSONL provenance ledgers
+- **Auditable data harvesting** — three UCDP data streams (annual, candidate monthly, .9 consolidated) plus PRIO-GRID static covariates, all with schema validation, drift detection, and JSONL provenance ledgers
 - **PRIO-GRID spatial backbone** — pure-numpy generation of the standard 259,200-cell global grid at 0.5° resolution, validated cell-by-cell against the official PRIO reference shapefile
 - **Temporal backbone** with VIEWS month_id adapters (epoch: January 1980)
-- **Deterministic compilation** of raw event data onto the spatiotemporal grid as npy arrays
+- **Vintage-aware consolidation** — lossless, append-only, bitemporal event store from all three UCDP sources with content-digest deduplication
+- **Configurable viewpoints** — survivorship strategies (annual_wins, dot9_wins), temporal distribution (even_split, ceil_split), production filtering via named profiles
+- **Deterministic compilation** of viewpoint output onto the spatiotemporal grid as npy arrays
+- **Consumer adapters** — grid-to-DataFrame and grid-to-FeatureFrame conversions for downstream consumers
 - **Synthetic data generation** with controllable spatiotemporal covariance structure (planned)
 - **End-to-end provenance** — every value in a compiled grid is traceable back to the specific source records and compilation config that produced it
 
@@ -57,16 +60,19 @@ views-datafactory is the upstream data provider for the VIEWS forecasting pipeli
 
 ```
 UCDP/GED API ──→ datafactory_harvester ──→ Raw Parquet snapshots
-                                                    │
+                        (annual, candidate, .9)       │
                                        datafactory_consolidation ──→ Consolidated event store
                                                     │
                                          datafactory_viewpoint ──→ Materialized viewpoint
                                                     │
 PRIO-GRID ──────→ datafactory_priogrid ─────────────┤
-                                                    │
+PRIO-GRID API ──→ datafactory_harvester ──→ Static covariates   │
+                        (priogrid_static)            │
                                        datafactory_compilation ──→ Compiled grid.npy
                                                     │
                   datafactory_synthetic ─────────────────────────→ Synthetic grid.npy
+                                                    │
+                                        datafactory_adapters ──→ DataFrame / FeatureFrame
                                                     │
                                            ┌────────┴────────┐
                                            │   Consumers     │
@@ -101,6 +107,9 @@ Layer 3 — Viewpoint (imports provenance, reads consolidation files):
 
 Layer 4 — Compilation (imports provenance + priogrid, reads viewpoint files):
   datafactory_compilation       Viewpoint output → populated grid arrays
+
+Consumer-facing (no datafactory_* imports):
+  datafactory_adapters          Grid → DataFrame, Grid → FeatureFrame
 ```
 
 **Dependency rules (ADR-012):**
@@ -109,6 +118,7 @@ Layer 4 — Compilation (imports provenance + priogrid, reads viewpoint files):
 - `datafactory_consolidation` imports only from `datafactory_provenance`; reads harvester output as **files**
 - `datafactory_viewpoint` imports only from `datafactory_provenance`; reads consolidation output as **files**
 - `datafactory_compilation` imports `datafactory_provenance` and `datafactory_priogrid`; reads viewpoint output as **files**
+- `datafactory_adapters` imports nothing from `datafactory_*`; sits alongside the graph, not inside it
 - Independence is enforced by an import-enforcement test that AST-scans every package
 
 ### Design Principles
@@ -127,13 +137,14 @@ Layer 4 — Compilation (imports provenance + priogrid, reads viewpoint files):
 
 | Package | Layer | Purpose | Status |
 |---------|-------|---------|--------|
-| `datafactory_provenance` | 0 | Content digests and JSONL ledger operations | Done (DoD001) |
-| `datafactory_priogrid` | 1 | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done (DoD002) |
-| `datafactory_harvester` | 1 | Data harvesting with pluggable sources (UCDP annual + candidate monthly) | Done (DoD003, DoD005) |
+| `datafactory_provenance` | 0 | Content digests, JSONL ledgers, file locking, rotation | Done |
+| `datafactory_priogrid` | 1 | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done |
+| `datafactory_harvester` | 1 | Data harvesting: UCDP annual, candidate, .9, PRIO-GRID static | Done |
 | `datafactory_synthetic` | 1 | Synthetic data generation with controlled covariance structure | Planned |
-| `datafactory_consolidation` | 2 | Lossless consolidation of raw snapshots into event stores | Scaffold |
-| `datafactory_viewpoint` | 3 | Opinionated, versioned views over consolidated data | Scaffold |
-| `datafactory_compilation` | 4 | Places viewpoint output onto grid, outputs npy | Done (DoD004) |
+| `datafactory_consolidation` | 2 | Lossless, vintage-aware consolidation of three UCDP sources | Done |
+| `datafactory_viewpoint` | 3 | Opinionated views: survivorship, temporal distribution, profiles | Done |
+| `datafactory_compilation` | 4 | Viewpoint output → grid npy with coordinate sidecars | Done |
+| `datafactory_adapters` | — | Consumer-facing: grid → DataFrame, grid → FeatureFrame | Done |
 
 ---
 
@@ -161,27 +172,49 @@ views-datafactory/
 │   │   ├── snapshot_storage.py                         save_event_snapshot, archive_snapshot
 │   │   └── sources/                                    Source plugin registry
 │   │       ├── ucdp_annual.py                            UCDP/GED Annual source
-│   │       └── ucdp_candidate.py                         UCDP/GED Candidate Monthly source
+│   │       ├── ucdp_candidate.py                         UCDP/GED Candidate Monthly source
+│   │       ├── ucdp_dot9.py                              UCDP/GED .9 Consolidated Monthly
+│   │       └── priogrid_static.py                        PRIO-GRID static covariates
 │   ├── datafactory_synthetic/                        # Layer 1 — synthetic generation (stub)
 │   ├── datafactory_consolidation/                    # Layer 2 — lossless event stores
-│   │   └── consolidators/                              Consolidator plugin registry
+│   │   ├── event_store.py                              Append-only Parquet store
+│   │   └── consolidators/
+│   │       └── ucdp.py                                   Three-source UCDP consolidation
 │   ├── datafactory_viewpoint/                        # Layer 3 — opinionated views
-│   │   └── builders/                                   Viewpoint builder plugin registry
-│   └── datafactory_compilation/                      # Layer 4 — grid compilation
-│       ├── compilation_config.py                       CompilationConfig
-│       ├── grid_compilation.py                         compile_grid (main function)
-│       └── aggregation.py                              count, sum_best, max_best strategies
-├── tests/                                            # 179 tests
+│   │   ├── survivorship.py                             Strategy registry (annual_wins, dot9_wins)
+│   │   ├── temporal_distribution.py                    Strategy registry (even_split, ceil_split)
+│   │   ├── profiles.py                                 Named presets (production_parity)
+│   │   └── builders/
+│   │       └── ucdp_v1.py                                UCDP viewpoint builder
+│   ├── datafactory_compilation/                      # Layer 4 — grid compilation
+│   │   ├── compilation_config.py                       CompilationConfig
+│   │   ├── grid_compilation.py                         compile_grid (main function)
+│   │   └── aggregation.py                              count, sum_best, max_best strategies
+│   └── datafactory_adapters/                         # Consumer-facing conversions
+│       ├── feature_frame.py                            FeatureFrame dataclass
+│       └── grid_to_dataframe.py                        Grid → pandas DataFrame
+├── tests/                                            # 367 tests (11 skipped falsification audits)
+├── scripts/                                          # Operational scripts
+│   ├── harvest_ucdp.py                                 Full harvest pipeline
+│   ├── consolidate_ucdp.py                             Three-source consolidation
+│   ├── build_viewpoint.py                              Viewpoint from profile
+│   ├── compile_grid.py                                 Grid compilation
+│   ├── assemble_grid.py                                UCDP + static covariate assembly
+│   ├── export_dataframe.py                             Grid → DataFrame export
+│   ├── visualize_audit.py                              14-plot data audit visualization
+│   ├── check_health.py                                 System health check
+│   └── ...                                             harvest_priogrid, verify_parity, etc.
 ├── docs/                                             # ADRs, CICs, protocols, standards
-│   ├── ADRs/                                           12 constitutional + 1 project-specific
-│   ├── CICs/                                           3 active class intent contracts
+│   ├── ADRs/                                           10 constitutional + 9 project-specific
+│   ├── CICs/                                           14 active class intent contracts
 │   ├── contributor_protocols/                          carbon, silicon, hardened
 │   └── standards/                                      logging & observability
-├── reports/                                          # Strategic documents
-│   ├── rd_roadmap.md                                   R&D roadmap
-│   ├── product_development_plan.md                     Product development plan
-│   └── concerns00.md                                   Expert review concerns tracker
-├── provenance/                                       # JSONL ledgers (git-tracked)
+├── reports/                                          # Strategic documents + audit outputs
+│   ├── rd_roadmap01.md                                 R&D roadmap (v01)
+│   ├── product_development_plan01.md                   Product development plan (v01)
+│   ├── concerns00.md                                   Expert review concerns tracker
+│   └── dot9_investigation/                             .9 data stream research findings
+├── provenance/                                       # JSONL ledgers (gitignored)
 └── data/                                             # Raw + compiled data (gitignored)
 ```
 
@@ -207,24 +240,36 @@ uv run pytest -v
 
 ## Quick Start
 
+```bash
+# Full pipeline: harvest → consolidate → build viewpoint → compile grid
+uv run python scripts/harvest_ucdp.py          # fetch all UCDP sources
+uv run python scripts/consolidate_ucdp.py      # three-source consolidation
+uv run python scripts/build_viewpoint.py       # apply production_parity profile
+uv run python scripts/compile_grid.py          # place onto PRIO-GRID → grid.npy
+uv run python scripts/assemble_grid.py         # combine compiled grid + static covariates
+
+# Visualize the assembled grid
+uv run python scripts/visualize_audit.py       # 14 audit plots → reports/audit/
+
+# Export for downstream consumers
+uv run python scripts/export_dataframe.py      # grid → DataFrame CSV
+```
+
 ```python
-# Grid backbone
-from datafactory_priogrid import GridConfig, SpatioTemporalGrid
-grid = SpatioTemporalGrid()   # 259,200 cells × 432 months
+# Programmatic usage
+from datafactory_priogrid import SpatioTemporalGrid
+grid = SpatioTemporalGrid()   # 259,200 cells × 456 months (1989-2026)
 
-# Harvest UCDP data (requires API token)
-from datafactory_harvester.sources.ucdp_annual import fetch_ucdp_annual
-fetch_ucdp_annual()  # fetches, validates, stores, logs provenance
+from datafactory_adapters import FeatureFrame, grid_to_dataframe
+import json, numpy as np
 
-# Compile events onto the grid
-from datafactory_compilation import CompilationConfig, compile_grid
-from pathlib import Path
+data = np.load("data/assembled/grid.npy", mmap_mode="r")
+pgids = np.load("data/assembled/pgids.npy")
+time_steps = np.load("data/assembled/time_steps.npy")
+feature_names = json.loads(open("data/assembled/feature_names.json").read())
 
-config = CompilationConfig(
-    source_path=Path("data/ucdp_annual/snapshot.parquet"),
-    features=(("event_count", "count"), ("fatalities", "sum_best")),
-)
-compile_grid(config)  # produces grid.npy + coordinate sidecars + provenance
+df = grid_to_dataframe(data, pgids, time_steps, feature_names, month_id_epoch=1980)
+ff = FeatureFrame.from_grid(data, pgids, time_steps, feature_names)
 ```
 
 ---
@@ -233,8 +278,10 @@ compile_grid(config)  # produces grid.npy + coordinate sidecars + provenance
 
 The `reports/` directory contains living documents that define the project's direction:
 
-- **[R&D Roadmap](reports/rd_roadmap.md)** — Research questions, hypotheses, data agenda, experimentation framework, and milestones. Focuses on what must be *discovered*.
-- **[Product Development Plan](reports/product_development_plan.md)** — Users, requirements, system architecture, data infrastructure, and release plan. Focuses on what must be *built*.
+- **[R&D Roadmap](reports/rd_roadmap01.md)** — Research questions, hypotheses, data agenda, experimentation framework, and milestones. Focuses on what must be *discovered*.
+- **[Product Development Plan](reports/product_development_plan01.md)** — Users, requirements, system architecture, data infrastructure, and release plan. Focuses on what must be *built*.
+- **[Concerns Tracker](reports/concerns00.md)** — Expert review concerns: 50 resolved, 13 deferred with trigger conditions.
+- **[.9 Investigation](reports/dot9_investigation/)** — Empirical findings on UCDP .9 data stream characteristics.
 
 ---
 

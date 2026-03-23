@@ -48,7 +48,7 @@ Governs version discovery for the `.9` stream (format `YY.9.MM`), API transport,
 - `timeout`: int, HTTP request timeout in seconds (default: `30`)
 - `max_retries`: int, >= 1, retry attempts on transient failure (default: `3`)
 - `discovery_rate_limit`: float, > 0, seconds between discovery probes (default: `0.5`)
-- `max_versions`: int, >= 1, maximum versions to discover (default: `200`)
+- `max_versions`: int, >= 1, maximum versions to discover (default: `120`)
 - `data_dir`: Path, output directory for Parquet snapshots
 - `ledger_path`: Path, provenance ledger location
 
@@ -90,7 +90,7 @@ All failures are immediate and loud. No silent fallbacks.
 ## 8. Examples of Correct Usage
 
 ```python
-cfg = UcdpDot9Config()  # From 2018-01, discover up to 200 versions
+cfg = UcdpDot9Config()  # From 2018-01, discover up to 120 versions
 cfg = UcdpDot9Config(start_year=2025, start_month=1)  # Recent only
 ```
 

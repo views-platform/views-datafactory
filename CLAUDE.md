@@ -22,6 +22,7 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 - `datafactory_consolidation` — lossless consolidation of raw snapshots (Layer 2, imports provenance only)
 - `datafactory_viewpoint` — opinionated, versioned views over consolidated data (Layer 3, imports provenance only)
 - `datafactory_compilation` — viewpoint output → grid npy (Layer 4, imports provenance + priogrid)
+- `datafactory_adapters` — consumer-facing conversions: grid → DataFrame, grid → FeatureFrame (no datafactory_* imports; sits alongside the graph, not inside it)
 
 ## Tooling
 
