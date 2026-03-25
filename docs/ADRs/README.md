@@ -81,6 +81,12 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-018** -- Operational Resilience Policy
   Pipeline stays fail-loud. Operators may serve bounded-stale data under documented conditions.
 
+- **ADR-019** -- Visualization Style Guide
+  Shared style module (`scripts/viz_style.py`) for all visualization scripts. Tufte-derived aesthetic.
+
+- **ADR-020** -- Technical Risk Register
+  Formalized risk register as governance artifact. Active + resolved archive split.
+
 These must comply with the constitutional ADRs above.
 
 ---

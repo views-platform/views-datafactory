@@ -16,7 +16,7 @@ class TestTechDebtResolved:
 
     def test_smoke_test_retired(self) -> None:
         """Resolved: smoke_test.py retired. Its functionality
-        is covered by layer scripts and 320+ tests.
+        is covered by layer scripts and 376 tests.
         """
         from pathlib import Path
 

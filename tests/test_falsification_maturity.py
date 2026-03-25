@@ -19,7 +19,7 @@ class TestMaturitySoftFalsifications:
     def test_dot9_harvester_exists(self) -> None:
         """Resolved: .9 harvester implemented and registered.
         Smoke test retired; .9 coverage verified by layer
-        scripts and 320+ tests.
+        scripts and 376 tests.
         """
         from datafactory_harvester.sources import list_sources
 

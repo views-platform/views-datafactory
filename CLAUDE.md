@@ -43,8 +43,8 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 
 ## Strategic Documents
 
-- `reports/rd_roadmap.md` — Research questions, hypotheses, data agenda, milestones
-- `reports/product_development_plan.md` — Users, requirements, architecture, release plan
+- `reports/rd_roadmap02.md` — Research questions, hypotheses, data agenda, milestones
+- `reports/product_development_plan02.md` — Users, requirements, architecture, release plan
 
 ## Relationship to views-metric-lab
 

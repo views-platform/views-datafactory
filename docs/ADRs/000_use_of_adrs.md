@@ -178,4 +178,4 @@ These costs are accepted intentionally.
 
 - `docs/ADRs/adr_template.md`
 - `CLAUDE.md` (project instructions)
-- `reports/product_development_plan.md`
+- `reports/product_development_plan02.md`

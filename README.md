@@ -193,8 +193,9 @@ views-datafactory/
 │   │   └── aggregation.py                              count, sum_best, max_best strategies
 │   └── datafactory_adapters/                         # Consumer-facing conversions
 │       ├── feature_frame.py                            FeatureFrame dataclass
-│       └── grid_to_dataframe.py                        Grid → pandas DataFrame
-├── tests/                                            # 367 tests (11 skipped falsification audits)
+│       ├── grid_to_dataframe.py                        Grid → pandas DataFrame
+│       └── grid_from_feature_frame.py                  FeatureFrame → Grid (inverse)
+├── tests/                                            # 376 tests
 ├── scripts/                                          # Operational scripts
 │   ├── harvest_ucdp.py                                 Full harvest pipeline
 │   ├── consolidate_ucdp.py                             Three-source consolidation
@@ -207,14 +208,14 @@ views-datafactory/
 │   ├── check_health.py                                 System health check
 │   └── ...                                             harvest_priogrid, verify_parity, etc.
 ├── docs/                                             # ADRs, CICs, protocols, standards
-│   ├── ADRs/                                           10 constitutional + 9 project-specific
-│   ├── CICs/                                           15 active class intent contracts
+│   ├── ADRs/                                           10 constitutional + 11 project-specific
+│   ├── CICs/                                           16 active class intent contracts
 │   ├── contributor_protocols/                          carbon, silicon, hardened
 │   └── standards/                                      logging & observability
 ├── reports/                                          # Strategic documents + audit outputs
 │   ├── rd_roadmap01.md                                 R&D roadmap (v01)
 │   ├── product_development_plan01.md                   Product development plan (v01)
-│   ├── concerns00.md                                   Expert review concerns tracker
+│   ├── technical_risk_register.md                      Technical risk register (ADR-020)
 │   └── dot9_investigation/                             .9 data stream research findings
 ├── provenance/                                       # JSONL ledgers (gitignored)
 └── data/                                             # Raw + compiled data (gitignored)
