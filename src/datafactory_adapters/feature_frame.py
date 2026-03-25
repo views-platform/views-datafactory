@@ -176,6 +176,25 @@ class FeatureFrame:
             **kwargs: Passed to grid_to_feature_frame
                 (land_pgids, month_id_epoch, metadata).
         """
+        if grid.ndim != 4:
+            msg = (
+                "grid must be 4D [T, H, W, C], "
+                f"got {grid.ndim}D"
+            )
+            raise ValueError(msg)
+        if pgids.ndim != 2:
+            msg = (
+                "pgids must be 2D [H, W], "
+                f"got {pgids.ndim}D"
+            )
+            raise ValueError(msg)
+        if grid.shape[1:3] != pgids.shape:
+            msg = (
+                f"grid spatial dims {grid.shape[1:3]} "
+                f"!= pgids shape {pgids.shape}"
+            )
+            raise ValueError(msg)
+
         from datafactory_adapters.grid_to_dataframe import (
             grid_to_feature_frame,
         )

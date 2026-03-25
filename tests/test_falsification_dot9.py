@@ -15,7 +15,7 @@ import pytest
 class TestDot9InvestigationFalsifications:
     """Hard and soft falsifications from the .9 investigation audit."""
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="HARD FALSIFICATION (resolved in ADR-015): .9 contains "
         "13,005 exclusive events not in any annual or candidate "
         "release. ADR-015 updated to document .9 as distinct source."
@@ -33,7 +33,7 @@ class TestDot9InvestigationFalsifications:
         """
         pytest.fail("ADR-015 stitching claim is empirically false")
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="SOFT FALSIFICATION: findings.md states .9 versions "
         "available '25.9.1 through 26.9.2' but .9 exists from "
         "18.9.1 onward — 84 additional versions undocumented."
@@ -56,7 +56,7 @@ class TestDot9InvestigationFalsifications:
 class TestDot9BonusObservations:
     """Bonus observations discovered during falsification."""
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="OBSERVATION: Candidate data is mutable. 26.0.1 "
         "changed from 727 to 1,727 events between fetches. "
         "Snapshot comparisons are time-sensitive."

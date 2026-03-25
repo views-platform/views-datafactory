@@ -25,7 +25,7 @@ class TestMaturitySoftFalsifications:
 
         assert "ucdp_dot9" in list_sources()
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="SOFT FALSIFICATION: The claim says 'fully "
         "consolidated from start to Feb 2026' but we have "
         "only 16 of ~197 available source files. The full "

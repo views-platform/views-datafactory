@@ -9,6 +9,29 @@ import pyarrow.parquet as pq
 import pytest
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register --run-falsification CLI option."""
+    parser.addoption(
+        "--run-falsification",
+        action="store_true",
+        default=False,
+        help="Show falsification stubs (skipped by default)",
+    )
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item],
+) -> None:
+    """Deselect @pytest.mark.falsification unless flag is passed."""
+    if config.getoption("--run-falsification"):
+        return
+    kept: list[pytest.Item] = []
+    for item in items:
+        if "falsification" not in item.keywords:
+            kept.append(item)
+    items[:] = kept
+
+
 def make_ucdp_event(
     event_id: int = 1,
     *,

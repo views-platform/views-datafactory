@@ -14,7 +14,7 @@ import pytest
 
 class TestCandidateCoverageFalsifications:
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="HARD FALSIFICATION: Candidate versions are NOT "
         "strictly one month. 25.0.1 has 1 event from Dec 2024. "
         "25.0.12 has events from Jan, Oct, Nov 2025. 24.0.11 "
@@ -36,7 +36,7 @@ class TestCandidateCoverageFalsifications:
             "Candidate versions span multiple calendar months"
         )
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="HARD FALSIFICATION: Candidate versions 21.0.4 "
         "and 21.0.5 share 606 event IDs (99.7% of 21.0.4). "
         "This is the only overlap across 1,953 version pairs "

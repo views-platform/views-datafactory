@@ -17,7 +17,7 @@ import pytest
 class TestCandidateMutabilityFalsifications:
     """Hard falsification: candidate versions are NOT static."""
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="HARD FALSIFICATION: All 14 candidate versions "
         "(25.0.1-26.0.2) gained exactly +1,000 events each in "
         "a bulk update. 25.0.1 (Jan 2025, 14 months old) "
@@ -57,7 +57,7 @@ class TestCandidateMutabilityFalsifications:
             "+1,000 events across all 2025-2026 versions"
         )
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="OBSERVATION: 2024 candidates are stable while "
         "2025-2026 are mutable. There appears to be an "
         "undocumented age boundary for version freezing."

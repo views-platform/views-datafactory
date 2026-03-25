@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-25)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 80 concerns total: 53 resolved, 27 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 80 concerns total: 56 resolved, 24 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -32,10 +32,8 @@
 | C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment |
 | C-71 | 4 | No retry jitter | Concurrent harvesters deployed |
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s |
-| C-73 | 4 | Grid shape transposition — silent wrong results | Next consumer integration |
 | C-74 | 4 | CompilationConfig leaks strategy vocabulary | User confusion observed |
 | C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns |
-| C-76 | 4 | Falsification tests are skipped, not running | Consider marker or move to docs/ |
 | C-77 | 4 | Ledger archive retention unbounded | Automated deployment |
 | C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s |
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s |
@@ -43,7 +41,6 @@
 | C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed |
 | C-60 | 4 | Health check output not tested with mock ledgers | check_health.py modified |
 | C-61 | 4 | No schema evolution test | 3rd data source |
-| C-66 | — | ~~concerns00.md scaling~~ RESOLVED | Replaced by this register + archive split (ADR-020) |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -135,8 +132,8 @@ Fixed exponential backoff (1s, 2s, 4s) creates thundering herd risk if multiple 
 Rate-limit responses get the same retry treatment as server errors. No `Retry-After` header parsing. **Trigger: if UCDP starts returning 429s (not observed to date).**
 **Source:** Nygard (expert review #4)
 
-### C-73: Grid shape transposition produces silent wrong results — [DEFER]
-`FeatureFrame.from_grid()` accepts `[T, H, W, C]` but doesn't validate that `grid.shape[1:3] == pgids.shape`. A transposed grid (`[T, W, H, C]`) produces silently wrong results. **Trigger: add shape assertion before next consumer integration.**
+### C-73: ~~Grid shape transposition produces silent wrong results~~ RESOLVED
+Added shape validation (ndim + spatial dim match) to `_flatten_grid()`, `feature_frame_to_grid()`, and `FeatureFrame.from_grid()`. Transposed grids, 3D grids, and 1D pgids now raise `ValueError`. Retired `visualize_grid.py` (superseded scaffolding with live indexing bugs from an older grid convention).
 **Source:** Ousterhout (expert review #4), failure mode analysis
 
 ### C-74: CompilationConfig leaks strategy vocabulary — [DEFER]
@@ -147,8 +144,8 @@ Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filt
 8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; monitor if callers misuse. **Trigger: deepen if recurring misuse patterns emerge.**
 **Source:** Ousterhout (expert review #4)
 
-### C-76: Falsification tests are skipped, not running — [DEFER]
-11 test files with `pytest.skip()` document empirical UCDP findings but never execute assertions. Valuable as documentation but potentially confusing. **Trigger: consider `--run-falsification` marker or moving to `docs/`.**
+### C-76: ~~Falsification tests are skipped, not running~~ RESOLVED
+Registered `falsification` pytest marker. 11 stubs now use `@pytest.mark.falsification()` instead of `@pytest.mark.skip()`. Auto-skipped by default; visible with `--run-falsification`. Normal `pytest` output shows 0 skipped.
 **Source:** Beck (expert review #4)
 
 ### C-77: Ledger archive retention unbounded — [DEFER]

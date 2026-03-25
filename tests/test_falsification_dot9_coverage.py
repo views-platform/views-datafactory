@@ -15,7 +15,7 @@ import pytest
 
 class TestDot9CoverageFalsifications:
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="HARD FALSIFICATION: 8 of 78 .9 versions are NOT "
         "13 months. 5 are 14 months, 2 are 15 months, and "
         "21.9.1 spans 25 months (Jan 2019 – Jan 2021). "
@@ -31,7 +31,7 @@ class TestDot9CoverageFalsifications:
         """
         pytest.fail("8 of 78 .9 versions are not 13 months")
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="HARD FALSIFICATION: Consecutive .9 overlap ranges "
         "from 41.5% (21.9.1→21.9.2) to 100% (18.9.1→18.9.2). "
         "The ~88% figure only holds for 2022-2024 data."
@@ -49,7 +49,7 @@ class TestDot9CoverageFalsifications:
         """
         pytest.fail("Overlap ranges from 41.5% to 100%")
 
-    @pytest.mark.skip(
+    @pytest.mark.falsification(
         reason="HARD FALSIFICATION: Exclusive event count ranges "
         "from 364 (20.9.6) to 2,593 (24.9.6) — a 7x range. "
         "The ~2,600 figure only applies to the most recent year."

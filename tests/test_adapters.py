@@ -530,3 +530,83 @@ class TestGridRoundtripParityGreen:
         reconstructed = feature_frame_to_grid(ff, pgids)
 
         np.testing.assert_array_equal(grid, reconstructed)
+
+
+# ---- Grid shape validation: Beige (C-73) ----
+
+
+class TestGridShapeValidationBeige:
+
+    def test_3d_grid_rejected(self) -> None:
+        """3D grid [T, H*W, C] instead of 4D [T, H, W, C]."""
+        grid_3d = np.zeros((2, 12, 2), dtype=np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+        with pytest.raises(ValueError, match="4D"):
+            grid_to_dataframe(
+                grid_3d, pgids, time_steps, ["a", "b"],
+            )
+
+    def test_transposed_grid_rejected(self) -> None:
+        """Grid [T, W, H, C] with pgids [H, W] caught."""
+        grid = np.zeros(
+            (2, 4, 3, 2), dtype=np.float32,
+        )  # W=4, H=3
+        pgids = np.arange(1, 13).reshape(3, 4)  # H=3, W=4
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+        with pytest.raises(ValueError, match="spatial dims"):
+            grid_to_dataframe(
+                grid, pgids, time_steps, ["a", "b"],
+            )
+
+    def test_1d_pgids_rejected(self) -> None:
+        """Flattened pgids should be rejected."""
+        grid = np.zeros(
+            (2, 3, 4, 2), dtype=np.float32,
+        )
+        pgids_flat = np.arange(1, 13)  # 1D
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+        with pytest.raises(ValueError, match="2D"):
+            grid_to_dataframe(
+                grid, pgids_flat, time_steps, ["a", "b"],
+            )
+
+    def test_from_grid_validates(self) -> None:
+        """FeatureFrame.from_grid rejects bad shapes."""
+        grid_3d = np.zeros((2, 12, 2), dtype=np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+        with pytest.raises(ValueError, match="4D"):
+            FeatureFrame.from_grid(
+                grid_3d, pgids, time_steps, ["a", "b"],
+            )
+
+    def test_feature_frame_to_grid_1d_pgids(
+        self,
+    ) -> None:
+        """feature_frame_to_grid rejects 1D pgids."""
+        grid = np.zeros(
+            (2, 3, 4, 2), dtype=np.float32,
+        )
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps, ["a", "b"],
+        )
+        with pytest.raises(ValueError, match="2D"):
+            feature_frame_to_grid(ff, pgids.ravel())
