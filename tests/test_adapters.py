@@ -9,6 +9,7 @@ import pytest
 
 from datafactory_adapters import (
     FeatureFrame,
+    feature_frame_to_grid,
     grid_to_dataframe,
     grid_to_feature_frame,
 )
@@ -444,3 +445,88 @@ class TestIdentifierAlignmentGreen:
         )
         assert "time" in ff.identifiers
         assert "unit" in ff.identifiers
+
+
+# ---- Grid roundtrip parity: Green (C-70) ----
+
+
+class TestGridRoundtripParityGreen:
+
+    def test_grid_to_ff_to_grid_exact(self) -> None:
+        """Grid → FeatureFrame → grid is lossless."""
+        grid = np.random.rand(
+            2, 3, 4, 2
+        ).astype(np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps, ["a", "b"],
+        )
+        reconstructed = feature_frame_to_grid(ff, pgids)
+
+        np.testing.assert_array_equal(grid, reconstructed)
+
+    def test_roundtrip_with_save_load(
+        self, tmp_path: Path
+    ) -> None:
+        """Grid → FF → save → load → grid is lossless."""
+        grid = np.random.rand(
+            2, 3, 4, 2
+        ).astype(np.float32)
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps, ["a", "b"],
+        )
+        ff.save(tmp_path / "rt")
+        loaded = FeatureFrame.load(tmp_path / "rt")
+        reconstructed = feature_frame_to_grid(
+            loaded, pgids
+        )
+
+        np.testing.assert_array_equal(grid, reconstructed)
+
+    def test_roundtrip_sparse_grid(self) -> None:
+        """Sparse grid (99% zeros) survives roundtrip."""
+        grid = np.zeros(
+            (3, 5, 6, 2), dtype=np.float32
+        )
+        grid[0, 1, 2, 0] = 5.0
+        grid[2, 3, 4, 1] = 7.0
+        pgids = np.arange(1, 31).reshape(5, 6)
+        time_steps = np.array(
+            ["2024-01", "2024-02", "2024-03"],
+            dtype="datetime64[M]",
+        )
+
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps, ["x", "y"],
+        )
+        reconstructed = feature_frame_to_grid(ff, pgids)
+
+        np.testing.assert_array_equal(grid, reconstructed)
+
+    def test_roundtrip_single_timestep(self) -> None:
+        """Single time step roundtrip."""
+        grid = np.ones(
+            (1, 2, 3, 1), dtype=np.float32
+        )
+        pgids = np.arange(1, 7).reshape(2, 3)
+        time_steps = np.array(
+            ["2024-06"], dtype="datetime64[M]",
+        )
+
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps, ["f"],
+        )
+        reconstructed = feature_frame_to_grid(ff, pgids)
+
+        np.testing.assert_array_equal(grid, reconstructed)

@@ -101,8 +101,8 @@ from datafactory_compilation import FeatureSpec
 cfg = CompilationConfig(
     source_path=path,
     features=(
-        FeatureSpec("ged_ns_count", "count", {"type_of_violence": 1}),
-        FeatureSpec("ged_ns_best", "sum_best", {"type_of_violence": 1}),
+        FeatureSpec("ged_sb_count", "count", {"type_of_violence": 1}),
+        FeatureSpec("ged_sb_best", "sum_best", {"type_of_violence": 1}),
     ),
 )
 ```

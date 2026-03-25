@@ -35,6 +35,7 @@ Thumbs.db
 # Operational artifacts (regenerable)
 provenance/
 reports/audit/
+reports/presentation/
 
 # Session
 resume_session.md

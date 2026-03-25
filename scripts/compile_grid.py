@@ -31,7 +31,7 @@ def main() -> int:
         "--source",
         type=Path,
         default=Path(
-            "data/viewpoints/production_parity.parquet"
+            "data/viewpoint/production_parity.parquet"
         ),
         help="Source Parquet file",
     )
@@ -96,8 +96,8 @@ def main() -> int:
     )
     from datafactory_priogrid import GridConfig, TemporalConfig
 
-    # Disaggregated by type of violence (production parity)
-    # ns=1 (state-based), os=2 (one-sided), sb=3 (non-state)
+    # Disaggregated by UCDP type of violence:
+    #   1 = state-based (sb), 2 = non-state (ns), 3 = one-sided (os)
     config = CompilationConfig(
         source_path=args.source,
         grid_config=GridConfig(),
@@ -107,27 +107,27 @@ def main() -> int:
         ),
         features=(
             FeatureSpec(
-                "ged_ns_count", "count",
-                {"type_of_violence": 1},
-            ),
-            FeatureSpec(
-                "ged_ns_best", "sum_best",
-                {"type_of_violence": 1},
-            ),
-            FeatureSpec(
-                "ged_os_count", "count",
-                {"type_of_violence": 2},
-            ),
-            FeatureSpec(
-                "ged_os_best", "sum_best",
-                {"type_of_violence": 2},
-            ),
-            FeatureSpec(
                 "ged_sb_count", "count",
-                {"type_of_violence": 3},
+                {"type_of_violence": 1},
             ),
             FeatureSpec(
                 "ged_sb_best", "sum_best",
+                {"type_of_violence": 1},
+            ),
+            FeatureSpec(
+                "ged_ns_count", "count",
+                {"type_of_violence": 2},
+            ),
+            FeatureSpec(
+                "ged_ns_best", "sum_best",
+                {"type_of_violence": 2},
+            ),
+            FeatureSpec(
+                "ged_os_count", "count",
+                {"type_of_violence": 3},
+            ),
+            FeatureSpec(
+                "ged_os_best", "sum_best",
                 {"type_of_violence": 3},
             ),
         ),

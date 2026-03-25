@@ -20,8 +20,8 @@ class FeatureSpec:
 
     The filter dict maps event field names to required values.
     Only events matching ALL filter conditions are aggregated.
-    Example: ``FeatureSpec("ged_ns_count", "count", {"type_of_violence": 1})``
-    counts only state-based conflict events.
+    Example: ``FeatureSpec("ged_sb_count", "count", {"type_of_violence": 1})``
+    counts only state-based conflict events (UCDP type 1).
     """
 
     name: str

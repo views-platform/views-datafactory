@@ -38,7 +38,7 @@ Combines strategy selection (survivorship, distribution), event filtering (priog
 ## 4. Inputs and Assumptions
 
 - `consolidated_path`: Path, input consolidated event store (no default)
-- `output_path`: Path, viewpoint output location (default: `data/viewpoints/ucdp_v1.parquet`)
+- `output_path`: Path, viewpoint output location (default: `data/viewpoint/ucdp_v1.parquet`)
 - `ledger_path`: Path, provenance ledger (default: `provenance/viewpoint/ucdp_v1_ledger.jsonl`)
 - `survivorship_strategy`: str, must be registered (default: `"annual_wins"`)
 - `distribution_strategy`: str, must be registered (default: `"even_split"`)

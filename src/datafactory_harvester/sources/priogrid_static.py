@@ -54,7 +54,7 @@ class PriogridStaticConfig:
     """
 
     api_url: str = PRIOGRID_API_URL
-    data_dir: Path = Path("data/priogrid_static")
+    data_dir: Path = Path("data/raw/priogrid_static")
     ledger_path: Path = Path(
         "provenance/priogrid_static/ingestion_ledger.jsonl"
     )

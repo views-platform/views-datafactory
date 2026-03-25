@@ -53,7 +53,7 @@ def main() -> int:
     args = parser.parse_args()
 
     output = args.output or (
-        Path("data/viewpoints") / f"{args.profile}.parquet"
+        Path("data/viewpoint") / f"{args.profile}.parquet"
     )
 
     print("=" * 60)

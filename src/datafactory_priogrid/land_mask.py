@@ -18,7 +18,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 _PRIOGRID_API_URL = "https://grid.prio.org/api/data/landarea"
-_DEFAULT_CACHE_PATH = Path("data/priogrid/land_pgids.json")
+_DEFAULT_CACHE_PATH = Path("data/raw/priogrid/land_pgids.json")
 
 
 def fetch_land_pgids(

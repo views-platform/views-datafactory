@@ -177,8 +177,8 @@ class TestUcdpConsolidationConfigGreen:
 
     def test_defaults(self) -> None:
         cfg = UcdpConsolidationConfig()
-        assert cfg.annual_dir == Path("data/ucdp_annual")
-        assert cfg.candidate_dir == Path("data/ucdp_candidate")
+        assert cfg.annual_dir == Path("data/raw/ucdp_annual")
+        assert cfg.candidate_dir == Path("data/raw/ucdp_candidate")
 
     def test_frozen(self) -> None:
         cfg = UcdpConsolidationConfig()

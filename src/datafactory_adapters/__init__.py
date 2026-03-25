@@ -10,6 +10,9 @@ pandas only — no other datafactory_* imports).
 """
 
 from datafactory_adapters.feature_frame import FeatureFrame
+from datafactory_adapters.grid_from_feature_frame import (
+    feature_frame_to_grid,
+)
 from datafactory_adapters.grid_to_dataframe import (
     grid_to_dataframe,
     grid_to_feature_frame,
@@ -17,6 +20,7 @@ from datafactory_adapters.grid_to_dataframe import (
 
 __all__ = [
     "FeatureFrame",
+    "feature_frame_to_grid",
     "grid_to_dataframe",
     "grid_to_feature_frame",
 ]

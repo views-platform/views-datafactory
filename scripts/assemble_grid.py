@@ -3,7 +3,7 @@
 
 Usage:
     uv run python scripts/assemble_grid.py
-    uv run python scripts/assemble_grid.py --ucdp-grid data/full_harvest/compiled
+    uv run python scripts/assemble_grid.py --ucdp-grid data/compiled
     uv run python scripts/assemble_grid.py --admin-dir data/gaul_admin
 
 Combines the compiled UCDP conflict grid with PRIO-GRID static
@@ -36,19 +36,19 @@ def main() -> int:
     parser.add_argument(
         "--ucdp-grid",
         type=Path,
-        default=Path("data/full_harvest/compiled"),
+        default=Path("data/compiled"),
         help="Compiled UCDP grid directory",
     )
     parser.add_argument(
         "--static-dir",
         type=Path,
-        default=Path("data/priogrid_static"),
+        default=Path("data/raw/priogrid_static"),
         help="PRIO-GRID static Parquet directory",
     )
     parser.add_argument(
         "--admin-dir",
         type=Path,
-        default=Path("data/gaul_admin"),
+        default=Path("data/raw/gaul_admin"),
         help="GAUL admin boundary Parquet directory",
     )
     parser.add_argument(
@@ -96,8 +96,8 @@ def main() -> int:
 
     t0 = time.monotonic()
 
-    # Load UCDP grid
-    ucdp_grid = np.load(grid_path)
+    # Load UCDP grid (mmap to reduce peak memory)
+    ucdp_grid = np.load(grid_path, mmap_mode="r")
     pgids = np.load(pgids_path)
     time_steps = np.load(time_path)
     ucdp_features = json.loads(features_path.read_text())

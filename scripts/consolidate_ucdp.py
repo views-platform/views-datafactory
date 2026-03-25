@@ -3,7 +3,7 @@
 
 Usage:
     uv run python scripts/consolidate_ucdp.py
-    uv run python scripts/consolidate_ucdp.py --data-dir data/full_harvest
+    uv run python scripts/consolidate_ucdp.py --data-dir data/raw
 
 Reads whatever Parquet files exist in the annual, candidate, and .9
 directories, tags each with source metadata, deduplicates on content
@@ -30,8 +30,14 @@ def main() -> int:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data"),
-        help="Base data directory (default: data/)",
+        default=Path("data/raw"),
+        help="Raw data directory (default: data/raw/)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("data/consolidated"),
+        help="Output directory (default: data/consolidated/)",
     )
     parser.add_argument(
         "--provenance-dir",
@@ -44,6 +50,7 @@ def main() -> int:
     print("=" * 60)
     print("UCDP CONSOLIDATION (Layer 2)")
     print(f"Data dir: {args.data_dir}")
+    print(f"Output:   {args.output_dir}")
     print("=" * 60)
     print()
 
@@ -72,9 +79,7 @@ def main() -> int:
             / "ingestion_ledger.jsonl"
         ),
         output_path=(
-            args.data_dir
-            / "consolidated"
-            / "ucdp_store.parquet"
+            args.output_dir / "ucdp_store.parquet"
         ),
         ledger_path=(
             args.provenance_dir

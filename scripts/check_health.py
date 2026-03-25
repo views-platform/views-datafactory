@@ -3,7 +3,7 @@
 
 Usage:
     uv run python scripts/check_health.py
-    uv run python scripts/check_health.py --data-dir data/full_harvest
+    uv run python scripts/check_health.py --data-dir data
 
 Reads all JSONL provenance ledgers and reports:
 - Last successful operation per source

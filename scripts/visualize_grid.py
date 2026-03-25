@@ -2,7 +2,7 @@
 """Diagnostic visualization of a compiled PRIO-GRID.
 
 Usage:
-    uv run python scripts/visualize_grid.py data/smoke_test/compiled_real/
+    uv run python scripts/visualize_grid.py data/compiled/
 
 Reads grid.npy + sidecars from the specified directory and produces
 diagnostic PNGs in reports/. Each plot answers a specific question
@@ -15,8 +15,13 @@ import json
 import sys
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
+import matplotlib
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+from viz_style import CMAP_SEQ, DPI, EXTENT, FONT_ANNOT, FONT_TITLE  # noqa: E402
 
 
 def load_grid(grid_dir: Path) -> dict:
@@ -68,8 +73,8 @@ def plot_spatial_heatmap(data: dict, output_dir: Path) -> Path:
         log_img = np.log10(1 + img)
     im = ax.imshow(
         log_img,
-        extent=[-180, 180, -90, 90],
-        cmap="YlOrRd",
+        extent=EXTENT,
+        cmap=CMAP_SEQ,
         aspect="auto",
         interpolation="nearest",
     )
@@ -79,7 +84,7 @@ def plot_spatial_heatmap(data: dict, output_dir: Path) -> Path:
     ax.set_title(
         "UCDP/GED Events on PRIO-GRID — Spatial Distribution\n"
         "Q: Do hotspots match known conflict zones?",
-        fontsize=13,
+        fontsize=FONT_TITLE,
     )
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
@@ -94,13 +99,13 @@ def plot_spatial_heatmap(data: dict, output_dir: Path) -> Path:
         f"({100 * n_active / n_total:.2f}%)\n"
         f"Total events: {total_counts.sum():,.0f}",
         transform=ax.transAxes,
-        fontsize=9,
+        fontsize=FONT_ANNOT,
         va="bottom",
         bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
     )
 
     path = output_dir / "grid_spatial_heatmap.png"
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    fig.savefig(path, dpi=DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {path}")
     return path
@@ -145,14 +150,14 @@ def plot_temporal_profile(data: dict, output_dir: Path) -> Path:
     ax1.set_title(
         "Monthly Conflict Profile\n"
         "Q: Does conflict vary across months, or is it flat?",
-        fontsize=13,
+        fontsize=FONT_TITLE,
     )
     ax1.set_xlabel("Month")
     plt.xticks(rotation=45)
 
     fig.tight_layout()
     path = output_dir / "grid_temporal_profile.png"
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    fig.savefig(path, dpi=DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {path}")
     return path
@@ -210,7 +215,7 @@ def plot_zero_inflation(data: dict, output_dir: Path) -> Path:
             f"p95: {np.percentile(positive, 95):.0f}\n"
             f"p99: {np.percentile(positive, 99):.0f}",
             transform=ax2.transAxes,
-            fontsize=9,
+            fontsize=FONT_ANNOT,
             va="top",
             ha="right",
             bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.8},
@@ -218,12 +223,12 @@ def plot_zero_inflation(data: dict, output_dir: Path) -> Path:
 
     fig.suptitle(
         "Conflict Data Sparsity on PRIO-GRID",
-        fontsize=14,
+        fontsize=FONT_TITLE,
         y=1.02,
     )
     fig.tight_layout()
     path = output_dir / "grid_zero_inflation.png"
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    fig.savefig(path, dpi=DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {path}")
     return path
@@ -256,7 +261,7 @@ def plot_fatalities_vs_events(data: dict, output_dir: Path) -> Path:
     ax.set_title(
         "Fatalities vs. Event Count per Cell\n"
         "Q: Are these correlated, or does intensity vary independently?",
-        fontsize=13,
+        fontsize=FONT_TITLE,
     )
 
     # Log-log scale for readability
@@ -272,13 +277,13 @@ def plot_fatalities_vs_events(data: dict, output_dir: Path) -> Path:
             f"Log-log correlation: {corr:.3f}\n"
             f"Active cells: {len(x):,}",
             transform=ax.transAxes,
-            fontsize=10,
+            fontsize=FONT_ANNOT,
             va="top",
             bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.8},
         )
 
     path = output_dir / "grid_fatalities_vs_events.png"
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    fig.savefig(path, dpi=DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {path}")
     return path
@@ -287,7 +292,7 @@ def plot_fatalities_vs_events(data: dict, output_dir: Path) -> Path:
 def main() -> int:
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <compiled_grid_dir>")
-        print(f"Example: {sys.argv[0]} data/smoke_test/compiled_real/")
+        print(f"Example: {sys.argv[0]} data/compiled/")
         return 1
 
     grid_dir = Path(sys.argv[1])

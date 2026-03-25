@@ -4,7 +4,7 @@
 Usage:
     uv run python scripts/generate_schema_ref.py
 
-Reads Parquet files from data/smoke_test/ and generates
+Reads Parquet files from data/raw/ and generates
 reports/schema_reference.md. Always accurate — generated from
 real data, not manually maintained.
 """
@@ -82,7 +82,7 @@ def _drift_check(
 
 def main() -> int:
     """Generate schema reference from smoke test data."""
-    data_dir = Path("data/smoke_test")
+    data_dir = Path("data/raw")
     output_path = Path("reports/schema_reference.md")
 
     # Discover available data files
@@ -110,14 +110,14 @@ def main() -> int:
     if consolidated.exists():
         datasets["Consolidated store"] = consolidated
 
-    viewpoint = data_dir / "viewpoints" / "ucdp_v1.parquet"
+    viewpoint = data_dir / "viewpoint" / "ucdp_v1.parquet"
     if viewpoint.exists():
         datasets["Viewpoint output"] = viewpoint
 
     if not datasets:
-        print("No data files found in data/smoke_test/")
-        print("Run the smoke test first:")
-        print("  uv run python scripts/smoke_test.py")
+        print("No data files found in data/raw/")
+        print("Harvest data first:")
+        print("  uv run python scripts/harvest_ucdp.py")
         return 1
 
     # Load all tables

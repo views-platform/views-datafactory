@@ -80,10 +80,10 @@ class GaulAdminConfig:
     gaul_l1_url: str = GAUL_L1_URL
     gaul_l2_url: str = GAUL_L2_URL
     centroid_shapefile: Path = Path(
-        "data/priogrid/shapefile/priogrid_centroid.shp"
+        "data/raw/priogrid/shapefile/priogrid_centroid.shp"
     )
-    data_dir: Path = Path("data/gaul_admin")
-    cache_dir: Path = Path("data/gaul_admin/shapefiles")
+    data_dir: Path = Path("data/raw/gaul_admin")
+    cache_dir: Path = Path("data/raw/gaul_admin/shapefiles")
     ledger_path: Path = Path(
         "provenance/gaul_admin/ingestion_ledger.jsonl"
     )

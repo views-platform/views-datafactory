@@ -97,7 +97,7 @@ class UcdpAnnualConfig:
     max_retries: int = 3
 
     # Storage
-    data_dir: Path = Path("data/ucdp_annual")
+    data_dir: Path = Path("data/raw/ucdp_annual")
     ledger_path: Path = Path("provenance/ucdp_annual/ingestion_ledger.jsonl")
 
     def __post_init__(self) -> None:

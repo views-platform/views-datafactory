@@ -98,7 +98,7 @@ class UcdpDot9Config:
     max_versions: int = _DEFAULT_MAX_VERSIONS
 
     # Storage
-    data_dir: Path = Path("data/ucdp_dot9")
+    data_dir: Path = Path("data/raw/ucdp_dot9")
     ledger_path: Path = Path(
         "provenance/ucdp_dot9/ingestion_ledger.jsonl"
     )

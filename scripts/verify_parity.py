@@ -9,9 +9,9 @@ the production_parity profile, and compares against the raw .9 as
 baseline. Reports discrepancy percentage and causes.
 
 Requires data from prior smoke test and full harvest runs:
-  - data/full_harvest/ucdp_annual/ (annual v25.1)
-  - data/smoke_test/ucdp_candidate/ (candidate 25.0.1-26.0.2)
-  - data/smoke_test/ucdp_dot9/ (raw .9 version 25.9.11)
+  - data/raw/ucdp_annual/ (annual v25.1)
+  - data/raw/ucdp_candidate/ (candidate 25.0.1-26.0.2)
+  - data/raw/ucdp_dot9/ (raw .9 version 25.9.11)
 """
 
 from __future__ import annotations
@@ -31,16 +31,16 @@ def main() -> int:
     print("=" * 70)
     print()
 
-    out_dir = Path("data/parity_test")
+    out_dir = Path("data/consolidated")
     prov_dir = Path("provenance/parity_test")
 
     # ---- Check prerequisites ----
 
-    annual_dir = Path("data/full_harvest/ucdp_annual")
-    candidate_dir = Path("data/smoke_test/ucdp_candidate")
-    dot9_dir = Path("data/parity_test/ucdp_dot9")
+    annual_dir = Path("data/raw/ucdp_annual")
+    candidate_dir = Path("data/raw/ucdp_candidate")
+    dot9_dir = Path("data/consolidated/ucdp_dot9")
     dot9_baseline = Path(
-        "data/smoke_test/ucdp_dot9/ucdp_ged_25.9.11.parquet"
+        "data/raw/ucdp_dot9/ucdp_ged_25.9.11.parquet"
     )
 
     for label, path in [

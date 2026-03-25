@@ -247,9 +247,9 @@ class UcdpConsolidationConfig:
     is checked at consolidation time, not config time.
     """
 
-    annual_dir: Path = Path("data/ucdp_annual")
-    candidate_dir: Path = Path("data/ucdp_candidate")
-    dot9_dir: Path = Path("data/ucdp_dot9")
+    annual_dir: Path = Path("data/raw/ucdp_annual")
+    candidate_dir: Path = Path("data/raw/ucdp_candidate")
+    dot9_dir: Path = Path("data/raw/ucdp_dot9")
     annual_ledger_path: Path = Path(
         "provenance/ucdp_annual/ingestion_ledger.jsonl"
     )

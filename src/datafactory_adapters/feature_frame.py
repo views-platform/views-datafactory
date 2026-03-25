@@ -10,6 +10,7 @@ or a micro-service, only numpy comes with it.
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -143,8 +144,6 @@ class FeatureFrame:
             directory / "identifiers.npz",
             **self.identifiers,
         )
-        import json
-
         (directory / "feature_names.json").write_text(
             json.dumps(self.feature_names)
         )
@@ -195,8 +194,6 @@ class FeatureFrame:
         Returns:
             Reconstructed FeatureFrame.
         """
-        import json
-
         y_features = np.load(directory / "y_features.npy")
         id_data = np.load(directory / "identifiers.npz")
         identifiers = {k: id_data[k] for k in id_data.files}

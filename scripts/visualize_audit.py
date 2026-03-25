@@ -31,35 +31,33 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import numpy as np
 
-# ── Style constants ──────────────────────────────────────────
-
-DPI = 200
-
-FIG_FULL = (14, 7)
-FIG_HALF = (7, 7)
-FIG_TALL = (7, 12)
-FIG_PANEL_2x2 = (14, 9)
-FIG_PANEL_1x3 = (14, 5)
-FIG_PANEL_4x3 = (14, 10)
-
-FONT_TITLE = 13
-FONT_LABEL = 10
-FONT_TICK = 8
-FONT_ANNOT = 8
-
-CMAP_SEQ = "YlOrRd"
-CMAP_DIV = "RdBu_r"
-CMAP_HEAT = "Reds"
-CMAP_COV = "viridis"
-CMAP_ONSET = "plasma"
-
-COLOR_NS = "#4878A8"
-COLOR_OS = "#D4752E"
-COLOR_SB = "#7A8B3C"
-COLOR_ACCENT = "#2C5080"
-COLOR_GRAY = "#666666"
-
-EXTENT = [-180, 180, -90, 90]
+from viz_style import (
+    CMAP_COV,
+    CMAP_DIV,
+    CMAP_HEAT,
+    CMAP_ONSET,
+    CMAP_SEQ,
+    COLOR_ACCENT,
+    COLOR_GRAY,
+    COLOR_NS,
+    COLOR_OS,
+    COLOR_SB,
+    EXTENT,
+    FIG_FULL,
+    FIG_HALF,
+    FIG_TALL,
+    FONT_ANNOT,
+    FONT_LABEL,
+    FONT_TICK,
+    FONT_TITLE,
+    FIG_PANEL_1x3,
+    FIG_PANEL_2x2,
+    FIG_PANEL_4x3,
+    make_dates,
+    save_plot,
+    spatial_imshow,
+    style_ax,
+)
 
 DECADE_BOUNDS: list[tuple[int, int, str]] = [
     (0, 120, "1989\u20131998"),
@@ -100,80 +98,7 @@ REGION_BOUNDS: list[tuple[tuple[int, int], tuple[int, int], str]] = [
 ]
 
 
-# ── Style helpers ────────────────────────────────────────────
-
-
-def style_ax(
-    ax: object,
-    *,
-    title: str | None = None,
-    xlabel: str | None = None,
-    ylabel: str | None = None,
-) -> None:
-    """Apply Tufte-compliant style to an axes."""
-    ax.spines["top"].set_visible(False)  # type: ignore[union-attr]
-    ax.spines["right"].set_visible(False)  # type: ignore[union-attr]
-    ax.tick_params(labelsize=FONT_TICK)  # type: ignore[union-attr]
-    if title:
-        ax.set_title(  # type: ignore[union-attr]
-            title, fontsize=FONT_TITLE, fontweight="bold",
-        )
-    if xlabel:
-        ax.set_xlabel(xlabel, fontsize=FONT_LABEL)  # type: ignore[union-attr]
-    if ylabel:
-        ax.set_ylabel(ylabel, fontsize=FONT_LABEL)  # type: ignore[union-attr]
-
-
-def save_plot(fig: object, output_dir: Path, name: str) -> None:
-    """Save figure and close."""
-    import matplotlib.pyplot as plt
-
-    fig.savefig(  # type: ignore[union-attr]
-        output_dir / name, dpi=DPI, bbox_inches="tight",
-    )
-    plt.close(fig)  # type: ignore[arg-type]
-    print(f"  \u2192 {name}")
-
-
-def spatial_imshow(
-    ax: object,
-    data_2d: np.ndarray,
-    ocean_mask: np.ndarray,
-    cmap: str,
-    *,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    log: bool = False,
-    cbar_label: str | None = None,
-    fig: object | None = None,
-) -> object:
-    """Mask ocean, flip, imshow. Returns image handle."""
-    import numpy as np
-
-    display = data_2d.astype(np.float64).copy()
-    display[ocean_mask] = np.nan
-    if log:
-        display = np.where(
-            np.isnan(display), np.nan, np.log1p(display),
-        )
-    display = np.flipud(display)
-    im = ax.imshow(  # type: ignore[union-attr]
-        display, cmap=cmap, aspect="auto", extent=EXTENT,
-        vmin=vmin, vmax=vmax,
-    )
-    if cbar_label and fig is not None:
-        import matplotlib.pyplot as plt
-
-        plt.colorbar(im, ax=ax, label=cbar_label)
-    return im
-
-
-def make_dates(n_t: int) -> list[dt.date]:
-    """Build date list from 1989-01 through n_t months."""
-    return [
-        dt.date(1989 + t // 12, 1 + t % 12, 15)
-        for t in range(n_t)
-    ]
+# style_ax, save_plot, spatial_imshow, make_dates — from viz_style
 
 
 def cell_to_label(
@@ -276,9 +201,10 @@ def precompute(
         np.zeros((n_h, n_w), dtype=bool) for _ in ucdp_feats
     ]
 
-    # Feature completeness
+    # Feature completeness (static + admin channels only)
+    n_ucdp = len(ucdp_feats)
     completeness = np.zeros((n_h, n_w), dtype=np.int32)
-    for f_idx in range(6, n_f):
+    for f_idx in range(n_ucdp, n_f):
         completeness += (grid[0, :, :, f_idx] != 0).astype(np.int32)
 
     # Allocate accumulators
@@ -730,7 +656,8 @@ def plot_correlation(d: PrecomputedData, out: Path) -> None:
     import matplotlib.pyplot as plt
     import numpy as np
 
-    static_names = d.features[6:]
+    n_ucdp = len(d.ucdp_features)
+    static_names = d.features[n_ucdp:]
     n_static = len(static_names)
     land_flat = ~d.ocean_mask.ravel()
 
@@ -738,7 +665,7 @@ def plot_correlation(d: PrecomputedData, out: Path) -> None:
         (int(land_flat.sum()), n_static), dtype=np.float32,
     )
     for i in range(n_static):
-        vals = d.grid[0, :, :, 6 + i].ravel()
+        vals = d.grid[0, :, :, n_ucdp + i].ravel()
         static_matrix[:, i] = vals[land_flat]
 
     corr = np.nan_to_num(np.corrcoef(static_matrix.T), nan=0.0)

@@ -30,7 +30,7 @@ class ViewpointConfig:
     consolidated_path: Path
 
     # Output
-    output_path: Path = Path("data/viewpoints/ucdp_v1.parquet")
+    output_path: Path = Path("data/viewpoint/ucdp_v1.parquet")
     ledger_path: Path = Path(
         "provenance/viewpoint/ucdp_v1_ledger.jsonl"
     )

@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import tempfile
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -113,7 +114,7 @@ def compute_file_digest(
 
 
 @contextmanager
-def file_lock(path: Path):
+def file_lock(path: Path) -> Iterator[None]:
     """Advisory file lock via fcntl.flock.
 
     Creates a .lock file alongside the target path and holds an

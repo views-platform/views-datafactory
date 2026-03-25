@@ -38,7 +38,7 @@ def main() -> int:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/priogrid_static"),
+        default=Path("data/raw/priogrid_static"),
         help="Output directory",
     )
     parser.add_argument(

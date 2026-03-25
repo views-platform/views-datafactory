@@ -92,7 +92,7 @@ class UcdpCandidateConfig:
     max_versions: int = _DEFAULT_MAX_VERSIONS
 
     # Storage
-    data_dir: Path = Path("data/ucdp_candidate")
+    data_dir: Path = Path("data/raw/ucdp_candidate")
     ledger_path: Path = Path(
         "provenance/ucdp_candidate/ingestion_ledger.jsonl"
     )

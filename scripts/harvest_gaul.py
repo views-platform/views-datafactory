@@ -47,20 +47,20 @@ def main() -> int:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data/gaul_admin"),
+        default=Path("data/raw/gaul_admin"),
         help="Output directory for Parquet files",
     )
     parser.add_argument(
         "--cache-dir",
         type=Path,
-        default=Path("data/gaul_admin/shapefiles"),
+        default=Path("data/raw/gaul_admin/shapefiles"),
         help="Cache directory for downloaded shapefiles",
     )
     parser.add_argument(
         "--centroid-shapefile",
         type=Path,
         default=Path(
-            "data/priogrid/shapefile/priogrid_centroid.shp"
+            "data/raw/priogrid/shapefile/priogrid_centroid.shp"
         ),
         help="PRIO-GRID centroid shapefile",
     )

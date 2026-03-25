@@ -102,12 +102,17 @@ class TestCheckHealthGreen:
 
 class TestAllScriptsGreen:
 
+    # Shared modules (not runnable scripts)
+    _MODULES = {"viz_style.py"}
+
     def test_all_scripts_have_main(self) -> None:
         """Every script in scripts/ should have a main()."""
         scripts_dir = (
             Path(__file__).parent.parent / "scripts"
         )
         for script in sorted(scripts_dir.glob("*.py")):
+            if script.name in self._MODULES:
+                continue
             source = script.read_text()
             tree = ast.parse(source)
             func_names = [
@@ -125,6 +130,8 @@ class TestAllScriptsGreen:
             Path(__file__).parent.parent / "scripts"
         )
         for script in sorted(scripts_dir.glob("*.py")):
+            if script.name in self._MODULES:
+                continue
             content = script.read_text()
             assert '__name__' in content, (
                 f"{script.name} missing __name__ guard"

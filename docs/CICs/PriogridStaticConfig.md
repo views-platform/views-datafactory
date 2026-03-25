@@ -37,7 +37,7 @@ Governs API access (URL, timeout), storage paths, and optional variable selectio
 ## 4. Inputs and Assumptions
 
 - `api_url`: str, PRIO-GRID API base URL (default: `https://grid.prio.org/api`)
-- `data_dir`: Path, output directory for Parquet snapshots (default: `data/priogrid_static`)
+- `data_dir`: Path, output directory for Parquet snapshots (default: `data/raw/priogrid_static`)
 - `ledger_path`: Path, provenance ledger (default: `provenance/priogrid_static/ingestion_ledger.jsonl`)
 - `timeout`: int, >= 1, HTTP request timeout in seconds (default: `60`)
 - `variables`: tuple[str, ...] | None, subset of variables to fetch (default: `None` = all static)
