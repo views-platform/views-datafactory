@@ -18,6 +18,7 @@ and ADR-017 (vintage-aware consolidation).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -496,6 +497,12 @@ def consolidate_ucdp(
 
     n_total = combined.num_rows
 
+    # Schema fingerprint for drift detection
+    schema_cols = sorted(combined.column_names)
+    schema_fingerprint = hashlib.sha256(
+        ",".join(schema_cols).encode()
+    ).hexdigest()[:16]
+
     # Record provenance
     append_ledger_entry(config.ledger_path, {
         "dataset": DATASET_ID,
@@ -506,6 +513,8 @@ def consolidate_ucdp(
         "source_manifest": source_manifest,
         "output_path": str(config.output_path),
         "output_digest": output_digest,
+        "schema_fingerprint": schema_fingerprint,
+        "schema_columns": schema_cols,
         "ledger_version": LEDGER_VERSION,
         "digest_algorithm": DIGEST_SCHEME,
     })

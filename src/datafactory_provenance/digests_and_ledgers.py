@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import tempfile
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -113,6 +114,9 @@ def compute_file_digest(
     return hexdigest[:truncate] if truncate > 0 else hexdigest
 
 
+_STALE_LOCK_SECONDS: int = 300  # 5 minutes
+
+
 @contextmanager
 def file_lock(path: Path) -> Iterator[None]:
     """Advisory file lock via fcntl.flock.
@@ -122,11 +126,29 @@ def file_lock(path: Path) -> Iterator[None]:
     using file_lock on the same path will block until the lock is
     released.
 
+    If the lock file is older than 5 minutes (indicating a crashed
+    process), it is removed with a warning before acquiring.
+
     Args:
         path: Path to the file being protected.
     """
     lock_path = path.with_suffix(path.suffix + ".lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Check for stale lock file from a crashed process
+    if lock_path.exists():
+        try:
+            age = time.time() - lock_path.stat().st_mtime
+            if age > _STALE_LOCK_SECONDS:
+                logger.warning(
+                    "Removing stale lock file %s (age: %.0fs)",
+                    lock_path,
+                    age,
+                )
+                lock_path.unlink(missing_ok=True)
+        except OSError:
+            pass  # Race with another process; proceed to flock
+
     with open(lock_path, "w") as lock_file:
         fcntl.flock(lock_file, fcntl.LOCK_EX)
         try:

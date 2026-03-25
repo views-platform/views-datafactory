@@ -30,26 +30,32 @@ class TestTechDebtResolved:
         )
 
     def test_concerns_header_accuracy(self) -> None:
-        """Resolved: concerns00.md header updated to
-        reflect actual counts (49 total, 24 resolved).
+        """Resolved: concerns file renamed to
+        technical_risk_register.md and split into
+        active + resolved archive (ADR-020).
         """
         from pathlib import Path
 
-        concerns = (
+        old_file = (
             Path(__file__).parent.parent
             / "reports"
             / "concerns00.md"
         )
-        content = concerns.read_text()
-        # Header should NOT claim old counts
-        assert "27 of 35" not in content, (
-            "Stale header from original review"
+        assert not old_file.exists(), (
+            "concerns00.md should be replaced by "
+            "technical_risk_register.md"
         )
-        assert "24 of 42" not in content, (
-            "Stale header from repo assimilation"
+
+        register = (
+            Path(__file__).parent.parent
+            / "reports"
+            / "technical_risk_register.md"
         )
-        # Header should reflect current counts
-        assert "66 concerns total" in content
+        assert register.exists(), (
+            "technical_risk_register.md not found"
+        )
+        content = register.read_text()
+        assert "80 concerns total" in content
 
     def test_maturity_skip_reason_current(self) -> None:
         """Resolved: maturity test for .9 in smoke test

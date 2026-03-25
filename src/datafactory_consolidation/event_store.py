@@ -7,6 +7,8 @@ Parquet file — simple, queryable, and sufficient at current scale.
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from pathlib import Path
 
 import pyarrow as pa
@@ -41,7 +43,20 @@ def write_store(table: pa.Table, path: Path) -> str:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     with file_lock(path):
-        pq.write_table(table, path, compression=_PARQUET_COMPRESSION)
+        # Atomic write: temp file then rename to prevent corruption on crash
+        fd, tmp = tempfile.mkstemp(
+            dir=path.parent, suffix=".tmp",
+        )
+        try:
+            os.close(fd)
+            tmp_path = Path(tmp)
+            pq.write_table(
+                table, tmp_path, compression=_PARQUET_COMPRESSION,
+            )
+            tmp_path.rename(path)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
     digest = compute_file_digest(path)
     logger.info(
         "Wrote consolidated store: %s (%d rows, digest: %s)",
