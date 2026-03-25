@@ -1,5 +1,8 @@
 # Data cache (disposable — rebuildable from provenance)
-data/
+# Ignore contents but track README
+data/*
+!data/README.md
+data/*/
 
 # Python
 __pycache__/

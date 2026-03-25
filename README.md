@@ -204,11 +204,12 @@ views-datafactory/
 │   ├── harvest_gaul.py                                  GAUL admin boundary harvest + spatial join
 │   ├── assemble_grid.py                                UCDP + static + admin assembly
 │   ├── export_dataframe.py                             Grid → DataFrame export
+│   ├── export_zarr.py                                  Grid → zarr store (HTTP-servable)
 │   ├── visualize_audit.py                              15-plot data audit visualization
 │   ├── check_health.py                                 System health check
 │   └── ...                                             harvest_priogrid, verify_parity, etc.
 ├── docs/                                             # ADRs, CICs, protocols, standards
-│   ├── ADRs/                                           10 constitutional + 11 project-specific
+│   ├── ADRs/                                           10 constitutional + 12 project-specific
 │   ├── CICs/                                           16 active class intent contracts
 │   ├── contributor_protocols/                          carbon, silicon, hardened
 │   └── standards/                                      logging & observability

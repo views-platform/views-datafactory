@@ -87,6 +87,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-020** -- Technical Risk Register
   Formalized risk register as governance artifact. Active + resolved archive split.
 
+- **ADR-021** -- Zarr as Servable Export Format
+  xarray-compatible zarr store for HTTP serving. One variable per feature, 12-month chunks.
+
 These must comply with the constitutional ADRs above.
 
 ---
