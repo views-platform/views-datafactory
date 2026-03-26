@@ -142,7 +142,7 @@ class FeatureFrame:
         np.save(directory / "y_features.npy", self.y_features)
         np.savez(
             directory / "identifiers.npz",
-            **self.identifiers,
+            **self.identifiers,  # type: ignore[arg-type]
         )
         (directory / "feature_names.json").write_text(
             json.dumps(self.feature_names)

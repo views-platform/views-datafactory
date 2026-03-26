@@ -361,7 +361,7 @@ def _write_variable(
 
         gids.append(gid)
         if is_numeric:
-            values_int.append(int(val))
+            values_int.append(int(val))  # type: ignore[call-overload]
         else:
             values_str.append(str(val))
 

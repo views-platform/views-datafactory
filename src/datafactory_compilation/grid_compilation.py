@@ -13,6 +13,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+import pyarrow as pa
 import pyarrow.parquet as pq
 
 from datafactory_compilation.aggregation import get_strategy
@@ -55,7 +56,7 @@ def _parse_month_index(
 
 
 def _place_events_columnar(
-    table: pq.ParquetFile | object,
+    table: pa.Table,
     config: CompilationConfig,
 ) -> dict[tuple[int, int], list[dict]]:
     """Assign events to (pgid_index, time_index) bins using columnar data.

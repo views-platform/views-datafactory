@@ -273,8 +273,8 @@ def _fetch_version(
         e.get("date_start") for e in events
         if e.get("date_start")
     ]
-    min_date = min(dates) if dates else None
-    max_date = max(dates) if dates else None
+    min_date: str | None = min(dates) if dates else None  # type: ignore[type-var]
+    max_date: str | None = max(dates) if dates else None  # type: ignore[type-var]
 
     base_entry = {
         "dataset": DATASET_ID,
