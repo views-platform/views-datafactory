@@ -311,11 +311,13 @@ def last_digest(
         return None
     try:
         entry = json.loads(last_line)
-        return entry.get(digest_field)
+        result: str | None = entry.get(digest_field)
+        return result
     except json.JSONDecodeError:
         # Fall back to full read if last line is malformed
         entries = _read_ledger_entries(ledger_path)
-        return entries[-1].get(digest_field) if entries else None
+        result = entries[-1].get(digest_field) if entries else None
+        return result
 
 
 def last_digest_for_version(

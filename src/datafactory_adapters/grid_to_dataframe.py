@@ -39,7 +39,8 @@ def _compute_month_ids(
     ).astype(int)
     years = 1970 + months_since_epoch_70 // 12
     months = months_since_epoch_70 % 12 + 1
-    return (years - epoch) * 12 + months
+    result: np.ndarray = (years - epoch) * 12 + months
+    return result
 
 
 def _flatten_grid(
@@ -75,7 +76,7 @@ def _flatten_grid(
     n_t, n_h, n_w, _ = grid.shape
     month_ids = _compute_month_ids(time_steps, month_id_epoch)
 
-    flat_data = grid.reshape(n_t * n_h * n_w, -1)
+    flat_data: np.ndarray = grid.reshape(n_t * n_h * n_w, -1)
     pgids_flat = pgids.ravel()
     all_pgids = np.tile(pgids_flat, n_t)
     all_month_ids = np.repeat(month_ids, n_h * n_w)

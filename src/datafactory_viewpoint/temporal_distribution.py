@@ -101,7 +101,7 @@ def even_split(event: dict) -> list[dict]:
 
     if date_prec != _SUMMARY_DATE_PREC:
         # Non-summary: single row, month from date_end
-        row = {**event, "date_month": _month_first_day(date_end)}
+        row = {**event, "date_month": _month_first_day(str(date_end))}
         return [row]
 
     # Summary event: distribute across months
@@ -179,7 +179,7 @@ def ceil_split(event: dict) -> list[dict]:
 
     if not is_summary:
         # Non-summary: single row, month from date_end
-        row = {**event, "date_month": _month_first_day(date_end)}
+        row = {**event, "date_month": _month_first_day(str(date_end))}
         return [row]
 
     # Summary event: distribute with ceil
