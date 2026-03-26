@@ -3,7 +3,7 @@
 
 Usage:
     uv run python scripts/compile_grid.py
-    uv run python scripts/compile_grid.py --source data/viewpoints/parity.parquet
+    uv run python scripts/compile_grid.py --source data/viewpoint/parity.parquet
     uv run python scripts/compile_grid.py --end-year 2026
 
 Reads a viewpoint Parquet (or any event Parquet with lat, lon, date

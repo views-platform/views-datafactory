@@ -9,8 +9,8 @@
 
 ## Context
 
-Three visualization scripts (`visualize_grid.py`, `visualize_audit.py`,
-`presentation_plots.py`) each define their own style constants and helpers.
+Visualization scripts (`visualize_audit.py`, `presentation_plots.py`)
+each defined their own style constants and helpers.
 This produced inconsistencies (DPI 150 vs 200), duplicated code (`style_ax`,
 `save_plot`, `make_dates` appear in multiple files), and no single source
 of truth for the project's visual identity.
@@ -96,8 +96,8 @@ module: **`scripts/viz_style.py`**.
 ## Implementation Notes
 
 - `scripts/viz_style.py` exports constants and helpers
-- `visualize_audit.py`, `presentation_plots.py`, `visualize_grid.py` import
-  from it instead of defining their own
+- `visualize_audit.py` and `presentation_plots.py` import from it instead
+  of defining their own
 - DPI standardized to 200 across all scripts
 - New visualization scripts should `from viz_style import ...`
 
@@ -108,8 +108,7 @@ module: **`scripts/viz_style.py`**.
 - `ruff check scripts/viz_style.py` passes
 - Grep for `DPI =`, `FONT_TITLE =` in consuming scripts should return
   zero matches (all definitions live in `viz_style.py`)
-- Visual spot-check: existing plots unchanged in appearance (except
-  `visualize_grid.py` which moves from DPI 150 → 200)
+- Visual spot-check: existing plots unchanged in appearance
 
 ---
 

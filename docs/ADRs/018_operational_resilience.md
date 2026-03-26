@@ -101,5 +101,5 @@ When the system reaches production deployment, the following should be implement
 
 - ADR-008 (Observability and Explicit Failure)
 - ADR-011 (Fail Loud, No Stale Data Serving)
-- `reports/concerns00.md` D-03
+- `reports/technical_risk_register_resolved.md` D-03
 - Expert review 6: Nygard perspective on operational resilience

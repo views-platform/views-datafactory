@@ -42,7 +42,7 @@ def main() -> int:
         "--output",
         type=Path,
         default=None,
-        help="Output path (default: data/viewpoints/<profile>.parquet)",
+        help="Output path (default: data/viewpoint/<profile>.parquet)",
     )
     parser.add_argument(
         "--provenance-dir",

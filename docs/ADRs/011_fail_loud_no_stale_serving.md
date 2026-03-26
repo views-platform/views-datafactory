@@ -73,4 +73,4 @@ These trade-offs are accepted intentionally for the pre-production phase.
 
 - ADR-003 (Authority of Declarations — fail-loud invariant)
 - ADR-008 (Observability and Explicit Failure)
-- `reports/concerns00.md` C-15, D-03
+- `reports/technical_risk_register_resolved.md` C-15, D-03
