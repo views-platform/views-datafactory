@@ -73,7 +73,7 @@ Each source module provides:
 Adding a new source means adding `sources/<name>.py`. No changes to existing sources.
 
 ## Invariants
-- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
+- **Single-writer access assumed.** No concurrent operations supported (see technical_risk_register_resolved.md C-16)
 
 - Raw data is stored unaltered (all source fields preserved in Parquet)
 - Content digest (via `datafactory_provenance.compute_content_digest`) on every harvest

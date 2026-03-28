@@ -71,8 +71,9 @@ Synthetic data follows an independent path: it produces npy output directly and 
 | Package | May import from | Reads filesystem output of |
 |---------|----------------|---------------------------|
 | `datafactory_provenance` | nothing | nothing |
-| `datafactory_priogrid` | provenance | nothing |
-| `datafactory_harvester` | provenance | nothing |
+| `datafactory_http` | nothing | nothing |
+| `datafactory_priogrid` | provenance, http | nothing |
+| `datafactory_harvester` | provenance, http | nothing |
 | `datafactory_synthetic` | provenance | nothing |
 | `datafactory_consolidation` | provenance | harvester |
 | `datafactory_viewpoint` | provenance | consolidation |

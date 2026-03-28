@@ -41,7 +41,7 @@ Per ADR-012 (topology and dependency direction):
 | `DIGEST_SCHEME` | Centralized constant (`"sha256_16"`) recorded in every ledger entry for forward compatibility. |
 
 ## Invariants
-- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
+- **Single-writer access assumed.** No concurrent operations supported (see technical_risk_register_resolved.md C-16)
 
 - Zero imports from any other `datafactory_*` package (ADR-012, Layer 0)
 - All public symbols declared in `__all__` (ADR-001)

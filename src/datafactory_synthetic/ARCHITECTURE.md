@@ -51,7 +51,7 @@ Grid-native synthetic data generation with controllable covariance structure. Pr
 | Output contract | Panel array | Same contract as compiler: (cells, time, features) + coordinate arrays |
 
 ## Invariants
-- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
+- **Single-writer access assumed.** No concurrent operations supported (see technical_risk_register_resolved.md C-16)
 
 - **Same output contract as compiler:** Shape `(n_cells, n_steps, n_features)` with coordinate sidecar arrays (`pgids.npy`, `time_steps.npy`, `feature_names.json`)
 - **Deterministic:** seed + config = reproducible output. Fresh RNG per `generate()` call. No global random state.

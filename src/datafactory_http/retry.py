@@ -7,7 +7,9 @@ No outbound imports to other datafactory_* packages.
 from __future__ import annotations
 
 import logging
+import random
 import time
+from typing import Any
 
 import requests
 
@@ -18,7 +20,7 @@ def request_with_retry(
     url: str,
     *,
     headers: dict[str, str] | None = None,
-    params: dict[str, str | int] | None = None,
+    params: dict[str, Any] | None = None,
     max_retries: int = 3,
     timeout: int = 30,
 ) -> requests.Response:
@@ -47,6 +49,33 @@ def request_with_retry(
             )
             resp.raise_for_status()
             return resp
+        except requests.HTTPError as exc:
+            # 4xx client errors will never succeed on retry — fail fast
+            if (
+                exc.response is not None
+                and 400 <= exc.response.status_code < 500
+            ):
+                logger.error(
+                    "Client error %d (not retryable): %s",
+                    exc.response.status_code,
+                    url,
+                )
+                raise
+            if attempt == max_retries - 1:
+                logger.error(
+                    "Request failed after %d attempts: %s",
+                    max_retries,
+                    url,
+                )
+                raise
+            delay = 2**attempt + random.uniform(0, 1)
+            logger.warning(
+                "Request attempt %d/%d failed, retrying in %.1fs",
+                attempt + 1,
+                max_retries,
+                delay,
+            )
+            time.sleep(delay)
         except requests.RequestException:
             if attempt == max_retries - 1:
                 logger.error(
@@ -55,9 +84,9 @@ def request_with_retry(
                     url,
                 )
                 raise
-            delay = 2**attempt
+            delay = 2**attempt + random.uniform(0, 1)
             logger.warning(
-                "Request attempt %d/%d failed, retrying in %ds",
+                "Request attempt %d/%d failed, retrying in %.1fs",
                 attempt + 1,
                 max_retries,
                 delay,

@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 64 concerns total: 35 resolved, 29 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 64 concerns total: 38 resolved, 26 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -31,11 +31,11 @@
 | C-38 | 4 | Version string year offset assumes 21st century | Never (2099) |
 | C-10 | 4 | Ontology vocabulary overhead | Accepted |
 | C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment |
-| C-71 | 4 | No retry jitter | Concurrent harvesters deployed |
+| C-71 | 4 | ~~No retry jitter~~ | RESOLVED — `random.uniform(0, 1)` added |
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s |
 | C-74 | 4 | CompilationConfig leaks strategy vocabulary | User confusion observed |
 | C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns |
-| C-77 | 4 | Ledger archive retention unbounded | Automated deployment |
+| C-77 | — | ~~Ledger archive retention unbounded~~ | RESOLVED — 9-archive cap is the retention policy |
 | C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s |
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s |
 | C-80 | 4 | Registry boilerplate duplicated 5x | 6th registry added |
@@ -43,7 +43,7 @@
 | C-60 | 4 | Health check output not tested with mock ledgers | check_health.py modified |
 | C-61 | 4 | No schema evolution test | 3rd data source |
 | C-81 | 4 | ~~GAUL shapefile download has no retry logic~~ | RESOLVED — uses `request_with_retry` |
-| C-83 | 4 | Retry retries on 4xx client errors | C-72 addressed (shared retry utility) |
+| C-83 | 4 | ~~Retry retries on 4xx client errors~~ | RESOLVED — 4xx fail-fast, 5xx retry |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -135,8 +135,8 @@ Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are prec
 After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. **Trigger: implement before multi-operator or automated deployment.**
 **Source:** Nygard (expert review #4)
 
-### C-71: No retry jitter — [DEFER]
-Fixed exponential backoff (1s, 2s, 4s) creates thundering herd risk if multiple harvest instances restart simultaneously. **Trigger: add `random.uniform(0, 1)` jitter when deploying concurrent harvesters.**
+### C-71: ~~No retry jitter~~ RESOLVED
+Added `random.uniform(0, 1)` jitter to exponential backoff in `datafactory_http/retry.py`. Delay is now `2^attempt + random(0, 1)` instead of fixed `2^attempt`.
 **Source:** Nygard (expert review #4)
 
 ### C-72: HTTP 429 not distinguished from 500 — [DEFER]
@@ -159,9 +159,9 @@ Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filt
 Registered `falsification` pytest marker. 11 stubs now use `@pytest.mark.falsification()` instead of `@pytest.mark.skip()`. Auto-skipped by default; visible with `--run-falsification`. Normal `pytest` output shows 0 skipped.
 **Source:** Beck (expert review #4)
 
-### C-77: Ledger archive retention unbounded — [DEFER]
-Rotated ledger archives (`ledger.1.jsonl` through `ledger.9.jsonl`) are never deleted. Requires manual cleanup. **Trigger: add 90-day retention policy before automated deployment.**
-**Source:** Nygard (expert review #4)
+### C-77: ~~Ledger archive retention unbounded~~ RESOLVED (accepted by design)
+The existing 9-archive rotation cap in `_rotate_ledger()` (`digests_and_ledgers.py:163`) bounds disk usage at 720 MB worst case across all 8 ledger types. At current growth rates (530 KB total, ~1-2 KB per monthly run), this bound won't be reached for decades. Provenance is mission-critical — archives should be preserved for audit, not garbage-collected. 8/8 expert perspectives agree: the problem doesn't exist at current scale.
+**Source:** Nygard (expert review #4), expert review #8 (unanimous)
 
 ### C-78: `_place_events_columnar` hard to test in isolation — [DEFER]
 100 lines of columnar bin-assignment logic tested only indirectly through `compile_grid()`. Core algorithm (lat/lon -> pgid, date -> month_index) could be extracted into a pure function. **Trigger: extract `compute_bin_assignments()` when compilation tests exceed 5 seconds.**
@@ -191,8 +191,8 @@ No test for what happens when Parquet columns are added/removed between consolid
 `gaul_admin.py:_download_shapefile_zip()` now uses `request_with_retry` from `datafactory_http`, gaining exponential backoff retry consistent with all other downloaders.
 **Source:** Tech debt cleanup 2026-03-27
 
-### C-83: Retry retries on 4xx client errors — [DEFER]
-`request_with_retry` in `datafactory_http/retry.py:50` catches all `requests.RequestException`, including 4xx client errors (401 Unauthorized, 404 Not Found) that will never succeed on retry. C-72 tracks 429 specifically; this is the broader issue. A 401 with `max_retries=3` and `timeout=300` wastes up to 903 seconds before the inevitable failure. **Trigger: add `if 400 <= status < 500: raise` guard when C-72 is addressed.**
+### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
+`request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.
 **Source:** Nygard, Hickey (expert review #7)
 
 ---

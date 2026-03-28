@@ -46,7 +46,7 @@ datafactory_compilation/
 | FeatureSpec | Frozen dataclass: `name`, `strategy`, optional `filter` dict. Filter enables per-feature disaggregation (e.g., `{"type_of_violence": 1}` for state-based only). Declared in config, never inferred (ADR-003). |
 
 ## Invariants
-- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
+- **Single-writer access assumed.** No concurrent operations supported (see technical_risk_register_resolved.md C-16)
 
 - **Dimension order:** Always `[T, H, W, C]` — time, height (rows), width (columns), channels (features). Canonical z-stack layout.
 - **Coordinate sidecars:** `pgids.npy` (int32, shape `[H, W]`), `time_steps.npy` (datetime64[M]), `feature_names.json` always shipped alongside `grid.npy`
