@@ -97,7 +97,12 @@ def main() -> int:
         detail = res.get("detail", "")
         print(f"  {name}: {status} {detail}")
     print("=" * 60)
-    return 0
+
+    n_failed = sum(
+        1 for r in results.values()
+        if r.get("status") == "FAIL"
+    )
+    return 1 if n_failed > 0 else 0
 
 
 def _harvest_annual(

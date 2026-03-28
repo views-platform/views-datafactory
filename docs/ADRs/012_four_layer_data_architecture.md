@@ -40,9 +40,9 @@ This is a **graph**, not a pipeline. Not all data flows through all layers. Synt
 ## The Dependency DAG
 
 ```
-Layer 0 (Foundation):     datafactory_provenance
-                               ^
-                               |
+Layer 0 (Foundation):     datafactory_provenance    datafactory_http
+                               ^                        ^
+                               |                        |
 Layer 1 (Sources):        datafactory_priogrid    datafactory_harvester    datafactory_synthetic
                                |                        |                        |
                                |        ┌───────────────┘                        |

@@ -37,8 +37,8 @@ from datafactory_harvester.sources.ucdp_annual import (
     UcdpAnnualConfig,
     fetch_paginated,
     get_ucdp_token,
-    request_with_retry,
 )
+from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -183,8 +183,8 @@ def discover_dot9_versions(
         try:
             resp = request_with_retry(
                 url,
-                headers,
-                params,
+                headers=headers,
+                params=params,
                 max_retries=config.max_retries,
                 timeout=config.timeout,
             )

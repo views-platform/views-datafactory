@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-03-25)
+**Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 80 concerns total: 56 resolved, 24 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 64 concerns total: 35 resolved, 29 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -14,6 +14,7 @@
 | ID | Tier | Title | Trigger |
 |----|------|-------|---------|
 | D-03 | 1 | Fail-loud vs. operational resilience | Before production deployment |
+| C-82 | 3 | ~~No GAUL retry integration test~~ | RESOLVED — `test_gaul_admin.py` |
 | C-21 | 3 | No characterization tests for migration | Next migration batch planned |
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook or change observed |
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 |
@@ -25,7 +26,7 @@
 | C-30 | 4 | No performance test for full-scale compilation | Before CI/CD pipeline |
 | C-29 | 4 | No end-to-end integration test | Before production deployment |
 | C-28 | 4 | Candidate uses fake annual config workaround | Extract `_ucdp_common.py` (C-31) |
-| C-27 | 4 | Retry pattern duplicated in 2 modules | 3rd module needs it |
+| C-27 | 4 | ~~Retry pattern duplicated in 3 modules~~ | RESOLVED — extracted to `datafactory_http` |
 | C-41 | 4 | Digest truncation collision risk | Records exceed 100M |
 | C-38 | 4 | Version string year offset assumes 21st century | Never (2099) |
 | C-10 | 4 | Ontology vocabulary overhead | Accepted |
@@ -41,6 +42,8 @@
 | C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed |
 | C-60 | 4 | Health check output not tested with mock ledgers | check_health.py modified |
 | C-61 | 4 | No schema evolution test | 3rd data source |
+| C-81 | 4 | ~~GAUL shapefile download has no retry logic~~ | RESOLVED — uses `request_with_retry` |
+| C-83 | 4 | Retry retries on 4xx client errors | C-72 addressed (shared retry utility) |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -49,12 +52,20 @@
 ## Tier 1 — Fix Before Production
 
 ### D-03: Fail-loud vs. operational resilience
-ADR-003/008 mandate fail-loud everywhere. Nygard asks what the operational experience is when the UCDP API is down for 3 days. For a production forecasting system, some resilience policy is needed — serve last-known-good with a warning flag, alert, or queue retry. **Resolution needed: define as a project-specific ADR before production deployment.** Note: D-03 disagreement resolved via ADR-018 (policy defined), but the Tier 1 concern stands — the policy has no code-level implementation yet.
-**Source:** Nygard (expert reviews 4, 6)
+ADR-003/008 mandate fail-loud everywhere. Nygard asks what the operational experience is when the UCDP API is down for 3 days. For a production forecasting system, some resilience policy is needed. **Policy defined in ADR-018 (operator-mediated bounded staleness). Code-level implementation partially complete (2026-03-28):**
+- `harvest_ucdp.py` now exits non-zero on harvest failure (was always exiting 0)
+- `refresh_pipeline.sh` has ERR trap: writes `logs/pipeline_failure.json` sentinel on failure, optionally sends email if `ALERT_EMAIL` is set
+- `check_health.py` reports staleness and failures (already existed)
+**Remaining gap:** No freshness indicator in zarr/parquet exports for consumers. **Trigger: add before second consumer.**
+**Source:** Nygard (expert reviews 4, 6, 7)
 
 ---
 
 ## Tier 3 — Improve Quality
+
+### C-82: ~~No GAUL retry integration test~~ RESOLVED
+Added `test_gaul_admin.py` with `test_retries_on_transient_failure` (verifies `_download_shapefile_zip` retries via `request_with_retry`) and `test_skips_download_when_cached` (verifies cache-hit path).
+**Source:** Feathers, Beck, Nygard (expert review #7)
 
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
@@ -104,9 +115,9 @@ Partially addressed by `test_integration.py` (100 events, realistic pipeline). F
 `ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated`. Sends unnecessary 100-year date range. Works correctly. **Trigger: fix when extracting `_ucdp_common.py` (C-31).**
 **Source:** Falsification audit DoD005
 
-### C-27: Retry pattern duplicated in 2 modules — [DEFER]
-`grid/harvester.py:52-75` and `ucdp_annual.py:132-163` implement the same exponential backoff. **Trigger: extract to core when a 3rd module needs it (DRY "third use" rule).**
-**Source:** Repo assimilation, expert review 4
+### C-27: ~~Retry pattern duplicated in 3 modules~~ RESOLVED
+Extracted `request_with_retry` to new Layer 0 package `datafactory_http`. All callers (`ucdp_annual`, `ucdp_candidate`, `ucdp_dot9`, `shapefile_harvester`, `gaul_admin`) now import from the shared module.
+**Source:** Repo assimilation, expert review 4, tech debt cleanup 2026-03-27
 
 ### C-41: Digest truncation collision risk — [DEFER]
 `DIGEST_TRUNCATE = 16` hex chars = 64-bit space. 50% collision at ~4B items. Fine at ~2M events. **Trigger: consider when total records exceed 100M or digests are used as unique keys.**
@@ -175,6 +186,14 @@ Rotated ledger archives (`ledger.1.jsonl` through `ledger.9.jsonl`) are never de
 ### C-61: No schema evolution test — [DEFER]
 No test for what happens when Parquet columns are added/removed between consolidation vintages. **Trigger: add before third data source.**
 **Source:** Kleppmann (test review)
+
+### C-81: ~~GAUL shapefile download has no retry logic~~ RESOLVED
+`gaul_admin.py:_download_shapefile_zip()` now uses `request_with_retry` from `datafactory_http`, gaining exponential backoff retry consistent with all other downloaders.
+**Source:** Tech debt cleanup 2026-03-27
+
+### C-83: Retry retries on 4xx client errors — [DEFER]
+`request_with_retry` in `datafactory_http/retry.py:50` catches all `requests.RequestException`, including 4xx client errors (401 Unauthorized, 404 Not Found) that will never succeed on retry. C-72 tracks 429 specifically; this is the broader issue. A 401 with `max_retries=3` and `timeout=300` wastes up to 903 seconds before the inevitable failure. **Trigger: add `if 400 <= status < 500: raise` guard when C-72 is addressed.**
+**Source:** Nygard, Hickey (expert review #7)
 
 ---
 

@@ -14,13 +14,11 @@ from __future__ import annotations
 
 import io
 import logging
-import time
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-import requests
-
+from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -49,7 +47,7 @@ class ShapefileHarvesterConfig:
     """
 
     url: str = DEFAULT_SHAPEFILE_URL
-    data_dir: Path = Path("data/priogrid")
+    data_dir: Path = Path("data/raw/priogrid")
     ledger_path: Path = Path(
         "provenance/priogrid/ingestion_ledger.jsonl"
     )
@@ -70,51 +68,6 @@ class ShapefileHarvesterConfig:
             )
             logger.error(err_msg)
             raise ValueError(err_msg)
-
-
-def _download(
-    url: str,
-    *,
-    timeout: int = 120,
-    max_retries: int = 3,
-) -> bytes:
-    """Download content from a URL with retry and exponential backoff.
-
-    Args:
-        url: URL to download.
-        timeout: Request timeout in seconds.
-        max_retries: Maximum number of attempts.
-
-    Returns:
-        Raw response bytes.
-
-    Raises:
-        requests.RequestException: After all retries exhausted.
-    """
-    for attempt in range(max_retries):
-        try:
-            resp = requests.get(url, timeout=timeout)
-            resp.raise_for_status()
-            return resp.content
-        except requests.RequestException:
-            if attempt == max_retries - 1:
-                logger.error(
-                    "Download failed after %d attempts: %s",
-                    max_retries,
-                    url,
-                )
-                raise
-            delay = 2**attempt
-            logger.warning(
-                "Download attempt %d/%d failed, retrying in %ds",
-                attempt + 1,
-                max_retries,
-                delay,
-            )
-            time.sleep(delay)
-    # Unreachable, but keeps mypy happy
-    msg = "Unreachable"
-    raise AssertionError(msg)
 
 
 def _extract_zip(content: bytes, target_dir: Path) -> list[str]:
@@ -171,11 +124,11 @@ def fetch_shapefile(
         config.url,
     )
     config.data_dir.mkdir(parents=True, exist_ok=True)
-    content = _download(
+    content = request_with_retry(
         config.url,
         timeout=config.timeout,
         max_retries=config.max_retries,
-    )
+    ).content
 
     digest = compute_content_digest(content)
     logger.info("Downloaded %d bytes (digest: %s)", len(content), digest)

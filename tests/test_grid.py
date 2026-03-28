@@ -452,7 +452,7 @@ def test_fetch_shapefile_full_flow(tmp_path: Path) -> None:
         ledger_path=ledger,
     )
 
-    _target = "datafactory_priogrid.shapefile_harvester.requests.get"
+    _target = "datafactory_http.retry.requests.get"
     with patch(_target, return_value=mock_resp):
         result = fetch_shapefile(cfg)
 
@@ -491,7 +491,7 @@ def test_fetch_shapefile_unchanged_content(tmp_path: Path) -> None:
         data_dir=tmp_path / "data",
         ledger_path=ledger,
     )
-    _target = "datafactory_priogrid.shapefile_harvester.requests.get"
+    _target = "datafactory_http.retry.requests.get"
     with patch(_target, return_value=mock_resp):
         fetch_shapefile(cfg)
 
@@ -519,39 +519,11 @@ def test_fetch_shapefile_existing_files(tmp_path: Path) -> None:
         data_dir=tmp_path / "data",
         ledger_path=tmp_path / "ledger.jsonl",
     )
-    with patch("datafactory_priogrid.shapefile_harvester.requests.get") as mock_get:
+    with patch("datafactory_http.retry.requests.get") as mock_get:
         result = fetch_shapefile(cfg)
 
     mock_get.assert_not_called()
     assert result == shp_dir
-
-
-def test_download_retries_on_failure() -> None:
-    """_download should retry on transient errors with exponential backoff."""
-    from unittest.mock import MagicMock, patch
-
-    from datafactory_priogrid.shapefile_harvester import _download
-
-    mock_resp = MagicMock()
-    mock_resp.content = b"success"
-    mock_resp.raise_for_status = MagicMock()
-
-    with patch("datafactory_priogrid.shapefile_harvester.requests.get") as mock_get, \
-         patch("datafactory_priogrid.shapefile_harvester.time.sleep") as mock_sleep:
-        import requests as _req
-
-        mock_get.side_effect = [
-            _req.ConnectionError("fail 1"),
-            _req.ConnectionError("fail 2"),
-            mock_resp,
-        ]
-        result = _download("http://example.com", max_retries=3)
-
-    assert result == b"success"
-    assert mock_get.call_count == 3
-    assert mock_sleep.call_count == 2
-    mock_sleep.assert_any_call(1)   # 2^0
-    mock_sleep.assert_any_call(2)   # 2^1
 
 
 def test_extract_zip_rejects_corrupt_content() -> None:

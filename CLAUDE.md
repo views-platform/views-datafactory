@@ -16,8 +16,9 @@ The system is a **graph, not a pipeline** (ADR-012):
 
 Multiple top-level packages under `src/` with `datafactory_` prefix:
 - `datafactory_provenance` — content digests and JSONL ledger operations (Layer 0, no outbound imports)
-- `datafactory_priogrid` — PRIO-GRID spatial + temporal backbone (Layer 1, imports provenance only)
-- `datafactory_harvester` — data ingestion with pluggable sources: UCDP (annual, candidate, .9), PRIO-GRID static, GAUL admin boundaries (Layer 1, imports provenance only)
+- `datafactory_http` — HTTP request utilities: retry with exponential backoff (Layer 0, no outbound imports)
+- `datafactory_priogrid` — PRIO-GRID spatial + temporal backbone (Layer 1, imports provenance + http)
+- `datafactory_harvester` — data ingestion with pluggable sources: UCDP (annual, candidate, .9), PRIO-GRID static, GAUL admin boundaries (Layer 1, imports provenance + http)
 - `datafactory_synthetic` — grid-native synthetic generation (Layer 1, imports provenance only)
 - `datafactory_consolidation` — lossless consolidation of raw snapshots (Layer 2, imports provenance only)
 - `datafactory_viewpoint` — opinionated, versioned views over consolidated data (Layer 3, imports provenance only)
