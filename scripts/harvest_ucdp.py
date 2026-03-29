@@ -39,8 +39,8 @@ def main() -> int:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data"),
-        help="Base data directory (default: data/)",
+        default=Path("data/raw"),
+        help="Raw data directory (default: data/raw/)",
     )
     parser.add_argument(
         "--provenance-dir",
