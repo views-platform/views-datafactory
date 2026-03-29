@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 64 concerns total: 38 resolved, 26 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 69 concerns total: 38 resolved, 31 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -14,6 +14,11 @@
 | ID | Tier | Title | Trigger |
 |----|------|-------|---------|
 | D-03 | 1 | Fail-loud vs. operational resilience | Before production deployment |
+| C-84 | 2 | Server runs everything as root | Before granting second user access |
+| C-85 | 2 | Personal GitHub SSH key on shared server | Before granting second user access |
+| C-86 | 2 | No deploy key — repo access tied to personal account | Before granting second user access |
+| C-87 | 2 | No named user accounts on server | Before granting second user access |
+| C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment |
 | C-82 | 3 | ~~No GAUL retry integration test~~ | RESOLVED — `test_gaul_admin.py` |
 | C-21 | 3 | No characterization tests for migration | Next migration batch planned |
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook or change observed |
@@ -58,6 +63,30 @@ ADR-003/008 mandate fail-loud everywhere. Nygard asks what the operational exper
 - `check_health.py` reports staleness and failures (already existed)
 **Remaining gap:** No freshness indicator in zarr/parquet exports for consumers. **Trigger: add before second consumer.**
 **Source:** Nygard (expert reviews 4, 6, 7)
+
+---
+
+## Tier 2 — Fix Before Sharing Server Access
+
+### C-84: Server runs everything as root — [DEFER]
+All pipeline operations, git, and Caddy configuration run as `root` on the Hetzner server. No separation of privileges. A mistake as root can destroy the OS. IT head explicitly advised "limit who can sudo." **Trigger: create a non-root service account (e.g., `views-deploy`) before granting anyone else server access.**
+**Source:** PRIO IT security guidance, server setup 2026-03-28
+
+### C-85: Personal GitHub SSH key on shared server — [DEFER]
+The server's SSH key (`/root/.ssh/id_ed25519`) is registered on Simon's personal GitHub account. If another user gets root access, they effectively have Simon's GitHub credentials for all repos. **Trigger: replace with a repo-scoped deploy key before granting second user access.**
+**Source:** Server setup 2026-03-28
+
+### C-86: No deploy key — repo access tied to personal account — [DEFER]
+GitHub access from the server uses a personal SSH key, not a deploy key. Deploy keys are scoped to a single repo, are read-only by default, and don't grant access to other repos on the account. **Trigger: create a GitHub deploy key for `views-platform/views-datafactory` and remove the personal key from the server.**
+**Source:** Server setup 2026-03-28
+
+### C-87: No named user accounts on server — [DEFER]
+Only `root` exists. IT head advised: named accounts per person, no shared accounts, plus a break-glass emergency account with securely stored credentials. **Trigger: create named accounts before granting second user access.**
+**Source:** PRIO IT security guidance, server setup 2026-03-28
+
+### C-88: SSH not restricted to PRIO/Uppsala IPs — [DEFER]
+SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.**
+**Source:** PRIO IT security guidance, server setup 2026-03-28
 
 ---
 
