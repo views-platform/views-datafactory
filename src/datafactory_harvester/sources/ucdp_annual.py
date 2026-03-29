@@ -94,6 +94,7 @@ class UcdpAnnualConfig:
     page_size: int = 1000
     timeout: int = 30
     max_retries: int = 3
+    page_delay: float = 0.5  # seconds between paginated requests
 
     # Storage
     data_dir: Path = Path("data/raw/ucdp_annual")
@@ -229,6 +230,7 @@ def fetch_paginated(
         if max_pages is not None and page >= max_pages:
             logger.info("Stopped after %d pages (max_pages limit)", max_pages)
             break
+        time.sleep(config.page_delay)
         page += 1
 
     logger.info("Fetched %d total events", len(all_events))
