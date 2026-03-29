@@ -203,10 +203,16 @@ def main() -> int:
         f"{n_t * n_h * n_w * n_total * 4 / 1e9:.1f} GB"
     )
 
-    # Allocate output array and fill in-place
-    # (avoids copying UCDP grid + broadcasting static)
-    assembled = np.zeros(
-        (n_t, n_h, n_w, n_total), dtype=np.float32
+    # Allocate output as memory-mapped file to avoid OOM on
+    # servers with limited RAM. Writes go directly to disk;
+    # peak memory is ~150 MB instead of 4.6 GB.
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = args.output_dir / "grid.npy"
+    assembled = np.lib.format.open_memmap(
+        str(output_path),
+        mode="w+",
+        dtype=np.float32,
+        shape=(n_t, n_h, n_w, n_total),
     )
 
     # Copy UCDP channels
@@ -235,9 +241,8 @@ def main() -> int:
     for i, name in enumerate(all_features):
         print(f"  {i:2d}: {name}")
 
-    # Write output
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    np.save(args.output_dir / "grid.npy", assembled)
+    # Flush mmap to disk (file already exists from open_memmap)
+    assembled.flush()
     np.save(args.output_dir / "pgids.npy", pgids)
     np.save(args.output_dir / "time_steps.npy", time_steps)
     (args.output_dir / "feature_names.json").write_text(
@@ -261,7 +266,7 @@ def main() -> int:
             "admin_dir": str(args.admin_dir),
             "admin_variables": admin_names,
         },
-        "output_shape": list(assembled.shape),
+        "output_shape": [n_t, n_h, n_w, n_total],
         "n_features": len(all_features),
         "feature_names": all_features,
         "output_digest": output_digest,
