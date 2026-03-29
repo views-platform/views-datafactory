@@ -94,7 +94,7 @@ class UcdpAnnualConfig:
     page_size: int = 1000
     timeout: int = 30
     max_retries: int = 3
-    page_delay: float = 0.5  # seconds between paginated requests
+    page_delay: float = 2.0  # seconds between paginated requests
 
     # Storage
     data_dir: Path = Path("data/raw/ucdp_annual")
