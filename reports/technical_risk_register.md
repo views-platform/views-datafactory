@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 72 concerns total: 38 resolved, 34 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 74 concerns total: 38 resolved, 36 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -52,6 +52,8 @@
 | C-89 | 4 | No formal SLO for data freshness | Before second consumer |
 | C-90 | 4 | Pipeline runs as interactive session, not a service | Before cron job setup |
 | C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED |
+| C-92 | 4 | Duplicated retry-delay logic in `datafactory_http` | When retry.py is next modified |
+| C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -234,6 +236,14 @@ The pipeline runs via `tmux` — an operator must SSH in, start tmux, and run th
 ### C-91: No pipeline duration tracking — [DEFER]
 A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. DDIA Ch.2 pp.37-42 emphasizes measuring performance as a distribution, not a single number. If a new data source doubles pipeline time, we'd only notice when the cron job overlaps with the next month. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**
 **Source:** DDIA literature alignment 2026-03-30
+
+### C-92: Duplicated retry-delay logic in `datafactory_http` — [DEFER]
+`retry.py` lines 60-93: the `HTTPError` branch and the `RequestException` branch share identical retry logic (log warning, compute delay with jitter, sleep). The only difference is the 4xx fail-fast check at the top of the HTTPError branch. Could extract a shared `_retry_delay()` helper. File is 96 lines total — duplication is minor but will compound if more exception types are added. **Trigger: extract when `retry.py` is next modified or a new exception branch is added.**
+**Source:** PR #2 code review 2026-03-30
+
+### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
+`harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**
+**Source:** PR #2 code review 2026-03-30
 
 ### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
 `request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.
