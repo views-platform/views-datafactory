@@ -12,7 +12,7 @@ The data factory is feature-complete for UCDP conflict data on the
 PRIO-GRID. Five data sources, 4-layer pipeline, production parity
 achieved. Infrastructure in place: zarr export (1.8 GB servable
 store), consumer guides, deployment documentation, CI/CD for
-main + development branches, 376 tests, 22 ADRs.
+main + development branches, 381 tests, 22 ADRs.
 
 The Hetzner server is available but not yet configured for serving.
 The `development` branch is the active working branch; `main` is

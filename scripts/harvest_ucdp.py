@@ -23,6 +23,23 @@ import time
 from pathlib import Path
 
 
+def _count_outcomes(
+    results: list[dict],
+) -> dict[str, int]:
+    """Count harvest outcomes by category."""
+    counts: dict[str, int] = {}
+    for key in (
+        "cached", "success", "unchanged",
+        "failed", "not_served",
+    ):
+        counts[key] = sum(
+            1 for r in results
+            if r.get("outcome") == key
+        )
+    counts["served"] = len(results) - counts["not_served"]
+    return counts
+
+
 def main() -> int:
     """Run the UCDP harvester."""
     sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
@@ -167,39 +184,19 @@ def _harvest_candidate(
         )
         elapsed = time.monotonic() - t0
 
-        n_total = len(results)
-        n_cached = sum(
-            1
-            for r in results
-            if r.get("outcome") == "cached"
-        )
-        n_fetched = sum(
-            1
-            for r in results
-            if r.get("outcome") == "success"
-        )
-        n_unchanged = sum(
-            1
-            for r in results
-            if r.get("outcome") == "unchanged"
-        )
-        n_failed = sum(
-            1
-            for r in results
-            if r.get("outcome") == "failed"
-        )
-
+        c = _count_outcomes(results)
         print(
-            f"[candidate] {n_total} versions: "
-            f"{n_cached} cached, {n_fetched} fetched, "
-            f"{n_unchanged} unchanged, {n_failed} failed "
+            f"[candidate] {c['served']} versions served "
+            f"({c['not_served']} no longer available): "
+            f"{c['cached']} cached, {c['success']} fetched, "
+            f"{c['unchanged']} unchanged, {c['failed']} failed "
             f"— {elapsed:.1f}s — PASS"
         )
         return {
             "status": "PASS",
             "detail": (
-                f"({n_total} versions, "
-                f"{n_cached} cached)"
+                f"({c['served']} versions, "
+                f"{c['cached']} cached)"
             ),
         }
     except Exception as e:
@@ -232,39 +229,19 @@ def _harvest_dot9(
         )
         elapsed = time.monotonic() - t0
 
-        n_total = len(results)
-        n_cached = sum(
-            1
-            for r in results
-            if r.get("outcome") == "cached"
-        )
-        n_fetched = sum(
-            1
-            for r in results
-            if r.get("outcome") == "success"
-        )
-        n_unchanged = sum(
-            1
-            for r in results
-            if r.get("outcome") == "unchanged"
-        )
-        n_failed = sum(
-            1
-            for r in results
-            if r.get("outcome") == "failed"
-        )
-
+        c = _count_outcomes(results)
         print(
-            f"[dot9] {n_total} versions: "
-            f"{n_cached} cached, {n_fetched} fetched, "
-            f"{n_unchanged} unchanged, {n_failed} failed "
+            f"[dot9] {c['served']} versions served "
+            f"({c['not_served']} no longer available): "
+            f"{c['cached']} cached, {c['success']} fetched, "
+            f"{c['unchanged']} unchanged, {c['failed']} failed "
             f"— {elapsed:.1f}s — PASS"
         )
         return {
             "status": "PASS",
             "detail": (
-                f"({n_total} versions, "
-                f"{n_cached} cached)"
+                f"({c['served']} versions, "
+                f"{c['cached']} cached)"
             ),
         }
     except Exception as e:

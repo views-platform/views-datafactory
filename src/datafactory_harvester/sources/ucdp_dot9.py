@@ -278,6 +278,16 @@ def _fetch_dot9_version(
     events = fetch_paginated(annual_config, token=token)
     fetch_duration = time.monotonic() - t0
 
+    # Empty result = version no longer served by UCDP
+    if not events:
+        logger.debug(
+            "Version %s: 0 events (no longer served)", version,
+        )
+        return {
+            "version": version,
+            "outcome": "not_served",
+        }
+
     # Validate
     validation = validate_events(
         events, REQUIRED_FIELDS, FIELD_TYPES

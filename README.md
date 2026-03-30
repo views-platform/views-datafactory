@@ -198,7 +198,7 @@ views-datafactory/
 │       ├── feature_frame.py                            FeatureFrame dataclass
 │       ├── grid_to_dataframe.py                        Grid → pandas DataFrame
 │       └── grid_from_feature_frame.py                  FeatureFrame → Grid (inverse)
-├── tests/                                            # 376 tests
+├── tests/                                            # 381 tests
 ├── scripts/                                          # Operational scripts
 │   ├── harvest_ucdp.py                                 Full harvest pipeline
 │   ├── consolidate_ucdp.py                             Three-source consolidation
