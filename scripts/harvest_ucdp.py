@@ -122,7 +122,7 @@ def _harvest_annual(
             prov_dir / "ucdp_annual" / "ingestion_ledger.jsonl"
         ),
         timeout=120,  # Annual dataset is large; 30s often insufficient
-        page_size=10000,  # Fewer pages = fewer requests = avoids rate limit
+        page_size=50000,  # API rate-limits after ~40 requests; 50k = 8 pages
     )
 
     try:
