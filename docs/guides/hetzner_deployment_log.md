@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-27 to 2026-03-30
 **Server:** views-datafactory-00 at 204.168.219.108 (Helsinki, CPX32)
-**Status:** Pipeline runs end-to-end. Caddy not yet configured. Data not yet served.
+**Status:** Pipeline runs end-to-end. Caddy installed and serving data over HTTP with basic auth.
 
 This is a detailed record of the first deployment attempt — what worked,
 what broke, how we fixed it, and what we learned. Written for future
@@ -389,7 +389,61 @@ data/
 
 ---
 
-## 8. Commits Made During Deployment
+## 8. Caddy Web Server Setup (2026-03-30)
+
+### What we did
+
+Installed Caddy 2.11.2 to serve zarr and parquet data over HTTP with basic auth.
+
+1. Installed Caddy from official apt repo
+2. Created `/srv/views-data/` with symlinks to assembled zarr and compiled parquet
+3. Configured Caddyfile at `/etc/caddy/Caddyfile` — HTTP on port 80, basic auth (username: `views`), CORS headers, `file_server browse`
+4. Generated bcrypt password hash via `caddy hash-password` (interactive — plaintext never stored)
+5. Enabled Caddy as systemd service (`systemctl enable caddy`)
+
+### Problems encountered
+
+**Problem 1: `tls internal` SSL handshake failure.**
+Attempted HTTPS with self-signed cert (`tls internal` directive). Caddy's internal CA couldn't install the root cert because the `caddy` user lacks sudo. Installed `libnss3-tools` and ran `caddy trust` as root — CA was trusted but TLS still failed because `:443` has no hostname for SNI, so Caddy can't match a cert.
+
+**Decision:** Switched to HTTP-only on port 80. For IP-only access without a domain, self-signed TLS provides no real security benefit — the cert can't be verified by clients anyway. Basic auth over HTTP is sufficient for internal single-user access. Revisit when a domain name is assigned (Caddy will auto-provision Let's Encrypt).
+
+**Problem 2: 403 Forbidden on all files.**
+Caddy runs as user `caddy` but the data symlinks resolve through `/root/`, which had permissions `drwx------` (700). The `caddy` user couldn't traverse the directory.
+
+**Fix:** `chmod o+x /root` — allows traversal (execute) without granting read access to `/root/` contents. Only the symlinked paths are accessible.
+
+### Current Caddyfile
+
+```
+:80 {
+    root * /srv/views-data
+    file_server browse
+
+    basicauth {
+        views <bcrypt-hash>
+    }
+
+    header Access-Control-Allow-Origin *
+    header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+}
+```
+
+### Verification
+
+- Unauthenticated: `curl http://204.168.219.108/grid.zarr/.zmetadata` → 401
+- Authenticated: `curl -u views http://204.168.219.108/grid.zarr/.zmetadata` → zarr JSON metadata
+- Caddy runs as systemd service, starts on boot
+
+### What's still needed
+
+- Domain name → switch to HTTPS with automatic Let's Encrypt
+- Cron job for monthly pipeline refresh (C-90)
+- xarray consumer test from laptop
+
+---
+
+## 9. Commits Made During Deployment
 
 | Commit | Fix |
 |--------|-----|

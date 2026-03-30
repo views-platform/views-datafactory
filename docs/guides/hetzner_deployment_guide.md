@@ -125,63 +125,76 @@ print(f'Total fatalities: {float(ds[\"ged_sb_best\"].sum()):.0f}')
 ### 3.1 Install Caddy
 
 ```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install caddy
+apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+apt update
+apt install caddy
 ```
 
 ### 3.2 Create a data directory for serving
 
 ```bash
 # Create a directory that Caddy will serve
-sudo mkdir -p /srv/views-data
+mkdir -p /srv/views-data
 
 # Symlink the exports into it
-sudo ln -s ~/views-datafactory/data/assembled/grid.zarr /srv/views-data/grid.zarr
-sudo ln -s ~/views-datafactory/data/compiled/dataframe.parquet /srv/views-data/dataframe.parquet
+ln -sf ~/views-datafactory/data/assembled/grid.zarr /srv/views-data/grid.zarr
+ln -sf ~/views-datafactory/data/compiled/dataframe.parquet /srv/views-data/dataframe.parquet
 ```
 
-### 3.3 Configure Caddy
+**Important:** Caddy runs as user `caddy`, so it must be able to traverse
+the symlink path. If data lives under `/root/`, you need:
+```bash
+chmod o+x /root   # Allow traversal only (not read)
+```
+
+### 3.3 Generate a password hash
+
+```bash
+caddy hash-password
+# Type your password twice (plaintext never stored)
+# Copy the bcrypt hash output ($2a$14$...)
+```
+
+### 3.4 Configure Caddy
+
+Edit `/etc/caddy/Caddyfile`:
 
 **Option A: With a domain name (recommended)**
 
-Edit `/etc/caddy/Caddyfile`:
+When a domain points to the server, Caddy auto-provisions a Let's Encrypt
+TLS certificate. No manual cert management needed.
 
 ```
 data.views.uu.se {
     root * /srv/views-data
     file_server browse
 
-    # Basic auth (username: views, password: generate one)
     basicauth {
-        views $2a$14$HASHED_PASSWORD_HERE
+        views <paste-bcrypt-hash-here>
     }
 
-    # CORS headers for browser-based consumers
     header Access-Control-Allow-Origin *
     header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
 }
 ```
 
-To generate the hashed password:
-```bash
-caddy hash-password
-# Enter your chosen password when prompted
-# Copy the output into the Caddyfile
-```
+**Option B: Without a domain name (HTTP only) — current setup**
 
-**Option B: Without a domain name (IP address only)**
+Without a domain, `tls internal` does not work reliably (Caddy's
+internal CA needs a hostname for SNI; raw IPs fail the TLS handshake).
+Serve over HTTP instead. Basic auth still protects access — the only
+risk is password interception on the wire, acceptable for internal
+single-user access.
 
 ```
-:443 {
-    tls internal  # Self-signed certificate
+:80 {
     root * /srv/views-data
     file_server browse
 
     basicauth {
-        views $2a$14$HASHED_PASSWORD_HERE
+        views <paste-bcrypt-hash-here>
     }
 
     header Access-Control-Allow-Origin *
@@ -189,28 +202,30 @@ caddy hash-password
 }
 ```
 
-### 3.4 Start Caddy
+Upgrade to Option A when a domain name is available.
+
+### 3.5 Start Caddy
 
 ```bash
-sudo systemctl enable caddy   # Start on boot
-sudo systemctl restart caddy   # Start now
-sudo systemctl status caddy    # Check it's running
+systemctl enable caddy    # Start on boot
+systemctl restart caddy   # Start now
+systemctl status caddy    # Check it's running
 ```
 
-### 3.5 Test from your laptop
+### 3.6 Test
 
 ```bash
-# Test with curl (replace URL and credentials)
-curl -u views:yourpassword https://data.views.uu.se/
+# From the server — should return 401 (auth required)
+curl -s -o /dev/null -w "%{http_code}" http://localhost/grid.zarr/.zmetadata
 
-# Test zarr with Python
-python -c "
-import xarray as xr
-ds = xr.open_zarr(
-    'https://views:yourpassword@data.views.uu.se/grid.zarr'
-)
-print(ds)
-"
+# From the server — should return zarr JSON metadata
+curl -s -u views http://localhost/grid.zarr/.zmetadata | head -10
+
+# From your laptop — should return 401
+curl -s -o /dev/null -w "%{http_code}" http://204.168.219.108/grid.zarr/.zmetadata
+
+# From your laptop — should return zarr JSON metadata
+curl -s -u views http://204.168.219.108/grid.zarr/.zmetadata | head -10
 ```
 
 ---
@@ -232,7 +247,7 @@ crontab -e
 Add this line (runs on the 1st of every month at 3 AM):
 
 ```
-0 3 1 * * cd /home/your-username/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
 ```
 
 ### 4.3 Verify cron is set
@@ -258,9 +273,16 @@ cat logs/refresh.log
 ```python
 import xarray as xr
 
+# With domain + HTTPS (Option A):
 ds = xr.open_zarr(
     "https://data.views.uu.se/grid.zarr",
     storage_options={"auth": ("views", "yourpassword")},
+)
+
+# With IP + HTTP (Option B, current setup):
+ds = xr.open_zarr(
+    "http://204.168.219.108/grid.zarr",
+    storage_options={"client_kwargs": {"auth": ("views", "yourpassword")}},
 )
 
 # Slice: Ethiopia fatalities 2020
@@ -274,11 +296,16 @@ print(f"Ethiopia 2020 total: {float(eth.sum()):.0f}")
 
 ```python
 import pandas as pd
+import requests
 
-# Download full file (basic auth in URL)
-df = pd.read_parquet(
-    "https://views:yourpassword@data.views.uu.se/dataframe.parquet"
+# Download with auth
+resp = requests.get(
+    "http://204.168.219.108/dataframe.parquet",
+    auth=("views", "yourpassword"),
 )
+with open("dataframe.parquet", "wb") as f:
+    f.write(resp.content)
+df = pd.read_parquet("dataframe.parquet")
 print(df.head())
 ```
 
@@ -295,9 +322,14 @@ sudo journalctl -u caddy --no-pager -n 20
 **"401 Unauthorized"** — Wrong username or password.
 Check the Caddyfile credentials match what you're sending.
 
+**"403 Forbidden"** — Caddy can't read the files. Check that
+the `caddy` user can traverse the symlink path (`chmod o+x /root`
+if data is under `/root/`).
+
 **"Certificate error"** — If using a domain, DNS must point to
 the server. Caddy gets certificates automatically but needs DNS
-to be correct. If using IP, use `tls internal` (self-signed).
+to be correct. If using IP only, use HTTP (Option B) — `tls internal`
+does not work with raw IPs.
 
 **"Pipeline failed"** — Check which step failed in the log:
 ```bash
@@ -318,7 +350,7 @@ Check with `df -h`.
 After completing all phases, you have:
 
 1. **A server** (Hetzner) running 24/7
-2. **A web server** (Caddy) serving data over HTTPS
+2. **A web server** (Caddy) serving data over HTTP (HTTPS when domain assigned)
 3. **Authentication** (basic auth) controlling access
 4. **Two consumer formats:**
    - Zarr store — lazy loading, subset access, xarray interface
@@ -329,10 +361,10 @@ After completing all phases, you have:
 Consumers access the data with:
 ```python
 # Zarr (subsets, lazy loading)
-ds = xr.open_zarr("https://data.views.uu.se/grid.zarr", ...)
+ds = xr.open_zarr("http://204.168.219.108/grid.zarr", ...)
 
 # Parquet (full download)
-df = pd.read_parquet("https://data.views.uu.se/dataframe.parquet")
+df = pd.read_parquet("http://204.168.219.108/dataframe.parquet")
 ```
 
 ---
