@@ -106,7 +106,7 @@ class TestFetchUcdpAnnualGreen:
 
         with (
             patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get",
+                "datafactory_http.retry.requests.get",
                 return_value=mock_resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test-token"}),
@@ -145,7 +145,7 @@ class TestFetchUcdpAnnualGreen:
         append_ledger_entry(config.ledger_path, {"content_digest": "abc123"})
 
         with patch(
-            "datafactory_harvester.sources.ucdp_annual.requests.get"
+            "datafactory_http.retry.requests.get"
         ) as mock_get:
             result = fetch_ucdp_annual(config)
 
@@ -170,7 +170,7 @@ class TestFetchUcdpAnnualBeige:
 
         with (
             patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get",
+                "datafactory_http.retry.requests.get",
                 return_value=mock_resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test-token"}),
@@ -188,58 +188,6 @@ class TestFetchUcdpAnnualBeige:
 
 # ---- Retry Logic ----
 
-
-class TestRequestWithRetryGreen:
-
-    def test_retries_on_failure(self) -> None:
-        """Retry with exponential backoff on transient errors."""
-        from datafactory_harvester.sources.ucdp_annual import request_with_retry
-
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status = MagicMock()
-
-        with (
-            patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get"
-            ) as mock_get,
-            patch(
-                "datafactory_harvester.sources.ucdp_annual.time.sleep"
-            ) as mock_sleep,
-        ):
-            import requests as _req
-
-            mock_get.side_effect = [
-                _req.ConnectionError("fail 1"),
-                _req.ConnectionError("fail 2"),
-                mock_resp,
-            ]
-            request_with_retry(
-                "http://test", {}, {}, max_retries=3, timeout=5
-            )
-
-        assert mock_get.call_count == 3
-        assert mock_sleep.call_count == 2
-        mock_sleep.assert_any_call(1)  # 2^0
-        mock_sleep.assert_any_call(2)  # 2^1
-
-    def test_raises_after_all_retries_exhausted(self) -> None:
-        from datafactory_harvester.sources.ucdp_annual import request_with_retry
-
-        with (
-            patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get"
-            ) as mock_get,
-            patch("datafactory_harvester.sources.ucdp_annual.time.sleep"),
-        ):
-            import requests as _req
-
-            mock_get.side_effect = _req.ConnectionError("always fails")
-            with pytest.raises(_req.ConnectionError):
-                request_with_retry(
-                    "http://test", {}, {}, max_retries=3, timeout=5
-                )
-
-        assert mock_get.call_count == 3
 
 
 # ---- Envelope Validation ----

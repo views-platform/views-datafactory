@@ -8,21 +8,43 @@ what all of this means.
 
 ---
 
+## Server Details
+
+| Property | Value |
+|----------|-------|
+| **Name** | `views-datafactory-00` |
+| **IP** | `204.168.219.108` |
+| **Location** | Helsinki (eu-central) |
+| **Type** | CPX32 (4 vCPU, 8 GB RAM, 160 GB SSD) |
+| **OS** | Ubuntu 24.04 |
+| **Project** | views-datafactory (Hetzner console) |
+| **Backups** | Enabled (daily) |
+| **Cost** | ~€12.60/month (server + IPv4 + backups) |
+| **SSH** | `ssh root@204.168.219.108` |
+
+---
+
 ## Prerequisites
 
-- A Hetzner server you can SSH into
-- A domain name pointing to the server (e.g., `data.views.uu.se`)
-  OR willingness to use the IP address directly
 - The `UCDP_API_TOKEN` environment variable
+- A domain name pointing to the server (e.g., `data.views.uu.se`)
+  OR willingness to use the IP address directly (current)
 
 ---
 
 ## Phase 1: Server setup (one-time)
 
+### 1.0 Server provisioned (DONE)
+
+- Hetzner project: `views-datafactory`
+- Server: `views-datafactory-00` at `204.168.219.108`
+- SSH key registered: `simon@simon-XPS-15-9530`
+- Backups enabled
+
 ### 1.1 SSH into the server
 
 ```bash
-ssh your-username@your-server-ip
+ssh root@204.168.219.108
 ```
 
 ### 1.2 Update the system

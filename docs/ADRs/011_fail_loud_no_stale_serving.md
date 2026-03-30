@@ -74,3 +74,6 @@ These trade-offs are accepted intentionally for the pre-production phase.
 - ADR-003 (Authority of Declarations — fail-loud invariant)
 - ADR-008 (Observability and Explicit Failure)
 - `reports/technical_risk_register_resolved.md` C-15, D-03
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.2 pp.43-44: Fault vs failure distinction; crash-stop fault model
+  - Ch.2 pp.46-47: Software faults — systematic, correlated, lie dormant until triggered

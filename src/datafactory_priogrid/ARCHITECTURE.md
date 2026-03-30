@@ -42,7 +42,7 @@ PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate 
 | land_mask | Fetches land cell pgids from PRIO-GRID API (`landarea` variable, 64,818 cells). Cached to disk. Not auto-imported (avoids pulling `requests`). |
 
 ## Invariants
-- **Single-writer access assumed.** No concurrent operations supported (see concerns00.md C-16)
+- **Single-writer access assumed.** No concurrent operations supported (see technical_risk_register_resolved.md C-16)
 
 - Default configuration produces exactly 259,200 cells (360 x 720)
 - pgid numbering: row-major from bottom-left, 1-indexed (pgid 1 is southwest corner)

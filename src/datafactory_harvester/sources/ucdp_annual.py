@@ -16,8 +16,6 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-import requests
-
 from datafactory_harvester.event_validation import (
     ComparisonResult,
     compare_snapshots,
@@ -25,6 +23,7 @@ from datafactory_harvester.event_validation import (
 )
 from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
 from datafactory_harvester.sources import register_source
+from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -95,6 +94,7 @@ class UcdpAnnualConfig:
     page_size: int = 1000
     timeout: int = 30
     max_retries: int = 3
+    page_delay: float = 2.0  # seconds between paginated requests
 
     # Storage
     data_dir: Path = Path("data/raw/ucdp_annual")
@@ -137,39 +137,6 @@ def get_ucdp_token(token: str | None = None) -> str:
         raise ValueError(err_msg)
     return resolved
 
-
-def request_with_retry(
-    url: str,
-    headers: dict,
-    params: dict,
-    *,
-    max_retries: int = 3,
-    timeout: int = 30,
-) -> requests.Response:
-    """HTTP GET with exponential backoff retry."""
-    for attempt in range(max_retries):
-        try:
-            resp = requests.get(url, headers=headers, params=params, timeout=timeout)
-            resp.raise_for_status()
-            return resp
-        except requests.RequestException:
-            if attempt == max_retries - 1:
-                logger.error(
-                    "Request failed after %d attempts: %s",
-                    max_retries,
-                    url,
-                )
-                raise
-            delay = 2**attempt
-            logger.warning(
-                "Request attempt %d/%d failed, retrying in %ds",
-                attempt + 1,
-                max_retries,
-                delay,
-            )
-            time.sleep(delay)
-    msg = "Unreachable"
-    raise AssertionError(msg)
 
 
 def validate_envelope(data: dict) -> None:
@@ -223,8 +190,8 @@ def fetch_paginated(
         params["page"] = page
         response = request_with_retry(
             url,
-            headers,
-            params,
+            headers=headers,
+            params=params,
             max_retries=config.max_retries,
             timeout=config.timeout,
         )
@@ -263,6 +230,7 @@ def fetch_paginated(
         if max_pages is not None and page >= max_pages:
             logger.info("Stopped after %d pages (max_pages limit)", max_pages)
             break
+        time.sleep(config.page_delay)
         page += 1
 
     logger.info("Fetched %d total events", len(all_events))

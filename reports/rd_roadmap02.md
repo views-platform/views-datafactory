@@ -12,7 +12,7 @@ The data factory is feature-complete for UCDP conflict data on the PRIO-GRID.
 Five data sources (UCDP annual, candidate, .9, PRIO-GRID static, GAUL admin
 boundaries) flow through the 4-layer graph (ADR-012) to produce assembled
 grids with ~39 features. Production parity is achieved (100% match on
-non-expanded events). The codebase has 376 tests, 21 ADRs, 16 CICs, and a
+non-expanded events). The codebase has 381 tests, 22 ADRs, 16 CICs, and a
 formalized technical risk register (ADR-020) with 56 of 80 concerns resolved.
 
 The last development sprint (2026-03-22 to 2026-03-25) focused on quality:

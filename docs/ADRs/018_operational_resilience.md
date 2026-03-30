@@ -103,3 +103,7 @@ When the system reaches production deployment, the following should be implement
 - ADR-011 (Fail Loud, No Stale Data Serving)
 - `reports/technical_risk_register_resolved.md` D-03
 - Expert review 6: Nygard perspective on operational resilience
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.2 pp.41-42: SLOs and SLAs — measurable targets for performance and availability
+  - Ch.2 pp.43-44: Fault tolerance — continuing to provide service despite component faults
+  - Ch.2 p.38: Metastable failures and retry storms — why bounded staleness needs operator judgment

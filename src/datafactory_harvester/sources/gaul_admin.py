@@ -29,12 +29,12 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-import requests
 import shapefile as shp
 from shapely.geometry import Point, shape
 from shapely.strtree import STRtree
 
 from datafactory_harvester.sources import register_source
+from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -128,8 +128,7 @@ def _download_shapefile_zip(
     # Download
     logger.info("Downloading %s ...", url)
     t0 = time.monotonic()
-    resp = requests.get(url, timeout=timeout)
-    resp.raise_for_status()
+    resp = request_with_retry(url, timeout=timeout)
 
     # Read into memory and extract
     content = resp.content

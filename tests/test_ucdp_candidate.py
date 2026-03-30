@@ -134,7 +134,7 @@ class TestDiscoverVersionsGreen:
         config = UcdpCandidateConfig(start_year=2025)
         with (
             patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get",
+                "datafactory_http.retry.requests.get",
                 side_effect=responses,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
@@ -152,7 +152,7 @@ class TestDiscoverVersionsGreen:
         config = UcdpCandidateConfig(start_year=2025)
         with (
             patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get",
+                "datafactory_http.retry.requests.get",
                 return_value=resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
@@ -184,7 +184,7 @@ class TestDigestCachingGreen:
 
         with (
             patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get",
+                "datafactory_http.retry.requests.get",
                 return_value=mock_resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
@@ -238,7 +238,7 @@ class TestFetchUcdpCandidateGreen:
 
         with (
             patch(
-                "datafactory_harvester.sources.ucdp_annual.requests.get",
+                "datafactory_http.retry.requests.get",
                 side_effect=discover_responses + [fetch_resp],
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),

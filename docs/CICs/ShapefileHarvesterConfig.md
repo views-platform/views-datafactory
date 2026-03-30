@@ -36,7 +36,7 @@ The shapefile is grid reference geometry (not a data source). It's a one-time do
 ## 4. Inputs and Assumptions
 
 - `url`: str, shapefile ZIP URL (default: PRIO-GRID v2 shapefile)
-- `data_dir`: Path, storage directory (default: `data/priogrid`)
+- `data_dir`: Path, storage directory (default: `data/raw/priogrid`)
 - `ledger_path`: Path, provenance ledger (default: `provenance/priogrid/ingestion_ledger.jsonl`)
 - `timeout`: int, >= 1, HTTP timeout in seconds (default: 120)
 - `max_retries`: int, >= 1, download retry attempts (default: 3)

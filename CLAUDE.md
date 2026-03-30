@@ -16,8 +16,9 @@ The system is a **graph, not a pipeline** (ADR-012):
 
 Multiple top-level packages under `src/` with `datafactory_` prefix:
 - `datafactory_provenance` — content digests and JSONL ledger operations (Layer 0, no outbound imports)
-- `datafactory_priogrid` — PRIO-GRID spatial + temporal backbone (Layer 1, imports provenance only)
-- `datafactory_harvester` — data ingestion with pluggable sources: UCDP (annual, candidate, .9), PRIO-GRID static, GAUL admin boundaries (Layer 1, imports provenance only)
+- `datafactory_http` — HTTP request utilities: retry with exponential backoff (Layer 0, no outbound imports)
+- `datafactory_priogrid` — PRIO-GRID spatial + temporal backbone (Layer 1, imports provenance + http)
+- `datafactory_harvester` — data ingestion with pluggable sources: UCDP (annual, candidate, .9), PRIO-GRID static, GAUL admin boundaries (Layer 1, imports provenance + http)
 - `datafactory_synthetic` — grid-native synthetic generation (Layer 1, imports provenance only)
 - `datafactory_consolidation` — lossless consolidation of raw snapshots (Layer 2, imports provenance only)
 - `datafactory_viewpoint` — opinionated, versioned views over consolidated data (Layer 3, imports provenance only)
@@ -45,6 +46,17 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 
 - `reports/rd_roadmap02.md` — Research questions, hypotheses, data agenda, milestones
 - `reports/product_development_plan02.md` — Users, requirements, architecture, release plan
+
+## Vocabulary (aligned with Kleppmann, DDIA 2nd ed.)
+
+Our terminology maps to established data systems concepts:
+
+- **Consolidated store** = system of record (DDIA Ch.1) — the authoritative, lossless event store
+- **Viewpoint** = materialized view / derived data (DDIA Ch.1) — opinionated, rebuildable from the consolidated store
+- **Provenance ledger** = append-only audit log (DDIA Ch.1) — immutable record of every operation
+- **Fail-loud** (ADR-011) = crash-stop fault model (DDIA Ch.2) — faults become visible failures, never hidden
+- **Bounded staleness** (ADR-018) = SLO-based fault tolerance (DDIA Ch.2) — explicit freshness targets with operator judgment
+- **Graph, not pipeline** (ADR-012) = ETL/ELT with multiple valid paths (DDIA Ch.1) — not all data traverses all layers
 
 ## Relationship to views-metric-lab
 

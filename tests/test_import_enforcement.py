@@ -18,8 +18,9 @@ from pathlib import Path
 # Allowed imports per package (beyond stdlib and external libs)
 ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "datafactory_provenance": set(),
-    "datafactory_priogrid": {"datafactory_provenance"},
-    "datafactory_harvester": {"datafactory_provenance"},
+    "datafactory_http": set(),
+    "datafactory_priogrid": {"datafactory_provenance", "datafactory_http"},
+    "datafactory_harvester": {"datafactory_provenance", "datafactory_http"},
     "datafactory_synthetic": {"datafactory_provenance"},
     "datafactory_consolidation": {"datafactory_provenance"},
     "datafactory_viewpoint": {"datafactory_provenance"},

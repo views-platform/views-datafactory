@@ -23,6 +23,23 @@ import time
 from pathlib import Path
 
 
+def _count_outcomes(
+    results: list[dict],
+) -> dict[str, int]:
+    """Count harvest outcomes by category."""
+    counts: dict[str, int] = {}
+    for key in (
+        "cached", "success", "unchanged",
+        "failed", "not_served",
+    ):
+        counts[key] = sum(
+            1 for r in results
+            if r.get("outcome") == key
+        )
+    counts["served"] = len(results) - counts["not_served"]
+    return counts
+
+
 def main() -> int:
     """Run the UCDP harvester."""
     sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
@@ -39,8 +56,8 @@ def main() -> int:
     parser.add_argument(
         "--data-dir",
         type=Path,
-        default=Path("data"),
-        help="Base data directory (default: data/)",
+        default=Path("data/raw"),
+        help="Raw data directory (default: data/raw/)",
     )
     parser.add_argument(
         "--provenance-dir",
@@ -97,7 +114,12 @@ def main() -> int:
         detail = res.get("detail", "")
         print(f"  {name}: {status} {detail}")
     print("=" * 60)
-    return 0
+
+    n_failed = sum(
+        1 for r in results.values()
+        if r.get("status") == "FAIL"
+    )
+    return 1 if n_failed > 0 else 0
 
 
 def _harvest_annual(
@@ -116,6 +138,8 @@ def _harvest_annual(
         ledger_path=(
             prov_dir / "ucdp_annual" / "ingestion_ledger.jsonl"
         ),
+        timeout=120,  # Annual dataset is large; 30s often insufficient
+        page_size=50000,  # API rate-limits after ~40 requests; 50k = 8 pages
     )
 
     try:
@@ -160,39 +184,19 @@ def _harvest_candidate(
         )
         elapsed = time.monotonic() - t0
 
-        n_total = len(results)
-        n_cached = sum(
-            1
-            for r in results
-            if r.get("outcome") == "cached"
-        )
-        n_fetched = sum(
-            1
-            for r in results
-            if r.get("outcome") == "success"
-        )
-        n_unchanged = sum(
-            1
-            for r in results
-            if r.get("outcome") == "unchanged"
-        )
-        n_failed = sum(
-            1
-            for r in results
-            if r.get("outcome") == "failed"
-        )
-
+        c = _count_outcomes(results)
         print(
-            f"[candidate] {n_total} versions: "
-            f"{n_cached} cached, {n_fetched} fetched, "
-            f"{n_unchanged} unchanged, {n_failed} failed "
+            f"[candidate] {c['served']} versions served "
+            f"({c['not_served']} no longer available): "
+            f"{c['cached']} cached, {c['success']} fetched, "
+            f"{c['unchanged']} unchanged, {c['failed']} failed "
             f"— {elapsed:.1f}s — PASS"
         )
         return {
             "status": "PASS",
             "detail": (
-                f"({n_total} versions, "
-                f"{n_cached} cached)"
+                f"({c['served']} versions, "
+                f"{c['cached']} cached)"
             ),
         }
     except Exception as e:
@@ -225,39 +229,19 @@ def _harvest_dot9(
         )
         elapsed = time.monotonic() - t0
 
-        n_total = len(results)
-        n_cached = sum(
-            1
-            for r in results
-            if r.get("outcome") == "cached"
-        )
-        n_fetched = sum(
-            1
-            for r in results
-            if r.get("outcome") == "success"
-        )
-        n_unchanged = sum(
-            1
-            for r in results
-            if r.get("outcome") == "unchanged"
-        )
-        n_failed = sum(
-            1
-            for r in results
-            if r.get("outcome") == "failed"
-        )
-
+        c = _count_outcomes(results)
         print(
-            f"[dot9] {n_total} versions: "
-            f"{n_cached} cached, {n_fetched} fetched, "
-            f"{n_unchanged} unchanged, {n_failed} failed "
+            f"[dot9] {c['served']} versions served "
+            f"({c['not_served']} no longer available): "
+            f"{c['cached']} cached, {c['success']} fetched, "
+            f"{c['unchanged']} unchanged, {c['failed']} failed "
             f"— {elapsed:.1f}s — PASS"
         )
         return {
             "status": "PASS",
             "detail": (
-                f"({n_total} versions, "
-                f"{n_cached} cached)"
+                f"({c['served']} versions, "
+                f"{c['cached']} cached)"
             ),
         }
     except Exception as e:

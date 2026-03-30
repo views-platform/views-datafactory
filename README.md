@@ -91,10 +91,11 @@ Not all paths traverse all layers. Synthetic data produces npy directly and reac
 The architecture is a **graph**, not a pipeline. Each node is a self-contained package with explicit dependencies:
 
 ```
-Layer 0 — Provenance (no internal imports):
+Layer 0 — Foundation (no internal imports):
   datafactory_provenance        Content digests, JSONL ledger operations
+  datafactory_http              HTTP request utilities: retry with exponential backoff
 
-Layer 1 — Source nodes (import only provenance):
+Layer 1 — Source nodes (import provenance + http):
   datafactory_priogrid          PRIO-GRID spatial + temporal backbone
   datafactory_harvester         Data ingestion with pluggable sources
   datafactory_synthetic         Grid-native synthetic generation (stub)
@@ -158,6 +159,8 @@ views-datafactory/
 ├── src/
 │   ├── datafactory_provenance/                       # Layer 0 — digests + ledgers
 │   │   └── digests_and_ledgers.py
+│   ├── datafactory_http/                             # Layer 0 — HTTP retry utilities
+│   │   └── retry.py                                    request_with_retry (shared)
 │   ├── datafactory_priogrid/                         # Layer 1 — PRIO-GRID backbone
 │   │   ├── grid_config.py                              GridConfig (spatial params)
 │   │   ├── temporal_config.py                          TemporalConfig (year/month range)
@@ -195,12 +198,13 @@ views-datafactory/
 │       ├── feature_frame.py                            FeatureFrame dataclass
 │       ├── grid_to_dataframe.py                        Grid → pandas DataFrame
 │       └── grid_from_feature_frame.py                  FeatureFrame → Grid (inverse)
-├── tests/                                            # 376 tests
+├── tests/                                            # 381 tests
 ├── scripts/                                          # Operational scripts
 │   ├── harvest_ucdp.py                                 Full harvest pipeline
 │   ├── consolidate_ucdp.py                             Three-source consolidation
 │   ├── build_viewpoint.py                              Viewpoint from profile
 │   ├── compile_grid.py                                 Grid compilation
+│   ├── harvest_shapefile.py                              PRIO-GRID shapefile download
 │   ├── harvest_gaul.py                                  GAUL admin boundary harvest + spatial join
 │   ├── assemble_grid.py                                UCDP + static + admin assembly
 │   ├── export_dataframe.py                             Grid → DataFrame export
@@ -282,9 +286,9 @@ ff = FeatureFrame.from_grid(data, pgids, time_steps, feature_names)
 
 The `reports/` directory contains living documents that define the project's direction:
 
-- **[R&D Roadmap](reports/rd_roadmap01.md)** — Research questions, hypotheses, data agenda, experimentation framework, and milestones. Focuses on what must be *discovered*.
-- **[Product Development Plan](reports/product_development_plan01.md)** — Users, requirements, system architecture, data infrastructure, and release plan. Focuses on what must be *built*.
-- **[Concerns Tracker](reports/concerns00.md)** — Expert review concerns: 50 resolved, 13 deferred with trigger conditions.
+- **[R&D Roadmap](reports/rd_roadmap03.md)** — Research questions, hypotheses, data agenda, milestones. Focuses on what must be *discovered*.
+- **[Product Development Plan](reports/product_development_plan02.md)** — Users, requirements, architecture, release plan. Focuses on what must be *built*.
+- **[Technical Risk Register](reports/technical_risk_register.md)** — 64 concerns tracked, 38 resolved, 26 deferred with trigger conditions (ADR-020).
 - **[.9 Investigation](reports/dot9_investigation/)** — Empirical findings on UCDP .9 data stream characteristics.
 
 ---

@@ -40,9 +40,9 @@ This is a **graph**, not a pipeline. Not all data flows through all layers. Synt
 ## The Dependency DAG
 
 ```
-Layer 0 (Foundation):     datafactory_provenance
-                               ^
-                               |
+Layer 0 (Foundation):     datafactory_provenance    datafactory_http
+                               ^                        ^
+                               |                        |
 Layer 1 (Sources):        datafactory_priogrid    datafactory_harvester    datafactory_synthetic
                                |                        |                        |
                                |        ┌───────────────┘                        |
@@ -71,8 +71,9 @@ Synthetic data follows an independent path: it produces npy output directly and 
 | Package | May import from | Reads filesystem output of |
 |---------|----------------|---------------------------|
 | `datafactory_provenance` | nothing | nothing |
-| `datafactory_priogrid` | provenance | nothing |
-| `datafactory_harvester` | provenance | nothing |
+| `datafactory_http` | nothing | nothing |
+| `datafactory_priogrid` | provenance, http | nothing |
+| `datafactory_harvester` | provenance, http | nothing |
 | `datafactory_synthetic` | provenance | nothing |
 | `datafactory_consolidation` | provenance | harvester |
 | `datafactory_viewpoint` | provenance | consolidation |
@@ -174,3 +175,12 @@ This ADR defines *structural topology only*. It does not define:
 - source-specific rules (ADR-015+),
 - boundary contracts (ADR-009),
 - or failure handling (ADR-008).
+
+---
+
+## References
+
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.1 pp.7-11: Data warehousing, ETL/ELT pipelines, systems of record vs derived data
+  - Ch.1 pp.10-11: Systems of record (authoritative, canonical) vs derived data systems (redundant, rebuildable)
+  - Ch.1 p.10: The "sushi principle" — raw data is better (motivates lossless consolidation)
