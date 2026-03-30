@@ -144,3 +144,11 @@ The consolidated Parquet store uses `pa.concat_tables(promote_options="default")
 - **Type changes:** PyArrow's type promotion resolves compatible types (e.g., int32 → int64). Incompatible changes (e.g., int → string) will raise an error during concatenation.
 
 This is intentional: the lossless principle means no data is discarded, and schema differences between vintages are preserved rather than resolved. Consumers should handle nullable columns gracefully.
+
+---
+
+## References
+
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.1 p.10: The "sushi principle" — raw data is better; each consumer transforms to suit their needs
+  - Ch.1 pp.10-11: Systems of record hold authoritative data; if there's a discrepancy, the system of record wins

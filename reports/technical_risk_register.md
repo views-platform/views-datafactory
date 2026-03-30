@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 69 concerns total: 38 resolved, 31 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 72 concerns total: 38 resolved, 34 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -49,6 +49,9 @@
 | C-61 | 4 | No schema evolution test | 3rd data source |
 | C-81 | 4 | ~~GAUL shapefile download has no retry logic~~ | RESOLVED — uses `request_with_retry` |
 | C-83 | 4 | ~~Retry retries on 4xx client errors~~ | RESOLVED — 4xx fail-fast, 5xx retry |
+| C-89 | 4 | No formal SLO for data freshness | Before second consumer |
+| C-90 | 4 | Pipeline runs as interactive session, not a service | Before cron job setup |
+| C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -219,6 +222,18 @@ No test for what happens when Parquet columns are added/removed between consolid
 ### C-81: ~~GAUL shapefile download has no retry logic~~ RESOLVED
 `gaul_admin.py:_download_shapefile_zip()` now uses `request_with_retry` from `datafactory_http`, gaining exponential backoff retry consistent with all other downloaders.
 **Source:** Tech debt cleanup 2026-03-27
+
+### C-89: No formal SLO for data freshness — [DEFER]
+ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks or reports whether data meets the target. Consumers can't programmatically verify freshness. DDIA Ch.2 pp.41-42 defines SLOs as measurable targets with consequences — our threshold is a guideline, not a contract. **Trigger: define measurable SLO before second consumer.**
+**Source:** DDIA literature alignment 2026-03-30
+
+### C-90: Pipeline runs as interactive session, not a service — [DEFER]
+The pipeline runs via `tmux` — an operator must SSH in, start tmux, and run the script. If tmux isn't used, SSH disconnect kills the process (as happened during deployment). Running as a systemd service or cron job would make it resilient to operator disconnects. DDIA Ch.9 p.86 discusses process pauses. **Trigger: resolve when setting up cron job on Hetzner.**
+**Source:** DDIA literature alignment 2026-03-30, Hetzner deployment experience
+
+### C-91: No pipeline duration tracking — [DEFER]
+A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. DDIA Ch.2 pp.37-42 emphasizes measuring performance as a distribution, not a single number. If a new data source doubles pipeline time, we'd only notice when the cron job overlaps with the next month. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**
+**Source:** DDIA literature alignment 2026-03-30
 
 ### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
 `request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.

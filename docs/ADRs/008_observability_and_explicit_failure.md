@@ -103,3 +103,12 @@ or logging infrastructure configuration, which are operational concerns.
 
 Observability must support understanding.
 Failure must never be silent.
+
+---
+
+## References
+
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.2 pp.53-54: Operability — monitoring, predictable behavior, good defaults
+  - Ch.2 pp.43-47: Fault vs failure distinction; software faults lie dormant until triggered
+  - Ch.1 p.20: Observability tools for diagnosing distributed system behavior

@@ -47,6 +47,17 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 - `reports/rd_roadmap02.md` — Research questions, hypotheses, data agenda, milestones
 - `reports/product_development_plan02.md` — Users, requirements, architecture, release plan
 
+## Vocabulary (aligned with Kleppmann, DDIA 2nd ed.)
+
+Our terminology maps to established data systems concepts:
+
+- **Consolidated store** = system of record (DDIA Ch.1) — the authoritative, lossless event store
+- **Viewpoint** = materialized view / derived data (DDIA Ch.1) — opinionated, rebuildable from the consolidated store
+- **Provenance ledger** = append-only audit log (DDIA Ch.1) — immutable record of every operation
+- **Fail-loud** (ADR-011) = crash-stop fault model (DDIA Ch.2) — faults become visible failures, never hidden
+- **Bounded staleness** (ADR-018) = SLO-based fault tolerance (DDIA Ch.2) — explicit freshness targets with operator judgment
+- **Graph, not pipeline** (ADR-012) = ETL/ELT with multiple valid paths (DDIA Ch.1) — not all data traverses all layers
+
 ## Relationship to views-metric-lab
 
 The metric lab (`../views-metric-lab/`) is the first consumer. Grid and harvester code is being migrated from the lab into this repo. The lab retains models, metrics, losses, and evaluation infrastructure.

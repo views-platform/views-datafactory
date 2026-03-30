@@ -175,3 +175,12 @@ This ADR defines *structural topology only*. It does not define:
 - source-specific rules (ADR-015+),
 - boundary contracts (ADR-009),
 - or failure handling (ADR-008).
+
+---
+
+## References
+
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.1 pp.7-11: Data warehousing, ETL/ELT pipelines, systems of record vs derived data
+  - Ch.1 pp.10-11: Systems of record (authoritative, canonical) vs derived data systems (redundant, rebuildable)
+  - Ch.1 p.10: The "sushi principle" — raw data is better (motivates lossless consolidation)
