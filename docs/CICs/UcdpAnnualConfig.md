@@ -32,6 +32,7 @@ Separates harvesting concerns from reporting concerns (SRP). Contains dataset id
 - Guarantees `end_year >= start_year`
 - Guarantees `page_size >= 1`
 - Guarantees `max_retries >= 1`
+- Guarantees `page_delay > 0`
 - Guarantees `version` is non-empty
 
 ---
@@ -42,9 +43,10 @@ Separates harvesting concerns from reporting concerns (SRP). Contains dataset id
 - `start_year`: int, first year of data range (default: `1989`)
 - `end_year`: int, last year of data range (default: `2024`)
 - `base_url`: str, UCDP API base URL
-- `page_size`: int, >= 1, records per API page (default: `1000`)
+- `page_size`: int, >= 1, records per API page (default: `1000`; production override: `50000` in `harvest_ucdp.py` to avoid API rate-limiting)
 - `timeout`: int, HTTP request timeout in seconds (default: `30`)
 - `max_retries`: int, >= 1, retry attempts on transient failure (default: `3`)
+- `page_delay`: float, > 0, seconds between paginated requests (default: `2.0`)
 - `data_dir`: Path, output directory for Parquet snapshots
 - `ledger_path`: Path, provenance ledger location
 
