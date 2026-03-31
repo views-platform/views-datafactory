@@ -29,12 +29,13 @@ set -euo pipefail
 # Cron runs with minimal PATH; ensure uv and cargo binaries are available.
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 
-# Source env vars from bashrc without triggering set -u errors.
-# bashrc often references $PS1 which is unset in non-interactive shells.
-if [ -f "$HOME/.bashrc" ]; then
+# Source env vars (UCDP_API_TOKEN, etc.) for non-interactive shells.
+# .bashrc exits early when PS1 is unset (non-interactive), so env vars
+# defined after that guard are unreachable. Use .profile instead.
+if [ -f "$HOME/.profile" ]; then
     set +u
     # shellcheck source=/dev/null
-    source "$HOME/.bashrc"
+    source "$HOME/.profile"
     set -u
 fi
 
