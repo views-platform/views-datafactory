@@ -29,10 +29,13 @@ set -euo pipefail
 # Cron runs with minimal PATH; ensure uv and cargo binaries are available.
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
 
-# Source bashrc for UCDP_API_TOKEN and other env vars (if non-interactive)
+# Source env vars from bashrc without triggering set -u errors.
+# bashrc often references $PS1 which is unset in non-interactive shells.
 if [ -f "$HOME/.bashrc" ]; then
+    set +u
     # shellcheck source=/dev/null
     source "$HOME/.bashrc"
+    set -u
 fi
 
 # ---- Failure notification ----
