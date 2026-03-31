@@ -565,6 +565,15 @@ if not changed and not force_refresh and files_on_disk:
 
 Now if the digest matches but files are missing, extraction proceeds anyway.
 
+### Broader fix (C-95)
+
+The same bug existed in 4 other harvesters: `priogrid_static.py` (confirmed
+failing on the same cron run — step 5/7 failed on missing static data),
+`ucdp_candidate.py`, `ucdp_dot9.py`, and `gaul_admin.py`. All had
+"content unchanged" paths that skipped writing without checking the output
+file. Added `snap_path.exists()` to every "unchanged" code path.
+`ucdp_annual.py` was clean — it always writes. C-95 resolved.
+
 ### Lesson learned
 
 14. **Provenance ledger is not a proxy for file existence.** The ledger
@@ -592,3 +601,5 @@ Now if the digest matches but files are missing, extraction proceeds anyway.
 | `6a82275` | Cron fix: set +u around bashrc source for PS1 |
 | `29ed4d9` | Cron fix: source .profile not .bashrc for token |
 | `a330f60` | Shapefile harvester: check files exist before skipping extraction |
+| `ef4acbf` | Docs: shapefile bug documented, C-94 resolved, C-95 opened |
+| `9e52930` | All 5 harvesters: verify files exist before skipping on unchanged digest (C-95) |
