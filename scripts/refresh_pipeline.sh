@@ -25,6 +25,16 @@
 
 set -euo pipefail
 
+# ---- Environment ----
+# Cron runs with minimal PATH; ensure uv and cargo binaries are available.
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+
+# Source bashrc for UCDP_API_TOKEN and other env vars (if non-interactive)
+if [ -f "$HOME/.bashrc" ]; then
+    # shellcheck source=/dev/null
+    source "$HOME/.bashrc"
+fi
+
 # ---- Failure notification ----
 # On any step failure, write a machine-readable sentinel and
 # optionally send email (if mail is configured and ALERT_EMAIL set).

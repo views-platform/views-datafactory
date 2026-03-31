@@ -248,6 +248,8 @@ Add this line (runs on the 1st of every month at 3 AM):
 
 ```
 0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+# Note: refresh_pipeline.sh sources ~/.bashrc and adds ~/.cargo/bin to PATH,
+# so uv and UCDP_API_TOKEN are available even in cron's minimal environment.
 ```
 
 ### 4.3 Verify cron is set
