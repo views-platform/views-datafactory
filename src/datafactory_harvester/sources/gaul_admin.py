@@ -388,7 +388,7 @@ def _write_variable(
     previous = last_digest_for_version(
         config.ledger_path, var_name
     )
-    if previous == content_digest:
+    if previous == content_digest and snap_path.exists():
         logger.info(
             "%s unchanged (digest: %s)", var_name, content_digest
         )

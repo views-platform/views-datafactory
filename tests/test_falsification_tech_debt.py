@@ -56,7 +56,7 @@ class TestTechDebtResolved:
         )
         content = register.read_text()
         assert "76 concerns total" in content
-        assert "40 resolved" in content
+        assert "41 resolved" in content
 
     def test_maturity_skip_reason_current(self) -> None:
         """Resolved: maturity test for .9 in smoke test

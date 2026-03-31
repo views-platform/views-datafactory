@@ -342,7 +342,7 @@ def _fetch_dot9_version(
         or previous != validation.content_digest
     )
 
-    if not changed and not force_refresh:
+    if not changed and not force_refresh and snap_path.exists():
         logger.info(
             "Version %s unchanged (digest: %s)",
             version, validation.content_digest,
