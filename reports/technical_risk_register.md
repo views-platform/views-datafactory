@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 74 concerns total: 39 resolved, 35 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 76 concerns total: 40 resolved, 36 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -54,6 +54,8 @@
 | C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED |
 | C-92 | 4 | Duplicated retry-delay logic in `datafactory_http` | When retry.py is next modified |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored |
+| C-94 | 4 | ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ | RESOLVED — files_on_disk check added |
+| C-95 | 4 | Other harvesters may have same stale-ledger-vs-missing-files bug | Before data wipe or disaster recovery test |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -244,6 +246,14 @@ A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether 
 ### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**
 **Source:** PR #2 code review 2026-03-30
+
+### C-94: ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ RESOLVED
+After data wipe, the provenance ledger survived with a valid digest. The shapefile harvester downloaded the ZIP, found the digest unchanged, and returned without extracting — assuming files were on disk. They weren't. Fixed by adding `files_on_disk` check to the "unchanged" code path: `shp_dir.exists() and any(shp_dir.glob("*.shp"))`.
+**Source:** Cron pipeline failure 2026-03-31
+
+### C-95: Other harvesters may have same stale-ledger-vs-missing-files bug — [DEFER]
+The shapefile harvester had a bug where "content unchanged" skipped extraction without verifying files exist. The UCDP harvesters (`ucdp_annual`, `ucdp_candidate`, `ucdp_dot9`) and GAUL admin harvester have similar "skip if digest matches" logic. They may have the same vulnerability: if data is deleted but the ledger survives, they could skip re-fetching. **Trigger: audit all harvesters before next data wipe or disaster recovery test.**
+**Source:** Cron pipeline failure 2026-03-31, shapefile harvester fix
 
 ### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
 `request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.

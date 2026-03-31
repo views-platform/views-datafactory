@@ -527,9 +527,54 @@ After the third fix, cron successfully:
 - Continued through candidate and dot9 discovery
 - Full pipeline running end-to-end (March 31 10:50 UTC)
 
+**However**, the pipeline then failed at shapefile harvest — see section 10.
+
 ---
 
-## 10. Commits Made During Deployment
+## 10. Shapefile Harvester Bug (2026-03-31)
+
+### What happened
+
+After the cron job successfully started the pipeline, it failed at
+`harvest_shapefile.py` with "centroid shapefile not found after extraction."
+The shapefile was never extracted despite being downloaded.
+
+### Root cause
+
+When we wiped all data (`rm -rf data/raw/*`), the provenance ledger
+(`provenance/priogrid/ingestion_ledger.jsonl`) survived. The shapefile
+harvester downloads the ZIP, computes its digest, compares it to the
+ledger's last entry — digests match, so `changed = False`. The
+"unchanged" code path returned `shp_dir` without extracting, assuming
+the files were already on disk. They weren't.
+
+Code path in `shapefile_harvester.py`:
+1. Early return guard (lines 113-119): `shp_dir.exists() and any(shp_dir.glob("*.shp"))` — this correctly **failed** (directory empty), so download proceeded
+2. Download: fetched 9 MB ZIP, computed digest `60363c2721285f9d`
+3. Compare: digest matches previous ledger entry → `changed = False`
+4. **Bug:** Returned `shp_dir` without extracting, without checking files exist
+
+### Fix
+
+Added `files_on_disk` check to the "unchanged" path:
+```python
+files_on_disk = shp_dir.exists() and any(shp_dir.glob("*.shp"))
+if not changed and not force_refresh and files_on_disk:
+    # ... skip extraction
+```
+
+Now if the digest matches but files are missing, extraction proceeds anyway.
+
+### Lesson learned
+
+14. **Provenance ledger is not a proxy for file existence.** The ledger
+    records what happened (download, digest, extraction). It does not
+    guarantee the artifacts still exist. Any "skip if unchanged" logic
+    must verify the output files exist, not just the ledger entry.
+
+---
+
+## 11. Commits Made During Deployment
 
 | Commit | Fix |
 |--------|-----|
@@ -546,3 +591,4 @@ After the third fix, cron successfully:
 | `b285398` | Cron fix: add PATH for uv |
 | `6a82275` | Cron fix: set +u around bashrc source for PS1 |
 | `29ed4d9` | Cron fix: source .profile not .bashrc for token |
+| `a330f60` | Shapefile harvester: check files exist before skipping extraction |
