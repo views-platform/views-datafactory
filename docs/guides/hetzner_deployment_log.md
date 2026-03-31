@@ -387,6 +387,22 @@ data/
     timestamp, exit code, and step name made debugging straightforward
     across SSH disconnects.
 
+### About cron
+
+11. **Cron is not your shell.** Cron provides a minimal `PATH`
+    (`/usr/bin:/bin`), no loaded `.bashrc`, and no `$PS1`. Every
+    script that runs under cron must explicitly set its own PATH and
+    source env vars from `.profile` (not `.bashrc`).
+
+12. **`.bashrc` has a non-interactive guard.** Most default `.bashrc`
+    files have `[ -z "$PS1" ] && return` near the top. Anything below
+    that line is unreachable in cron. Put cron-needed env vars in
+    `~/.profile` instead.
+
+13. **`set -u` and sourcing don't mix.** `set -u` (treat unbound
+    variables as errors) will crash when sourcing files that reference
+    optional variables like `$PS1`. Wrap the source in `set +u`/`set -u`.
+
 ---
 
 ## 8. Caddy Web Server Setup (2026-03-30)
@@ -438,12 +454,82 @@ Caddy runs as user `caddy` but the data symlinks resolve through `/root/`, which
 ### What's still needed
 
 - Domain name → switch to HTTPS with automatic Let's Encrypt
-- Cron job for monthly pipeline refresh (C-90)
 - xarray consumer test from laptop
 
 ---
 
-## 9. Commits Made During Deployment
+## 9. Cron Job Setup (2026-03-31)
+
+### What we did
+
+Set up a cron job to run the pipeline automatically. Resolves C-90
+(pipeline runs as interactive session, not a service).
+
+Final cron entry (monthly, 1st of month at 3 AM UTC):
+```
+0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+```
+
+### Problems encountered (3 failures before success)
+
+**Failure 1: `uv: command not found` (exit 127)**
+Cron runs with a minimal `PATH` (`/usr/bin:/bin`) that doesn't include
+`~/.cargo/bin` where `uv` is installed.
+
+**Fix:** Added `export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"`
+to the top of `refresh_pipeline.sh`.
+
+**Failure 2: `PS1: unbound variable`**
+We sourced `~/.bashrc` to get environment variables, but `.bashrc`
+references `$PS1` (the shell prompt) which is unset in non-interactive
+cron shells. Under `set -u` (treat unbound variables as errors), this
+crashes the script before reaching any env vars.
+
+**Fix:** Wrapped the source in `set +u` / `set -u` to temporarily allow
+unbound variables during sourcing. (Later replaced entirely — see failure 3.)
+
+**Failure 3: `UCDP_API_TOKEN` not available**
+`.bashrc` has a guard at line 6: `[ -z "$PS1" ] && return`. In
+non-interactive shells (like cron), PS1 is empty, so `.bashrc` exits
+immediately — before reaching `export UCDP_API_TOKEN` on line 102.
+All environment variables defined after the guard are unreachable.
+
+**Fix:** Moved `UCDP_API_TOKEN` to `~/.profile` (which doesn't have
+the non-interactive guard) and changed `refresh_pipeline.sh` to source
+`~/.profile` instead of `~/.bashrc`.
+
+### Lesson learned
+
+**Cron environment is not your shell environment.** Three things every
+cron script needs that your interactive shell provides for free:
+
+1. **PATH** — cron's PATH is minimal. Export the full PATH explicitly.
+2. **Environment variables** — `.bashrc` guards against non-interactive
+   shells. Put cron-needed env vars in `.profile` instead.
+3. **No assumptions about shell state** — `set -u` interacts badly with
+   sourcing files that reference optional variables like `$PS1`.
+
+The general pattern for cron-safe scripts:
+```bash
+set -euo pipefail
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+if [ -f "$HOME/.profile" ]; then
+    set +u; source "$HOME/.profile"; set -u
+fi
+```
+
+### Verification
+
+After the third fix, cron successfully:
+- Found `uv`
+- Loaded `UCDP_API_TOKEN` from `.profile`
+- Harvested 335,918 annual events
+- Continued through candidate and dot9 discovery
+- Full pipeline running end-to-end (March 31 10:50 UTC)
+
+---
+
+## 10. Commits Made During Deployment
 
 | Commit | Fix |
 |--------|-----|
@@ -457,3 +543,6 @@ Caddy runs as user `caddy` but the data symlinks resolve through `/root/`, which
 | `af8c02c` | Viewpoint builder OOM — sorted-group processing |
 | `934a016` | Assemble grid OOM — mmap output |
 | `bb52dbf` | page_delay 0.5 → 2.0 (before discovering page_size fix) |
+| `b285398` | Cron fix: add PATH for uv |
+| `6a82275` | Cron fix: set +u around bashrc source for PS1 |
+| `29ed4d9` | Cron fix: source .profile not .bashrc for token |

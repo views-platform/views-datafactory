@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 74 concerns total: 38 resolved, 36 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 74 concerns total: 39 resolved, 35 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -50,7 +50,7 @@
 | C-81 | 4 | ~~GAUL shapefile download has no retry logic~~ | RESOLVED — uses `request_with_retry` |
 | C-83 | 4 | ~~Retry retries on 4xx client errors~~ | RESOLVED — 4xx fail-fast, 5xx retry |
 | C-89 | 4 | No formal SLO for data freshness | Before second consumer |
-| C-90 | 4 | Pipeline runs as interactive session, not a service | Before cron job setup |
+| C-90 | 4 | ~~Pipeline runs as interactive session, not a service~~ | RESOLVED — cron job on Hetzner |
 | C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED |
 | C-92 | 4 | Duplicated retry-delay logic in `datafactory_http` | When retry.py is next modified |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored |
@@ -229,9 +229,9 @@ No test for what happens when Parquet columns are added/removed between consolid
 ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks or reports whether data meets the target. Consumers can't programmatically verify freshness. DDIA Ch.2 pp.41-42 defines SLOs as measurable targets with consequences — our threshold is a guideline, not a contract. **Trigger: define measurable SLO before second consumer.**
 **Source:** DDIA literature alignment 2026-03-30
 
-### C-90: Pipeline runs as interactive session, not a service — [DEFER]
-The pipeline runs via `tmux` — an operator must SSH in, start tmux, and run the script. If tmux isn't used, SSH disconnect kills the process (as happened during deployment). Running as a systemd service or cron job would make it resilient to operator disconnects. DDIA Ch.9 p.86 discusses process pauses. **Trigger: resolve when setting up cron job on Hetzner.**
-**Source:** DDIA literature alignment 2026-03-30, Hetzner deployment experience
+### C-90: ~~Pipeline runs as interactive session, not a service~~ RESOLVED
+Cron job set up on Hetzner: `0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1`. Pipeline now runs automatically on the 1st of every month. Three cron environment issues fixed: PATH (uv not found), PS1 unbound variable, and UCDP_API_TOKEN unreachable after .bashrc guard. `refresh_pipeline.sh` now sources `~/.profile` and exports PATH explicitly.
+**Source:** DDIA literature alignment 2026-03-30, cron setup 2026-03-31
 
 ### C-91: No pipeline duration tracking — [DEFER]
 A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. DDIA Ch.2 pp.37-42 emphasizes measuring performance as a distribution, not a single number. If a new data source doubles pipeline time, we'd only notice when the cron job overlaps with the next month. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**

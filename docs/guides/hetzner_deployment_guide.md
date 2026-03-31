@@ -26,7 +26,8 @@ what all of this means.
 
 ## Prerequisites
 
-- The `UCDP_API_TOKEN` environment variable
+- The `UCDP_API_TOKEN` environment variable (must be in `~/.profile`,
+  not `~/.bashrc` — see Phase 4 for why)
 - A domain name pointing to the server (e.g., `data.views.uu.se`)
   OR willingness to use the IP address directly (current)
 
@@ -81,9 +82,10 @@ uv sync
 ### 1.6 Set API token
 
 ```bash
-# Add to ~/.bashrc so it's always available
-echo 'export UCDP_API_TOKEN="your-token-here"' >> ~/.bashrc
-source ~/.bashrc
+# Add to ~/.profile (NOT .bashrc — .bashrc exits early in non-interactive
+# shells like cron, making env vars unreachable for automated jobs)
+echo 'export UCDP_API_TOKEN="your-token-here"' >> ~/.profile
+source ~/.profile
 ```
 
 ---
@@ -248,8 +250,10 @@ Add this line (runs on the 1st of every month at 3 AM):
 
 ```
 0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
-# Note: refresh_pipeline.sh sources ~/.bashrc and adds ~/.cargo/bin to PATH,
-# so uv and UCDP_API_TOKEN are available even in cron's minimal environment.
+# Note: refresh_pipeline.sh sources ~/.profile (not .bashrc) and adds
+# ~/.cargo/bin to PATH. Environment variables like UCDP_API_TOKEN must
+# be in ~/.profile, not .bashrc — .bashrc exits early in non-interactive
+# shells before reaching env var exports.
 ```
 
 ### 4.3 Verify cron is set
@@ -336,7 +340,19 @@ does not work with raw IPs.
 **"Pipeline failed"** — Check which step failed in the log:
 ```bash
 tail -50 logs/refresh.log
+cat logs/pipeline_failure.json  # machine-readable: step, exit code, timestamp
 ```
+
+**"Cron job didn't run" or "command not found"** — Cron has a
+minimal environment. Three common issues:
+1. `uv: command not found` — PATH doesn't include `~/.cargo/bin`.
+   Fixed in `refresh_pipeline.sh` (exports PATH explicitly).
+2. `PS1: unbound variable` — `.bashrc` references PS1 which is
+   unset in cron. Fixed in `refresh_pipeline.sh` (`set +u` around source).
+3. `UCDP_API_TOKEN` missing — `.bashrc` exits early in non-interactive
+   shells. Put env vars in `~/.profile` instead.
+
+Check cron ran: `grep CRON /var/log/syslog | tail -5`
 
 **"UCDP API timeout"** — The API is occasionally slow. The
 harvester has built-in retry (3 attempts with exponential
