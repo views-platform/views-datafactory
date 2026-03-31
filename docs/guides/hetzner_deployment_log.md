@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-27 to 2026-03-30
 **Server:** views-datafactory-00 at 204.168.219.108 (Helsinki, CPX32)
-**Status:** Pipeline runs end-to-end. Caddy not yet configured. Data not yet served.
+**Status:** Pipeline runs end-to-end. Caddy installed and serving data over HTTP with basic auth.
 
 This is a detailed record of the first deployment attempt — what worked,
 what broke, how we fixed it, and what we learned. Written for future
@@ -387,9 +387,149 @@ data/
     timestamp, exit code, and step name made debugging straightforward
     across SSH disconnects.
 
+### About cron
+
+11. **Cron is not your shell.** Cron provides a minimal `PATH`
+    (`/usr/bin:/bin`), no loaded `.bashrc`, and no `$PS1`. Every
+    script that runs under cron must explicitly set its own PATH and
+    source env vars from `.profile` (not `.bashrc`).
+
+12. **`.bashrc` has a non-interactive guard.** Most default `.bashrc`
+    files have `[ -z "$PS1" ] && return` near the top. Anything below
+    that line is unreachable in cron. Put cron-needed env vars in
+    `~/.profile` instead.
+
+13. **`set -u` and sourcing don't mix.** `set -u` (treat unbound
+    variables as errors) will crash when sourcing files that reference
+    optional variables like `$PS1`. Wrap the source in `set +u`/`set -u`.
+
 ---
 
-## 8. Commits Made During Deployment
+## 8. Caddy Web Server Setup (2026-03-30)
+
+### What we did
+
+Installed Caddy 2.11.2 to serve zarr and parquet data over HTTP with basic auth.
+
+1. Installed Caddy from official apt repo
+2. Created `/srv/views-data/` with symlinks to assembled zarr and compiled parquet
+3. Configured Caddyfile at `/etc/caddy/Caddyfile` — HTTP on port 80, basic auth (username: `views`), CORS headers, `file_server browse`
+4. Generated bcrypt password hash via `caddy hash-password` (interactive — plaintext never stored)
+5. Enabled Caddy as systemd service (`systemctl enable caddy`)
+
+### Problems encountered
+
+**Problem 1: `tls internal` SSL handshake failure.**
+Attempted HTTPS with self-signed cert (`tls internal` directive). Caddy's internal CA couldn't install the root cert because the `caddy` user lacks sudo. Installed `libnss3-tools` and ran `caddy trust` as root — CA was trusted but TLS still failed because `:443` has no hostname for SNI, so Caddy can't match a cert.
+
+**Decision:** Switched to HTTP-only on port 80. For IP-only access without a domain, self-signed TLS provides no real security benefit — the cert can't be verified by clients anyway. Basic auth over HTTP is sufficient for internal single-user access. Revisit when a domain name is assigned (Caddy will auto-provision Let's Encrypt).
+
+**Problem 2: 403 Forbidden on all files.**
+Caddy runs as user `caddy` but the data symlinks resolve through `/root/`, which had permissions `drwx------` (700). The `caddy` user couldn't traverse the directory.
+
+**Fix:** `chmod o+x /root` — allows traversal (execute) without granting read access to `/root/` contents. Only the symlinked paths are accessible.
+
+### Current Caddyfile
+
+```
+:80 {
+    root * /srv/views-data
+    file_server browse
+
+    basicauth {
+        views <bcrypt-hash>
+    }
+
+    header Access-Control-Allow-Origin *
+    header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+}
+```
+
+### Verification
+
+- Unauthenticated: `curl http://204.168.219.108/grid.zarr/.zmetadata` → 401
+- Authenticated: `curl -u views http://204.168.219.108/grid.zarr/.zmetadata` → zarr JSON metadata
+- Caddy runs as systemd service, starts on boot
+
+### What's still needed
+
+- Domain name → switch to HTTPS with automatic Let's Encrypt
+- xarray consumer test from laptop
+
+---
+
+## 9. Cron Job Setup (2026-03-31)
+
+### What we did
+
+Set up a cron job to run the pipeline automatically. Resolves C-90
+(pipeline runs as interactive session, not a service).
+
+Final cron entry (monthly, 1st of month at 3 AM UTC):
+```
+0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+```
+
+### Problems encountered (3 failures before success)
+
+**Failure 1: `uv: command not found` (exit 127)**
+Cron runs with a minimal `PATH` (`/usr/bin:/bin`) that doesn't include
+`~/.cargo/bin` where `uv` is installed.
+
+**Fix:** Added `export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"`
+to the top of `refresh_pipeline.sh`.
+
+**Failure 2: `PS1: unbound variable`**
+We sourced `~/.bashrc` to get environment variables, but `.bashrc`
+references `$PS1` (the shell prompt) which is unset in non-interactive
+cron shells. Under `set -u` (treat unbound variables as errors), this
+crashes the script before reaching any env vars.
+
+**Fix:** Wrapped the source in `set +u` / `set -u` to temporarily allow
+unbound variables during sourcing. (Later replaced entirely — see failure 3.)
+
+**Failure 3: `UCDP_API_TOKEN` not available**
+`.bashrc` has a guard at line 6: `[ -z "$PS1" ] && return`. In
+non-interactive shells (like cron), PS1 is empty, so `.bashrc` exits
+immediately — before reaching `export UCDP_API_TOKEN` on line 102.
+All environment variables defined after the guard are unreachable.
+
+**Fix:** Moved `UCDP_API_TOKEN` to `~/.profile` (which doesn't have
+the non-interactive guard) and changed `refresh_pipeline.sh` to source
+`~/.profile` instead of `~/.bashrc`.
+
+### Lesson learned
+
+**Cron environment is not your shell environment.** Three things every
+cron script needs that your interactive shell provides for free:
+
+1. **PATH** — cron's PATH is minimal. Export the full PATH explicitly.
+2. **Environment variables** — `.bashrc` guards against non-interactive
+   shells. Put cron-needed env vars in `.profile` instead.
+3. **No assumptions about shell state** — `set -u` interacts badly with
+   sourcing files that reference optional variables like `$PS1`.
+
+The general pattern for cron-safe scripts:
+```bash
+set -euo pipefail
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+if [ -f "$HOME/.profile" ]; then
+    set +u; source "$HOME/.profile"; set -u
+fi
+```
+
+### Verification
+
+After the third fix, cron successfully:
+- Found `uv`
+- Loaded `UCDP_API_TOKEN` from `.profile`
+- Harvested 335,918 annual events
+- Continued through candidate and dot9 discovery
+- Full pipeline running end-to-end (March 31 10:50 UTC)
+
+---
+
+## 10. Commits Made During Deployment
 
 | Commit | Fix |
 |--------|-----|
@@ -403,3 +543,6 @@ data/
 | `af8c02c` | Viewpoint builder OOM — sorted-group processing |
 | `934a016` | Assemble grid OOM — mmap output |
 | `bb52dbf` | page_delay 0.5 → 2.0 (before discovering page_size fix) |
+| `b285398` | Cron fix: add PATH for uv |
+| `6a82275` | Cron fix: set +u around bashrc source for PS1 |
+| `29ed4d9` | Cron fix: source .profile not .bashrc for token |

@@ -25,6 +25,20 @@
 
 set -euo pipefail
 
+# ---- Environment ----
+# Cron runs with minimal PATH; ensure uv and cargo binaries are available.
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+
+# Source env vars (UCDP_API_TOKEN, etc.) for non-interactive shells.
+# .bashrc exits early when PS1 is unset (non-interactive), so env vars
+# defined after that guard are unreachable. Use .profile instead.
+if [ -f "$HOME/.profile" ]; then
+    set +u
+    # shellcheck source=/dev/null
+    source "$HOME/.profile"
+    set -u
+fi
+
 # ---- Failure notification ----
 # On any step failure, write a machine-readable sentinel and
 # optionally send email (if mail is configured and ALERT_EMAIL set).
