@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 76 concerns total: 41 resolved, 35 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 78 concerns total: 41 resolved, 37 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -56,6 +56,8 @@
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored |
 | C-94 | 4 | ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ | RESOLVED — files_on_disk check added |
 | C-95 | 4 | ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ | RESOLVED — all 5 harvesters patched |
+| C-96 | 4 | fsspec does not auto-read `~/.netrc` — xarray consumers need auth boilerplate | If fsspec adds netrc support |
+| C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -250,6 +252,14 @@ A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether 
 ### C-94: ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ RESOLVED
 After data wipe, the provenance ledger survived with a valid digest. The shapefile harvester downloaded the ZIP, found the digest unchanged, and returned without extracting — assuming files were on disk. They weren't. Fixed by adding `files_on_disk` check to the "unchanged" code path: `shp_dir.exists() and any(shp_dir.glob("*.shp"))`.
 **Source:** Cron pipeline failure 2026-03-31
+
+### C-96: fsspec does not auto-read `~/.netrc` — [DEFER]
+fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its aiohttp session. xarray consumers must pass auth explicitly via `storage_options={"client_kwargs": {"auth": (user, pass)}}`. The `verify_remote.py` script reads netrc programmatically via Python's `netrc` module, but the primary consumer path (xarray + fsspec + zarr) does not benefit from it automatically. Consumer guide should provide a helper pattern. **Trigger: simplify consumer guide if fsspec adds netrc/trust_env support.**
+**Source:** Falsification audit 2026-04-01 (F3)
+
+### C-97: Basic auth + Caddy scalability ceiling at ~30-50 users — [DEFER]
+Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
+**Source:** Falsification audit 2026-04-01 (F2)
 
 ### C-95: ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ RESOLVED
 Audited and patched all 5 harvesters with the same `snap_path.exists()` check: `priogrid_static.py` (confirmed failing on cron run), `ucdp_candidate.py`, `ucdp_dot9.py`, `gaul_admin.py`. `ucdp_annual.py` was clean — it always writes regardless of digest. Pattern: every "unchanged" code path now verifies the output file exists before skipping the write.

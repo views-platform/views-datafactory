@@ -36,9 +36,28 @@ without downloading the entire 19 GB file.
 ```python
 import xarray as xr
 
-ds = xr.open_zarr("https://yourserver/grid.zarr")
+ds = xr.open_zarr("http://204.168.219.108/grid.zarr")
 print(ds)
 ```
+
+**Auth:** This requires a one-time credential setup. xarray uses
+fsspec as its HTTP backend, which reads `~/.config/fsspec/http.json`:
+
+```bash
+mkdir -p ~/.config/fsspec
+cat > ~/.config/fsspec/http.json << 'EOF'
+{
+  "client_kwargs": {
+    "auth": ["views", "yourpassword"]
+  }
+}
+EOF
+chmod 600 ~/.config/fsspec/http.json
+```
+
+After this, `xr.open_zarr(url)` works with no extra arguments.
+See `docs/guides/hetzner_deployment_guide.md` Phase 5 for full
+setup instructions.
 
 ### From a local path
 

@@ -272,24 +272,112 @@ cat logs/refresh.log
 
 ---
 
-## Phase 5: Verify consumer access
+## Phase 5: Set up credentials and verify consumer access
 
-### For xarray (zarr) consumers
+### 5.1 Consumer credential setup (one-time, per machine)
+
+All data access uses HTTP basic auth. Credentials are stored in two
+local config files — one for xarray, one for everything else. Both
+are set-once, work automatically, and scale to multiple users.
+
+**Revocation is server-side:** removing a user's hash from the
+Caddyfile immediately blocks their access, regardless of what's
+in their local config files.
+
+#### For xarray consumers (primary path): fsspec config
+
+fsspec is the HTTP backend used by xarray and zarr. It reads its
+own config from `~/.config/fsspec/`. This gives you zero-boilerplate
+xarray access.
+
+```bash
+mkdir -p ~/.config/fsspec
+cat > ~/.config/fsspec/http.json << 'EOF'
+{
+  "client_kwargs": {
+    "auth": ["views", "yourpassword"]
+  }
+}
+EOF
+chmod 600 ~/.config/fsspec/http.json
+```
+
+After this, xarray just works — no `storage_options` needed:
+```python
+import xarray as xr
+ds = xr.open_zarr("http://204.168.219.108/grid.zarr")
+```
+
+#### For curl, scripts, and verify_remote.py: netrc
+
+`~/.netrc` is the standard Unix credential file, read natively by
+`curl`, Python `requests`, and the verification script.
+
+```bash
+cat >> ~/.netrc << 'EOF'
+machine 204.168.219.108
+login views
+password yourpassword
+EOF
+chmod 600 ~/.netrc
+```
+
+After this, `curl` just works — no `-u` needed:
+```bash
+curl -n http://204.168.219.108/grid.zarr/.zmetadata | head -10
+```
+
+#### Why two files?
+
+| Tool | Reads fsspec config | Reads netrc |
+|------|:---:|:---:|
+| xarray / zarr | Yes | No |
+| curl | No | Yes |
+| requests | No | Yes |
+| verify_remote.py | No | Yes |
+
+fsspec does not read `~/.netrc` (C-96). netrc does not help xarray.
+Two files, two purposes, same password, same `chmod 600`.
+
+#### Adding a new consumer
+
+1. Admin: `caddy hash-password` on server, add `username $hash` to Caddyfile
+2. Consumer: create both config files with their username and password
+3. No code changes anywhere
+
+### 5.2 Run the automated verification script
+
+```bash
+uv run python scripts/verify_remote.py
+```
+
+This runs 10 checks against the remote server:
+
+| Check | What it verifies |
+|-------|-----------------|
+| 1. Connectivity | TCP connection to server port 80 |
+| 2. Auth enforcement | Unauthenticated request returns 401 |
+| 3. Netrc credentials | `~/.netrc` has entry for server |
+| 4. Metadata | `.zmetadata` returns valid JSON |
+| 5. Dataset attributes | CRS, resolution, source, feature count |
+| 6. Dimensions | 456 months, 360 lat, 720 lon |
+| 7. Variables | 6 UCDP + 34 static + 3 admin = 43 |
+| 8. Data access | xarray opens store, loads 1 chunk |
+| 9. Data sanity | ged_sb_best has plausible non-zero values |
+| 10. Parquet | dataframe.parquet downloadable |
+
+The script reads credentials from `~/.netrc`. The xarray check
+(step 8) uses the fsspec config. Both must be set up.
+
+### 5.3 Manual consumer examples
+
+**xarray (zarr) — zero boilerplate with fsspec config:**
 
 ```python
 import xarray as xr
 
-# With domain + HTTPS (Option A):
-ds = xr.open_zarr(
-    "https://data.views.uu.se/grid.zarr",
-    storage_options={"auth": ("views", "yourpassword")},
-)
-
-# With IP + HTTP (Option B, current setup):
-ds = xr.open_zarr(
-    "http://204.168.219.108/grid.zarr",
-    storage_options={"client_kwargs": {"auth": ("views", "yourpassword")}},
-)
+# Auth handled by ~/.config/fsspec/http.json — no storage_options
+ds = xr.open_zarr("http://204.168.219.108/grid.zarr")
 
 # Slice: Ethiopia fatalities 2020
 eth = ds["ged_sb_best"].sel(
@@ -298,16 +386,15 @@ eth = ds["ged_sb_best"].sel(
 print(f"Ethiopia 2020 total: {float(eth.sum()):.0f}")
 ```
 
-### For pandas (parquet) consumers
+**pandas (parquet) — via requests (reads netrc):**
 
 ```python
 import pandas as pd
 import requests
 
-# Download with auth
+# Auth handled by ~/.netrc — no explicit credentials
 resp = requests.get(
     "http://204.168.219.108/dataframe.parquet",
-    auth=("views", "yourpassword"),
 )
 with open("dataframe.parquet", "wb") as f:
     f.write(resp.content)
@@ -387,10 +474,46 @@ df = pd.read_parquet("http://204.168.219.108/dataframe.parquet")
 
 ---
 
+## Access model
+
+The system has two distinct access layers:
+
+### Data consumers (HTTP basic auth)
+
+Anyone who needs to read zarr or parquet data. Current setup:
+
+- **Auth method:** Caddy basic auth (`~/.netrc` on client side)
+- **Current credentials:** Single shared `views` account
+- **Adding a consumer:** (1) Generate hash: `caddy hash-password` on server,
+  (2) Add `username $hash` line to Caddyfile, (3) Consumer adds entry to
+  their `~/.netrc`
+- **Revoking access:** Remove the user's line from the Caddyfile
+
+No server SSH access needed. No code changes needed per consumer.
+
+### Server administrators (SSH)
+
+People who maintain the pipeline, debug failures, or update code.
+**Not yet set up for multiple users.** Current state: root-only.
+
+Before granting a second admin, resolve these (Tier 2 risk register):
+- **C-84:** Create `views-deploy` non-root service account for pipeline
+- **C-85/C-86:** Replace personal SSH key with repo-scoped deploy key
+- **C-87:** Named SSH accounts per person + break-glass emergency account
+- **C-88:** Restrict SSH to PRIO/Uppsala VPN IPs (Hetzner firewall)
+
+These are documented in detail in the technical risk register and
+follow the PRIO IT head's security recommendations.
+
+---
+
 ## Next steps (when ready)
 
-- **Add more users:** Edit Caddyfile, add more `username hash` lines
+- **Add data consumers:** See access model above — Caddyfile + netrc
+- **Add server admins:** Resolve C-84 through C-88 first
+- **Get a domain name:** Switch Caddy to Option A for automatic HTTPS
 - **Monitor health remotely:** `ssh server 'cd views-datafactory && uv run python scripts/check_health.py --json'`
 - **Change update frequency:** Edit the cron schedule (e.g., weekly: `0 3 * * 1`)
+- **Verify after pipeline run:** `uv run python scripts/verify_remote.py`
 - **Add a query API:** See `data_serving_guide.md` section 9
 - **Add MCP:** See `data_serving_guide.md` section 9

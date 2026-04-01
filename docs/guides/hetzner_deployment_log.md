@@ -583,7 +583,59 @@ file. Added `snap_path.exists()` to every "unchanged" code path.
 
 ---
 
-## 11. Commits Made During Deployment
+## 11. Access Model and Verification Script (2026-04-01)
+
+### Decisions made
+
+The password handling question for a verification script forced us
+to think about the broader access model. Two decisions:
+
+**Decision 1: Consumer auth via netrc.**
+Data consumers (anyone downloading zarr/parquet) authenticate via
+HTTP basic auth. Credentials are stored in each consumer's `~/.netrc`
+file — the standard Unix mechanism read by `curl`, `requests`, `httpx`,
+`aiohttp`, and xarray's `fsspec` backend. This scales without script
+changes: adding a consumer means (1) add their `username hash` to the
+Caddyfile, (2) they add a `~/.netrc` entry.
+
+Why not environment variables? They're per-machine, per-session, and
+don't scale to multiple maintainers. Why not hardcoded? Obviously not.
+Why not interactive prompts? Can't run unattended.
+
+**Update (2026-04-01):** Falsification audit of the netrc claim (F2, F3)
+revealed: (1) fsspec does NOT auto-read `~/.netrc` — xarray consumers
+still need auth boilerplate, and (2) basic auth hits a scalability ceiling
+at ~30-50 users. Revised to a dual-config approach: `~/.config/fsspec/http.json`
+for xarray (zero boilerplate) + `~/.netrc` for curl/requests/scripts.
+Both are per-user, `chmod 600`, same password. See C-96, C-97.
+
+**Decision 2: Server admin access — defer, document the plan.**
+C-84 through C-88 stay deferred. Their trigger ("before granting
+second user access") hasn't fired. The IT head's recommendations
+are documented in the deployment guide as the intended plan:
+`views-deploy` service account, named SSH accounts, deploy key,
+IP whitelisting, break-glass account.
+
+### What was created
+
+`scripts/verify_remote.py` — runs from a maintainer's laptop, tests
+that the Hetzner server is serving data correctly. 10 checks:
+connectivity, auth enforcement, netrc credentials, metadata, dataset
+attributes, dimensions, variables, xarray data access, data sanity,
+and parquet availability. Reads credentials from `~/.netrc`.
+
+### Lesson learned
+
+15. **Decide the access model before writing auth code.** We almost
+    baked in an environment variable pattern that wouldn't scale to
+    the second maintainer. The right question wasn't "how does the
+    script get the password?" but "what is the access model for this
+    system?" The answer separated data consumers (HTTP basic auth +
+    netrc) from server admins (SSH, deferred until needed).
+
+---
+
+## 12. Commits Made During Deployment
 
 | Commit | Fix |
 |--------|-----|
