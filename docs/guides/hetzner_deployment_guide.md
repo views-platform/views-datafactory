@@ -276,42 +276,13 @@ cat logs/refresh.log
 
 ### 5.1 Consumer credential setup (one-time, per machine)
 
-All data access uses HTTP basic auth. Credentials are stored in two
-local config files — one for xarray, one for everything else. Both
-are set-once, work automatically, and scale to multiple users.
+All data access uses HTTP basic auth. Credentials are stored in
+`~/.netrc` — the standard Unix credential file, read natively by
+`curl`, Python `requests`, and the verification script.
 
 **Revocation is server-side:** removing a user's hash from the
 Caddyfile immediately blocks their access, regardless of what's
-in their local config files.
-
-#### For xarray consumers (primary path): fsspec config
-
-fsspec is the HTTP backend used by xarray and zarr. It reads its
-own config from `~/.config/fsspec/`. This gives you zero-boilerplate
-xarray access.
-
-```bash
-mkdir -p ~/.config/fsspec
-cat > ~/.config/fsspec/http.json << 'EOF'
-{
-  "client_kwargs": {
-    "auth": ["views", "yourpassword"]
-  }
-}
-EOF
-chmod 600 ~/.config/fsspec/http.json
-```
-
-After this, xarray just works — no `storage_options` needed:
-```python
-import xarray as xr
-ds = xr.open_zarr("http://204.168.219.108/grid.zarr")
-```
-
-#### For curl, scripts, and verify_remote.py: netrc
-
-`~/.netrc` is the standard Unix credential file, read natively by
-`curl`, Python `requests`, and the verification script.
+in their `~/.netrc`.
 
 ```bash
 cat >> ~/.netrc << 'EOF'
@@ -322,27 +293,20 @@ EOF
 chmod 600 ~/.netrc
 ```
 
-After this, `curl` just works — no `-u` needed:
+After this, `curl` and `requests` just work — no credentials in code:
 ```bash
 curl -n http://204.168.219.108/grid.zarr/.zmetadata | head -10
 ```
 
-#### Why two files?
-
-| Tool | Reads fsspec config | Reads netrc |
-|------|:---:|:---:|
-| xarray / zarr | Yes | No |
-| curl | No | Yes |
-| requests | No | Yes |
-| verify_remote.py | No | Yes |
-
-fsspec does not read `~/.netrc` (C-96). netrc does not help xarray.
-Two files, two purposes, same password, same `chmod 600`.
+**For xarray**, auth requires an `aiohttp.BasicAuth` object in
+`storage_options`. A helper function reads `~/.netrc` and constructs
+it (see section 5.3 below). This is a 3-line wrapper, not boilerplate
+in every script — call it once per session.
 
 #### Adding a new consumer
 
 1. Admin: `caddy hash-password` on server, add `username $hash` to Caddyfile
-2. Consumer: create both config files with their username and password
+2. Consumer: add entry to their `~/.netrc`, `chmod 600`
 3. No code changes anywhere
 
 ### 5.2 Run the automated verification script
@@ -366,27 +330,44 @@ This runs 10 checks against the remote server:
 | 9. Data sanity | ged_sb_best has plausible non-zero values |
 | 10. Parquet | dataframe.parquet downloadable |
 
-The script reads credentials from `~/.netrc`. The xarray check
-(step 8) uses the fsspec config. Both must be set up.
+The script reads credentials from `~/.netrc` for HTTP checks and
+constructs `aiohttp.BasicAuth` for the xarray check.
 
-### 5.3 Manual consumer examples
+### 5.3 Consumer examples
 
-**xarray (zarr) — zero boilerplate with fsspec config:**
+**xarray (zarr) — reads credentials from ~/.netrc:**
 
 ```python
+import aiohttp
 import xarray as xr
+from netrc import netrc
+from pathlib import Path
 
-# Auth handled by ~/.config/fsspec/http.json — no storage_options
-ds = xr.open_zarr("http://204.168.219.108/grid.zarr")
+# Read credentials from ~/.netrc (one-time per session)
+nrc = netrc(str(Path.home() / ".netrc"))
+login, _, password = nrc.authenticators("204.168.219.108")
+auth = aiohttp.BasicAuth(login, password)
 
-# Slice: Ethiopia fatalities 2020
+# Open dataset — only downloads metadata, not data
+ds = xr.open_zarr(
+    "http://204.168.219.108/grid.zarr",
+    storage_options={"client_kwargs": {"auth": auth}},
+)
+
+# Slice: Ethiopia fatalities 2020 (downloads ~1 MB, not 19 GB)
 eth = ds["ged_sb_best"].sel(
     time="2020", lat=slice(3, 15), lon=slice(33, 48)
 )
 print(f"Ethiopia 2020 total: {float(eth.sum()):.0f}")
 ```
 
-**pandas (parquet) — via requests (reads netrc):**
+**Why the `aiohttp.BasicAuth` wrapper?** xarray uses fsspec, which
+uses aiohttp for HTTP. aiohttp requires a `BasicAuth` object, not
+a `(user, pass)` tuple. The `netrc` module returns the raw values;
+`aiohttp.BasicAuth()` wraps them. This is 3 lines of boilerplate
+that could be extracted to a helper if it recurs across scripts.
+
+**pandas (parquet) — via requests (reads ~/.netrc automatically):**
 
 ```python
 import pandas as pd

@@ -34,30 +34,31 @@ without downloading the entire 19 GB file.
 ### From a URL (remote server)
 
 ```python
+import aiohttp
 import xarray as xr
+from netrc import netrc
+from pathlib import Path
 
-ds = xr.open_zarr("http://204.168.219.108/grid.zarr")
+# Read credentials from ~/.netrc (set up once per machine)
+nrc = netrc(str(Path.home() / ".netrc"))
+login, _, password = nrc.authenticators("204.168.219.108")
+auth = aiohttp.BasicAuth(login, password)
+
+ds = xr.open_zarr(
+    "http://204.168.219.108/grid.zarr",
+    storage_options={"client_kwargs": {"auth": auth}},
+)
 print(ds)
 ```
 
-**Auth:** This requires a one-time credential setup. xarray uses
-fsspec as its HTTP backend, which reads `~/.config/fsspec/http.json`:
-
-```bash
-mkdir -p ~/.config/fsspec
-cat > ~/.config/fsspec/http.json << 'EOF'
-{
-  "client_kwargs": {
-    "auth": ["views", "yourpassword"]
-  }
-}
-EOF
-chmod 600 ~/.config/fsspec/http.json
+**Auth setup (one-time):** Add credentials to `~/.netrc`:
 ```
-
-After this, `xr.open_zarr(url)` works with no extra arguments.
-See `docs/guides/hetzner_deployment_guide.md` Phase 5 for full
-setup instructions.
+machine 204.168.219.108
+login views
+password yourpassword
+```
+Then `chmod 600 ~/.netrc`. See `docs/guides/hetzner_deployment_guide.md`
+Phase 5 for full instructions.
 
 ### From a local path
 
