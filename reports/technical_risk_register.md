@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 74 concerns total: 39 resolved, 35 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 80 concerns total: 42 resolved, 38 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -13,7 +13,7 @@
 
 | ID | Tier | Title | Trigger |
 |----|------|-------|---------|
-| D-03 | 1 | Fail-loud vs. operational resilience | Before production deployment |
+| D-03 | 1 | ~~Fail-loud vs. operational resilience~~ | RESOLVED — ADR-018 policy + export_timestamp |
 | C-84 | 2 | Server runs everything as root | Before granting second user access |
 | C-85 | 2 | Personal GitHub SSH key on shared server | Before granting second user access |
 | C-86 | 2 | No deploy key — repo access tied to personal account | Before granting second user access |
@@ -54,6 +54,12 @@
 | C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED |
 | C-92 | 4 | Duplicated retry-delay logic in `datafactory_http` | When retry.py is next modified |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored |
+| C-94 | 4 | ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ | RESOLVED — files_on_disk check added |
+| C-95 | 4 | ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ | RESOLVED — all 5 harvesters patched |
+| C-96 | 4 | fsspec does not auto-read `~/.netrc` — xarray consumers need auth boilerplate | If fsspec adds netrc support |
+| C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 |
+| C-98 | 4 | No deployment gate — git pull deploys branch tip | Before second maintainer pushes to development |
+| C-99 | 4 | No log rotation for pipeline logs | When log exceeds 10 MB |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -61,13 +67,14 @@
 
 ## Tier 1 — Fix Before Production
 
-### D-03: Fail-loud vs. operational resilience
-ADR-003/008 mandate fail-loud everywhere. Nygard asks what the operational experience is when the UCDP API is down for 3 days. For a production forecasting system, some resilience policy is needed. **Policy defined in ADR-018 (operator-mediated bounded staleness). Code-level implementation partially complete (2026-03-28):**
-- `harvest_ucdp.py` now exits non-zero on harvest failure (was always exiting 0)
-- `refresh_pipeline.sh` has ERR trap: writes `logs/pipeline_failure.json` sentinel on failure, optionally sends email if `ALERT_EMAIL` is set
-- `check_health.py` reports staleness and failures (already existed)
-**Remaining gap:** No freshness indicator in zarr/parquet exports for consumers. **Trigger: add before second consumer.**
-**Source:** Nygard (expert reviews 4, 6, 7)
+### D-03: ~~Fail-loud vs. operational resilience~~ RESOLVED
+ADR-003/008 mandate fail-loud everywhere. Nygard asked what the operational experience is when the UCDP API is down for 3 days. **All components now in place:**
+- Policy: ADR-018 (operator-mediated bounded staleness, 7-day threshold)
+- `harvest_ucdp.py` exits non-zero on harvest failure
+- `refresh_pipeline.sh` has ERR trap with `pipeline_failure.json` sentinel + optional email
+- `check_health.py` reports staleness and recent failures
+- `export_zarr.py` writes `export_timestamp` (ISO 8601 UTC) to zarr attributes — consumers can verify freshness programmatically
+**Source:** Nygard (expert reviews 4, 6, 7). Freshness indicator added 2026-04-02.
 
 ---
 
@@ -230,7 +237,7 @@ ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks o
 **Source:** DDIA literature alignment 2026-03-30
 
 ### C-90: ~~Pipeline runs as interactive session, not a service~~ RESOLVED
-Cron job set up on Hetzner: `0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1`. Pipeline now runs automatically on the 1st of every month. Three cron environment issues fixed: PATH (uv not found), PS1 unbound variable, and UCDP_API_TOKEN unreachable after .bashrc guard. `refresh_pipeline.sh` now sources `~/.profile` and exports PATH explicitly.
+Cron job set up on Hetzner: `0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1`. Pipeline now runs automatically on the 21st of every month at midnight UTC. Three cron environment issues fixed: PATH (uv not found), PS1 unbound variable, and UCDP_API_TOKEN unreachable after .bashrc guard. `refresh_pipeline.sh` now sources `~/.profile` and exports PATH explicitly.
 **Source:** DDIA literature alignment 2026-03-30, cron setup 2026-03-31
 
 ### C-91: No pipeline duration tracking — [DEFER]
@@ -244,6 +251,30 @@ A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether 
 ### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**
 **Source:** PR #2 code review 2026-03-30
+
+### C-94: ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ RESOLVED
+After data wipe, the provenance ledger survived with a valid digest. The shapefile harvester downloaded the ZIP, found the digest unchanged, and returned without extracting — assuming files were on disk. They weren't. Fixed by adding `files_on_disk` check to the "unchanged" code path: `shp_dir.exists() and any(shp_dir.glob("*.shp"))`.
+**Source:** Cron pipeline failure 2026-03-31
+
+### C-96: fsspec does not auto-read `~/.netrc` — [DEFER]
+fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its aiohttp session. xarray consumers must pass auth explicitly via `storage_options={"client_kwargs": {"auth": (user, pass)}}`. The `verify_remote.py` script reads netrc programmatically via Python's `netrc` module, but the primary consumer path (xarray + fsspec + zarr) does not benefit from it automatically. Consumer guide should provide a helper pattern. **Trigger: simplify consumer guide if fsspec adds netrc/trust_env support.**
+**Source:** Falsification audit 2026-04-01 (F3)
+
+### C-97: Basic auth + Caddy scalability ceiling at ~30-50 users — [DEFER]
+Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
+**Source:** Falsification audit 2026-04-01 (F2)
+
+### C-95: ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ RESOLVED
+Audited and patched all 5 harvesters with the same `snap_path.exists()` check: `priogrid_static.py` (confirmed failing on cron run), `ucdp_candidate.py`, `ucdp_dot9.py`, `gaul_admin.py`. `ucdp_annual.py` was clean — it always writes regardless of digest. Pattern: every "unchanged" code path now verifies the output file exists before skipping the write.
+**Source:** Cron pipeline failure 2026-03-31, systematic audit
+
+### C-98: No deployment gate — [DEFER]
+`git pull` on the Hetzner server deploys whatever is at the tip of the tracked branch. No tags, no release process, no rollback mechanism. A broken commit pushed to development is one `git pull` away from running on the data server. **Trigger: implement tag-based checkout in `refresh_pipeline.sh` before second maintainer pushes to development.**
+**Source:** Falsification audit 2026-04-01 (F5)
+
+### C-99: No log rotation for pipeline logs — [DEFER]
+`logs/refresh.log` is appended to on every pipeline run. No logrotate config exists. At 11 KB/month growth, this won't cause problems for years. logrotate is installed on the server. **Trigger: add `/etc/logrotate.d/views-datafactory` when log exceeds 10 MB or a second log stream is added.**
+**Source:** Falsification audit 2026-04-01 (F4)
 
 ### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
 `request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.

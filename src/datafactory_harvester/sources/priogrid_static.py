@@ -211,7 +211,7 @@ def _fetch_variable(
     previous = last_digest_for_version(
         config.ledger_path, name
     )
-    if previous == content_digest and not force_refresh:
+    if previous == content_digest and not force_refresh and snap_path.exists():
         logger.info(
             "Variable %s unchanged (digest: %s)",
             name, content_digest,

@@ -246,10 +246,10 @@ mkdir -p ~/views-datafactory/logs
 crontab -e
 ```
 
-Add this line (runs on the 1st of every month at 3 AM):
+Add this line (runs on the 21st of every month at midnight UTC):
 
 ```
-0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
 # Note: refresh_pipeline.sh sources ~/.profile (not .bashrc) and adds
 # ~/.cargo/bin to PATH. Environment variables like UCDP_API_TOKEN must
 # be in ~/.profile, not .bashrc — .bashrc exits early in non-interactive
@@ -272,42 +272,110 @@ cat logs/refresh.log
 
 ---
 
-## Phase 5: Verify consumer access
+## Phase 5: Set up credentials and verify consumer access
 
-### For xarray (zarr) consumers
+### 5.1 Consumer credential setup (one-time, per machine)
+
+All data access uses HTTP basic auth. Credentials are stored in
+`~/.netrc` — the standard Unix credential file, read natively by
+`curl`, Python `requests`, and the verification script.
+
+**Revocation is server-side:** removing a user's hash from the
+Caddyfile immediately blocks their access, regardless of what's
+in their `~/.netrc`.
+
+```bash
+cat >> ~/.netrc << 'EOF'
+machine 204.168.219.108
+login views
+password yourpassword
+EOF
+chmod 600 ~/.netrc
+```
+
+After this, `curl` and `requests` just work — no credentials in code:
+```bash
+curl -n http://204.168.219.108/grid.zarr/.zmetadata | head -10
+```
+
+**For xarray**, auth requires an `aiohttp.BasicAuth` object in
+`storage_options`. A helper function reads `~/.netrc` and constructs
+it (see section 5.3 below). This is a 3-line wrapper, not boilerplate
+in every script — call it once per session.
+
+#### Adding a new consumer
+
+1. Admin: `caddy hash-password` on server, add `username $hash` to Caddyfile
+2. Consumer: add entry to their `~/.netrc`, `chmod 600`
+3. No code changes anywhere
+
+### 5.2 Run the automated verification script
+
+```bash
+uv run python scripts/verify_remote.py
+```
+
+This runs 10 checks against the remote server:
+
+| Check | What it verifies |
+|-------|-----------------|
+| 1. Connectivity | TCP connection to server port 80 |
+| 2. Auth enforcement | Unauthenticated request returns 401 |
+| 3. Netrc credentials | `~/.netrc` has entry for server |
+| 4. Metadata | `.zmetadata` returns valid JSON |
+| 5. Dataset attributes | CRS, resolution, source, feature count |
+| 6. Dimensions | 456 months, 360 lat, 720 lon |
+| 7. Variables | 6 UCDP + 34 static + 3 admin = 43 |
+| 8. Data access | xarray opens store, loads 1 chunk |
+| 9. Data sanity | ged_sb_best has plausible non-zero values |
+| 10. Parquet | dataframe.parquet downloadable |
+
+The script reads credentials from `~/.netrc` for HTTP checks and
+constructs `aiohttp.BasicAuth` for the xarray check.
+
+### 5.3 Consumer examples
+
+**xarray (zarr) — reads credentials from ~/.netrc:**
 
 ```python
+import aiohttp
 import xarray as xr
+from netrc import netrc
+from pathlib import Path
 
-# With domain + HTTPS (Option A):
-ds = xr.open_zarr(
-    "https://data.views.uu.se/grid.zarr",
-    storage_options={"auth": ("views", "yourpassword")},
-)
+# Read credentials from ~/.netrc (one-time per session)
+nrc = netrc(str(Path.home() / ".netrc"))
+login, _, password = nrc.authenticators("204.168.219.108")
+auth = aiohttp.BasicAuth(login, password)
 
-# With IP + HTTP (Option B, current setup):
+# Open dataset — only downloads metadata, not data
 ds = xr.open_zarr(
     "http://204.168.219.108/grid.zarr",
-    storage_options={"client_kwargs": {"auth": ("views", "yourpassword")}},
+    storage_options={"client_kwargs": {"auth": auth}},
 )
 
-# Slice: Ethiopia fatalities 2020
+# Slice: Ethiopia fatalities 2020 (downloads ~1 MB, not 19 GB)
 eth = ds["ged_sb_best"].sel(
     time="2020", lat=slice(3, 15), lon=slice(33, 48)
 )
 print(f"Ethiopia 2020 total: {float(eth.sum()):.0f}")
 ```
 
-### For pandas (parquet) consumers
+**Why the `aiohttp.BasicAuth` wrapper?** xarray uses fsspec, which
+uses aiohttp for HTTP. aiohttp requires a `BasicAuth` object, not
+a `(user, pass)` tuple. The `netrc` module returns the raw values;
+`aiohttp.BasicAuth()` wraps them. This is 3 lines of boilerplate
+that could be extracted to a helper if it recurs across scripts.
+
+**pandas (parquet) — via requests (reads ~/.netrc automatically):**
 
 ```python
 import pandas as pd
 import requests
 
-# Download with auth
+# Auth handled by ~/.netrc — no explicit credentials
 resp = requests.get(
     "http://204.168.219.108/dataframe.parquet",
-    auth=("views", "yourpassword"),
 )
 with open("dataframe.parquet", "wb") as f:
     f.write(resp.content)
@@ -387,10 +455,46 @@ df = pd.read_parquet("http://204.168.219.108/dataframe.parquet")
 
 ---
 
+## Access model
+
+The system has two distinct access layers:
+
+### Data consumers (HTTP basic auth)
+
+Anyone who needs to read zarr or parquet data. Current setup:
+
+- **Auth method:** Caddy basic auth (`~/.netrc` on client side)
+- **Current credentials:** Single shared `views` account
+- **Adding a consumer:** (1) Generate hash: `caddy hash-password` on server,
+  (2) Add `username $hash` line to Caddyfile, (3) Consumer adds entry to
+  their `~/.netrc`
+- **Revoking access:** Remove the user's line from the Caddyfile
+
+No server SSH access needed. No code changes needed per consumer.
+
+### Server administrators (SSH)
+
+People who maintain the pipeline, debug failures, or update code.
+**Not yet set up for multiple users.** Current state: root-only.
+
+Before granting a second admin, resolve these (Tier 2 risk register):
+- **C-84:** Create `views-deploy` non-root service account for pipeline
+- **C-85/C-86:** Replace personal SSH key with repo-scoped deploy key
+- **C-87:** Named SSH accounts per person + break-glass emergency account
+- **C-88:** Restrict SSH to PRIO/Uppsala VPN IPs (Hetzner firewall)
+
+These are documented in detail in the technical risk register and
+follow the PRIO IT head's security recommendations.
+
+---
+
 ## Next steps (when ready)
 
-- **Add more users:** Edit Caddyfile, add more `username hash` lines
+- **Add data consumers:** See access model above — Caddyfile + netrc
+- **Add server admins:** Resolve C-84 through C-88 first
+- **Get a domain name:** Switch Caddy to Option A for automatic HTTPS
 - **Monitor health remotely:** `ssh server 'cd views-datafactory && uv run python scripts/check_health.py --json'`
 - **Change update frequency:** Edit the cron schedule (e.g., weekly: `0 3 * * 1`)
+- **Verify after pipeline run:** `uv run python scripts/verify_remote.py`
 - **Add a query API:** See `data_serving_guide.md` section 9
 - **Add MCP:** See `data_serving_guide.md` section 9

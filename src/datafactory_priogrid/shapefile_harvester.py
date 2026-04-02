@@ -147,7 +147,8 @@ def fetch_shapefile(
         "digest_algorithm": DIGEST_SCHEME,
     }
 
-    if not changed and not force_refresh:
+    files_on_disk = shp_dir.exists() and any(shp_dir.glob("*.shp"))
+    if not changed and not force_refresh and files_on_disk:
         logger.info("Content unchanged (digest: %s), skipping extraction", digest)
         append_ledger_entry(config.ledger_path, {**base_entry, "changed": False})
         return shp_dir

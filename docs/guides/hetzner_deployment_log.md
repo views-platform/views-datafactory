@@ -465,9 +465,9 @@ Caddy runs as user `caddy` but the data symlinks resolve through `/root/`, which
 Set up a cron job to run the pipeline automatically. Resolves C-90
 (pipeline runs as interactive session, not a service).
 
-Final cron entry (monthly, 1st of month at 3 AM UTC):
+Final cron entry (monthly, 21st at midnight UTC):
 ```
-0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
 ```
 
 ### Problems encountered (3 failures before success)
@@ -527,9 +527,115 @@ After the third fix, cron successfully:
 - Continued through candidate and dot9 discovery
 - Full pipeline running end-to-end (March 31 10:50 UTC)
 
+**However**, the pipeline then failed at shapefile harvest — see section 10.
+
 ---
 
-## 10. Commits Made During Deployment
+## 10. Shapefile Harvester Bug (2026-03-31)
+
+### What happened
+
+After the cron job successfully started the pipeline, it failed at
+`harvest_shapefile.py` with "centroid shapefile not found after extraction."
+The shapefile was never extracted despite being downloaded.
+
+### Root cause
+
+When we wiped all data (`rm -rf data/raw/*`), the provenance ledger
+(`provenance/priogrid/ingestion_ledger.jsonl`) survived. The shapefile
+harvester downloads the ZIP, computes its digest, compares it to the
+ledger's last entry — digests match, so `changed = False`. The
+"unchanged" code path returned `shp_dir` without extracting, assuming
+the files were already on disk. They weren't.
+
+Code path in `shapefile_harvester.py`:
+1. Early return guard (lines 113-119): `shp_dir.exists() and any(shp_dir.glob("*.shp"))` — this correctly **failed** (directory empty), so download proceeded
+2. Download: fetched 9 MB ZIP, computed digest `60363c2721285f9d`
+3. Compare: digest matches previous ledger entry → `changed = False`
+4. **Bug:** Returned `shp_dir` without extracting, without checking files exist
+
+### Fix
+
+Added `files_on_disk` check to the "unchanged" path:
+```python
+files_on_disk = shp_dir.exists() and any(shp_dir.glob("*.shp"))
+if not changed and not force_refresh and files_on_disk:
+    # ... skip extraction
+```
+
+Now if the digest matches but files are missing, extraction proceeds anyway.
+
+### Broader fix (C-95)
+
+The same bug existed in 4 other harvesters: `priogrid_static.py` (confirmed
+failing on the same cron run — step 5/7 failed on missing static data),
+`ucdp_candidate.py`, `ucdp_dot9.py`, and `gaul_admin.py`. All had
+"content unchanged" paths that skipped writing without checking the output
+file. Added `snap_path.exists()` to every "unchanged" code path.
+`ucdp_annual.py` was clean — it always writes. C-95 resolved.
+
+### Lesson learned
+
+14. **Provenance ledger is not a proxy for file existence.** The ledger
+    records what happened (download, digest, extraction). It does not
+    guarantee the artifacts still exist. Any "skip if unchanged" logic
+    must verify the output files exist, not just the ledger entry.
+
+---
+
+## 11. Access Model and Verification Script (2026-04-01)
+
+### Decisions made
+
+The password handling question for a verification script forced us
+to think about the broader access model. Two decisions:
+
+**Decision 1: Consumer auth via netrc.**
+Data consumers (anyone downloading zarr/parquet) authenticate via
+HTTP basic auth. Credentials are stored in each consumer's `~/.netrc`
+file — the standard Unix mechanism read by `curl`, `requests`, `httpx`,
+`aiohttp`, and xarray's `fsspec` backend. This scales without script
+changes: adding a consumer means (1) add their `username hash` to the
+Caddyfile, (2) they add a `~/.netrc` entry.
+
+Why not environment variables? They're per-machine, per-session, and
+don't scale to multiple maintainers. Why not hardcoded? Obviously not.
+Why not interactive prompts? Can't run unattended.
+
+**Update (2026-04-01):** Falsification audit of the netrc claim (F2, F3)
+revealed: (1) fsspec does NOT auto-read `~/.netrc` — xarray consumers
+still need auth boilerplate, and (2) basic auth hits a scalability ceiling
+at ~30-50 users. Revised to a dual-config approach: `~/.config/fsspec/http.json`
+for xarray (zero boilerplate) + `~/.netrc` for curl/requests/scripts.
+Both are per-user, `chmod 600`, same password. See C-96, C-97.
+
+**Decision 2: Server admin access — defer, document the plan.**
+C-84 through C-88 stay deferred. Their trigger ("before granting
+second user access") hasn't fired. The IT head's recommendations
+are documented in the deployment guide as the intended plan:
+`views-deploy` service account, named SSH accounts, deploy key,
+IP whitelisting, break-glass account.
+
+### What was created
+
+`scripts/verify_remote.py` — runs from a maintainer's laptop, tests
+that the Hetzner server is serving data correctly. 10 checks:
+connectivity, auth enforcement, netrc credentials, metadata, dataset
+attributes, dimensions, variables, xarray data access, data sanity,
+and parquet availability. Reads credentials from `~/.netrc`.
+
+### Lesson learned
+
+15. **Decide the access model before writing auth code.** We almost
+    baked in an environment variable pattern that wouldn't scale to
+    the second maintainer. The right question wasn't "how does the
+    script get the password?" but "what is the access model for this
+    system?" The answer separated data consumers (HTTP basic auth +
+    netrc) from server admins (SSH, deferred until needed).
+
+---
+
+## 12. Commits Made During Deployment
 
 | Commit | Fix |
 |--------|-----|
@@ -546,3 +652,6 @@ After the third fix, cron successfully:
 | `b285398` | Cron fix: add PATH for uv |
 | `6a82275` | Cron fix: set +u around bashrc source for PS1 |
 | `29ed4d9` | Cron fix: source .profile not .bashrc for token |
+| `a330f60` | Shapefile harvester: check files exist before skipping extraction |
+| `ef4acbf` | Docs: shapefile bug documented, C-94 resolved, C-95 opened |
+| `9e52930` | All 5 harvesters: verify files exist before skipping on unchanged digest (C-95) |

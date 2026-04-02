@@ -21,7 +21,7 @@
 # The script stops on first error (set -e). Check output for
 # which step failed. Each step writes provenance to provenance/.
 #
-# For cron: 0 3 1 * * cd /path/to/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+# For cron: 0 0 21 * * cd /path/to/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
 
 set -euo pipefail
 

@@ -165,13 +165,13 @@ Cron is a scheduler built into Linux. You tell it "run this
 command at this time" and it does it automatically, forever, even
 if you're not logged in.
 
-Example: "Run the data pipeline on the 1st of every month at 3 AM"
+Example: "Run the data pipeline on the 21st of every month at midnight"
 
 ```
-0 3 1 * * /path/to/refresh_pipeline.sh
+0 0 21 * * /path/to/refresh_pipeline.sh
 ```
 
-That line means: minute 0, hour 3, day 1, every month, every
+That line means: minute 0, hour 0, day 21, every month, every
 day-of-week. Run the script.
 
 Your pipeline takes about 10-20 minutes (harvesting is the slow

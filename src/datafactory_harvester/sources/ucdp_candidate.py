@@ -324,7 +324,7 @@ def _fetch_version(
         or previous_digest != validation.content_digest
     )
 
-    if not digest_changed and not force_refresh:
+    if not digest_changed and not force_refresh and snap_path.exists():
         logger.info(
             "Version %s unchanged (digest: %s), recording heartbeat",
             version,
