@@ -8,19 +8,17 @@ Usage:
 Runs 10 checks against the remote server: connectivity, auth,
 metadata, dimensions, variables, data access, and sanity.
 
-Requires two credential files (one-time setup):
+Requires ~/.netrc with server credentials (one-time setup):
 
-1. ~/.netrc (for curl, requests, and this script):
     machine 204.168.219.108
     login views
     password yourpassword
 
     chmod 600 ~/.netrc
 
-2. ~/.config/fsspec/http.json (for xarray/zarr, check 8):
-    {"client_kwargs": {"auth": ["views", "yourpassword"]}}
-
-    chmod 600 ~/.config/fsspec/http.json
+All checks (including xarray) read from ~/.netrc. The xarray
+check wraps credentials in aiohttp.BasicAuth as required by
+fsspec's HTTP backend (see C-96).
 
 See docs/guides/hetzner_deployment_guide.md Phase 5 for details.
 """
@@ -318,36 +316,29 @@ def main() -> int:
         n_failed += 1
 
     # ---- Check 8: Data access (xarray) ----
-    # Uses fsspec config (~/.config/fsspec/http.json) for auth,
-    # NOT the netrc credentials. Falls back to explicit auth if
-    # fsspec config is missing (so the check still works).
+    # Reads netrc credentials and wraps them in aiohttp.BasicAuth
+    # (required by fsspec's aiohttp backend — C-96).
     step = " 8/10  Data access"
     ds = None
     try:
+        import aiohttp
         import xarray as xr
 
-        fsspec_conf = (
-            Path.home() / ".config" / "fsspec" / "http.json"
+        basic_auth = aiohttp.BasicAuth(
+            auth_tuple[0], auth_tuple[1],
         )
-        if fsspec_conf.exists():
-            # fsspec config handles auth automatically
-            ds = xr.open_zarr(zarr_url)
-        else:
-            # Fallback: pass auth from netrc explicitly
-            ds = xr.open_zarr(
-                zarr_url,
-                storage_options={
-                    "client_kwargs": {"auth": auth_tuple},
-                },
-            )
+        ds = xr.open_zarr(
+            zarr_url,
+            storage_options={
+                "client_kwargs": {"auth": basic_auth},
+            },
+        )
         # Load a single chunk to verify actual data transfer
         chunk = ds["ged_sb_best"].isel(time=slice(0, 12)).values
-        fsspec_note = "fsspec config" if fsspec_conf.exists() else "netrc fallback"
         ok = _result(
             step, True,
             f"xarray loaded 1 chunk: "
-            f"{chunk.shape[0]}x{chunk.shape[1]}x{chunk.shape[2]}"
-            f" ({fsspec_note})",
+            f"{chunk.shape[0]}x{chunk.shape[1]}x{chunk.shape[2]}",
         )
     except ImportError:
         ok = _result(step, False, "xarray not installed")
