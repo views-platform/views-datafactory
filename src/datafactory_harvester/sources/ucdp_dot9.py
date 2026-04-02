@@ -24,6 +24,7 @@ import requests
 
 from datafactory_harvester.event_validation import (
     compare_snapshots,
+    date_range,
     validate_events,
 )
 from datafactory_harvester.snapshot_storage import (
@@ -294,8 +295,6 @@ def _fetch_dot9_version(
     )
 
     # Compute actual date coverage
-    from datafactory_harvester.event_validation import date_range
-
     min_date, max_date = date_range(events)
 
     base_entry = {
