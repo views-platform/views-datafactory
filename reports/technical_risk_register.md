@@ -234,7 +234,7 @@ ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks o
 **Source:** DDIA literature alignment 2026-03-30
 
 ### C-90: ~~Pipeline runs as interactive session, not a service~~ RESOLVED
-Cron job set up on Hetzner: `0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1`. Pipeline now runs automatically on the 1st of every month. Three cron environment issues fixed: PATH (uv not found), PS1 unbound variable, and UCDP_API_TOKEN unreachable after .bashrc guard. `refresh_pipeline.sh` now sources `~/.profile` and exports PATH explicitly.
+Cron job set up on Hetzner: `0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1`. Pipeline now runs automatically on the 21st of every month at midnight UTC. Three cron environment issues fixed: PATH (uv not found), PS1 unbound variable, and UCDP_API_TOKEN unreachable after .bashrc guard. `refresh_pipeline.sh` now sources `~/.profile` and exports PATH explicitly.
 **Source:** DDIA literature alignment 2026-03-30, cron setup 2026-03-31
 
 ### C-91: No pipeline duration tracking — [DEFER]

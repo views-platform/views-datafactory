@@ -246,10 +246,10 @@ mkdir -p ~/views-datafactory/logs
 crontab -e
 ```
 
-Add this line (runs on the 1st of every month at 3 AM):
+Add this line (runs on the 21st of every month at midnight UTC):
 
 ```
-0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
 # Note: refresh_pipeline.sh sources ~/.profile (not .bashrc) and adds
 # ~/.cargo/bin to PATH. Environment variables like UCDP_API_TOKEN must
 # be in ~/.profile, not .bashrc — .bashrc exits early in non-interactive

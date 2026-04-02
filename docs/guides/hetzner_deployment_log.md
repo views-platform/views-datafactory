@@ -465,9 +465,9 @@ Caddy runs as user `caddy` but the data symlinks resolve through `/root/`, which
 Set up a cron job to run the pipeline automatically. Resolves C-90
 (pipeline runs as interactive session, not a service).
 
-Final cron entry (monthly, 1st of month at 3 AM UTC):
+Final cron entry (monthly, 21st at midnight UTC):
 ```
-0 3 1 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
 ```
 
 ### Problems encountered (3 failures before success)
