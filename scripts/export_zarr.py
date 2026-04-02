@@ -183,6 +183,11 @@ def main() -> int:
         encoding=encoding,
     )
 
+    # Ensure consolidated metadata for HTTP serving
+    import zarr
+
+    zarr.consolidate_metadata(str(output))
+
     elapsed = time.monotonic() - t0
 
     # Compute store size
