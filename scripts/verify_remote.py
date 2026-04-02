@@ -130,9 +130,13 @@ def main() -> int:
         return 1
 
     # ---- Check 2: Auth enforcement ----
+    # Use a fresh Session with trust_env=False to prevent
+    # auto-reading ~/.netrc credentials for this test.
     step = " 2/10  Auth enforcement"
     try:
-        resp = requests.get(
+        no_auth = requests.Session()
+        no_auth.trust_env = False
+        resp = no_auth.get(
             f"{zarr_url}/.zmetadata", timeout=10,
         )
         if resp.status_code == 401:
