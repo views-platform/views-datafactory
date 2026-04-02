@@ -15,6 +15,7 @@ from datafactory_harvester.event_validation import (
     ComparisonResult,
     ValidationResult,
     compare_snapshots,
+    date_range,
     validate_events,
 )
 from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
@@ -25,6 +26,7 @@ __all__ = [
     "ComparisonResult",
     "validate_events",
     "compare_snapshots",
+    "date_range",
     "save_event_snapshot",
     "archive_snapshot",
     "register_source",

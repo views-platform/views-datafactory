@@ -2,13 +2,13 @@
 """Production parity test: compare our pipeline against UCDP .9.
 
 Usage:
-    uv run python scripts/parity_test.py
+    uv run python scripts/verify_parity.py
 
 Consolidates annual + candidate + .9 data, builds a viewpoint with
 the production_parity profile, and compares against the raw .9 as
 baseline. Reports discrepancy percentage and causes.
 
-Requires data from prior smoke test and full harvest runs:
+Requires data from prior harvest runs:
   - data/raw/ucdp_annual/ (annual v25.1)
   - data/raw/ucdp_candidate/ (candidate 25.0.1-26.0.2)
   - data/raw/ucdp_dot9/ (raw .9 version 25.9.11)

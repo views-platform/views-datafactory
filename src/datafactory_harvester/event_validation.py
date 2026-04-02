@@ -46,6 +46,24 @@ class ComparisonResult:
     warnings: list[str] = field(default_factory=list)
 
 
+def date_range(
+    events: list[dict],
+    field_name: str = "date_start",
+) -> tuple[str | None, str | None]:
+    """Extract min/max date strings from events.
+
+    Returns (min_date, max_date) or (None, None) if no dates found.
+    """
+    dates: list[str] = [
+        str(e[field_name])
+        for e in events
+        if e.get(field_name)
+    ]
+    if not dates:
+        return None, None
+    return min(dates), max(dates)
+
+
 def validate_events(
     events: list[dict],
     required_fields: set[str],

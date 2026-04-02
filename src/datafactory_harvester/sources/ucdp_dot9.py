@@ -294,12 +294,9 @@ def _fetch_dot9_version(
     )
 
     # Compute actual date coverage
-    dates = [
-        e.get("date_start") for e in events
-        if e.get("date_start")
-    ]
-    min_date: str | None = min(dates) if dates else None  # type: ignore[type-var]
-    max_date: str | None = max(dates) if dates else None  # type: ignore[type-var]
+    from datafactory_harvester.event_validation import date_range
+
+    min_date, max_date = date_range(events)
 
     base_entry = {
         "dataset": DATASET_ID,
