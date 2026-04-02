@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 80 concerns total: 41 resolved, 39 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 80 concerns total: 42 resolved, 38 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -13,7 +13,7 @@
 
 | ID | Tier | Title | Trigger |
 |----|------|-------|---------|
-| D-03 | 1 | Fail-loud vs. operational resilience | Before production deployment |
+| D-03 | 1 | ~~Fail-loud vs. operational resilience~~ | RESOLVED — ADR-018 policy + export_timestamp |
 | C-84 | 2 | Server runs everything as root | Before granting second user access |
 | C-85 | 2 | Personal GitHub SSH key on shared server | Before granting second user access |
 | C-86 | 2 | No deploy key — repo access tied to personal account | Before granting second user access |
@@ -67,13 +67,14 @@
 
 ## Tier 1 — Fix Before Production
 
-### D-03: Fail-loud vs. operational resilience
-ADR-003/008 mandate fail-loud everywhere. Nygard asks what the operational experience is when the UCDP API is down for 3 days. For a production forecasting system, some resilience policy is needed. **Policy defined in ADR-018 (operator-mediated bounded staleness). Code-level implementation partially complete (2026-03-28):**
-- `harvest_ucdp.py` now exits non-zero on harvest failure (was always exiting 0)
-- `refresh_pipeline.sh` has ERR trap: writes `logs/pipeline_failure.json` sentinel on failure, optionally sends email if `ALERT_EMAIL` is set
-- `check_health.py` reports staleness and failures (already existed)
-**Remaining gap:** No freshness indicator in zarr/parquet exports for consumers. **Trigger: add before second consumer.**
-**Source:** Nygard (expert reviews 4, 6, 7)
+### D-03: ~~Fail-loud vs. operational resilience~~ RESOLVED
+ADR-003/008 mandate fail-loud everywhere. Nygard asked what the operational experience is when the UCDP API is down for 3 days. **All components now in place:**
+- Policy: ADR-018 (operator-mediated bounded staleness, 7-day threshold)
+- `harvest_ucdp.py` exits non-zero on harvest failure
+- `refresh_pipeline.sh` has ERR trap with `pipeline_failure.json` sentinel + optional email
+- `check_health.py` reports staleness and recent failures
+- `export_zarr.py` writes `export_timestamp` (ISO 8601 UTC) to zarr attributes — consumers can verify freshness programmatically
+**Source:** Nygard (expert reviews 4, 6, 7). Freshness indicator added 2026-04-02.
 
 ---
 

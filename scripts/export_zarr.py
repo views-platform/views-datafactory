@@ -143,6 +143,14 @@ def main() -> int:
         if "output_digest" in prov:
             attrs["source_digest"] = prov["output_digest"]
 
+    # Freshness indicator (D-03): consumers can check when data
+    # was last exported. ISO 8601 UTC timestamp.
+    from datetime import datetime, timezone
+
+    attrs["export_timestamp"] = (
+        datetime.now(tz=timezone.utc).isoformat()
+    )
+
     ds = xr.Dataset(
         data_vars=data_vars,
         coords=coords,

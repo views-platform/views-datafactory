@@ -228,12 +228,16 @@ def main() -> int:
                 checks.append(f"source={attrs.get('source')}")
             if attrs.get("n_features") != EXPECTED_N_FEATURES:
                 checks.append(f"n_features={attrs.get('n_features')}")
+            ts = attrs.get("export_timestamp")
+            if not ts:
+                checks.append("export_timestamp missing (D-03)")
             if checks:
                 ok = _result(step, False, f"mismatches: {', '.join(checks)}")
             else:
                 ok = _result(
                     step, True,
-                    f"{EXPECTED_CRS}, {EXPECTED_RESOLUTION}°, {EXPECTED_SOURCE}",
+                    f"{EXPECTED_CRS}, {EXPECTED_RESOLUTION}°,"
+                    f" exported {ts[:10]}",
                 )
         except KeyError as e:
             ok = _result(step, False, f"missing key: {e}")
