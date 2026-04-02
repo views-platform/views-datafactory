@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 78 concerns total: 41 resolved, 37 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 80 concerns total: 41 resolved, 39 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -58,6 +58,8 @@
 | C-95 | 4 | ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ | RESOLVED — all 5 harvesters patched |
 | C-96 | 4 | fsspec does not auto-read `~/.netrc` — xarray consumers need auth boilerplate | If fsspec adds netrc support |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 |
+| C-98 | 4 | No deployment gate — git pull deploys branch tip | Before second maintainer pushes to development |
+| C-99 | 4 | No log rotation for pipeline logs | When log exceeds 10 MB |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -264,6 +266,14 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 ### C-95: ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ RESOLVED
 Audited and patched all 5 harvesters with the same `snap_path.exists()` check: `priogrid_static.py` (confirmed failing on cron run), `ucdp_candidate.py`, `ucdp_dot9.py`, `gaul_admin.py`. `ucdp_annual.py` was clean — it always writes regardless of digest. Pattern: every "unchanged" code path now verifies the output file exists before skipping the write.
 **Source:** Cron pipeline failure 2026-03-31, systematic audit
+
+### C-98: No deployment gate — [DEFER]
+`git pull` on the Hetzner server deploys whatever is at the tip of the tracked branch. No tags, no release process, no rollback mechanism. A broken commit pushed to development is one `git pull` away from running on the data server. **Trigger: implement tag-based checkout in `refresh_pipeline.sh` before second maintainer pushes to development.**
+**Source:** Falsification audit 2026-04-01 (F5)
+
+### C-99: No log rotation for pipeline logs — [DEFER]
+`logs/refresh.log` is appended to on every pipeline run. No logrotate config exists. At 11 KB/month growth, this won't cause problems for years. logrotate is installed on the server. **Trigger: add `/etc/logrotate.d/views-datafactory` when log exceeds 10 MB or a second log stream is added.**
+**Source:** Falsification audit 2026-04-01 (F4)
 
 ### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
 `request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.
