@@ -55,8 +55,8 @@ class TestTechDebtResolved:
             "technical_risk_register.md not found"
         )
         content = register.read_text()
-        assert "80 concerns total" in content
-        assert "42 resolved" in content
+        assert "82 concerns total" in content
+        assert "44 resolved" in content
 
     def test_maturity_skip_reason_current(self) -> None:
         """Resolved: maturity test for .9 in smoke test

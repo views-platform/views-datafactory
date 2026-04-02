@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-03-28)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 80 concerns total: 42 resolved, 38 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 82 concerns total: 44 resolved, 38 open/deferred. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -60,6 +60,8 @@
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 |
 | C-98 | 4 | No deployment gate — git pull deploys branch tip | Before second maintainer pushes to development |
 | C-99 | 4 | No log rotation for pipeline logs | When log exceeds 10 MB |
+| C-100 | 4 | ~~Stale smoke_test.py reference in verify_parity.py~~ | RESOLVED — docstring updated |
+| C-101 | 4 | ~~3x duplicated min/max date code with type: ignore~~ | RESOLVED — extracted date_range() |
 | C-06 | — | Provenance composability | Deferred by design |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
 
@@ -275,6 +277,14 @@ Audited and patched all 5 harvesters with the same `snap_path.exists()` check: `
 ### C-99: No log rotation for pipeline logs — [DEFER]
 `logs/refresh.log` is appended to on every pipeline run. No logrotate config exists. At 11 KB/month growth, this won't cause problems for years. logrotate is installed on the server. **Trigger: add `/etc/logrotate.d/views-datafactory` when log exceeds 10 MB or a second log stream is added.**
 **Source:** Falsification audit 2026-04-01 (F4)
+
+### C-100: ~~Stale smoke_test.py reference in verify_parity.py~~ RESOLVED
+`scripts/verify_parity.py` docstring referenced the retired `smoke_test.py` (line 11: "Requires data from prior smoke test") and used the old filename `parity_test.py` (line 5). Both updated.
+**Source:** Tech debt cleanup 2026-04-02
+
+### C-101: ~~3x duplicated min/max date code with type: ignore~~ RESOLVED
+`ucdp_annual.py:295`, `ucdp_candidate.py:286`, and `ucdp_dot9.py:301` each had identical 6-line blocks extracting min/max date strings from event lists with `# type: ignore[type-var]`. Extracted `date_range()` helper to `event_validation.py` — returns typed `tuple[str | None, str | None]`, eliminates all 3 type ignores.
+**Source:** Tech debt cleanup 2026-04-02
 
 ### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
 `request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.
