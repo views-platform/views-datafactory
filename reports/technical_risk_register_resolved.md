@@ -29,6 +29,10 @@ All three harvesters now assign comparison result, log revision stats, and merge
 Consolidation ledger entries had no record of the Parquet schema. Schema changes from UCDP (field additions/removals) were invisible until downstream failures. **Fix:** record `schema_fingerprint` (sorted column names hash) in each consolidation ledger entry.
 **Source:** Kleppmann (expert review #4), long-term regret test
 
+### C-27: ~~Retry pattern duplicated in 3 modules~~ RESOLVED
+Extracted `request_with_retry` to new Layer 0 package `datafactory_http`. All callers (`ucdp_annual`, `ucdp_candidate`, `ucdp_dot9`, `shapefile_harvester`, `gaul_admin`) now import from the shared module.
+**Source:** Repo assimilation, expert review 4, tech debt cleanup 2026-03-27
+
 ### Tier 2 (Fixed Before Scaling)
 
 ### C-24: ~~Compiler loads entire Parquet into list-of-dicts~~ RESOLVED
@@ -133,6 +137,58 @@ Added `TestIdentifierAlignmentGreen` verifying FeatureFrame's `REQUIRED_IDENTIFI
 Concern count exceeded 75 trigger. Split into `technical_risk_register.md` (active) + `technical_risk_register_resolved.md` (archive). Formalized as governance artifact in ADR-020.
 **Source:** Ousterhout (expert review #3)
 
+### C-71: ~~No retry jitter~~ RESOLVED
+Added `random.uniform(0, 1)` jitter to exponential backoff in `datafactory_http/retry.py`. Delay is now `2^attempt + random(0, 1)` instead of fixed `2^attempt`.
+**Source:** Nygard (expert review #4)
+
+### C-73: ~~Grid shape transposition produces silent wrong results~~ RESOLVED
+Added shape validation (ndim + spatial dim match) to `_flatten_grid()`, `feature_frame_to_grid()`, and `FeatureFrame.from_grid()`. Transposed grids, 3D grids, and 1D pgids now raise `ValueError`. Retired `visualize_grid.py` (superseded scaffolding with live indexing bugs from an older grid convention).
+**Source:** Ousterhout (expert review #4), failure mode analysis
+
+### C-76: ~~Falsification tests are skipped, not running~~ RESOLVED
+Registered `falsification` pytest marker. 11 stubs now use `@pytest.mark.falsification()` instead of `@pytest.mark.skip()`. Auto-skipped by default; visible with `--run-falsification`. Normal `pytest` output shows 0 skipped.
+**Source:** Beck (expert review #4)
+
+### C-77: ~~Ledger archive retention unbounded~~ RESOLVED (accepted by design)
+The existing 9-archive rotation cap in `_rotate_ledger()` (`digests_and_ledgers.py:163`) bounds disk usage at 720 MB worst case across all 8 ledger types. At current growth rates (530 KB total, ~1-2 KB per monthly run), this bound won't be reached for decades. Provenance is mission-critical — archives should be preserved for audit, not garbage-collected. 8/8 expert perspectives agree: the problem doesn't exist at current scale.
+**Source:** Nygard (expert review #4), expert review #8 (unanimous)
+
+### C-81: ~~GAUL shapefile download has no retry logic~~ RESOLVED
+`gaul_admin.py:_download_shapefile_zip()` now uses `request_with_retry` from `datafactory_http`, gaining exponential backoff retry consistent with all other downloaders.
+**Source:** Tech debt cleanup 2026-03-27
+
+### C-82: ~~No GAUL retry integration test~~ RESOLVED
+Added `test_gaul_admin.py` with `test_retries_on_transient_failure` (verifies `_download_shapefile_zip` retries via `request_with_retry`) and `test_skips_download_when_cached` (verifies cache-hit path).
+**Source:** Feathers, Beck, Nygard (expert review #7)
+
+### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
+`request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.
+**Source:** Nygard, Hickey (expert review #7)
+
+### C-90: ~~Pipeline runs as interactive session, not a service~~ RESOLVED
+Cron job set up on Hetzner: `0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1`. Pipeline now runs automatically on the 21st of every month at midnight UTC. Three cron environment issues fixed: PATH (uv not found), PS1 unbound variable, and UCDP_API_TOKEN unreachable after .bashrc guard. `refresh_pipeline.sh` now sources `~/.profile` and exports PATH explicitly.
+**Source:** DDIA literature alignment 2026-03-30, cron setup 2026-03-31
+
+### C-94: ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ RESOLVED
+After data wipe, the provenance ledger survived with a valid digest. The shapefile harvester downloaded the ZIP, found the digest unchanged, and returned without extracting — assuming files were on disk. They weren't. Fixed by adding `files_on_disk` check to the "unchanged" code path: `shp_dir.exists() and any(shp_dir.glob("*.shp"))`.
+**Source:** Cron pipeline failure 2026-03-31
+
+### C-95: ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ RESOLVED
+Audited and patched all 5 harvesters with the same `snap_path.exists()` check: `priogrid_static.py` (confirmed failing on cron run), `ucdp_candidate.py`, `ucdp_dot9.py`, `gaul_admin.py`. `ucdp_annual.py` was clean — it always writes regardless of digest. Pattern: every "unchanged" code path now verifies the output file exists before skipping the write.
+**Source:** Cron pipeline failure 2026-03-31, systematic audit
+
+### C-99: ~~No log rotation for pipeline logs~~ RESOLVED
+`/etc/logrotate.d/views-datafactory` configured on Hetzner server. Verified 2026-04-04. The risk register entry was stale; the deployment log was correct.
+**Source:** Falsification audit 2026-04-01, server verification 2026-04-04
+
+### C-100: ~~Stale smoke_test.py reference in verify_parity.py~~ RESOLVED
+`scripts/verify_parity.py` docstring referenced the retired `smoke_test.py` (line 11: "Requires data from prior smoke test") and used the old filename `parity_test.py` (line 5). Both updated.
+**Source:** Tech debt cleanup 2026-04-02
+
+### C-101: ~~3x duplicated min/max date code with type: ignore~~ RESOLVED
+`ucdp_annual.py:295`, `ucdp_candidate.py:286`, and `ucdp_dot9.py:301` each had identical 6-line blocks extracting min/max date strings from event lists with `# type: ignore[type-var]`. Extracted `date_range()` helper to `event_validation.py` — returns typed `tuple[str | None, str | None]`, eliminates all 3 type ignores.
+**Source:** Tech debt cleanup 2026-04-02
+
 ---
 
 ## Resolved Concerns (Early — Reference Table)
@@ -170,8 +226,13 @@ Ousterhout: 18 ADRs + 12 CICs for 36 source files is heavyweight. Beck: governan
 GoF: extract Protocols for strategy patterns. Hickey: plain functions work. **Resolution: aggregation strategies are plain functions, no Protocols needed. Extract when second source needs different signatures.**
 
 ### D-03: ~~Fail-loud vs. operational resilience~~ RESOLVED (ADR-018)
-ADR-018 defines operational resilience policy: pipeline stays fail-loud (ADR-008/011 unchanged), operators may serve bounded-stale data under documented conditions (provenance audit, staleness threshold, freshness indicator, alert escalation). No code changes to pipeline.
-**Source:** Nygard (expert reviews 4, 6)
+ADR-003/008 mandate fail-loud everywhere. Nygard asked what the operational experience is when the UCDP API is down for 3 days. **All components now in place:**
+- Policy: ADR-018 (operator-mediated bounded staleness, 7-day threshold)
+- `harvest_ucdp.py` exits non-zero on harvest failure
+- `refresh_pipeline.sh` has ERR trap with `pipeline_failure.json` sentinel + optional email
+- `check_health.py` reports staleness and recent failures
+- `export_zarr.py` writes `export_timestamp` (ISO 8601 UTC) to zarr attributes — consumers can verify freshness programmatically
+**Source:** Nygard (expert reviews 4, 6, 7). Freshness indicator added 2026-04-02.
 
 ### D-04: ~~Tests-first vs. characterization-first~~ RESOLVED
 Beck: write specification tests now. Feathers: capture metric lab behavior first. **Resolution: both valid — spec tests define target, characterization tests verify migration.**
