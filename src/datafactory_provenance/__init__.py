@@ -14,10 +14,12 @@ from datafactory_provenance.digests_and_ledgers import (
     last_digest,
     last_digest_for_version,
 )
+from datafactory_provenance.registry import Registry
 
 __all__ = [
     "DIGEST_SCHEME",
     "LEDGER_VERSION",
+    "Registry",
     "append_ledger_entry",
     "compute_content_digest",
     "compute_file_digest",

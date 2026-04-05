@@ -5,29 +5,21 @@ Given all versions of the same event (same id, different source
 versions), the strategy picks the winning record.
 
 Adding a new strategy means adding a function here with the
-@_register decorator — no changes to the builder (OCP).
+@_registry.decorator — no changes to the builder (OCP).
 """
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 
-logger = logging.getLogger(__name__)
+from datafactory_provenance.registry import Registry
+
+_registry: Registry[Callable[[list[dict]], dict]] = Registry(
+    "survivorship strategy"
+)
+STRATEGIES = _registry.entries
 
 __all__ = ["get_survivorship", "annual_wins", "dot9_wins"]
-
-STRATEGIES: dict[str, Callable[[list[dict]], dict]] = {}
-
-
-def _register(name: str) -> Callable:
-    """Decorator to register a survivorship strategy by name."""
-    def decorator(
-        fn: Callable[[list[dict]], dict],
-    ) -> Callable[[list[dict]], dict]:
-        STRATEGIES[name] = fn
-        return fn
-    return decorator
 
 
 def get_survivorship(name: str) -> Callable[[list[dict]], dict]:
@@ -36,15 +28,7 @@ def get_survivorship(name: str) -> Callable[[list[dict]], dict]:
     Raises:
         KeyError: If the strategy name is not registered.
     """
-    if name not in STRATEGIES:
-        available = sorted(STRATEGIES.keys())
-        err_msg = (
-            f"Unknown survivorship strategy '{name}'. "
-            f"Available: {available}"
-        )
-        logger.error(err_msg)
-        raise KeyError(err_msg)
-    return STRATEGIES[name]
+    return _registry.get(name)
 
 
 def _parse_version(version_str: str) -> tuple[int, ...]:
@@ -55,7 +39,7 @@ def _parse_version(version_str: str) -> tuple[int, ...]:
     return tuple(int(p) for p in version_str.split("."))
 
 
-@_register("annual_wins")
+@_registry.decorator("annual_wins")
 def annual_wins(versions: list[dict]) -> dict:
     """Pick annual if available, else latest candidate by version.
 
@@ -78,7 +62,7 @@ def annual_wins(versions: list[dict]) -> dict:
     ))
 
 
-@_register("dot9_wins")
+@_registry.decorator("dot9_wins")
 def dot9_wins(versions: list[dict]) -> dict:
     """Annual > .9 > candidate. Production-parity survivorship.
 

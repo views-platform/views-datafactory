@@ -193,6 +193,10 @@ Added `tests/test_performance.py` with `@pytest.mark.slow`. Compiles 50 events o
 Added `tests/test_schema_evolution.py` with 4 tests: column added in later version (nulls in old rows), column removed in later version (nulls in new rows), mixed schemas across all 3 streams, and schema fingerprint change detection.
 **Source:** Kleppmann (test review). Resolved 2026-04-04.
 
+### C-80: ~~Registry boilerplate duplicated 6x~~ RESOLVED
+Extracted generic `Registry[T]` class to `datafactory_provenance/registry.py`. All 6 registries (sources, consolidators, builders, aggregation, survivorship, temporal_distribution) now use `Registry` instances. Public APIs preserved via aliasing (`register_source = _registry.register`, `STRATEGIES = _registry.entries`). Test fixture `_clean_source_registry` continues to work via dict aliasing. 46 source files pass mypy strict.
+**Source:** Martin (expert review #4). Resolved 2026-04-05.
+
 ### C-92: ~~Duplicated retry-delay logic in `datafactory_http`~~ RESOLVED
 Extracted `_retry_or_raise()` helper in `retry.py`. Both the `HTTPError` and `RequestException` branches now call the shared function for retry-delay-or-raise logic. File reduced from 97 to 82 lines.
 **Source:** PR #2 code review 2026-03-30. Resolved 2026-04-04.

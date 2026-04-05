@@ -6,24 +6,18 @@ Consumers call fetch_source(name, ...) without knowing the implementation.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from datafactory_provenance.registry import Registry
 
-_SOURCES: dict[str, Callable[..., Any]] = {}
+_registry: Registry[Callable[..., Any]] = Registry("source")
 
-
-def register_source(name: str, fetch_fn: Callable[..., Any]) -> None:
-    """Register a data source fetch function.
-
-    Args:
-        name: Source identifier (e.g., "ucdp_annual").
-        fetch_fn: Callable that fetches data. Return type varies by source.
-    """
-    _SOURCES[name] = fetch_fn
-    logger.info("Registered data source: %s", name)
+# Backward-compatible public API
+_SOURCES = _registry.entries  # conftest.py accesses this directly
+register_source = _registry.register
+list_sources = _registry.list_entries
+_clear_registry = _registry.clear
 
 
 def fetch_source(name: str, **kwargs: Any) -> Any:
@@ -34,27 +28,10 @@ def fetch_source(name: str, **kwargs: Any) -> Any:
         **kwargs: Passed to the source's fetch function.
 
     Returns:
-        Source-specific result (Path for single-source, list[dict] for multi-version).
+        Source-specific result (Path for single-source,
+        list[dict] for multi-version).
 
     Raises:
         KeyError: If the source name is not registered.
     """
-    if name not in _SOURCES:
-        available = sorted(_SOURCES.keys())
-        err_msg = (
-            f"Unknown source '{name}'. "
-            f"Available: {available or 'none registered'}"
-        )
-        logger.error(err_msg)
-        raise KeyError(err_msg)
-    return _SOURCES[name](**kwargs)
-
-
-def list_sources() -> list[str]:
-    """Return sorted list of registered source names."""
-    return sorted(_SOURCES.keys())
-
-
-def _clear_registry() -> None:
-    """Clear all registered sources. For test isolation only."""
-    _SOURCES.clear()
+    return _registry.get(name)(**kwargs)

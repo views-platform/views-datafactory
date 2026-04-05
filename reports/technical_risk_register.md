@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-04)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 66 resolved, 36 open/deferred (3 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 67 resolved, 35 open/deferred (2 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -34,7 +34,6 @@
 | C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns | — |
 | C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s | Test infra |
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
-| C-80 | 3 | Registry boilerplate duplicated 6x — TRIGGER FIRED | 6th registry exists | Code cleanup |
 | C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed | — |
 | C-60 | 4 | Health check logic untested (incl. C-107) | check_health.py modified | Test infra |
 | C-89 | 4 | No formal SLO for data freshness | Before second consumer | — |
@@ -66,7 +65,7 @@ Items that should be resolved together:
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
 | **Test infrastructure** | C-29, C-60, C-78, C-79 | Test suite growth |
-| **Code cleanup** | C-31, C-93 | Next refactor opportunity |
+| **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80 resolved) |
 
 ---
 
@@ -103,10 +102,6 @@ The metric lab code being migrated has its own tests, but this repo has no "gold
 ### C-102: No tests for assembly, zarr export, or dataframe export scripts — [DEFER]
 `assemble_grid.py` (211 LOC), `export_zarr.py` (211 LOC), and `export_dataframe.py` (141 LOC) have no unit tests. These scripts contain production logic for dimension ordering, channel placement, mmap writes, zarr chunking, and xarray Dataset construction. Errors here corrupt the served data silently. Currently validated only by manual `verify_remote.py` runs or full pipeline execution. **Trigger: add tests when script logic is modified or a new source type is added.**
 **Source:** Repo assimilation 2026-04-04 (Phase 6)
-
-### C-80: Registry boilerplate duplicated 6x — TRIGGER FIRED
-`sources/__init__.py`, `consolidators/__init__.py`, `builders/__init__.py`, `aggregation.py`, `survivorship.py`, and `temporal_distribution.py` each implement identical dict-based registries (~60 LOC each, ~360 LOC total). **Trigger condition met:** 6th registry is `temporal_distribution.py`. Extract `Registry[T]` generic class.
-**Source:** Martin (expert review #4). Trigger verified 2026-04-04.
 
 ---
 

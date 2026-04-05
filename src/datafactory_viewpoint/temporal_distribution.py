@@ -5,7 +5,7 @@ Given a single event, the strategy returns one or more rows
 depending on whether the event spans multiple months.
 
 Adding a new strategy means adding a function here with the
-@_register decorator — no changes to the builder (OCP).
+@_registry.decorator — no changes to the builder (OCP).
 """
 
 from __future__ import annotations
@@ -14,23 +14,18 @@ import logging
 import math
 from collections.abc import Callable
 
+from datafactory_provenance.registry import Registry
+
 logger = logging.getLogger(__name__)
+
+_registry: Registry[Callable[[dict], list[dict]]] = Registry(
+    "distribution strategy"
+)
+STRATEGIES = _registry.entries
 
 __all__ = ["get_distribution", "even_split", "ceil_split"]
 
-STRATEGIES: dict[str, Callable[[dict], list[dict]]] = {}
-
 _SUMMARY_DATE_PREC: int = 5  # date_prec value indicating multi-month span
-
-
-def _register(name: str) -> Callable:
-    """Decorator to register a temporal distribution strategy."""
-    def decorator(
-        fn: Callable[[dict], list[dict]],
-    ) -> Callable[[dict], list[dict]]:
-        STRATEGIES[name] = fn
-        return fn
-    return decorator
 
 
 def get_distribution(name: str) -> Callable[[dict], list[dict]]:
@@ -39,15 +34,7 @@ def get_distribution(name: str) -> Callable[[dict], list[dict]]:
     Raises:
         KeyError: If the strategy name is not registered.
     """
-    if name not in STRATEGIES:
-        available = sorted(STRATEGIES.keys())
-        err_msg = (
-            f"Unknown distribution strategy '{name}'. "
-            f"Available: {available}"
-        )
-        logger.error(err_msg)
-        raise KeyError(err_msg)
-    return STRATEGIES[name]
+    return _registry.get(name)
 
 
 def _month_first_day(date_str: str) -> str:
@@ -85,7 +72,7 @@ def _months_between(start_str: str, end_str: str) -> list[str]:
     return months
 
 
-@_register("even_split")
+@_registry.decorator("even_split")
 def even_split(event: dict) -> list[dict]:
     """Distribute summary events evenly across spanned months.
 
@@ -142,7 +129,7 @@ def even_split(event: dict) -> list[dict]:
     return rows
 
 
-@_register("ceil_split")
+@_registry.decorator("ceil_split")
 def ceil_split(event: dict) -> list[dict]:
     """Production-parity summary event distribution.
 
