@@ -50,7 +50,7 @@ def main() -> int:
     ]:
         if not path.exists():
             print(f"MISSING: {label} at {path}")
-            print("Run smoke_test.py and fetch full annual first.")
+            print("Run scripts/harvest_ucdp.py first.")
             return 1
         print(f"  {label}: {path}")
 
@@ -74,7 +74,7 @@ def main() -> int:
             / "ingestion_ledger.jsonl"
         ),
         candidate_ledger_path=(
-            Path("provenance/smoke_test/ucdp_candidate")
+            Path("provenance/full_harvest/ucdp_candidate")
             / "ingestion_ledger.jsonl"
         ),
         dot9_ledger_path=(

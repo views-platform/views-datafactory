@@ -12,6 +12,8 @@ from collections.abc import Callable
 
 from datafactory_provenance.registry import Registry
 
+__all__ = ["count", "sum_best", "max_best", "get_strategy"]
+
 _registry: Registry[Callable[[list[dict]], float]] = Registry(
     "aggregation strategy"
 )

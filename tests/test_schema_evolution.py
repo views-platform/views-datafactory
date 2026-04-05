@@ -14,27 +14,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pyarrow as pa
-import pyarrow.parquet as pq
+from conftest import write_test_parquet
 
 from datafactory_consolidation.consolidators.ucdp import (
     UcdpConsolidationConfig,
     consolidate_ucdp,
 )
 from datafactory_consolidation.event_store import read_store
-
-
-def _write_parquet(path: Path, events: list[dict]) -> Path:
-    """Write events to Parquet with inferred schema."""
-    all_fields = sorted({k for ev in events for k in ev})
-    columns = {f: [ev.get(f) for ev in events] for f in all_fields}
-    pa_columns = {
-        n: pa.array(v, from_pandas=True) for n, v in columns.items()
-    }
-    table = pa.table(pa_columns)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, path)
-    return path
 
 
 def _base_event(i: int) -> dict:
@@ -79,7 +65,7 @@ class TestSchemaEvolutionGreen:
         """
         # Annual: standard fields
         annual_events = [_base_event(i) for i in range(3)]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "annual" / "ucdp_ged_v25.1_1989_2024.parquet",
             annual_events,
         )
@@ -89,7 +75,7 @@ class TestSchemaEvolutionGreen:
             {**_base_event(i + 100), "confidence": 0.85}
             for i in range(2)
         ]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "candidate" / "ucdp_ged_candidate_25.0.1.parquet",
             cand_events,
         )
@@ -131,14 +117,14 @@ class TestSchemaEvolutionGreen:
             {**_base_event(i), "region_code": 42}
             for i in range(3)
         ]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "annual" / "ucdp_ged_v25.1_1989_2024.parquet",
             annual_events,
         )
 
         # Candidate: does NOT have "region_code"
         cand_events = [_base_event(i + 100) for i in range(2)]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "candidate" / "ucdp_ged_candidate_25.0.1.parquet",
             cand_events,
         )
@@ -178,7 +164,7 @@ class TestSchemaEvolutionGreen:
             {**_base_event(i), "region_code": 42}
             for i in range(2)
         ]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "annual" / "ucdp_ged_v25.1_1989_2024.parquet",
             annual_events,
         )
@@ -188,7 +174,7 @@ class TestSchemaEvolutionGreen:
             {**_base_event(i + 100), "confidence": 0.9}
             for i in range(2)
         ]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "candidate" / "ucdp_ged_candidate_25.0.1.parquet",
             cand_events,
         )
@@ -198,7 +184,7 @@ class TestSchemaEvolutionGreen:
             {**_base_event(i + 200), "quality_flag": "A"}
             for i in range(2)
         ]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "dot9" / "ucdp_ged_dot9_25.9.1.parquet",
             dot9_events,
         )
@@ -225,7 +211,7 @@ class TestSchemaEvolutionGreen:
 
         # First consolidation: standard fields only
         annual_events = [_base_event(i) for i in range(3)]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "annual" / "ucdp_ged_v25.1_1989_2024.parquet",
             annual_events,
         )
@@ -245,7 +231,7 @@ class TestSchemaEvolutionGreen:
             {**_base_event(i + 100), "new_field": "x"}
             for i in range(2)
         ]
-        _write_parquet(
+        write_test_parquet(
             tmp_path / "candidate" / "ucdp_ged_candidate_25.0.1.parquet",
             cand_events,
         )
