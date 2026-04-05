@@ -185,6 +185,18 @@ Audited and patched all 5 harvesters with the same `snap_path.exists()` check: `
 `scripts/verify_parity.py` docstring referenced the retired `smoke_test.py` (line 11: "Requires data from prior smoke test") and used the old filename `parity_test.py` (line 5). Both updated.
 **Source:** Tech debt cleanup 2026-04-02
 
+### C-30: ~~No performance test for full-scale compilation~~ RESOLVED
+Added `tests/test_performance.py` with `@pytest.mark.slow`. Compiles 50 events onto the full 360x720 PRIO-GRID (259,200 cells x 12 months) and asserts <60s. Runs in ~0.3s.
+**Source:** Repo assimilation, Nygard. Resolved 2026-04-04.
+
+### C-61: ~~No schema evolution test~~ RESOLVED
+Added `tests/test_schema_evolution.py` with 4 tests: column added in later version (nulls in old rows), column removed in later version (nulls in new rows), mixed schemas across all 3 streams, and schema fingerprint change detection.
+**Source:** Kleppmann (test review). Resolved 2026-04-04.
+
+### C-92: ~~Duplicated retry-delay logic in `datafactory_http`~~ RESOLVED
+Extracted `_retry_or_raise()` helper in `retry.py`. Both the `HTTPError` and `RequestException` branches now call the shared function for retry-delay-or-raise logic. File reduced from 97 to 82 lines.
+**Source:** PR #2 code review 2026-03-30. Resolved 2026-04-04.
+
 ### C-101: ~~3x duplicated min/max date code with type: ignore~~ RESOLVED
 `ucdp_annual.py:295`, `ucdp_candidate.py:286`, and `ucdp_dot9.py:301` each had identical 6-line blocks extracting min/max date strings from event lists with `# type: ignore[type-var]`. Extracted `date_range()` helper to `event_validation.py` — returns typed `tuple[str | None, str | None]`, eliminates all 3 type ignores.
 **Source:** Tech debt cleanup 2026-04-02

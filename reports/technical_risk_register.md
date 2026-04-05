@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-04)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 63 resolved (archived), 39 open/deferred, 5 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 66 resolved, 36 open/deferred (3 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -24,24 +24,21 @@
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
 | C-45 | 4 | No Parquet schema evolution strategy | UCDP removes/renames a field | UCDP schema |
 | C-31 | 4 | Candidate source depends on annual source (incl. C-28) | 3rd shared function needed | Code cleanup |
-| C-44 | 4 | Harvest pipeline template is implicit | 4th data source added | V-Dem readiness |
+| C-44 | 4 | Harvest pipeline template is implicit — trigger fired, accepted at v1.0 | 5 sources exist | V-Dem readiness |
 | C-46 | 4 | No ledger write idempotency | External systems consume ledger | — |
 | C-32 | 4 | Source registry returns `Any` | Type errors in consumer code | — |
-| C-30 | 4 | No performance test for full-scale compilation | Before CI/CD pipeline | Test infra |
-| C-29 | 4 | No end-to-end integration test | Before production deployment | Test infra |
+| C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Server in production | Test infra |
 | C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment | UCDP resilience |
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
 | C-74 | 4 | CompilationConfig leaks strategy vocabulary | User confusion observed | — |
 | C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns | — |
 | C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s | Test infra |
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
-| C-80 | 4 | Registry boilerplate duplicated 5x | 6th registry added | Code cleanup |
+| C-80 | 3 | Registry boilerplate duplicated 6x — TRIGGER FIRED | 6th registry exists | Code cleanup |
 | C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed | — |
 | C-60 | 4 | Health check logic untested (incl. C-107) | check_health.py modified | Test infra |
-| C-61 | 4 | No schema evolution test | 3rd data source | V-Dem readiness |
 | C-89 | 4 | No formal SLO for data freshness | Before second consumer | — |
 | C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED | V-Dem readiness |
-| C-92 | 4 | Duplicated retry-delay logic in `datafactory_http` | When retry.py is next modified | Code cleanup |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
 | C-96 | 4 | fsspec does not auto-read `~/.netrc` | If fsspec adds netrc support | — |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
@@ -65,11 +62,11 @@ Items that should be resolved together:
 | Package | Items | Trigger |
 |---------|-------|---------|
 | **Server hardening** | C-84, C-85, C-86, C-87, C-88 | Before 2nd user access |
-| **V-Dem readiness** | C-44, C-61, C-91, C-102, C-104, C-106 | Before V-Dem integration |
+| **V-Dem readiness** | C-44, C-91, C-102, C-104, C-106 | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
-| **Test infrastructure** | C-29, C-30, C-60, C-78, C-79 | Test suite growth |
-| **Code cleanup** | C-31, C-80, C-92, C-93 | Next refactor opportunity |
+| **Test infrastructure** | C-29, C-60, C-78, C-79 | Test suite growth |
+| **Code cleanup** | C-31, C-93 | Next refactor opportunity |
 
 ---
 
@@ -107,6 +104,10 @@ The metric lab code being migrated has its own tests, but this repo has no "gold
 `assemble_grid.py` (211 LOC), `export_zarr.py` (211 LOC), and `export_dataframe.py` (141 LOC) have no unit tests. These scripts contain production logic for dimension ordering, channel placement, mmap writes, zarr chunking, and xarray Dataset construction. Errors here corrupt the served data silently. Currently validated only by manual `verify_remote.py` runs or full pipeline execution. **Trigger: add tests when script logic is modified or a new source type is added.**
 **Source:** Repo assimilation 2026-04-04 (Phase 6)
 
+### C-80: Registry boilerplate duplicated 6x — TRIGGER FIRED
+`sources/__init__.py`, `consolidators/__init__.py`, `builders/__init__.py`, `aggregation.py`, `survivorship.py`, and `temporal_distribution.py` each implement identical dict-based registries (~60 LOC each, ~360 LOC total). **Trigger condition met:** 6th registry is `temporal_distribution.py`. Extract `Registry[T]` generic class.
+**Source:** Martin (expert review #4). Trigger verified 2026-04-04.
+
 ---
 
 ## Tier 4 — Accept or Defer
@@ -124,11 +125,12 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 **Source:** Kleppmann (expert review 6)
 
 ### C-31: Candidate source depends on annual source — [DEFER]
-`ucdp_candidate.py:25-31` imports 5 symbols from `ucdp_annual.py` including `UcdpAnnualConfig`. Changing annual's API client could break candidate. Additionally, `ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated` — sends unnecessary 100-year date range (works correctly but is a workaround). **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed. Resolution also addresses former C-28.**
+`ucdp_candidate.py` imports 4 symbols and `ucdp_dot9.py` imports 5 symbols from `ucdp_annual.py` (including `UcdpAnnualConfig`, `fetch_paginated`, `FIELD_TYPES`, `REQUIRED_FIELDS`, and `get_ucdp_token`). Changing annual's API client could break candidate. Additionally, `ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated` — sends unnecessary 100-year date range (works correctly but is a workaround). **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed. Resolution also addresses former C-28.**
 **Source:** Martin (expert review 5), falsification audit DoD005
 
 ### C-44: Harvest pipeline template is implicit — [DEFER]
-All three UCDP harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A 4th source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
+All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
+**Note (2026-04-04):** Trigger condition met — 5 sources exist (ucdp_annual, ucdp_candidate, ucdp_dot9, priogrid_static, gaul_admin). Accepted at v1.0 scope: all 5 harvesters work correctly, implicit template hasn't caused bugs. Reassess before V-Dem (6th source).
 **Source:** GoF (expert review 6)
 
 ### C-46: No ledger write idempotency — [DEFER]
@@ -139,12 +141,9 @@ All three UCDP harvesters follow config->fetch->validate->compare->archive->stor
 `fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Consumers can't rely on the return type. **Trigger: consider `SourceResult` union if type errors appear in consumer code.**
 **Source:** GoF, Hickey (expert review 5)
 
-### C-30: No performance test for full-scale compilation — [DEFER]
-60-second target (NF-5: 259,200 cells x 432 months) has no test. Full-scale operation proven in practice (1.7M events, <60s). **Trigger: add performance test before CI/CD pipeline.**
-**Source:** Repo assimilation, Nygard
-
 ### C-29: No end-to-end integration test — [DEFER]
 Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
+**Note (2026-04-04):** Trigger condition met — server in production at 204.168.219.108. Accepted at v1.0 scope: integration test covers the critical harvest→compile path, `verify_remote.py` validates the deployed output (10/10 checks). Reassess before V-Dem.
 **Source:** Repo assimilation, Feathers
 
 ### C-70: No circuit breaker for UCDP API — [DEFER]
@@ -171,10 +170,6 @@ Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filt
 `compile_grid()` and `consolidate_ucdp()` always read from disk. No seam to inject mock reader. Tests create actual Parquet files. **Trigger: add `read_table_fn` parameter when test suite exceeds 30 seconds.**
 **Source:** Feathers (expert review #4)
 
-### C-80: Registry boilerplate duplicated 5x — [DEFER]
-`sources/__init__.py`, `consolidators/__init__.py`, `builders/__init__.py`, `aggregation.py`, `survivorship.py` each implement identical dict-based registries (~60 LOC each, ~200 LOC total). **Trigger: extract `Registry[T]` generic class on 6th registry.**
-**Source:** Martin (expert review #4)
-
 ### C-03: Protocol proliferation risk in synthetic module — [DEFER]
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
 **Source:** GoF, Hickey
@@ -183,10 +178,6 @@ Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filt
 `check_health.py` (236 LOC) has no test verifying output parsing with stale/missing/failing ledgers. A bug here could mask pipeline failures or produce false "all healthy" reports. **Trigger: add mock-ledger tests when check_health.py is modified.**
 **Source:** Nygard (test review), repo assimilation 2026-04-04 (incorporates former C-107)
 
-### C-61: No schema evolution test — [DEFER]
-No test for what happens when Parquet columns are added/removed between consolidation vintages. **Trigger: add before third data source.**
-**Source:** Kleppmann (test review)
-
 ### C-89: No formal SLO for data freshness — [DEFER]
 ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks or reports whether data meets the target. Consumers can't programmatically verify freshness. DDIA Ch.2 pp.41-42 defines SLOs as measurable targets with consequences — our threshold is a guideline, not a contract. **Trigger: define measurable SLO before second consumer.**
 **Source:** DDIA literature alignment 2026-03-30
@@ -194,10 +185,6 @@ ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks o
 ### C-91: No pipeline duration tracking — [DEFER]
 A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. DDIA Ch.2 pp.37-42 emphasizes measuring performance as a distribution, not a single number. If a new data source doubles pipeline time, we'd only notice when the cron job overlaps with the next month. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**
 **Source:** DDIA literature alignment 2026-03-30
-
-### C-92: Duplicated retry-delay logic in `datafactory_http` — [DEFER]
-`retry.py` lines 60-93: the `HTTPError` branch and the `RequestException` branch share identical retry logic (log warning, compute delay with jitter, sleep). The only difference is the 4xx fail-fast check at the top of the HTTPError branch. Could extract a shared `_retry_delay()` helper. File is 96 lines total — duplication is minor but will compound if more exception types are added. **Trigger: extract when `retry.py` is next modified or a new exception branch is added.**
-**Source:** PR #2 code review 2026-03-30
 
 ### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**
