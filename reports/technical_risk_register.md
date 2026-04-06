@@ -105,12 +105,12 @@ The metric lab code being migrated has its own tests, but this repo has no "gold
 **Source:** Repo assimilation
 
 ### C-36: UCDP API contract has no schema versioning — [DEFER]
-API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43-72,176-190`. No schema version negotiation. Fail-loud catches field removals; field additions are harmless (silently preserved). **Trigger: UCDP announces API v2 or breaking change.**
-**Source:** Repo assimilation
+API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43-72,176-190`. No schema version negotiation. Fail-loud catches field removals; field additions are harmless (silently preserved). Kleppmann (Ch.4 pp.131-136) notes that service providers often cannot control client upgrades, making forward compatibility essential — our fail-loud on missing fields is the correct strategy, but we have no mechanism to detect silent semantic changes in existing fields. **Trigger: UCDP announces API v2 or breaking change.**
+**Source:** Repo assimilation. DDIA Ch.4 pp.112, 131-136.
 
 ### C-45: No Parquet schema evolution strategy — [DEFER]
-`pa.concat_tables(promote_options="default")` in `ucdp.py:439-441` silently adds columns when UCDP adds fields. Removed fields leave nulls in new records. No schema registry. **Trigger: UCDP removes a field or renames a column.**
-**Source:** Kleppmann (expert review 6)
+`pa.concat_tables(promote_options="default")` in `ucdp.py:439-441` silently adds columns when UCDP adds fields. Removed fields leave nulls in new records. No schema registry. Kleppmann (Ch.4 pp.112-127) treats schema evolution as essential for long-lived data: backward compatibility (new code reads old data) and forward compatibility (old code reads new data) must both be maintained. Our `promote_options="default"` handles column additions (backward compat) but not removals or renames. Ch.4 p.125 recommends a schema versioning database; Ch.4 p.131 notes archival storage should re-encode using the latest schema. **Trigger: UCDP removes a field or renames a column.**
+**Source:** Kleppmann (expert review 6). DDIA Ch.4 pp.112-127, 131.
 
 ### C-31: Candidate source depends on annual source — [DEFER]
 `ucdp_candidate.py` imports 4 symbols and `ucdp_dot9.py` imports 5 symbols from `ucdp_annual.py` (including `UcdpAnnualConfig`, `fetch_paginated`, `FIELD_TYPES`, `REQUIRED_FIELDS`, and `get_ucdp_token`). Changing annual's API client could break candidate. Additionally, `ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated` — sends unnecessary 100-year date range (works correctly but is a workaround). **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed. Resolution also addresses former C-28.**
@@ -122,8 +122,8 @@ All five harvesters follow config->fetch->validate->compare->archive->store->pro
 **Source:** GoF (expert review 6)
 
 ### C-46: No ledger write idempotency — [DEFER]
-`append_ledger_entry()` has no dedup key. Process crash after append but before caller return causes duplicate on retry. Ledger readers tolerate duplicates. **Trigger: consider when ledger is consumed by external systems requiring exactly-once semantics.**
-**Source:** Kleppmann (expert review 6)
+`append_ledger_entry()` has no dedup key. Process crash after append but before caller return causes duplicate on retry. Ledger readers tolerate duplicates. Kleppmann (Ch.12 pp.516-518) argues exactly-once semantics require idempotence via operation identifiers — each write carries a unique ID; consumers deduplicate on read. Ch.7 p.231 warns that retrying a successful-but-unacknowledged write without dedup causes silent duplication. Recommended approach: add an `operation_id` field (e.g., content digest of the entry) to each ledger record. **Trigger: consider when ledger is consumed by external systems requiring exactly-once semantics.**
+**Source:** Kleppmann (expert review 6). DDIA Ch.7 p.231, Ch.12 pp.516-518.
 
 ### C-29: No end-to-end integration test — [DEFER]
 Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
@@ -131,12 +131,12 @@ Partially addressed by `test_integration.py` (100 events, realistic pipeline). F
 **Source:** Repo assimilation, Feathers
 
 ### C-70: No circuit breaker for UCDP API — [DEFER]
-After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. **Trigger: implement before multi-operator or automated deployment.**
-**Source:** Nygard (expert review #4)
+After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. Kleppmann (Ch.7 p.231) warns that retrying overload "will make the problem worse, not better" and recommends exponential backoff with distinct handling for overload vs transient errors. Ch.8 pp.281-283 discusses timeout-based fault detection and network congestion amplification. **Trigger: implement before multi-operator or automated deployment.**
+**Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 pp.281-283.
 
 ### C-72: HTTP 429 not distinguished from 500 — [DEFER]
-Rate-limit responses get the same retry treatment as server errors. No `Retry-After` header parsing. **Trigger: if UCDP starts returning 429s (not observed to date).**
-**Source:** Nygard (expert review #4)
+Rate-limit responses get the same retry treatment as server errors. No `Retry-After` header parsing. Kleppmann (Ch.7 p.231) explicitly argues "it is only worth retrying after transient errors (e.g., deadlock, network interruption); after a permanent error, a retry would be pointless" and that overload errors need distinct handling. Ch.8 p.281 notes short timeouts risk declaring healthy services dead during load spikes. **Trigger: if UCDP starts returning 429s (not observed to date).**
+**Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 p.281.
 
 ### C-74: CompilationConfig leaks strategy vocabulary — [DEFER]
 Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filter dict syntax. No IDE discoverability. **Trigger: consider enum-based strategy names if user confusion is observed.**
@@ -163,12 +163,12 @@ Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filt
 **Source:** Nygard (test review), repo assimilation 2026-04-04 (incorporates former C-107)
 
 ### C-89: No formal SLO for data freshness — [DEFER]
-ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks or reports whether data meets the target. Consumers can't programmatically verify freshness. DDIA Ch.2 pp.41-42 defines SLOs as measurable targets with consequences — our threshold is a guideline, not a contract. **Trigger: define measurable SLO before second consumer.**
-**Source:** DDIA literature alignment 2026-03-30
+ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks or reports whether data meets the target. Consumers can't programmatically verify freshness. Kleppmann (Ch.1 pp.13-14) distinguishes SLAs (contractual, with consequences) from SLOs (internal targets), arguing both should use percentiles not averages. Ch.2 pp.41-42 defines SLOs as measurable targets. Ch.8 pp.237-240 frames bounded staleness as a snapshot isolation trade-off — our threshold is a guideline, not a measurable contract. **Trigger: define measurable SLO before second consumer.**
+**Source:** DDIA Ch.1 pp.13-14, Ch.2 pp.41-42, Ch.8 pp.237-240.
 
 ### C-91: No pipeline duration tracking — [DEFER]
-A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. DDIA Ch.2 pp.37-42 emphasizes measuring performance as a distribution, not a single number. If a new data source doubles pipeline time, we'd only notice when the cron job overlaps with the next month. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**
-**Source:** DDIA literature alignment 2026-03-30
+A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. Kleppmann (Ch.1 p.13) argues performance should be measured as a distribution (percentiles, not averages) and tracked over time. Ch.8 pp.281-283 notes that timeouts are the only reliable fault detector — without duration tracking, a pipeline that silently doubles in runtime is indistinguishable from one that's about to fail. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**
+**Source:** DDIA Ch.1 p.13, Ch.8 pp.281-283.
 
 ### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**
@@ -187,8 +187,8 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 5)
 
 ### C-105: Assembly mmap write is not atomic — partial grid on disk full — [DEFER]
-`assemble_grid.py:211` uses `np.lib.format.open_memmap` to create a 19 GB output file. If disk fills during the write, a half-written `grid.npy` remains on disk with no rollback mechanism. The provenance digest computation would fail (can't hash incomplete file), but the corrupted file exists and downstream scripts may find it. The Hetzner server has 160 GB SSD with ~130 GB free after a full pipeline run. **Trigger: add disk space pre-check when server storage drops below 40 GB free.**
-**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 14)
+`assemble_grid.py:211` uses `np.lib.format.open_memmap` to create a 19 GB output file. If disk fills during the write, a half-written `grid.npy` remains on disk with no rollback mechanism. The provenance digest computation would fail (can't hash incomplete file), but the corrupted file exists and downstream scripts may find it. Kleppmann (Ch.7 pp.223-226) defines atomicity as "all or nothing" — either the entire write completes or none of it does. Ch.10 p.413 describes the batch output pattern: write to a temporary location, then atomically rename into place. This is the recommended fix: write to `grid.npy.tmp`, then `os.rename()` on success. **Trigger: add disk space pre-check when server storage drops below 40 GB free, or implement write-to-temp-then-rename.**
+**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 14). DDIA Ch.7 pp.223-226, Ch.10 p.413.
 
 ### C-106: `_source_version` parsing assumes dotted-integer format — [DEFER]
 `survivorship.py:_parse_version()` calls `int()` on each `.`-split part of a version string. A version like `"25.1-beta"` would raise `ValueError` with no try/except in the survivorship strategies. All current UCDP versions use dotted integers (e.g., `"25.1"`, `"25.0.12"`, `"25.9.1"`). **Trigger: add error handling when integrating a source with non-numeric version strings.**
@@ -199,8 +199,8 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 **Source:** Repo assimilation 2026-04-04 (Phase 3)
 
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
-`file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
-**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10)
+`file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
+**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10). DDIA Ch.7 pp.234-236, Ch.8 pp.301-303.
 
 ---
 
@@ -219,13 +219,13 @@ Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are prec
 **Source:** Repo assimilation
 
 ### C-06: Provenance logic should be a composable utility
-Every module independently calls `append_ledger_entry()` with its own format. A `@provenance` decorator or context manager would centralize ~50 lines of boilerplate across 4 modules. Accepted as explicit > implicit for now.
-**Source:** Hickey
+Every module independently calls `append_ledger_entry()` with its own format. A `@provenance` decorator or context manager would centralize ~50 lines of boilerplate across 4 modules. Kleppmann (Ch.12 pp.499-501) advocates Unix philosophy: composable tools with uniform interfaces. Our current approach (each module calls the same function with its own format) is composition via shared function, not shared abstraction — acceptable at this scale. **Accepted: explicit > implicit for now.**
+**Source:** Hickey. DDIA Ch.12 pp.499-501.
 
 ### C-07: Frozen dataclass pattern repeated
-7 config classes follow the same frozen-dataclass-with-`__post_init__` pattern. No shared Protocol or base. A declarative validation approach or `ValidatedConfig` Protocol would reduce duplication. Accepted: explicit repetition is simple and readable.
-**Source:** Hickey
+7 config classes follow the same frozen-dataclass-with-`__post_init__` pattern. No shared Protocol or base. A declarative validation approach or `ValidatedConfig` Protocol would reduce duplication. Kleppmann (Ch.4 p.127) argues schemas serve as documentation that "cannot diverge from reality" — our frozen dataclasses with `__post_init__` validation are effectively runtime schemas. **Accepted: explicit repetition is simple and readable; each config is its own schema.**
+**Source:** Hickey. DDIA Ch.4 p.127.
 
 ### C-32: Source registry returns `Any`
-`fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Sources, consolidators, and builders are intentionally heterogeneous — each has a different signature. The three strategy registries (aggregation, survivorship, temporal_distribution) already use precise types. Forcing a protocol on the heterogeneous registries adds complexity without benefit — no consumer code has hit type errors. **Accepted: heterogeneous signatures are by design.**
-**Source:** GoF, Hickey (expert review 5). Reclassified 2026-04-06.
+`fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Sources, consolidators, and builders are intentionally heterogeneous — each has a different signature. The three strategy registries (aggregation, survivorship, temporal_distribution) already use precise types. Kleppmann (Ch.4 p.126) notes dynamically generated schemas are an acceptable trade-off when sources have heterogeneous structures. **Accepted: heterogeneous signatures are by design.**
+**Source:** GoF, Hickey (expert review 5). DDIA Ch.4 p.126. Reclassified 2026-04-06.
