@@ -9,6 +9,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+__all__ = ["build_viewpoint", "list_builders", "register_builder"]
+
 from datafactory_provenance.registry import Registry
 
 _registry: Registry[Callable[..., Any]] = Registry("viewpoint builder")

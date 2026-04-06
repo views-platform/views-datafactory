@@ -9,6 +9,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+__all__ = ["consolidate_source", "list_consolidators", "register_consolidator"]
+
 from datafactory_provenance.registry import Registry
 
 _registry: Registry[Callable[..., Any]] = Registry("consolidator")
