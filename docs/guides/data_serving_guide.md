@@ -234,7 +234,32 @@ Consumer (Python)  ◀───────────────────�
 
 ---
 
-## 9. What comes later (and why not now)
+## 9. Why the server runs a specific version (not "latest")
+
+The pipeline script does not just run whatever code happens to be
+on the server. Before doing anything, it reads a file called
+`~/.views-deploy-tag` which contains a version name like `v1.1.0`.
+It then checks out that exact version and runs it.
+
+**Why?** Imagine you push a broken commit to GitHub at 3pm. If the
+server just runs "latest", the next cron job at midnight uses the
+broken code, the pipeline fails, and data goes stale. You might not
+notice for days.
+
+With the tag system: the server keeps running the old working version
+until you *explicitly* tell it to switch. You test the new version,
+tag it, and only then update the server. If the new version breaks,
+you write the old tag name back and you're running known-good code
+again.
+
+**The full deployment procedure** (create a tag, push it, update the
+server file, rollback if needed) is documented in
+`hetzner_deployment_guide.md` under "Deployment and releases".
+
+---
+
+## 10. What comes later (and why not now)
+
 
 ### Query API (FastAPI)
 
@@ -287,7 +312,7 @@ codebase.
 
 ---
 
-## 10. Glossary
+## 11. Glossary
 
 | Term | Meaning |
 |------|---------|
@@ -309,3 +334,6 @@ codebase.
 | **MCP** | Model Context Protocol — lets AI models query data |
 | **FastAPI** | A Python framework for building query APIs |
 | **Docker** | Packages software into portable containers |
+| **Git tag** | A permanent bookmark on a specific commit — unlike a branch, it never moves |
+| **Detached HEAD** | Git's way of saying you're looking at a tag, not a branch. Normal and expected on the server |
+| **Deploy tag** | The file `~/.views-deploy-tag` that tells the server which version to run |

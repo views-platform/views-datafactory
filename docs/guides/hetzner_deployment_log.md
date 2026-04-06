@@ -689,7 +689,20 @@ All v1.0 gate criteria met:
 
 ---
 
-## 14. Commits Made During Deployment
+## 14. v1.1.0 Tagged and Deploy Tag Set (2026-04-06)
+
+- v1.1.0 tag created on main after PR #6 and PR #7 merged
+- PR #6: deployment gate, Registry[T], 22 new tests (410 total), risk register governance
+- PR #7: server hardening docs (Phase 6), feature name uniqueness (C-103), strategic doc sync
+- `~/.views-deploy-tag` created on server with `echo 'v1.1.0' > ~/.views-deploy-tag`
+- Server checked out v1.1.0 via `git fetch --tags && git checkout v1.1.0`
+- Server now shows "HEAD detached at v1.1.0" — this is expected (tag-based deployment)
+- Next cron run (21st) will use v1.1.0 automatically
+- 411 tests pass, lint + mypy strict clean
+
+---
+
+## 15. Commits Made During Deployment
 
 | Commit | Fix |
 |--------|-----|

@@ -13,7 +13,20 @@
 #   6. Export to consumer formats (zarr, parquet)
 #   7. Run health check
 #
+# Deployment gate:
+#   Before running any steps, the script reads ~/.views-deploy-tag
+#   to find which tagged release to run (e.g., "v1.1.0"). It then
+#   checks out that exact tag. This means the server always runs a
+#   specific, tested version — not whatever happens to be on a branch.
+#   If the file is missing, empty, or the tag doesn't exist, the script
+#   stops immediately (fail-loud, ADR-011).
+#
+#   To deploy a new version: update ~/.views-deploy-tag on the server.
+#   To roll back: write the old tag name to ~/.views-deploy-tag.
+#   See docs/guides/hetzner_deployment_guide.md for full details.
+#
 # Requires:
+#   - ~/.views-deploy-tag file containing a valid git tag
 #   - UCDP_API_TOKEN environment variable
 #   - Internet access (for UCDP, PRIO-GRID, GAUL APIs)
 #   - uv installed
