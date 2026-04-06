@@ -682,7 +682,7 @@ All v1.0 gate criteria met:
 - D-03 resolved (export_timestamp added, last Tier 1 item closed)
 - main branch current (development merged via PR #4)
 - v1.0.0 tag on main
-- 383 tests pass, lint + mypy strict clean
+- 388 tests pass, lint + mypy strict clean
 - `verify_remote.py` 10/10 checks pass
 - Logrotate configured on server
 - Cron set to 21st at midnight UTC

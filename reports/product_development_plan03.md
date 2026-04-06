@@ -32,7 +32,7 @@
 | — | HTTP serving (Caddy, basic auth, cron) | Done | 0 (operational) |
 | — | Consumer verification (`verify_remote.py`) | Done | 0 (script) |
 
-**Total: 383 passed**
+**Total: 388 passed**
 
 ### Architecture
 
@@ -40,7 +40,7 @@
 - **5 data sources**: UCDP annual, UCDP candidate, UCDP .9, PRIO-GRID static, GAUL admin boundaries
 - **22 ADRs** (10 constitutional + 12 project-specific)
 - **16 CICs** (class intent contracts)
-- **Technical risk register** (ADR-020): 78 concerns tracked, 41 resolved, 37 deferred with triggers
+- **Technical risk register** (ADR-020): 109 concern IDs tracked, 67 resolved, 35 open/deferred, 5 accepted by design
 
 ### Production Parity — ALL CRITERIA MET (2026-03-21)
 
@@ -195,11 +195,11 @@ Meets institutional audit and compliance requirements for 50+ users.
 
 ## Operational Concerns (Summary)
 
-- **Tier 1:** 1 open (D-03 freshness gap) — resolved by priority 1 above
+- **Tier 1:** 0 open — D-03 resolved (export_timestamp + ADR-018)
 - **Tier 2:** 5 open (C-84 through C-88) — all resolved by v1.1 tasks
-- **Tier 3:** 1 open (C-21 characterization tests) — not yet triggered
-- **Tier 4:** 29 open — most not yet triggered; 2 triggered (C-29, C-89)
-- **Accepted:** C-96 (fsspec netrc), C-97 (basic auth ceiling), C-06/C-07 (by design)
+- **Tier 3:** 2 open (C-21 characterization tests, C-102 assembly/export tests)
+- **Tier 4:** 28 open — most not yet triggered; 2 triggered and accepted at v1.0 (C-29, C-44)
+- **Accepted by design:** C-06, C-07, C-10, C-38, C-41
 
 ---
 
