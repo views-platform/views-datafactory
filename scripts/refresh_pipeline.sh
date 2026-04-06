@@ -19,7 +19,7 @@
 #   checks out that exact tag. This means the server always runs a
 #   specific, tested version — not whatever happens to be on a branch.
 #   If the file is missing, empty, or the tag doesn't exist, the script
-#   stops immediately (fail-loud, ADR-011).
+#   stops immediately (fail-loud, ADR-011). See ADR-022 for rationale.
 #
 #   To deploy a new version: update ~/.views-deploy-tag on the server.
 #   To roll back: write the old tag name to ~/.views-deploy-tag.

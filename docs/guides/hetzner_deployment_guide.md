@@ -631,20 +631,10 @@ To apply a version change immediately, run the pipeline manually
 
 ### Why this design?
 
-The tag-based deployment gate implements several principles from
-Kleppmann & Riccomini, *Designing Data-Intensive Applications*
-(2nd ed., 2026):
-
-- **Fail-loud** (Ch.8 pp.274-276): A single-node system should be
-  "either fully functional or entirely broken" — never silently
-  running unknown code. The gate crashes visibly on misconfiguration.
-- **Immutability for recovery** (Ch.12 pp.524-526): If a new version
-  breaks the pipeline, the old tag still points to intact code. Roll
-  back by changing one file. "Violations of integrity are permanent;
-  violations of timeliness are eventual consistency."
-- **Atomic output replacement** (Ch.10 p.413): Each pipeline run
-  produces a complete new output. The old output stays until replaced.
-  No partial state.
+See **ADR-022** for the full rationale, alternatives considered
+(branch tracking, Docker, CI/CD, systemd), and DDIA references.
+The short version: the server should run a known, tested version —
+never whatever happens to be at the tip of a branch.
 
 ---
 

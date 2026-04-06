@@ -206,7 +206,7 @@ Updated `rd_roadmap04.md` and `product_development_plan03.md` to current state (
 **Source:** PR #6 review 2026-04-06. Resolved 2026-04-06.
 
 ### C-98: ~~No deployment gate~~ RESOLVED
-`refresh_pipeline.sh` now reads a deploy tag from `~/.views-deploy-tag`, fetches tags, and checks out the specified tag before running the pipeline. If the file is missing, empty, or the tag doesn't exist, the script exits non-zero (fail-loud per ADR-011). Operators control deployments by writing a tag name to the file. Rollback: write the previous tag.
+`refresh_pipeline.sh` now reads a deploy tag from `~/.views-deploy-tag`, fetches tags, and checks out the specified tag before running the pipeline. If the file is missing, empty, or the tag doesn't exist, the script exits non-zero (fail-loud per ADR-011). Operators control deployments by writing a tag name to the file. Rollback: write the previous tag. See **ADR-022** for the full design rationale and alternatives considered.
 **Source:** Falsification audit 2026-04-01 (F5). Resolved 2026-04-06.
 
 ### C-102: ~~No tests for assembly, zarr export, or dataframe export scripts~~ RESOLVED

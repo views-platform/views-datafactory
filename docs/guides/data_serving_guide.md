@@ -256,11 +256,8 @@ again.
 server file, rollback if needed) is documented in
 `hetzner_deployment_guide.md` under "Deployment and releases".
 
-This design follows Kleppmann's principle that **integrity matters more
-than timeliness** (DDIA Ch.12 pp.524-526): it's better to serve last
-month's correct data than this month's broken data. The pipeline also
-treats its inputs as **immutable** (DDIA Ch.10 p.397) — raw snapshots
-are never modified, so you can always rerun from intact sources.
+The architectural rationale (why tags instead of branch tracking,
+Docker, or CI/CD) is in **ADR-022**.
 
 ---
 
