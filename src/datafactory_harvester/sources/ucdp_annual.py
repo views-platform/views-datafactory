@@ -19,6 +19,7 @@ from pathlib import Path
 from datafactory_harvester.event_validation import (
     ComparisonResult,
     compare_snapshots,
+    date_range,
     validate_events,
 )
 from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
@@ -288,12 +289,7 @@ def fetch_ucdp_annual(
     validation = validate_events(events, REQUIRED_FIELDS, FIELD_TYPES)
 
     # Compute actual date coverage
-    dates = [
-        e.get("date_start") for e in events
-        if e.get("date_start")
-    ]
-    min_date: str | None = min(dates) if dates else None  # type: ignore[type-var]
-    max_date: str | None = max(dates) if dates else None  # type: ignore[type-var]
+    min_date, max_date = date_range(events)
 
     base_entry = {
         "dataset": DATASET_ID,

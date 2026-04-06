@@ -635,7 +635,61 @@ and parquet availability. Reads credentials from `~/.netrc`.
 
 ---
 
-## 12. Commits Made During Deployment
+## 12. Zarr Metadata Consolidation (2026-04-02)
+
+### What happened
+
+After adding `export_timestamp` to `export_zarr.py` and re-exporting
+on the server, `verify_remote.py` check 4 returned 404 for `.zmetadata`.
+A second attempt produced only 16 of 43 features.
+
+### Root cause
+
+Two issues:
+1. **Missing `zarr.consolidate_metadata()`:** xarray's `to_zarr()` did not
+   reliably write the consolidated `.zmetadata` file. Without it, HTTP
+   consumers get 404 (the file doesn't exist) or fall back to per-chunk
+   metadata requests (much slower).
+
+2. **Duplicate export processes:** Two `export_zarr.py` runs were started
+   accidentally (SSH timeout caused a retry). Both consumed 91% of 8 GB
+   RAM, competing for memory. The first produced a partial store.
+
+### Fixes
+
+1. Added explicit `zarr.consolidate_metadata(str(output))` after
+   `ds.to_zarr()` in `export_zarr.py`.
+
+2. Killed duplicate process, re-ran single export. Completed successfully
+   with all 43 features + consolidated `.zmetadata`.
+
+### Lesson learned
+
+16. **Always consolidate zarr metadata explicitly.** Don't rely on xarray
+    to do it — add `zarr.consolidate_metadata()` after every `to_zarr()`
+    write. Without it, HTTP serving breaks (consumers need `.zmetadata`
+    for efficient access).
+
+17. **Check for duplicate processes before re-running long operations.**
+    SSH timeouts don't kill server-side processes started with nohup.
+    Check `ps aux | grep <script>` before starting another.
+
+---
+
+## 13. v1.0 Tagged (2026-04-02)
+
+All v1.0 gate criteria met:
+- D-03 resolved (export_timestamp added, last Tier 1 item closed)
+- main branch current (development merged via PR #4)
+- v1.0.0 tag on main
+- 383 tests pass, lint + mypy strict clean
+- `verify_remote.py` 10/10 checks pass
+- Logrotate configured on server
+- Cron set to 21st at midnight UTC
+
+---
+
+## 14. Commits Made During Deployment
 
 | Commit | Fix |
 |--------|-----|
@@ -655,3 +709,7 @@ and parquet availability. Reads credentials from `~/.netrc`.
 | `a330f60` | Shapefile harvester: check files exist before skipping extraction |
 | `ef4acbf` | Docs: shapefile bug documented, C-94 resolved, C-95 opened |
 | `9e52930` | All 5 harvesters: verify files exist before skipping on unchanged digest (C-95) |
+| `6fe5935` | Add export_timestamp to zarr attrs (D-03 resolved) |
+| `656a43e` | Add explicit zarr.consolidate_metadata() after export |
+| `1b351c5` | Extract date_range() helper, fix stale verify_parity.py references |
+| `381ffeb` | Move date_range import to top-level in all 3 UCDP harvesters |

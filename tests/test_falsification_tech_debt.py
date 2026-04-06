@@ -33,7 +33,13 @@ class TestTechDebtResolved:
         """Resolved: concerns file renamed to
         technical_risk_register.md and split into
         active + resolved archive (ADR-020).
+
+        Structural: counts actual entries in both files and
+        compares to the header's claimed numbers, so the test
+        breaks if entries are added/removed without updating
+        the header.
         """
+        import re
         from pathlib import Path
 
         old_file = (
@@ -46,17 +52,59 @@ class TestTechDebtResolved:
             "technical_risk_register.md"
         )
 
-        register = (
-            Path(__file__).parent.parent
-            / "reports"
-            / "technical_risk_register.md"
-        )
-        assert register.exists(), (
+        reports = Path(__file__).parent.parent / "reports"
+        active = reports / "technical_risk_register.md"
+        archive = reports / "technical_risk_register_resolved.md"
+
+        assert active.exists(), (
             "technical_risk_register.md not found"
         )
-        content = register.read_text()
-        assert "80 concerns total" in content
-        assert "42 resolved" in content
+        assert archive.exists(), (
+            "technical_risk_register_resolved.md not found"
+        )
+
+        active_text = active.read_text()
+        archive_text = archive.read_text()
+
+        # Count full entries (### C-xx or ### D-xx lines)
+        entry_re = re.compile(r"^### [CD]-\d+", re.MULTILINE)
+        n_active = len(entry_re.findall(active_text))
+        n_archive = len(entry_re.findall(archive_text))
+
+        # Count early reference table rows (| C-xx |)
+        early_re = re.compile(
+            r"^\| C-\d+", re.MULTILINE
+        )
+        n_early = len(early_re.findall(archive_text))
+
+        n_resolved = n_archive + n_early
+        # Subtract disagreements (D-xx) from archive count
+        # — they are tracked separately in the header
+        n_archive_disagreements = len(
+            re.findall(
+                r"^### D-\d+", archive_text, re.MULTILINE
+            )
+        )
+        n_resolved_concerns = n_resolved - n_archive_disagreements
+
+        # Verify header claims match structural counts
+        assert f"{n_resolved_concerns} resolved" in active_text, (
+            f"Header should say '{n_resolved_concerns} resolved' "
+            f"but doesn't. Archive has {n_archive} full entries "
+            f"({n_archive_disagreements} disagreements) + "
+            f"{n_early} early reference rows."
+        )
+
+        # Summary table should match full entry count
+        summary_re = re.compile(
+            r"^\| C-\d+", re.MULTILINE
+        )
+        n_summary = len(summary_re.findall(active_text))
+        assert n_summary == n_active, (
+            f"Summary table has {n_summary} rows but "
+            f"active file has {n_active} full entries. "
+            f"These must match 1:1."
+        )
 
     def test_maturity_skip_reason_current(self) -> None:
         """Resolved: maturity test for .9 in smoke test

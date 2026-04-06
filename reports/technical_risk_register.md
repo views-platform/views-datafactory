@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-03-28)
+**Date:** 2026-03-17 (updated 2026-04-04)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 80 concerns total: 42 resolved, 38 open/deferred. 17 disagreements: 17 resolved.
+**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 67 resolved, 35 open/deferred (2 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -11,70 +11,61 @@
 
 ## Open Items Summary
 
-| ID | Tier | Title | Trigger |
-|----|------|-------|---------|
-| D-03 | 1 | ~~Fail-loud vs. operational resilience~~ | RESOLVED — ADR-018 policy + export_timestamp |
-| C-84 | 2 | Server runs everything as root | Before granting second user access |
-| C-85 | 2 | Personal GitHub SSH key on shared server | Before granting second user access |
-| C-86 | 2 | No deploy key — repo access tied to personal account | Before granting second user access |
-| C-87 | 2 | No named user accounts on server | Before granting second user access |
-| C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment |
-| C-82 | 3 | ~~No GAUL retry integration test~~ | RESOLVED — `test_gaul_admin.py` |
-| C-21 | 3 | No characterization tests for migration | Next migration batch planned |
-| C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook or change observed |
-| C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 |
-| C-45 | 4 | No Parquet schema evolution strategy | UCDP removes/renames a field |
-| C-31 | 4 | Candidate source depends on annual source | 3rd shared function needed |
-| C-44 | 4 | Harvest pipeline template is implicit | 4th data source added |
-| C-46 | 4 | No ledger write idempotency | External systems consume ledger |
-| C-32 | 4 | Source registry returns `Any` | Type errors in consumer code |
-| C-30 | 4 | No performance test for full-scale compilation | Before CI/CD pipeline |
-| C-29 | 4 | No end-to-end integration test | Before production deployment |
-| C-28 | 4 | Candidate uses fake annual config workaround | Extract `_ucdp_common.py` (C-31) |
-| C-27 | 4 | ~~Retry pattern duplicated in 3 modules~~ | RESOLVED — extracted to `datafactory_http` |
-| C-41 | 4 | Digest truncation collision risk | Records exceed 100M |
-| C-38 | 4 | Version string year offset assumes 21st century | Never (2099) |
-| C-10 | 4 | Ontology vocabulary overhead | Accepted |
-| C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment |
-| C-71 | 4 | ~~No retry jitter~~ | RESOLVED — `random.uniform(0, 1)` added |
-| C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s |
-| C-74 | 4 | CompilationConfig leaks strategy vocabulary | User confusion observed |
-| C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns |
-| C-77 | — | ~~Ledger archive retention unbounded~~ | RESOLVED — 9-archive cap is the retention policy |
-| C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s |
-| C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s |
-| C-80 | 4 | Registry boilerplate duplicated 5x | 6th registry added |
-| C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed |
-| C-60 | 4 | Health check output not tested with mock ledgers | check_health.py modified |
-| C-61 | 4 | No schema evolution test | 3rd data source |
-| C-81 | 4 | ~~GAUL shapefile download has no retry logic~~ | RESOLVED — uses `request_with_retry` |
-| C-83 | 4 | ~~Retry retries on 4xx client errors~~ | RESOLVED — 4xx fail-fast, 5xx retry |
-| C-89 | 4 | No formal SLO for data freshness | Before second consumer |
-| C-90 | 4 | ~~Pipeline runs as interactive session, not a service~~ | RESOLVED — cron job on Hetzner |
-| C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED |
-| C-92 | 4 | Duplicated retry-delay logic in `datafactory_http` | When retry.py is next modified |
-| C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored |
-| C-94 | 4 | ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ | RESOLVED — files_on_disk check added |
-| C-95 | 4 | ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ | RESOLVED — all 5 harvesters patched |
-| C-96 | 4 | fsspec does not auto-read `~/.netrc` — xarray consumers need auth boilerplate | If fsspec adds netrc support |
-| C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 |
-| C-98 | 4 | No deployment gate — git pull deploys branch tip | Before second maintainer pushes to development |
-| C-99 | 4 | No log rotation for pipeline logs | When log exceeds 10 MB |
-| C-06 | — | Provenance composability | Deferred by design |
-| C-07 | — | Frozen dataclass pattern repeated | Deferred by design |
+| ID | Tier | Title | Trigger | Package |
+|----|------|-------|---------|---------|
+| C-84 | 2 | Server runs everything as root | Before 2nd user access | Server hardening |
+| C-85 | 2 | Personal GitHub SSH key on shared server | Before 2nd user access | Server hardening |
+| C-86 | 2 | No deploy key — repo access tied to personal account | Before 2nd user access | Server hardening |
+| C-87 | 2 | No named user accounts on server | Before 2nd user access | Server hardening |
+| C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment | Server hardening |
+| C-21 | 3 | No characterization tests for migration | Next migration batch planned | — |
+| C-102 | 3 | No tests for assembly, zarr export, or dataframe export scripts | Script modified or new source type | V-Dem readiness |
+| C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
+| C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
+| C-45 | 4 | No Parquet schema evolution strategy | UCDP removes/renames a field | UCDP schema |
+| C-31 | 4 | Candidate source depends on annual source (incl. C-28) | 3rd shared function needed | Code cleanup |
+| C-44 | 4 | Harvest pipeline template is implicit — trigger fired, accepted at v1.0 | 5 sources exist | V-Dem readiness |
+| C-46 | 4 | No ledger write idempotency | External systems consume ledger | — |
+| C-32 | 4 | Source registry returns `Any` | Type errors in consumer code | — |
+| C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Server in production | Test infra |
+| C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment | UCDP resilience |
+| C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
+| C-74 | 4 | CompilationConfig leaks strategy vocabulary | User confusion observed | — |
+| C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns | — |
+| C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s | Test infra |
+| C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
+| C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed | — |
+| C-60 | 4 | Health check logic untested (incl. C-107) | check_health.py modified | Test infra |
+| C-89 | 4 | No formal SLO for data freshness | Before second consumer | — |
+| C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED | V-Dem readiness |
+| C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
+| C-96 | 4 | fsspec does not auto-read `~/.netrc` | If fsspec adds netrc support | — |
+| C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
+| C-98 | 4 | No deployment gate — git pull deploys branch tip | Before 2nd maintainer pushes | — |
+| C-103 | 4 | Feature name uniqueness not enforced in CompilationConfig | Two FeatureSpecs share same name | — |
+| C-104 | 4 | Date string format assumed YYYY-MM-DD throughout | New data source with different format | V-Dem readiness |
+| C-105 | 4 | Assembly mmap write is not atomic | Disk fills during assembly step | — |
+| C-106 | 4 | `_source_version` parsing assumes dotted-integer format | Non-numeric version segments | V-Dem readiness |
+| C-108 | 4 | Parquet and zarr exports serve different feature sets | Consumer expects parity | — |
+| C-109 | 4 | Advisory file locks (fcntl) don't work across NFS | Pipeline migrates to network FS | — |
+| C-10 | — | Ontology vocabulary overhead | Accepted | — |
+| C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
+| C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
+| C-06 | — | Provenance composability | Deferred by design | — |
+| C-07 | — | Frozen dataclass pattern repeated | Deferred by design | — |
 
----
+## Work Packages
 
-## Tier 1 — Fix Before Production
+Items that should be resolved together:
 
-### D-03: ~~Fail-loud vs. operational resilience~~ RESOLVED
-ADR-003/008 mandate fail-loud everywhere. Nygard asked what the operational experience is when the UCDP API is down for 3 days. **All components now in place:**
-- Policy: ADR-018 (operator-mediated bounded staleness, 7-day threshold)
-- `harvest_ucdp.py` exits non-zero on harvest failure
-- `refresh_pipeline.sh` has ERR trap with `pipeline_failure.json` sentinel + optional email
-- `check_health.py` reports staleness and recent failures
-- `export_zarr.py` writes `export_timestamp` (ISO 8601 UTC) to zarr attributes — consumers can verify freshness programmatically
-**Source:** Nygard (expert reviews 4, 6, 7). Freshness indicator added 2026-04-02.
+| Package | Items | Trigger |
+|---------|-------|---------|
+| **Server hardening** | C-84, C-85, C-86, C-87, C-88 | Before 2nd user access |
+| **V-Dem readiness** | C-44, C-91, C-102, C-104, C-106 | Before V-Dem integration |
+| **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
+| **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
+| **Test infrastructure** | C-29, C-60, C-78, C-79 | Test suite growth |
+| **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80 resolved) |
 
 ---
 
@@ -104,13 +95,13 @@ SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN
 
 ## Tier 3 — Improve Quality
 
-### C-82: ~~No GAUL retry integration test~~ RESOLVED
-Added `test_gaul_admin.py` with `test_retries_on_transient_failure` (verifies `_download_shapefile_zip` retries via `request_with_retry`) and `test_skips_download_when_cached` (verifies cache-hit path).
-**Source:** Feathers, Beck, Nygard (expert review #7)
-
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
 **Source:** Feathers
+
+### C-102: No tests for assembly, zarr export, or dataframe export scripts — [DEFER]
+`assemble_grid.py` (211 LOC), `export_zarr.py` (211 LOC), and `export_dataframe.py` (141 LOC) have no unit tests. These scripts contain production logic for dimension ordering, channel placement, mmap writes, zarr chunking, and xarray Dataset construction. Errors here corrupt the served data silently. Currently validated only by manual `verify_remote.py` runs or full pipeline execution. **Trigger: add tests when script logic is modified or a new source type is added.**
+**Source:** Repo assimilation 2026-04-04 (Phase 6)
 
 ---
 
@@ -129,11 +120,12 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 **Source:** Kleppmann (expert review 6)
 
 ### C-31: Candidate source depends on annual source — [DEFER]
-`ucdp_candidate.py:25-31` imports 5 symbols from `ucdp_annual.py` including `UcdpAnnualConfig`. Changing annual's API client could break candidate. **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed.**
-**Source:** Martin (expert review 5)
+`ucdp_candidate.py` imports 4 symbols and `ucdp_dot9.py` imports 5 symbols from `ucdp_annual.py` (including `UcdpAnnualConfig`, `fetch_paginated`, `FIELD_TYPES`, `REQUIRED_FIELDS`, and `get_ucdp_token`). Changing annual's API client could break candidate. Additionally, `ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated` — sends unnecessary 100-year date range (works correctly but is a workaround). **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed. Resolution also addresses former C-28.**
+**Source:** Martin (expert review 5), falsification audit DoD005
 
 ### C-44: Harvest pipeline template is implicit — [DEFER]
-All three UCDP harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A 4th source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
+All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
+**Note (2026-04-04):** Trigger condition met — 5 sources exist (ucdp_annual, ucdp_candidate, ucdp_dot9, priogrid_static, gaul_admin). Accepted at v1.0 scope: all 5 harvesters work correctly, implicit template hasn't caused bugs. Reassess before V-Dem (6th source).
 **Source:** GoF (expert review 6)
 
 ### C-46: No ledger write idempotency — [DEFER]
@@ -144,49 +136,18 @@ All three UCDP harvesters follow config->fetch->validate->compare->archive->stor
 `fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Consumers can't rely on the return type. **Trigger: consider `SourceResult` union if type errors appear in consumer code.**
 **Source:** GoF, Hickey (expert review 5)
 
-### C-30: No performance test for full-scale compilation — [DEFER]
-60-second target (NF-5: 259,200 cells x 432 months) has no test. Full-scale operation proven in practice (1.7M events, <60s). **Trigger: add performance test before CI/CD pipeline.**
-**Source:** Repo assimilation, Nygard
-
 ### C-29: No end-to-end integration test — [DEFER]
 Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
+**Note (2026-04-04):** Trigger condition met — server in production at 204.168.219.108. Accepted at v1.0 scope: integration test covers the critical harvest→compile path, `verify_remote.py` validates the deployed output (10/10 checks). Reassess before V-Dem.
 **Source:** Repo assimilation, Feathers
-
-### C-28: Candidate source uses fake annual config workaround — [DEFER]
-`ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated`. Sends unnecessary 100-year date range. Works correctly. **Trigger: fix when extracting `_ucdp_common.py` (C-31).**
-**Source:** Falsification audit DoD005
-
-### C-27: ~~Retry pattern duplicated in 3 modules~~ RESOLVED
-Extracted `request_with_retry` to new Layer 0 package `datafactory_http`. All callers (`ucdp_annual`, `ucdp_candidate`, `ucdp_dot9`, `shapefile_harvester`, `gaul_admin`) now import from the shared module.
-**Source:** Repo assimilation, expert review 4, tech debt cleanup 2026-03-27
-
-### C-41: Digest truncation collision risk — [DEFER]
-`DIGEST_TRUNCATE = 16` hex chars = 64-bit space. 50% collision at ~4B items. Fine at ~2M events. **Trigger: consider when total records exceed 100M or digests are used as unique keys.**
-**Source:** Repo assimilation
-
-### C-38: Version string year offset assumes 21st century — [DEFER]
-`_DOT9_YEAR_OFFSET = 2000` / `_CANDIDATE_YEAR_OFFSET = 2000` in `ucdp_dot9.py:50` and `ucdp_candidate.py:43`. Breaks silently for pre-2000 or post-2099 data. UCDP data starts 1989 (annual uses full version strings). **Trigger: never (2099 is 73 years away).**
-**Source:** Repo assimilation
-
-### C-10: Ontology vocabulary overhead — [DEFER]
-Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add conceptual overhead. For a 7-package project, governance is heavy. **Accepted: governance has proven itself (ADR-008 caught bugs in 3 audits). Cost is documentation maintenance, not development velocity.**
-**Source:** Ousterhout
 
 ### C-70: No circuit breaker for UCDP API — [DEFER]
 After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. **Trigger: implement before multi-operator or automated deployment.**
 **Source:** Nygard (expert review #4)
 
-### C-71: ~~No retry jitter~~ RESOLVED
-Added `random.uniform(0, 1)` jitter to exponential backoff in `datafactory_http/retry.py`. Delay is now `2^attempt + random(0, 1)` instead of fixed `2^attempt`.
-**Source:** Nygard (expert review #4)
-
 ### C-72: HTTP 429 not distinguished from 500 — [DEFER]
 Rate-limit responses get the same retry treatment as server errors. No `Retry-After` header parsing. **Trigger: if UCDP starts returning 429s (not observed to date).**
 **Source:** Nygard (expert review #4)
-
-### C-73: ~~Grid shape transposition produces silent wrong results~~ RESOLVED
-Added shape validation (ndim + spatial dim match) to `_flatten_grid()`, `feature_frame_to_grid()`, and `FeatureFrame.from_grid()`. Transposed grids, 3D grids, and 1D pgids now raise `ValueError`. Retired `visualize_grid.py` (superseded scaffolding with live indexing bugs from an older grid convention).
-**Source:** Ousterhout (expert review #4), failure mode analysis
 
 ### C-74: CompilationConfig leaks strategy vocabulary — [DEFER]
 Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filter dict syntax. No IDE discoverability. **Trigger: consider enum-based strategy names if user confusion is observed.**
@@ -196,14 +157,6 @@ Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filt
 8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; monitor if callers misuse. **Trigger: deepen if recurring misuse patterns emerge.**
 **Source:** Ousterhout (expert review #4)
 
-### C-76: ~~Falsification tests are skipped, not running~~ RESOLVED
-Registered `falsification` pytest marker. 11 stubs now use `@pytest.mark.falsification()` instead of `@pytest.mark.skip()`. Auto-skipped by default; visible with `--run-falsification`. Normal `pytest` output shows 0 skipped.
-**Source:** Beck (expert review #4)
-
-### C-77: ~~Ledger archive retention unbounded~~ RESOLVED (accepted by design)
-The existing 9-archive rotation cap in `_rotate_ledger()` (`digests_and_ledgers.py:163`) bounds disk usage at 720 MB worst case across all 8 ledger types. At current growth rates (530 KB total, ~1-2 KB per monthly run), this bound won't be reached for decades. Provenance is mission-critical — archives should be preserved for audit, not garbage-collected. 8/8 expert perspectives agree: the problem doesn't exist at current scale.
-**Source:** Nygard (expert review #4), expert review #8 (unanimous)
-
 ### C-78: `_place_events_columnar` hard to test in isolation — [DEFER]
 100 lines of columnar bin-assignment logic tested only indirectly through `compile_grid()`. Core algorithm (lat/lon -> pgid, date -> month_index) could be extracted into a pure function. **Trigger: extract `compute_bin_assignments()` when compilation tests exceed 5 seconds.**
 **Source:** Feathers (expert review #4)
@@ -212,49 +165,25 @@ The existing 9-archive rotation cap in `_rotate_ledger()` (`digests_and_ledgers.
 `compile_grid()` and `consolidate_ucdp()` always read from disk. No seam to inject mock reader. Tests create actual Parquet files. **Trigger: add `read_table_fn` parameter when test suite exceeds 30 seconds.**
 **Source:** Feathers (expert review #4)
 
-### C-80: Registry boilerplate duplicated 5x — [DEFER]
-`sources/__init__.py`, `consolidators/__init__.py`, `builders/__init__.py`, `aggregation.py`, `survivorship.py` each implement identical dict-based registries (~60 LOC each, ~200 LOC total). **Trigger: extract `Registry[T]` generic class on 6th registry.**
-**Source:** Martin (expert review #4)
-
 ### C-03: Protocol proliferation risk in synthetic module — [DEFER]
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
 **Source:** GoF, Hickey
 
-### C-60: No health check output tested with mock ledgers — [DEFER]
-`check_health.py` has no test verifying output parsing with stale/missing/failing ledgers. **Trigger: add when check_health.py is modified.**
-**Source:** Nygard (test review)
-
-### C-61: No schema evolution test — [DEFER]
-No test for what happens when Parquet columns are added/removed between consolidation vintages. **Trigger: add before third data source.**
-**Source:** Kleppmann (test review)
-
-### C-81: ~~GAUL shapefile download has no retry logic~~ RESOLVED
-`gaul_admin.py:_download_shapefile_zip()` now uses `request_with_retry` from `datafactory_http`, gaining exponential backoff retry consistent with all other downloaders.
-**Source:** Tech debt cleanup 2026-03-27
+### C-60: Health check logic untested — [DEFER]
+`check_health.py` (236 LOC) has no test verifying output parsing with stale/missing/failing ledgers. A bug here could mask pipeline failures or produce false "all healthy" reports. **Trigger: add mock-ledger tests when check_health.py is modified.**
+**Source:** Nygard (test review), repo assimilation 2026-04-04 (incorporates former C-107)
 
 ### C-89: No formal SLO for data freshness — [DEFER]
 ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks or reports whether data meets the target. Consumers can't programmatically verify freshness. DDIA Ch.2 pp.41-42 defines SLOs as measurable targets with consequences — our threshold is a guideline, not a contract. **Trigger: define measurable SLO before second consumer.**
 **Source:** DDIA literature alignment 2026-03-30
 
-### C-90: ~~Pipeline runs as interactive session, not a service~~ RESOLVED
-Cron job set up on Hetzner: `0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1`. Pipeline now runs automatically on the 21st of every month at midnight UTC. Three cron environment issues fixed: PATH (uv not found), PS1 unbound variable, and UCDP_API_TOKEN unreachable after .bashrc guard. `refresh_pipeline.sh` now sources `~/.profile` and exports PATH explicitly.
-**Source:** DDIA literature alignment 2026-03-30, cron setup 2026-03-31
-
 ### C-91: No pipeline duration tracking — [DEFER]
 A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. DDIA Ch.2 pp.37-42 emphasizes measuring performance as a distribution, not a single number. If a new data source doubles pipeline time, we'd only notice when the cron job overlaps with the next month. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**
 **Source:** DDIA literature alignment 2026-03-30
 
-### C-92: Duplicated retry-delay logic in `datafactory_http` — [DEFER]
-`retry.py` lines 60-93: the `HTTPError` branch and the `RequestException` branch share identical retry logic (log warning, compute delay with jitter, sleep). The only difference is the 4xx fail-fast check at the top of the HTTPError branch. Could extract a shared `_retry_delay()` helper. File is 96 lines total — duplication is minor but will compound if more exception types are added. **Trigger: extract when `retry.py` is next modified or a new exception branch is added.**
-**Source:** PR #2 code review 2026-03-30
-
 ### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**
 **Source:** PR #2 code review 2026-03-30
-
-### C-94: ~~Shapefile harvester skips extraction when files missing but ledger has digest~~ RESOLVED
-After data wipe, the provenance ledger survived with a valid digest. The shapefile harvester downloaded the ZIP, found the digest unchanged, and returned without extracting — assuming files were on disk. They weren't. Fixed by adding `files_on_disk` check to the "unchanged" code path: `shp_dir.exists() and any(shp_dir.glob("*.shp"))`.
-**Source:** Cron pipeline failure 2026-03-31
 
 ### C-96: fsspec does not auto-read `~/.netrc` — [DEFER]
 fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its aiohttp session. xarray consumers must pass auth explicitly via `storage_options={"client_kwargs": {"auth": (user, pass)}}`. The `verify_remote.py` script reads netrc programmatically via Python's `netrc` module, but the primary consumer path (xarray + fsspec + zarr) does not benefit from it automatically. Consumer guide should provide a helper pattern. **Trigger: simplify consumer guide if fsspec adds netrc/trust_env support.**
@@ -264,25 +193,49 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Source:** Falsification audit 2026-04-01 (F2)
 
-### C-95: ~~Other harvesters may have same stale-ledger-vs-missing-files bug~~ RESOLVED
-Audited and patched all 5 harvesters with the same `snap_path.exists()` check: `priogrid_static.py` (confirmed failing on cron run), `ucdp_candidate.py`, `ucdp_dot9.py`, `gaul_admin.py`. `ucdp_annual.py` was clean — it always writes regardless of digest. Pattern: every "unchanged" code path now verifies the output file exists before skipping the write.
-**Source:** Cron pipeline failure 2026-03-31, systematic audit
-
 ### C-98: No deployment gate — [DEFER]
 `git pull` on the Hetzner server deploys whatever is at the tip of the tracked branch. No tags, no release process, no rollback mechanism. A broken commit pushed to development is one `git pull` away from running on the data server. **Trigger: implement tag-based checkout in `refresh_pipeline.sh` before second maintainer pushes to development.**
 **Source:** Falsification audit 2026-04-01 (F5)
 
-### C-99: No log rotation for pipeline logs — [DEFER]
-`logs/refresh.log` is appended to on every pipeline run. No logrotate config exists. At 11 KB/month growth, this won't cause problems for years. logrotate is installed on the server. **Trigger: add `/etc/logrotate.d/views-datafactory` when log exceeds 10 MB or a second log stream is added.**
-**Source:** Falsification audit 2026-04-01 (F4)
+### C-103: Feature name uniqueness not enforced in CompilationConfig — [DEFER]
+`CompilationConfig` accepts any tuple of `FeatureSpec` instances without checking name uniqueness. If two specs share a name, `grid.npy` has distinct columns but `export_zarr.py` creates one xarray variable per name — the second silently overwrites the first, losing data. Current feature set (6 UCDP features) has no duplicates. **Trigger: add validation to `CompilationConfig.__post_init__` when feature set grows or user-defined features are supported.**
+**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 16)
 
-### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
-`request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.
-**Source:** Nygard, Hickey (expert review #7)
+### C-104: Date string format assumed YYYY-MM-DD throughout temporal pipeline — [DEFER]
+`_parse_month_index()`, `_month_first_day()`, and `_months_between()` in `grid_compilation.py` and `temporal_distribution.py` all split date strings on `"-"` and extract year/month by position. No format validation at the ingestion boundary. A new data source producing ISO 8601 with time components (e.g., `2023-03-15T00:00:00`) would partially parse but `_months_between` output wouldn't round-trip. UCDP consistently uses `YYYY-MM-DD`. **Trigger: add format validation when integrating V-Dem, ACLED, or any non-UCDP source.**
+**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 5)
+
+### C-105: Assembly mmap write is not atomic — partial grid on disk full — [DEFER]
+`assemble_grid.py:211` uses `np.lib.format.open_memmap` to create a 19 GB output file. If disk fills during the write, a half-written `grid.npy` remains on disk with no rollback mechanism. The provenance digest computation would fail (can't hash incomplete file), but the corrupted file exists and downstream scripts may find it. The Hetzner server has 160 GB SSD with ~130 GB free after a full pipeline run. **Trigger: add disk space pre-check when server storage drops below 40 GB free.**
+**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 14)
+
+### C-106: `_source_version` parsing assumes dotted-integer format — [DEFER]
+`survivorship.py:_parse_version()` calls `int()` on each `.`-split part of a version string. A version like `"25.1-beta"` would raise `ValueError` with no try/except in the survivorship strategies. All current UCDP versions use dotted integers (e.g., `"25.1"`, `"25.0.12"`, `"25.9.1"`). **Trigger: add error handling when integrating a source with non-numeric version strings.**
+**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 7)
+
+### C-108: Parquet and zarr exports serve different feature sets — [DEFER]
+`export_dataframe.py` defaults to `--input data/compiled` (6 UCDP features), while `export_zarr.py` defaults to `--input data/assembled` (43 features including PRIO-GRID static + GAUL admin). A consumer using the parquet endpoint gets a different feature set than one using zarr. This may be intentional (parquet = conflict-only, zarr = full grid) but is not documented. The `data_serving_guide.md` and `zarr_consumer_guide.md` do not mention the difference. **Trigger: document the intended asymmetry, or align both exports to data/assembled.**
+**Source:** Repo assimilation 2026-04-04 (Phase 3)
+
+### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
+`file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
+**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10)
 
 ---
 
 ## Deferred by Design
+
+### C-10: Ontology vocabulary overhead
+Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add conceptual overhead. For a 7-package project, governance is heavy. **Accepted: governance has proven itself (ADR-008 caught bugs in 3 audits). Cost is documentation maintenance, not development velocity.**
+**Source:** Ousterhout
+
+### C-38: Version string year offset assumes 21st century
+`_DOT9_YEAR_OFFSET = 2000` / `_CANDIDATE_YEAR_OFFSET = 2000` in `ucdp_dot9.py:50` and `ucdp_candidate.py:43`. Breaks silently for pre-2000 or post-2099 data. UCDP data starts 1989 (annual uses full version strings). **Trigger: never (2099 is 73 years away).**
+**Source:** Repo assimilation
+
+### C-41: Digest truncation collision risk
+`DIGEST_TRUNCATE = 16` hex chars = 64-bit space. 50% collision at ~4B items. Fine at ~2M events. **Trigger: consider when total records exceed 100M or digests are used as unique keys.**
+**Source:** Repo assimilation
 
 ### C-06: Provenance logic should be a composable utility
 Every module independently calls `append_ledger_entry()` with its own format. A `@provenance` decorator or context manager would centralize ~50 lines of boilerplate across 4 modules. Accepted as explicit > implicit for now.

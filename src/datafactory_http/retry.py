@@ -61,36 +61,33 @@ def request_with_retry(
                     url,
                 )
                 raise
-            if attempt == max_retries - 1:
-                logger.error(
-                    "Request failed after %d attempts: %s",
-                    max_retries,
-                    url,
-                )
-                raise
-            delay = 2**attempt + random.uniform(0, 1)
-            logger.warning(
-                "Request attempt %d/%d failed, retrying in %.1fs",
-                attempt + 1,
-                max_retries,
-                delay,
-            )
-            time.sleep(delay)
+            _retry_or_raise(attempt, max_retries, url)
         except requests.RequestException:
-            if attempt == max_retries - 1:
-                logger.error(
-                    "Request failed after %d attempts: %s",
-                    max_retries,
-                    url,
-                )
-                raise
-            delay = 2**attempt + random.uniform(0, 1)
-            logger.warning(
-                "Request attempt %d/%d failed, retrying in %.1fs",
-                attempt + 1,
-                max_retries,
-                delay,
-            )
-            time.sleep(delay)
+            _retry_or_raise(attempt, max_retries, url)
     msg = "Unreachable"
     raise AssertionError(msg)
+
+
+def _retry_or_raise(
+    attempt: int, max_retries: int, url: str
+) -> None:
+    """Log and sleep for retry, or raise on final attempt.
+
+    Must be called from an except block — bare raise re-raises
+    the caller's active exception.
+    """
+    if attempt == max_retries - 1:
+        logger.error(
+            "Request failed after %d attempts: %s",
+            max_retries,
+            url,
+        )
+        raise
+    delay = 2**attempt + random.uniform(0, 1)
+    logger.warning(
+        "Request attempt %d/%d failed, retrying in %.1fs",
+        attempt + 1,
+        max_retries,
+        delay,
+    )
+    time.sleep(delay)
