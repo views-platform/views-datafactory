@@ -47,16 +47,19 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 - `reports/rd_roadmap04.md` — R&D roadmap with 4 directions (serving, sources, raster, deployment hardening)
 - `reports/product_development_plan03.md` — Product plan with v1.0/v1.1/v2.0 gate criteria
 
-## Vocabulary (aligned with Kleppmann, DDIA 2nd ed.)
+## Vocabulary (aligned with Kleppmann & Riccomini, DDIA 2nd ed., 2026)
 
 Our terminology maps to established data systems concepts:
 
-- **Consolidated store** = system of record (DDIA Ch.1) — the authoritative, lossless event store
-- **Viewpoint** = materialized view / derived data (DDIA Ch.1) — opinionated, rebuildable from the consolidated store
-- **Provenance ledger** = append-only audit log (DDIA Ch.1) — immutable record of every operation
-- **Fail-loud** (ADR-011) = crash-stop fault model (DDIA Ch.2) — faults become visible failures, never hidden
-- **Bounded staleness** (ADR-018) = SLO-based fault tolerance (DDIA Ch.2) — explicit freshness targets with operator judgment
-- **Graph, not pipeline** (ADR-012) = ETL/ELT with multiple valid paths (DDIA Ch.1) — not all data traverses all layers
+- **Consolidated store** = system of record (Ch.1 pp.10-11) — the authoritative, lossless event store
+- **Viewpoint** = materialized view / derived data (Ch.1 pp.35-36, Ch.12 pp.491-495) — opinionated, rebuildable from the consolidated store
+- **Provenance ledger** = append-only audit log (Ch.1 p.10, Ch.11 p.457, Ch.12 p.495) — immutable record of every operation
+- **Fail-loud** (ADR-011) = crash-stop fault model (Ch.2 pp.43-44, Ch.8 pp.274-276) — faults become visible failures, never hidden
+- **Bounded staleness** (ADR-018) = SLO-based fault tolerance (Ch.2 pp.41-42, Ch.8 pp.237-240) — explicit freshness targets with operator judgment
+- **Graph, not pipeline** (ADR-012) = ETL/ELT with multiple valid paths (Ch.1 pp.7-11, Ch.12 pp.499-501) — not all data traverses all layers
+- **Immutable input** = batch processing principle (Ch.10 p.397) — raw snapshots never modified; outputs replace atomically
+- **Schema evolution** = backward/forward compatibility (Ch.4 pp.112-127) — data outlives code; old and new formats must coexist
+- **Idempotence** = exactly-once semantics via deduplication (Ch.12 pp.516-518) — safe to retry without side effects
 
 ## Relationship to views-metric-lab
 

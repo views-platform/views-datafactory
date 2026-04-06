@@ -152,3 +152,7 @@ This is intentional: the lossless principle means no data is discarded, and sche
 - Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
   - Ch.1 p.10: The "sushi principle" — raw data is better; each consumer transforms to suit their needs
   - Ch.1 pp.10-11: Systems of record hold authoritative data; if there's a discrepancy, the system of record wins
+  - Ch.4 p.131: Archival storage — re-encode snapshots using the latest schema; opportunity for columnar format
+  - Ch.10 p.397: Immutability — batch inputs are never modified; outputs replace atomically
+  - Ch.11 p.457: Event sourcing — store state as immutable sequence of events, derive current state by replay
+  - Ch.12 pp.524-526: Immutability enables recovery from bugs — rerun derivation from intact inputs

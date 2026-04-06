@@ -104,6 +104,10 @@ When the system reaches production deployment, the following should be implement
 - `reports/technical_risk_register_resolved.md` D-03
 - Expert review 6: Nygard perspective on operational resilience
 - Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.1 pp.13-14: SLAs vs SLOs — percentile-based performance targets, not averages
+  - Ch.2 p.38: Metastable failures and retry storms — why bounded staleness needs operator judgment
   - Ch.2 pp.41-42: SLOs and SLAs — measurable targets for performance and availability
   - Ch.2 pp.43-44: Fault tolerance — continuing to provide service despite component faults
-  - Ch.2 p.38: Metastable failures and retry storms — why bounded staleness needs operator judgment
+  - Ch.7 pp.231-232: Exponential backoff for transient errors; retrying overload makes it worse
+  - Ch.8 pp.237-240: Snapshot isolation as bounded staleness trade-off
+  - Ch.8 pp.289-290: Clock drift bounds (~200 ppm); timestamps have inherent uncertainty

@@ -141,3 +141,10 @@ The evidence for this decision is documented in:
 - `reports/dot9_investigation/findings.md` (section 6.3: candidate mutability)
 - `reports/dot9_investigation/reproducibility_note.md`
 - `tests/test_falsification_candidate_mutability.py`
+
+## References
+
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.4 pp.123-125: Writer's schema vs reader's schema — schemas don't need to match, only be compatible; Avro resolves differences by field name
+  - Ch.4 p.126: Dynamically generated schemas — re-generate schema from source on each export; no manual mapping maintenance
+  - Ch.4 p.131: Archival storage — "you might as well encode the copy of the data consistently" using the latest schema

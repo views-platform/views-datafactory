@@ -109,6 +109,9 @@ Failure must never be silent.
 ## References
 
 - Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
-  - Ch.2 pp.53-54: Operability — monitoring, predictable behavior, good defaults
-  - Ch.2 pp.43-47: Fault vs failure distinction; software faults lie dormant until triggered
   - Ch.1 p.20: Observability tools for diagnosing distributed system behavior
+  - Ch.2 pp.43-47: Fault vs failure distinction; software faults lie dormant until triggered
+  - Ch.2 pp.53-54: Operability — monitoring, predictable behavior, good defaults
+  - Ch.8 pp.274-276: Partial failure — single-node systems are deterministic; faults must be made visible
+  - Ch.8 pp.277-281: Unreliable networks and timeout-based fault detection
+  - Ch.12 pp.516-518: Exactly-once semantics via idempotence and operation identifiers

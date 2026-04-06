@@ -184,3 +184,6 @@ This ADR defines *structural topology only*. It does not define:
   - Ch.1 pp.7-11: Data warehousing, ETL/ELT pipelines, systems of record vs derived data
   - Ch.1 pp.10-11: Systems of record (authoritative, canonical) vs derived data systems (redundant, rebuildable)
   - Ch.1 p.10: The "sushi principle" — raw data is better (motivates lossless consolidation)
+  - Ch.10 pp.394-396: Unix philosophy — each program does one thing well; compose via uniform interfaces
+  - Ch.12 pp.491-495: System of record vs derived data; derived data is redundant but rebuildable
+  - Ch.12 pp.499-501: "Unbundling the database" — compose specialized tools instead of monolithic systems

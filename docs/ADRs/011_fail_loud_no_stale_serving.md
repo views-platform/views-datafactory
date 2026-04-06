@@ -77,3 +77,6 @@ These trade-offs are accepted intentionally for the pre-production phase.
 - Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
   - Ch.2 pp.43-44: Fault vs failure distinction; crash-stop fault model
   - Ch.2 pp.46-47: Software faults — systematic, correlated, lie dormant until triggered
+  - Ch.7 p.231: Retry only transient errors; permanent errors should fail immediately
+  - Ch.8 pp.274-276: Single-node systems are deterministic — either fully functional or entirely broken
+  - Ch.12 pp.524-526: Integrity over timeliness — violations of integrity are permanent, violations of timeliness are eventual consistency

@@ -163,3 +163,10 @@ This keeps categories visible in test output without requiring marker infrastruc
 Testing in this repository is not merely about correctness.
 
 It is about **preventing silent data corruption in systems that inform humanitarian decisions**.
+
+## References
+
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.10 p.413: Immutable inputs enable safe rerun — if a bug is found, fix the code and reprocess; the old output is still available
+  - Ch.12 pp.524-526: Integrity over timeliness — violations of integrity are permanent and unrecoverable; violations of timeliness are eventual consistency
+  - Ch.12 p.526: Deterministic derivation from logged inputs enables reconstruction after bugs

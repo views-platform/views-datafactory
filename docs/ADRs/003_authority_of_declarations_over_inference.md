@@ -119,3 +119,10 @@ This ADR does not define:
 
 It defines **who is allowed to say what something means**,
 and mandates **loud failure over silent misinterpretation**.
+
+## References
+
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.4 p.125: Schema versioning database — "a useful thing to have in any case, since it acts as documentation"
+  - Ch.4 p.127: Merits of schemas — "the schema is required for decoding, you can be sure that it is up to date (whereas manually maintained documentation may easily diverge from reality)"
+  - Ch.4 pp.129-130: Data outlives code — forward compatibility needed because "a value in the database may be written by a newer version of the code, and subsequently read by an older version"
