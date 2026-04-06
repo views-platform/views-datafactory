@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import socket
 import sys
+from datetime import datetime, timezone
 from netrc import netrc
 from pathlib import Path
 
@@ -234,10 +235,23 @@ def main() -> int:
             if checks:
                 ok = _result(step, False, f"mismatches: {', '.join(checks)}")
             else:
+                age_str = ""
+                try:
+                    ts_dt = datetime.fromisoformat(ts)
+                    now = datetime.now(tz=timezone.utc)
+                    age_h = (now - ts_dt).total_seconds() / 3600
+                    if age_h < 48:
+                        age_str = f", age {age_h:.0f}h"
+                    else:
+                        age_str = f", age {age_h / 24:.0f}d"
+                    if age_h >= 168:
+                        age_str += " (SLO BREACH >168h)"
+                except (ValueError, TypeError):
+                    pass
                 ok = _result(
                     step, True,
                     f"{EXPECTED_CRS}, {EXPECTED_RESOLUTION}°,"
-                    f" exported {ts[:10]}",
+                    f" exported {ts[:10]}{age_str}",
                 )
         except KeyError as e:
             ok = _result(step, False, f"missing key: {e}")

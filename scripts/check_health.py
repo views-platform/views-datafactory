@@ -21,6 +21,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Freshness SLO: maximum acceptable age of exported data (ADR-018).
+# Monthly pipeline runs on the 21st. 7 days (168h) allows one missed
+# cycle before data is flagged as stale.
+FRESHNESS_SLO_HOURS = 168
+
 
 def _read_last_entries(
     ledger_path: Path, n: int = 5
@@ -89,7 +94,7 @@ def _report_ledger(
             age_str = "unknown"
             age_hours = -1
 
-        status = "OK" if age_hours < 168 else "STALE"
+        status = "OK" if age_hours < FRESHNESS_SLO_HOURS else "STALE"
         detail = (
             f"Last success: {ts_str[:19]} ({age_str})"
         )
@@ -119,6 +124,67 @@ def _report_ledger(
     }
 
 
+def _check_export_freshness(
+    zarr_path: Path, now: datetime
+) -> dict:
+    """Check export_timestamp in zarr attrs against SLO."""
+    zattrs_path = zarr_path / ".zattrs"
+    if not zattrs_path.exists():
+        return {
+            "export_timestamp": None,
+            "export_age_hours": -1,
+            "export_slo_met": False,
+            "detail": f"No zarr store at {zarr_path}",
+        }
+
+    try:
+        attrs = json.loads(zattrs_path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        return {
+            "export_timestamp": None,
+            "export_age_hours": -1,
+            "export_slo_met": False,
+            "detail": f"Cannot read .zattrs: {e}",
+        }
+
+    ts_str = attrs.get("export_timestamp")
+    if not ts_str:
+        return {
+            "export_timestamp": None,
+            "export_age_hours": -1,
+            "export_slo_met": False,
+            "detail": "export_timestamp missing from zarr attrs",
+        }
+
+    try:
+        ts = datetime.fromisoformat(ts_str)
+        age_hours = (now - ts).total_seconds() / 3600
+    except (ValueError, TypeError):
+        return {
+            "export_timestamp": ts_str,
+            "export_age_hours": -1,
+            "export_slo_met": False,
+            "detail": f"Cannot parse timestamp: {ts_str}",
+        }
+
+    slo_met = age_hours < FRESHNESS_SLO_HOURS
+    age_str = (
+        f"{age_hours:.0f}h ago"
+        if age_hours < 48
+        else f"{age_hours / 24:.0f}d ago"
+    )
+    return {
+        "export_timestamp": ts_str,
+        "export_age_hours": round(age_hours, 1),
+        "export_slo_met": slo_met,
+        "detail": (
+            f"Exported {ts_str[:19]} ({age_str})"
+            f" — SLO {FRESHNESS_SLO_HOURS}h: "
+            f"{'MET' if slo_met else 'BREACHED'}"
+        ),
+    }
+
+
 def main() -> int:
     """Report system health."""
     sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
@@ -131,6 +197,12 @@ def main() -> int:
         type=Path,
         default=Path("provenance"),
         help="Base provenance directory",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=Path("data"),
+        help="Base data directory",
     )
     parser.add_argument(
         "--json",
@@ -193,12 +265,21 @@ def main() -> int:
         if result["status"] not in ("OK", "NO DATA"):
             any_issues = True
 
+    # Export freshness check (ADR-018 SLO)
+    zarr_path = args.data_dir / "assembled" / "grid.zarr"
+    freshness = _check_export_freshness(zarr_path, now)
+    if not freshness["export_slo_met"]:
+        any_issues = True
+
     if args.json:
         import json as json_mod
 
         output = {
             "timestamp": now.isoformat(),
             "healthy": not any_issues,
+            "freshness_slo_hours": FRESHNESS_SLO_HOURS,
+            "export_age_hours": freshness["export_age_hours"],
+            "export_slo_met": freshness["export_slo_met"],
             "sources": results,
         }
         print(json_mod.dumps(output, indent=2))
@@ -206,7 +287,17 @@ def main() -> int:
 
     print("=" * 60)
     print(f"DATAFACTORY HEALTH — {now.isoformat()[:19]}Z")
+    print(f"Freshness SLO: {FRESHNESS_SLO_HOURS}h (ADR-018)")
     print("=" * 60)
+    print()
+
+    # Export freshness
+    slo_marker = "  " if freshness["export_slo_met"] else "! "
+    slo_status = "MET" if freshness["export_slo_met"] else "BREACH"
+    print(
+        f"{slo_marker}[{slo_status:7s}] "
+        f"{'Export freshness':20s} {freshness['detail']}"
+    )
     print()
 
     for result in results:
@@ -225,9 +316,9 @@ def main() -> int:
 
     print()
     if any_issues:
-        print("Issues detected. Check ledger details.")
+        print("Issues detected. Check details above.")
         return 1
-    print("All sources healthy.")
+    print("All sources healthy. Export SLO met.")
     return 0
 
 
