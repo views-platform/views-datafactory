@@ -148,3 +148,6 @@ Those are implementation decisions that evolve with the research.
 - Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
   - Ch.1 pp.10-11: Derived data systems — redundant, rebuildable from the system of record
   - Ch.1 pp.35-36: Materialized views — precomputed query results that speed reads at the cost of write-time work
+  - Ch.10 pp.411-413: Batch-derived outputs — read-only files written once, replaced atomically
+  - Ch.12 pp.491-495: Derived data obtained by replaying events from system of record
+  - Ch.12 pp.509-510: Write path (eager precomputation) vs read path (on-demand); materialized views sit at the boundary

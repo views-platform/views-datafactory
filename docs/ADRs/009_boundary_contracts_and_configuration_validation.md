@@ -170,3 +170,10 @@ This ADR does not prescribe:
 
 Operational configuration structures may vary by module,
 provided they comply with the invariants defined here.
+
+## References
+
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.4 p.112: Backward and forward compatibility — essential for systems where data outlives code
+  - Ch.4 pp.129-130: Data outlives code — "the desirable behavior is usually for the old code to keep the new field intact, even though it couldn't interpret it"
+  - Ch.4 p.127: Schemas as documentation — "the schema is a valuable form of documentation"; schemas enable compile-time type checking and compatibility verification before deployment

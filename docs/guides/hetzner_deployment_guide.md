@@ -479,6 +479,175 @@ See **Phase 6: Server hardening** below for the multi-user setup.
 
 ---
 
+## Deployment and releases
+
+This section explains how the server decides which version of the
+code to run, how to deploy a new version, and how to roll back if
+something goes wrong.
+
+### What is a git tag?
+
+A git **tag** is a permanent bookmark on a specific commit. Think of
+it as a named snapshot: `v1.0.0` always points to exactly the same
+code, forever. Unlike a **branch** (which moves forward every time
+someone pushes a new commit), a tag never moves.
+
+When we say "deploy v1.1.0", we mean: run the code that was frozen
+at the moment we created the `v1.1.0` tag. Even if 100 more commits
+are pushed to main after that, `v1.1.0` still points to the original
+code.
+
+### What is "detached HEAD"?
+
+When you check out a tag on the server, git will say:
+
+```
+HEAD is now at 9fc36ce Merge PR #6: ...
+```
+
+And `git branch` will show:
+
+```
+* (HEAD detached at v1.1.0)
+  development
+  main
+```
+
+**This is normal and expected.** It means the server is looking at
+a frozen snapshot (the tag), not a moving branch. Nothing is broken.
+You are not "on" any branch — you are on a specific tagged release.
+
+This is exactly what we want: the server runs a known, tested version,
+not whatever happens to be at the tip of a branch.
+
+### How the deployment gate works
+
+`refresh_pipeline.sh` has a **deployment gate** at the top of the
+script. Before running any pipeline steps, it:
+
+1. Reads the file `~/.views-deploy-tag` (contains a tag name, e.g., `v1.1.0`)
+2. Runs `git fetch --tags` to download any new tags from GitHub
+3. Checks that the tag exists
+4. Runs `git checkout v1.1.0` to switch to that exact version
+5. Then runs the 7 pipeline steps (harvest, compile, export, etc.)
+
+If the `.views-deploy-tag` file is missing, empty, or contains a tag
+that doesn't exist, the script prints `FATAL` and stops immediately.
+It will never run an unknown version. This is the "fail-loud" principle
+(ADR-011): crash visibly rather than run the wrong code silently.
+
+### How to deploy a new version
+
+**On your laptop** (where you develop):
+
+```bash
+# 1. Make sure main is up to date
+git checkout main && git pull
+
+# 2. Create a tag on main
+git tag v1.2.0
+
+# 3. Push the tag to GitHub
+git push --tags
+```
+
+**On the server** (SSH in):
+
+```bash
+# 4. Update the deploy tag file
+echo 'v1.2.0' > ~/.views-deploy-tag
+```
+
+That's it. The next cron run (21st of the month) will automatically
+use `v1.2.0`. If you want to apply it right now instead of waiting:
+
+```bash
+# Run the pipeline manually (same command cron uses)
+cd ~/views-datafactory
+bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+```
+
+### How to roll back
+
+If a new version breaks the pipeline:
+
+```bash
+# On the server — point back to the old version
+echo 'v1.0.0' > ~/.views-deploy-tag
+```
+
+The next pipeline run will check out `v1.0.0` and run that code
+instead. The old version is always available — git never deletes tags.
+
+You can also run the pipeline manually to roll back immediately
+instead of waiting for the next cron run.
+
+### How to check what version is deployed
+
+```bash
+# What version is the server configured to run?
+cat ~/.views-deploy-tag
+
+# What version is actually checked out right now?
+git describe --tags --exact-match 2>/dev/null || git log --oneline -1
+
+# When did the last pipeline run happen?
+tail -5 logs/refresh.log
+```
+
+### What happens if the pipeline fails
+
+The script has an error trap. If any step fails:
+
+1. A file `logs/pipeline_failure.json` is written with the step name,
+   exit code, and timestamp
+2. The console/log shows `PIPELINE FAILED at step: <name>`
+3. If `ALERT_EMAIL` is set and `mail` is installed, an email is sent
+
+**Data is never corrupted by a failure.** The old data from the
+previous month stays in place. Consumers continue to see the last
+successful export. The data becomes *stale* (one month behind) but
+not *wrong*.
+
+To investigate: `cat logs/pipeline_failure.json` and
+`tail -100 logs/refresh.log`.
+
+### Cron timing
+
+The cron job runs on the **21st of every month at midnight UTC**.
+Changes to `~/.views-deploy-tag` take effect on the next cron run.
+They do NOT take effect immediately — cron only runs at the
+scheduled time.
+
+To apply a version change immediately, run the pipeline manually
+(see "How to deploy a new version" above).
+
+### Version history
+
+| Tag | Date | What changed |
+|-----|------|-------------|
+| `v1.0.0` | 2026-04-02 | First production release |
+| `v1.1.0` | 2026-04-06 | Deployment gate, Registry[T], 411 tests, server hardening docs |
+
+### Why this design?
+
+The tag-based deployment gate implements several principles from
+Kleppmann & Riccomini, *Designing Data-Intensive Applications*
+(2nd ed., 2026):
+
+- **Fail-loud** (Ch.8 pp.274-276): A single-node system should be
+  "either fully functional or entirely broken" — never silently
+  running unknown code. The gate crashes visibly on misconfiguration.
+- **Immutability for recovery** (Ch.12 pp.524-526): If a new version
+  breaks the pipeline, the old tag still points to intact code. Roll
+  back by changing one file. "Violations of integrity are permanent;
+  violations of timeliness are eventual consistency."
+- **Atomic output replacement** (Ch.10 p.413): Each pipeline run
+  produces a complete new output. The old output stays until replaced.
+  No partial state.
+
+---
+
 ## Phase 6: Server hardening (before 2nd user access)
 
 Resolves C-84 through C-88. Follow PRIO IT security guidance.

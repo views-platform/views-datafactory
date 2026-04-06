@@ -149,3 +149,7 @@ practice for gridded spatiotemporal datasets (cf. ERA5, CMIP6).
 - `docs/guides/zarr_consumer_guide.md`: Consumer documentation
 - xarray documentation: https://docs.xarray.dev/
 - zarr specification: https://zarr.readthedocs.io/
+- Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
+  - Ch.3 pp.91-99: Column-oriented storage — read only the columns you need, drastically reducing I/O for analytics
+  - Ch.4 p.131: Parquet/columnar formats for archival storage — re-encode snapshots in analytics-friendly format
+  - Ch.10 pp.411-413: Batch-derived outputs — read-only database files written once, replaced atomically
