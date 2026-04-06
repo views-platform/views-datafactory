@@ -193,6 +193,14 @@ Added `tests/test_performance.py` with `@pytest.mark.slow`. Compiles 50 events o
 Added `tests/test_schema_evolution.py` with 4 tests: column added in later version (nulls in old rows), column removed in later version (nulls in new rows), mixed schemas across all 3 streams, and schema fingerprint change detection.
 **Source:** Kleppmann (test review). Resolved 2026-04-04.
 
+### C-98: ~~No deployment gate~~ RESOLVED
+`refresh_pipeline.sh` now reads a deploy tag from `~/.views-deploy-tag`, fetches tags, and checks out the specified tag before running the pipeline. If the file is missing, empty, or the tag doesn't exist, the script exits non-zero (fail-loud per ADR-011). Operators control deployments by writing a tag name to the file. Rollback: write the previous tag.
+**Source:** Falsification audit 2026-04-01 (F5). Resolved 2026-04-06.
+
+### C-102: ~~No tests for assembly, zarr export, or dataframe export scripts~~ RESOLVED
+Added 3 test files (22 tests): `test_assemble.py` (GID lookup bijection, spatial join, admin fill values, feature concatenation, mmap round-trip), `test_export_zarr_logic.py` (coordinate boundaries, xarray construction, zarr round-trip, metadata consolidation), `test_export_dataframe_logic.py` (sparse vs dense modes, month_id epoch encoding, empty grid handling).
+**Source:** Repo assimilation 2026-04-04. Resolved 2026-04-06.
+
 ### C-80: ~~Registry boilerplate duplicated 6x~~ RESOLVED
 Extracted generic `Registry[T]` class to `datafactory_provenance/registry.py`. All 6 registries (sources, consolidators, builders, aggregation, survivorship, temporal_distribution) now use `Registry` instances. Public APIs preserved via aliasing (`register_source = _registry.register`, `STRATEGIES = _registry.entries`). Test fixture `_clean_source_registry` continues to work via dict aliasing. 46 source files pass mypy strict.
 **Source:** Martin (expert review #4). Resolved 2026-04-05.

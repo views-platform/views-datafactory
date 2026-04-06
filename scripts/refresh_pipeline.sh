@@ -59,8 +59,34 @@ on_failure() {
 }
 trap on_failure ERR
 
+# ---- Deployment gate (C-98) ----
+# The pipeline only runs a specific tagged release. Operators set the
+# tag in ~/.views-deploy-tag. Without this file, the pipeline refuses
+# to start (fail-loud per ADR-011).
+DEPLOY_TAG_FILE="$HOME/.views-deploy-tag"
+if [ ! -f "$DEPLOY_TAG_FILE" ]; then
+    echo "FATAL: No deploy tag file at $DEPLOY_TAG_FILE"
+    echo "Create it with: echo 'v1.0.0' > $DEPLOY_TAG_FILE"
+    exit 1
+fi
+
+DEPLOY_TAG=$(tr -d '[:space:]' < "$DEPLOY_TAG_FILE")
+if [ -z "$DEPLOY_TAG" ]; then
+    echo "FATAL: Deploy tag file is empty: $DEPLOY_TAG_FILE"
+    exit 1
+fi
+
+git fetch --tags --quiet
+if ! git rev-parse "$DEPLOY_TAG" >/dev/null 2>&1; then
+    echo "FATAL: Tag '$DEPLOY_TAG' not found in repository"
+    exit 1
+fi
+
+git checkout "$DEPLOY_TAG" --quiet
+
 echo "========================================"
 echo "VIEWS Data Factory — Pipeline Refresh"
+echo "Deploy tag: $DEPLOY_TAG"
 echo "Started: $(date -Iseconds)"
 echo "========================================"
 echo

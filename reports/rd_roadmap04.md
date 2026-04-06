@@ -21,8 +21,8 @@ found the system **works end-to-end but is not at deployment quality:**
 falsifications (branch divergence, HTTP not HTTPS, no deployment
 gate), 1 observation (no log rotation).
 
-78 concerns tracked in the risk register: 41 resolved, 37 open/deferred.
-383 tests pass.
+109 concern IDs tracked in the risk register: 67 resolved, 35 open/deferred,
+5 accepted by design. 388 tests pass.
 
 ---
 
@@ -203,7 +203,7 @@ LATER: Direction 4, Phase DH-3 -- v2.0 institutional
 ## Risk Register
 
 Active concerns tracked in `reports/technical_risk_register.md`
-(ADR-020). 78 concerns total: 41 resolved, 37 open/deferred.
+(ADR-020). 109 concern IDs total: 67 resolved, 35 open/deferred, 5 accepted by design.
 
 **Deployment-blocking items (resolved by DH phases):**
 
@@ -220,8 +220,9 @@ Active concerns tracked in `reports/technical_risk_register.md`
 **Source expansion risks (unchanged from v03):**
 - ACLED access may be restricted
 - Country-level broadcasting is a strong assumption
-- C-44 (harvest template on 4th source), C-61 (schema evolution
-  on 3rd source), C-80 (6th registry)
+- C-44 (harvest template on 4th source — trigger fired, accepted at v1.0)
+- ~~C-61 (schema evolution on 3rd source)~~ — RESOLVED: `test_schema_evolution.py`
+- ~~C-80 (6th registry)~~ — RESOLVED: extracted `Registry[T]` to `datafactory_provenance`
 
 **New from falsification audits:**
 - C-96: fsspec does not auto-read `~/.netrc` (accepted, wrapper provided)
