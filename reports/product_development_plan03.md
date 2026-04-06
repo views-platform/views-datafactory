@@ -65,8 +65,8 @@
 | M5 | Production filtering rules | Complete |
 | M6 | End-to-end production parity test | Complete |
 | M7 | Data serving operational (Caddy + cron + auth) | Complete |
-| **M8** | **Deployment quality v1.0 (single-user gate)** | **Open** |
-| M9 | Multi-user readiness v1.1 | Not started |
+| M8 | Deployment quality v1.0 (single-user gate) | **Complete** (2026-04-02, tag v1.0.0) |
+| **M9** | **Multi-user readiness v1.1** | **In progress** (tag v1.1.0 on main; hardening documented, blocked on domain + IT) |
 
 ---
 
@@ -87,28 +87,28 @@
 ### Falsification Findings (2026-04-01)
 
 A falsification audit tested the claim "we are at deployment quality."
-Verdict: **FALSIFIED** (1 hard, 3 soft, 1 observation).
+Verdict: **FALSIFIED** (1 hard, 3 soft, 1 observation). All v1.0 blockers resolved. Two v1.1 items remain.
 
-| ID | Severity | Title | Risk ref | Blocks |
-|----|----------|-------|----------|--------|
-| F1 | **Hard** | No freshness indicator in zarr/parquet exports | D-03 (Tier 1) | v1.0 |
-| F2 | Soft | Development 35 commits ahead of main; server runs development | — | v1.0 |
-| F3 | Soft | HTTP not HTTPS — credentials in cleartext on wire | — | v1.1 |
-| F4 | Observation | No log rotation (11 KB/month, years until problem) | — | v1.0 |
-| F5 | Soft | No deployment gate between push and server | — | v1.1 |
+| ID | Severity | Title | Risk ref | Blocks | Status |
+|----|----------|-------|----------|--------|--------|
+| F1 | **Hard** | No freshness indicator in zarr/parquet exports | D-03 (Tier 1) | v1.0 | **Resolved** — `export_timestamp` added |
+| F2 | Soft | Development 35 commits ahead of main; server runs development | — | v1.0 | **Resolved** — main current, v1.0.0 tagged |
+| F3 | Soft | HTTP not HTTPS — credentials in cleartext on wire | — | v1.1 | Open — blocked on domain registration |
+| F4 | Observation | No log rotation (11 KB/month, years until problem) | — | v1.0 | **Resolved** — logrotate configured on server |
+| F5 | Soft | No deployment gate between push and server | — | v1.1 | **Resolved** — tag-based gate in refresh_pipeline.sh (C-98) |
 
 ### Deferred Items Now Triggered
 
-| ID | Tier | Title | Trigger condition | Blocks |
-|----|------|-------|-------------------|--------|
-| D-03 | 1 | Fail-loud vs. operational resilience (freshness gap) | Before production deployment | v1.0 |
-| C-29 | 4 | No end-to-end integration test | Before production deployment | v1.0 |
-| C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment | v1.1 |
-| C-84 | 2 | Server runs everything as root | Before second user access | v1.1 |
-| C-85 | 2 | Personal GitHub SSH key on shared server | Before second user access | v1.1 |
-| C-86 | 2 | No deploy key — repo access tied to personal account | Before second user access | v1.1 |
-| C-87 | 2 | No named user accounts on server | Before second user access | v1.1 |
-| C-89 | 4 | No formal SLO for data freshness | Before second consumer | v1.1 |
+| ID | Tier | Title | Trigger condition | Blocks | Status |
+|----|------|-------|-------------------|--------|--------|
+| D-03 | 1 | Fail-loud vs. operational resilience (freshness gap) | Before production deployment | v1.0 | **Resolved** — export_timestamp + ADR-018 |
+| C-29 | 4 | No end-to-end integration test | Before production deployment | v1.0 | **Accepted** at v1.0 — integration test covers critical path |
+| C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment | v1.1 | Open — procedure documented, blocked on VPN CIDRs from IT |
+| C-84 | 2 | Server runs everything as root | Before second user access | v1.1 | Open — procedure documented (Phase 6.1) |
+| C-85 | 2 | Personal GitHub SSH key on shared server | Before second user access | v1.1 | Open — procedure documented (Phase 6.2) |
+| C-86 | 2 | No deploy key — repo access tied to personal account | Before second user access | v1.1 | Open — procedure documented (Phase 6.2) |
+| C-87 | 2 | No named user accounts on server | Before second user access | v1.1 | Open — procedure documented (Phase 6.3) |
+| C-89 | 4 | No formal SLO for data freshness | Before second consumer | v1.1 | Open — code-actionable |
 
 ### Accepted / Contested Items
 
@@ -141,16 +141,16 @@ The primary researcher can rely on the system for daily work.
 
 5-20 research consumers can be onboarded and use the data safely.
 
-| Criterion | How to verify |
-|-----------|--------------|
-| All v1.0 criteria | — |
-| HTTPS with valid TLS certificate | `curl https://data.views.uu.se/` returns 200 with valid cert |
-| Deployment uses tag checkout | `refresh_pipeline.sh` checks out git tag, not branch tip |
-| SSH restricted to institutional IPs | Hetzner firewall rules configured |
-| Non-root service account | `ps -u views-deploy` shows pipeline process |
-| Deploy key for GitHub | `/root/.ssh/` has deploy key, not personal key |
-| Named server accounts | `getent passwd simon colleague-name` exists |
-| Freshness SLO defined | zarr `export_timestamp` checked by consumer / monitoring |
+| Criterion | How to verify | Status |
+|-----------|--------------|--------|
+| All v1.0 criteria | — | **Done** |
+| HTTPS with valid TLS certificate | `curl https://data.views.uu.se/` returns 200 with valid cert | Blocked on domain |
+| Deployment uses tag checkout | `refresh_pipeline.sh` checks out git tag, not branch tip | **Done** (v1.1.0) |
+| SSH restricted to institutional IPs | Hetzner firewall rules configured | Blocked on IT CIDRs |
+| Non-root service account | `ps -u views-deploy` shows pipeline process | Procedure documented |
+| Deploy key for GitHub | `/home/views-deploy/.ssh/` has deploy key, not personal key | Procedure documented |
+| Named server accounts | `getent passwd simon colleague-name` exists | Procedure documented |
+| Freshness SLO defined | zarr `export_timestamp` checked by consumer / monitoring | Open |
 
 ### v2.0 — Institutional / scaled deployment
 
@@ -168,38 +168,38 @@ Meets institutional audit and compliance requirements for 50+ users.
 
 ## Prioritized Action List
 
-| Priority | Task | Effort | Finding/Ref | Target |
-|----------|------|--------|-------------|--------|
-| 1 | Add `export_timestamp` to zarr attrs in `export_zarr.py` | 1h | F1, D-03 | v1.0 |
-| 2 | Merge development to main | 1h | F2 | v1.0 |
-| 3 | Establish tagging convention, tag v1.0.0 | 30m | F2 | v1.0 |
-| 4 | Add e2e integration test (3-source mini-pipeline) | 2h | C-29 | v1.0 |
-| 5 | Add logrotate config on server | 30m | F4 | v1.0 |
-| 6 | Register domain, point DNS to Hetzner | 1-2d | F3 | v1.1 |
-| 7 | Swap Caddyfile to domain block (auto-TLS) | 30m | F3 | v1.1 |
-| 8 | Tag-based deployment gate in `refresh_pipeline.sh` | 2h | F5 | v1.1 |
-| 9 | Restrict SSH to PRIO/Uppsala IPs | 1h | C-88 | v1.1 |
-| 10 | Create `views-deploy` non-root service account | 2h | C-84 | v1.1 |
-| 11 | Replace personal SSH key with deploy key + named accounts | 2h | C-85/86/87 | v1.1 |
-| 12 | Define measurable freshness SLO | 2h | C-89 | v1.1 |
-| 13 | Migrate to OAuth2 (forward_auth + oauth2-proxy) | 1-2w | C-97 | v2.0 |
-| 14 | Per-user audit trail | 1w | C-97 | v2.0 |
-| 15 | Circuit breaker for upstream APIs | 1d | C-70 | v2.0 |
-| 16 | Pipeline duration tracking | 4h | C-91 | v2.0 |
+| Priority | Task | Effort | Finding/Ref | Target | Status |
+|----------|------|--------|-------------|--------|--------|
+| ~~1~~ | ~~Add `export_timestamp` to zarr attrs~~ | ~~1h~~ | F1, D-03 | v1.0 | **Done** (2026-04-02) |
+| ~~2~~ | ~~Merge development to main~~ | ~~1h~~ | F2 | v1.0 | **Done** (PR #4, 2026-04-02) |
+| ~~3~~ | ~~Establish tagging convention, tag v1.0.0~~ | ~~30m~~ | F2 | v1.0 | **Done** (2026-04-02) |
+| ~~4~~ | ~~Add e2e integration test~~ | ~~2h~~ | C-29 | v1.0 | **Done** (accepted at v1.0) |
+| ~~5~~ | ~~Add logrotate config on server~~ | ~~30m~~ | F4 | v1.0 | **Done** (2026-03-31) |
+| 6 | Register domain, point DNS to Hetzner | 1-2d | F3 | v1.1 | Blocked on domain |
+| 7 | Swap Caddyfile to domain block (auto-TLS) | 30m | F3 | v1.1 | Blocked on #6 |
+| ~~8~~ | ~~Tag-based deployment gate in `refresh_pipeline.sh`~~ | ~~2h~~ | F5 | v1.1 | **Done** (C-98, PR #6) |
+| 9 | Restrict SSH to PRIO/Uppsala IPs | 1h | C-88 | v1.1 | Blocked on IT CIDRs |
+| 10 | Create `views-deploy` non-root service account | 2h | C-84 | v1.1 | Procedure documented |
+| 11 | Replace personal SSH key with deploy key + named accounts | 2h | C-85/86/87 | v1.1 | Procedure documented |
+| 12 | Define measurable freshness SLO | 2h | C-89 | v1.1 | Open — code-actionable |
+| 13 | Migrate to OAuth2 (forward_auth + oauth2-proxy) | 1-2w | C-97 | v2.0 | — |
+| 14 | Per-user audit trail | 1w | C-97 | v2.0 | — |
+| 15 | Circuit breaker for upstream APIs | 1d | C-70 | v2.0 | — |
+| 16 | Pipeline duration tracking | 4h | C-91 | v2.0 | — |
 
-**Total effort to v1.0:** ~5 hours
-**Total effort to v1.1:** ~2-3 additional days (dominated by domain registration)
-**Total effort to v2.0:** ~3-4 additional weeks
+**v1.0:** Complete (2026-04-02, tag v1.0.0).
+**v1.1 remaining effort:** ~1 day code work (C-89 SLO) + server hardening (~4h operator actions) + domain registration (1-2d async).
+**v2.0:** ~3-4 additional weeks.
 
 ---
 
 ## Operational Concerns (Summary)
 
 - **Tier 1:** 0 open — D-03 resolved (export_timestamp + ADR-018)
-- **Tier 2:** 5 open (C-84 through C-88) — all resolved by v1.1 tasks
-- **Tier 3:** 2 open (C-21 characterization tests, C-102 assembly/export tests)
-- **Tier 4:** 28 open — most not yet triggered; 2 triggered and accepted at v1.0 (C-29, C-44)
-- **Accepted by design:** C-06, C-07, C-10, C-38, C-41
+- **Tier 2:** 5 open (C-84 through C-88) — procedures documented, blocked on external actions
+- **Tier 3:** 1 open (C-21 characterization tests) — C-102 resolved (22 tests added)
+- **Tier 4:** 24 open — most not yet triggered; 2 triggered and accepted at v1.0 (C-29, C-44)
+- **Accepted by design:** C-06, C-07, C-10, C-32, C-38, C-41
 
 ---
 
