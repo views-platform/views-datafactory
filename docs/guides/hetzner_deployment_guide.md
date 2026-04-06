@@ -629,6 +629,23 @@ To apply a version change immediately, run the pipeline manually
 | `v1.0.0` | 2026-04-02 | First production release |
 | `v1.1.0` | 2026-04-06 | Deployment gate, Registry[T], 411 tests, server hardening docs |
 
+### Why this design?
+
+The tag-based deployment gate implements several principles from
+Kleppmann & Riccomini, *Designing Data-Intensive Applications*
+(2nd ed., 2026):
+
+- **Fail-loud** (Ch.8 pp.274-276): A single-node system should be
+  "either fully functional or entirely broken" — never silently
+  running unknown code. The gate crashes visibly on misconfiguration.
+- **Immutability for recovery** (Ch.12 pp.524-526): If a new version
+  breaks the pipeline, the old tag still points to intact code. Roll
+  back by changing one file. "Violations of integrity are permanent;
+  violations of timeliness are eventual consistency."
+- **Atomic output replacement** (Ch.10 p.413): Each pipeline run
+  produces a complete new output. The old output stays until replaced.
+  No partial state.
+
 ---
 
 ## Phase 6: Server hardening (before 2nd user access)
