@@ -21,8 +21,8 @@ found the system **works end-to-end but is not at deployment quality:**
 falsifications (branch divergence, HTTP not HTTPS, no deployment
 gate), 1 observation (no log rotation).
 
-109 concern IDs tracked in the risk register: 67 resolved, 35 open/deferred,
-5 accepted by design. 388 tests pass.
+111 concern IDs tracked in the risk register: 72 resolved, 31 open/deferred,
+6 accepted by design. 411 tests pass.
 
 ---
 
@@ -203,7 +203,7 @@ LATER: Direction 4, Phase DH-3 -- v2.0 institutional
 ## Risk Register
 
 Active concerns tracked in `reports/technical_risk_register.md`
-(ADR-020). 109 concern IDs total: 67 resolved, 35 open/deferred, 5 accepted by design.
+(ADR-020). 111 concern IDs total: 72 resolved, 31 open/deferred, 6 accepted by design.
 
 **Deployment-blocking items (resolved by DH phases):**
 

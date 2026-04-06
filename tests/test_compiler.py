@@ -132,6 +132,16 @@ class TestCompilationConfigBeige:
                 features=(),
             )
 
+    def test_rejects_duplicate_feature_names(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="duplicate"):
+            CompilationConfig(
+                source_path=tmp_path / "test.parquet",
+                features=(
+                    FeatureSpec("event_count", "count"),
+                    FeatureSpec("event_count", "sum_best"),
+                ),
+            )
+
     def test_source_path_validated_at_compile_time(self, tmp_path: Path) -> None:
         """source_path is not validated at config time — only at compile time."""
         cfg = CompilationConfig(source_path=tmp_path / "nope.parquet")

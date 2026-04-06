@@ -32,7 +32,7 @@
 | — | HTTP serving (Caddy, basic auth, cron) | Done | 0 (operational) |
 | — | Consumer verification (`verify_remote.py`) | Done | 0 (script) |
 
-**Total: 388 passed**
+**Total: 411 passed**
 
 ### Architecture
 
@@ -40,7 +40,7 @@
 - **5 data sources**: UCDP annual, UCDP candidate, UCDP .9, PRIO-GRID static, GAUL admin boundaries
 - **22 ADRs** (10 constitutional + 12 project-specific)
 - **16 CICs** (class intent contracts)
-- **Technical risk register** (ADR-020): 109 concern IDs tracked, 67 resolved, 35 open/deferred, 5 accepted by design
+- **Technical risk register** (ADR-020): 111 concern IDs tracked, 72 resolved, 31 open/deferred, 6 accepted by design
 
 ### Production Parity — ALL CRITERIA MET (2026-03-21)
 

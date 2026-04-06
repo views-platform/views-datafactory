@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-04)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 111 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 69 resolved, 35 open/deferred (2 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 111 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 72 resolved, 31 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -25,7 +25,7 @@
 | C-31 | 4 | Candidate source depends on annual source (incl. C-28) | 3rd shared function needed | Code cleanup |
 | C-44 | 4 | Harvest pipeline template is implicit — trigger fired, accepted at v1.0 | 5 sources exist | V-Dem readiness |
 | C-46 | 4 | No ledger write idempotency | External systems consume ledger | — |
-| C-32 | 4 | Source registry returns `Any` | Type errors in consumer code | — |
+| C-32 | — | Source registry returns `Any` | Accepted by design | — |
 | C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Server in production | Test infra |
 | C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment | UCDP resilience |
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
@@ -40,14 +40,11 @@
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
 | C-96 | 4 | fsspec does not auto-read `~/.netrc` | If fsspec adds netrc support | — |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
-| C-103 | 4 | Feature name uniqueness not enforced in CompilationConfig | Two FeatureSpecs share same name | — |
 | C-104 | 4 | Date string format assumed YYYY-MM-DD throughout | New data source with different format | V-Dem readiness |
 | C-105 | 4 | Assembly mmap write is not atomic | Disk fills during assembly step | — |
 | C-106 | 4 | `_source_version` parsing assumes dotted-integer format | Non-numeric version segments | V-Dem readiness |
 | C-108 | 4 | Parquet and zarr exports serve different feature sets | Consumer expects parity | — |
 | C-109 | 4 | Advisory file locks (fcntl) don't work across NFS | Pipeline migrates to network FS | — |
-| C-110 | 4 | Strategic doc test/concern counts drift across commits | Next strategic docs update | — |
-| C-111 | 4 | Typo in test class name `TestXarrayConstruction` | Next test file edit | — |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -128,10 +125,6 @@ All five harvesters follow config->fetch->validate->compare->archive->store->pro
 `append_ledger_entry()` has no dedup key. Process crash after append but before caller return causes duplicate on retry. Ledger readers tolerate duplicates. **Trigger: consider when ledger is consumed by external systems requiring exactly-once semantics.**
 **Source:** Kleppmann (expert review 6)
 
-### C-32: Source registry returns `Any` — [DEFER]
-`fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Consumers can't rely on the return type. **Trigger: consider `SourceResult` union if type errors appear in consumer code.**
-**Source:** GoF, Hickey (expert review 5)
-
 ### C-29: No end-to-end integration test — [DEFER]
 Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
 **Note (2026-04-04):** Trigger condition met — server in production at 204.168.219.108. Accepted at v1.0 scope: integration test covers the critical harvest→compile path, `verify_remote.py` validates the deployed output (10/10 checks). Reassess before V-Dem.
@@ -189,10 +182,6 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Source:** Falsification audit 2026-04-01 (F2)
 
-### C-103: Feature name uniqueness not enforced in CompilationConfig — [DEFER]
-`CompilationConfig` accepts any tuple of `FeatureSpec` instances without checking name uniqueness. If two specs share a name, `grid.npy` has distinct columns but `export_zarr.py` creates one xarray variable per name — the second silently overwrites the first, losing data. Current feature set (6 UCDP features) has no duplicates. **Trigger: add validation to `CompilationConfig.__post_init__` when feature set grows or user-defined features are supported.**
-**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 16)
-
 ### C-104: Date string format assumed YYYY-MM-DD throughout temporal pipeline — [DEFER]
 `_parse_month_index()`, `_month_first_day()`, and `_months_between()` in `grid_compilation.py` and `temporal_distribution.py` all split date strings on `"-"` and extract year/month by position. No format validation at the ingestion boundary. A new data source producing ISO 8601 with time components (e.g., `2023-03-15T00:00:00`) would partially parse but `_months_between` output wouldn't round-trip. UCDP consistently uses `YYYY-MM-DD`. **Trigger: add format validation when integrating V-Dem, ACLED, or any non-UCDP source.**
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 5)
@@ -212,14 +201,6 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10)
-
-### C-110: Strategic doc test/concern counts drift across commits — [DEFER]
-`rd_roadmap04.md` and `product_development_plan03.md` contain hardcoded test counts and concern tallies (e.g., "388 tests", "67 resolved"). These go stale as tests/concerns are added in subsequent commits within the same PR. Current state: docs say 388 tests but suite has 410; docs say 67 resolved but register says 69. **Trigger: update counts in next strategic docs refresh.**
-**Source:** PR #6 review 2026-04-06
-
-### C-111: Typo in test class name `TestXarrayConstruction` — [DEFER]
-`tests/test_export_zarr_logic.py:57` has class `TestXarrayConstruction` (missing 't' in Construction). Does not affect test discovery or correctness. **Trigger: fix on next edit to test_export_zarr_logic.py.**
-**Source:** PR #6 review 2026-04-06
 
 ---
 
@@ -244,3 +225,7 @@ Every module independently calls `append_ledger_entry()` with its own format. A 
 ### C-07: Frozen dataclass pattern repeated
 7 config classes follow the same frozen-dataclass-with-`__post_init__` pattern. No shared Protocol or base. A declarative validation approach or `ValidatedConfig` Protocol would reduce duplication. Accepted: explicit repetition is simple and readable.
 **Source:** Hickey
+
+### C-32: Source registry returns `Any`
+`fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Sources, consolidators, and builders are intentionally heterogeneous — each has a different signature. The three strategy registries (aggregation, survivorship, temporal_distribution) already use precise types. Forcing a protocol on the heterogeneous registries adds complexity without benefit — no consumer code has hit type errors. **Accepted: heterogeneous signatures are by design.**
+**Source:** GoF, Hickey (expert review 5). Reclassified 2026-04-06.

@@ -55,7 +55,7 @@ class TestCoordinateComputation:
 
 
 class TestXarrayConstruction:
-    """xarray Dataset assembly from grid arrays."""
+    """xarray Dataset construction from grid arrays."""
 
     def test_dataset_dims_match_grid(self) -> None:
         """Dataset dimensions match input grid shape."""

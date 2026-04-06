@@ -30,6 +30,7 @@ Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, 
 
 - Guarantees immutability (frozen dataclass)
 - Guarantees features are non-empty (`__post_init__` validation)
+- Guarantees feature names are unique (`__post_init__` validation)
 - Guarantees all field names are explicit — column mappings (`lat_field`, `lon_field`, `date_field`) are declared in config, never hardcoded in the compiler
 - Guarantees grid and temporal configs use standard defaults when not overridden
 - Provides default features: `FeatureSpec("event_count", "count")` and `FeatureSpec("fatalities", "sum_best")`
@@ -47,7 +48,7 @@ Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, 
 - `ledger_path`: Path for provenance JSONL ledger
 - `lat_field`, `lon_field`, `date_field`: Column names in the source Parquet
 
-Empty `features` causes immediate `ValueError`.
+Empty `features` causes immediate `ValueError`. Duplicate feature names cause immediate `ValueError`.
 
 ---
 
@@ -61,6 +62,7 @@ Empty `features` causes immediate `ValueError`.
 ## 6. Failure Modes and Loudness
 
 - `ValueError` on empty `features` tuple
+- `ValueError` on duplicate feature names
 - `AttributeError` on any attempt to mutate fields (frozen)
 - Source file existence is NOT checked — `FileNotFoundError` is raised later by `compile_grid`
 
@@ -114,6 +116,12 @@ cfg = CompilationConfig(
 ```python
 # WRONG: Empty features — will raise ValueError
 CompilationConfig(source_path=path, features=())
+
+# WRONG: Duplicate feature names — will raise ValueError
+CompilationConfig(source_path=path, features=(
+    FeatureSpec("event_count", "count"),
+    FeatureSpec("event_count", "sum_best"),  # duplicate name
+))
 
 # WRONG: Inferring features from Parquet columns
 features = [(col, "count") for col in table.column_names]  # Violates ADR-003
