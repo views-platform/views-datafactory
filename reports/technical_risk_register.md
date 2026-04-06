@@ -72,23 +72,23 @@ Items that should be resolved together:
 ## Tier 2 — Fix Before Sharing Server Access
 
 ### C-84: Server runs everything as root — [DEFER]
-All pipeline operations, git, and Caddy configuration run as `root` on the Hetzner server. No separation of privileges. A mistake as root can destroy the OS. IT head explicitly advised "limit who can sudo." **Trigger: create a non-root service account (e.g., `views-deploy`) before granting anyone else server access.**
+All pipeline operations, git, and Caddy configuration run as `root` on the Hetzner server. No separation of privileges. A mistake as root can destroy the OS. IT head explicitly advised "limit who can sudo." **Trigger: create a non-root service account (e.g., `views-deploy`) before granting anyone else server access.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.1.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
 
 ### C-85: Personal GitHub SSH key on shared server — [DEFER]
-The server's SSH key (`/root/.ssh/id_ed25519`) is registered on Simon's personal GitHub account. If another user gets root access, they effectively have Simon's GitHub credentials for all repos. **Trigger: replace with a repo-scoped deploy key before granting second user access.**
+The server's SSH key (`/root/.ssh/id_ed25519`) is registered on Simon's personal GitHub account. If another user gets root access, they effectively have Simon's GitHub credentials for all repos. **Trigger: replace with a repo-scoped deploy key before granting second user access.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.2.
 **Source:** Server setup 2026-03-28
 
 ### C-86: No deploy key — repo access tied to personal account — [DEFER]
-GitHub access from the server uses a personal SSH key, not a deploy key. Deploy keys are scoped to a single repo, are read-only by default, and don't grant access to other repos on the account. **Trigger: create a GitHub deploy key for `views-platform/views-datafactory` and remove the personal key from the server.**
+GitHub access from the server uses a personal SSH key, not a deploy key. Deploy keys are scoped to a single repo, are read-only by default, and don't grant access to other repos on the account. **Trigger: create a GitHub deploy key for `views-platform/views-datafactory` and remove the personal key from the server.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.2.
 **Source:** Server setup 2026-03-28
 
 ### C-87: No named user accounts on server — [DEFER]
-Only `root` exists. IT head advised: named accounts per person, no shared accounts, plus a break-glass emergency account with securely stored credentials. **Trigger: create named accounts before granting second user access.**
+Only `root` exists. IT head advised: named accounts per person, no shared accounts, plus a break-glass emergency account with securely stored credentials. **Trigger: create named accounts before granting second user access.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.3.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
 
 ### C-88: SSH not restricted to PRIO/Uppsala IPs — [DEFER]
-SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.**
+SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
 
 ---
