@@ -475,23 +475,174 @@ No server SSH access needed. No code changes needed per consumer.
 ### Server administrators (SSH)
 
 People who maintain the pipeline, debug failures, or update code.
-**Not yet set up for multiple users.** Current state: root-only.
+See **Phase 6: Server hardening** below for the multi-user setup.
 
-Before granting a second admin, resolve these (Tier 2 risk register):
-- **C-84:** Create `views-deploy` non-root service account for pipeline
-- **C-85/C-86:** Replace personal SSH key with repo-scoped deploy key
-- **C-87:** Named SSH accounts per person + break-glass emergency account
-- **C-88:** Restrict SSH to PRIO/Uppsala VPN IPs (Hetzner firewall)
+---
 
-These are documented in detail in the technical risk register and
-follow the PRIO IT head's security recommendations.
+## Phase 6: Server hardening (before 2nd user access)
+
+Resolves C-84 through C-88. Follow PRIO IT security guidance.
+All commands run as `root` on the Hetzner server.
+
+### 6.1 Create service account (C-84)
+
+The pipeline should not run as root. Create a dedicated service account:
+
+```bash
+# Create user with home directory, no password login
+useradd -m -s /bin/bash views-deploy
+
+# Copy the repo (excluding data — large, handled separately)
+rsync -a --exclude='data/' /root/views-datafactory/ /home/views-deploy/views-datafactory/
+
+# Move data directory to service account (avoids 35 GB duplication)
+mv /root/views-datafactory/data /home/views-deploy/views-datafactory/data
+chown -R views-deploy:views-deploy /home/views-deploy/views-datafactory
+
+# Install uv for the service account
+su - views-deploy -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
+
+# Copy environment (UCDP_API_TOKEN) to service account's profile
+echo 'export UCDP_API_TOKEN="<token>"' >> /home/views-deploy/.profile
+
+# Copy deploy tag
+cp /root/.views-deploy-tag /home/views-deploy/.views-deploy-tag
+chown views-deploy:views-deploy /home/views-deploy/.views-deploy-tag
+
+# Update Caddy symlinks to point to new location
+ln -sf /home/views-deploy/views-datafactory/data/assembled/grid.zarr /srv/views-data/grid.zarr
+ln -sf /home/views-deploy/views-datafactory/data/compiled/dataframe.parquet /srv/views-data/dataframe.parquet
+chmod o+x /home/views-deploy  # Allow Caddy to traverse
+
+# Migrate cron from root to views-deploy
+crontab -u views-deploy -e
+# Add: 0 0 21 * * cd /home/views-deploy/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+
+# Remove the old root cron entry
+crontab -e  # Remove the pipeline line
+```
+
+Verify: `su - views-deploy -c "cd views-datafactory && uv run pytest"` — 410 tests pass.
+
+### 6.2 Deploy key for GitHub (C-85, C-86)
+
+Replace the personal SSH key with a repo-scoped deploy key:
+
+```bash
+# Generate a new key as the service account
+su - views-deploy
+ssh-keygen -t ed25519 -C "views-deploy@views-datafactory-00" -f ~/.ssh/id_ed25519 -N ""
+cat ~/.ssh/id_ed25519.pub
+exit
+```
+
+Then on GitHub:
+1. Go to `views-platform/views-datafactory` → Settings → Deploy keys
+2. Add the public key, title: `views-datafactory-00 (views-deploy)`
+3. Leave "Allow write access" **unchecked** (read-only — the server only needs `git fetch --tags` and `git checkout`)
+4. Save
+
+```bash
+# Test as views-deploy
+su - views-deploy -c "ssh -T git@github.com"
+# Should say: "You've successfully authenticated..."
+
+# Remove the personal key from root
+rm /root/.ssh/id_ed25519 /root/.ssh/id_ed25519.pub
+```
+
+**Important:** The deploy key is scoped to this single repo. It cannot
+access any other repository on the `views-platform` organization or
+Simon's personal account.
+
+### 6.3 Named user accounts (C-87)
+
+Create named accounts for each administrator:
+
+```bash
+# For each admin (example: simon, colleague)
+useradd -m -s /bin/bash simon
+useradd -m -s /bin/bash <colleague-username>
+
+# Add to sudo group
+usermod -aG sudo simon
+usermod -aG sudo <colleague-username>
+
+# Add their SSH public keys
+mkdir -p /home/simon/.ssh
+echo "<simon-public-key>" >> /home/simon/.ssh/authorized_keys
+chmod 700 /home/simon/.ssh
+chmod 600 /home/simon/.ssh/authorized_keys
+chown -R simon:simon /home/simon/.ssh
+
+# Repeat for each admin
+
+# Create break-glass emergency account
+useradd -m -s /bin/bash emergency
+usermod -aG sudo emergency
+# Set a strong password (store securely, e.g., PRIO password manager)
+passwd emergency
+```
+
+After verifying named accounts work:
+```bash
+# Disable root SSH login
+sed -i 's/^PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+systemctl restart sshd
+```
+
+**Test before disabling root:** SSH in with a named account, verify
+`sudo` works, then disable root login.
+
+### 6.4 SSH IP restriction (C-88)
+
+Restrict SSH to PRIO and Uppsala VPN IP ranges via Hetzner firewall:
+
+**Option A: Hetzner Cloud Firewall (recommended)**
+
+1. Hetzner Console → Firewalls → Create Firewall
+2. Name: `views-datafactory-ssh`
+3. Inbound rules:
+   - SSH (port 22): Allow from PRIO VPN range (get from IT)
+   - SSH (port 22): Allow from Uppsala VPN range (get from IT)
+   - HTTP (port 80): Allow from any (data consumers)
+   - HTTPS (port 443): Allow from any (for when domain is added)
+4. Apply to server `views-datafactory-00`
+
+**Option B: ufw on the server (fallback)**
+
+```bash
+ufw allow from <prio-vpn-cidr> to any port 22
+ufw allow from <uppsala-vpn-cidr> to any port 22
+ufw allow 80/tcp    # HTTP for data consumers
+ufw allow 443/tcp   # HTTPS for future domain
+ufw default deny incoming
+ufw enable
+```
+
+**Get the IP ranges from PRIO IT before configuring.** Test SSH from
+a whitelisted IP before applying the deny-all default.
+
+### 6.5 Verification checklist
+
+After completing all hardening steps:
+
+- [ ] Pipeline runs as `views-deploy`, not root
+- [ ] `crontab -u views-deploy -l` shows the monthly cron
+- [ ] `ssh -T git@github.com` works as `views-deploy` (deploy key)
+- [ ] `/root/.ssh/id_ed25519` no longer exists (personal key removed)
+- [ ] Named accounts can SSH and sudo
+- [ ] Root SSH login disabled (`PermitRootLogin no`)
+- [ ] Break-glass `emergency` account works
+- [ ] SSH from non-whitelisted IP is blocked
+- [ ] `verify_remote.py` passes 10/10 (data serving unaffected)
+- [ ] `cat /home/views-deploy/.views-deploy-tag` returns `v1.1.0`
 
 ---
 
 ## Next steps (when ready)
 
 - **Add data consumers:** See access model above — Caddyfile + netrc
-- **Add server admins:** Resolve C-84 through C-88 first
 - **Get a domain name:** Switch Caddy to Option A for automatic HTTPS
 - **Monitor health remotely:** `ssh server 'cd views-datafactory && uv run python scripts/check_health.py --json'`
 - **Change update frequency:** Edit the cron schedule (e.g., weekly: `0 3 * * 1`)

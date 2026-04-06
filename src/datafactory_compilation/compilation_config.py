@@ -70,5 +70,11 @@ class CompilationConfig:
             err_msg = "features must be non-empty"
             logger.error(err_msg)
             raise ValueError(err_msg)
+        names = [f.name for f in self.features]
+        if len(names) != len(set(names)):
+            dupes = sorted({n for n in names if names.count(n) > 1})
+            err_msg = f"duplicate feature names: {dupes}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         # source_path is validated at compile time (FileNotFoundError),
         # not at config construction time — the file may not exist yet.

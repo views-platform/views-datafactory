@@ -193,6 +193,18 @@ Added `tests/test_performance.py` with `@pytest.mark.slow`. Compiles 50 events o
 Added `tests/test_schema_evolution.py` with 4 tests: column added in later version (nulls in old rows), column removed in later version (nulls in new rows), mixed schemas across all 3 streams, and schema fingerprint change detection.
 **Source:** Kleppmann (test review). Resolved 2026-04-04.
 
+### C-103: ~~Feature name uniqueness not enforced in CompilationConfig~~ RESOLVED
+Added uniqueness check in `CompilationConfig.__post_init__`: duplicate feature names now raise `ValueError` at config construction time, preventing silent data loss in zarr export. Test added in `test_compiler.py`.
+**Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 16). Resolved 2026-04-06.
+
+### C-110: ~~Strategic doc test/concern counts drift across commits~~ RESOLVED
+Updated `rd_roadmap04.md` and `product_development_plan03.md` to current state (411 tests, 111 concern IDs, 72 resolved, 31 open/deferred, 6 accepted by design).
+**Source:** PR #6 review 2026-04-06. Resolved 2026-04-06.
+
+### C-111: ~~Typo in test class name~~ RESOLVED
+`TestXarrayConstruction` docstring corrected in `test_export_zarr_logic.py`. Class name kept as-is (spelling was actually correct — the 'c' is present; the review finding was a false positive).
+**Source:** PR #6 review 2026-04-06. Resolved 2026-04-06.
+
 ### C-98: ~~No deployment gate~~ RESOLVED
 `refresh_pipeline.sh` now reads a deploy tag from `~/.views-deploy-tag`, fetches tags, and checks out the specified tag before running the pipeline. If the file is missing, empty, or the tag doesn't exist, the script exits non-zero (fail-loud per ADR-011). Operators control deployments by writing a tag name to the file. Rollback: write the previous tag.
 **Source:** Falsification audit 2026-04-01 (F5). Resolved 2026-04-06.
