@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-04)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 68 resolved, 34 open/deferred (2 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 69 resolved, 33 open/deferred (2 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -40,7 +40,6 @@
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
 | C-96 | 4 | fsspec does not auto-read `~/.netrc` | If fsspec adds netrc support | — |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
-| C-98 | 4 | No deployment gate — git pull deploys branch tip | Before 2nd maintainer pushes | — |
 | C-103 | 4 | Feature name uniqueness not enforced in CompilationConfig | Two FeatureSpecs share same name | — |
 | C-104 | 4 | Date string format assumed YYYY-MM-DD throughout | New data source with different format | V-Dem readiness |
 | C-105 | 4 | Assembly mmap write is not atomic | Disk fills during assembly step | — |
@@ -187,10 +186,6 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 ### C-97: Basic auth + Caddy scalability ceiling at ~30-50 users — [DEFER]
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Source:** Falsification audit 2026-04-01 (F2)
-
-### C-98: No deployment gate — [DEFER]
-`git pull` on the Hetzner server deploys whatever is at the tip of the tracked branch. No tags, no release process, no rollback mechanism. A broken commit pushed to development is one `git pull` away from running on the data server. **Trigger: implement tag-based checkout in `refresh_pipeline.sh` before second maintainer pushes to development.**
-**Source:** Falsification audit 2026-04-01 (F5)
 
 ### C-103: Feature name uniqueness not enforced in CompilationConfig — [DEFER]
 `CompilationConfig` accepts any tuple of `FeatureSpec` instances without checking name uniqueness. If two specs share a name, `grid.npy` has distinct columns but `export_zarr.py` creates one xarray variable per name — the second silently overwrites the first, losing data. Current feature set (6 UCDP features) has no duplicates. **Trigger: add validation to `CompilationConfig.__post_init__` when feature set grows or user-defined features are supported.**
