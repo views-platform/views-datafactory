@@ -193,6 +193,10 @@ Added `tests/test_performance.py` with `@pytest.mark.slow`. Compiles 50 events o
 Added `tests/test_schema_evolution.py` with 4 tests: column added in later version (nulls in old rows), column removed in later version (nulls in new rows), mixed schemas across all 3 streams, and schema fingerprint change detection.
 **Source:** Kleppmann (test review). Resolved 2026-04-04.
 
+### C-89: ~~No formal SLO for data freshness~~ RESOLVED
+`check_health.py` now defines `FRESHNESS_SLO_HOURS = 168` (7 days, per ADR-018) as a named constant. Export freshness is checked against the zarr `export_timestamp` attr and reported in both human and `--json` output. `verify_remote.py` check 5 now computes and displays export age, warning on SLO breach. Consumers can programmatically verify freshness via `check_health.py --json | jq .export_slo_met`.
+**Source:** DDIA Ch.1 pp.13-14, Ch.2 pp.41-42, Ch.8 pp.237-240. Resolved 2026-04-06.
+
 ### C-103: ~~Feature name uniqueness not enforced in CompilationConfig~~ RESOLVED
 Added uniqueness check in `CompilationConfig.__post_init__`: duplicate feature names now raise `ValueError` at config construction time, preventing silent data loss in zarr export. Test added in `test_compiler.py`.
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 16). Resolved 2026-04-06.

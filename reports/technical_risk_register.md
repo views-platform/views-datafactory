@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-04)
+**Date:** 2026-03-17 (updated 2026-04-06)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 111 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 72 resolved, 31 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 111 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 73 resolved, 30 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -35,7 +35,6 @@
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
 | C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed | — |
 | C-60 | 4 | Health check logic untested (incl. C-107) | check_health.py modified | Test infra |
-| C-89 | 4 | No formal SLO for data freshness | Before second consumer | — |
 | C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED | V-Dem readiness |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
 | C-96 | 4 | fsspec does not auto-read `~/.netrc` | If fsspec adds netrc support | — |
@@ -161,10 +160,6 @@ Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filt
 ### C-60: Health check logic untested — [DEFER]
 `check_health.py` (236 LOC) has no test verifying output parsing with stale/missing/failing ledgers. A bug here could mask pipeline failures or produce false "all healthy" reports. **Trigger: add mock-ledger tests when check_health.py is modified.**
 **Source:** Nygard (test review), repo assimilation 2026-04-04 (incorporates former C-107)
-
-### C-89: No formal SLO for data freshness — [DEFER]
-ADR-018 defines a 7-day staleness threshold as policy, but no mechanism checks or reports whether data meets the target. Consumers can't programmatically verify freshness. Kleppmann (Ch.1 pp.13-14) distinguishes SLAs (contractual, with consequences) from SLOs (internal targets), arguing both should use percentiles not averages. Ch.2 pp.41-42 defines SLOs as measurable targets. Ch.8 pp.237-240 frames bounded staleness as a snapshot isolation trade-off — our threshold is a guideline, not a measurable contract. **Trigger: define measurable SLO before second consumer.**
-**Source:** DDIA Ch.1 pp.13-14, Ch.2 pp.41-42, Ch.8 pp.237-240.
 
 ### C-91: No pipeline duration tracking — [DEFER]
 A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. Kleppmann (Ch.1 p.13) argues performance should be measured as a distribution (percentiles, not averages) and tracked over time. Ch.8 pp.281-283 notes that timeouts are the only reliable fault detector — without duration tracking, a pipeline that silently doubles in runtime is indistinguishable from one that's about to fail. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**

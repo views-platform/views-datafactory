@@ -150,7 +150,7 @@ The primary researcher can rely on the system for daily work.
 | Non-root service account | `ps -u views-deploy` shows pipeline process | Procedure documented |
 | Deploy key for GitHub | `/home/views-deploy/.ssh/` has deploy key, not personal key | Procedure documented |
 | Named server accounts | `getent passwd simon colleague-name` exists | Procedure documented |
-| Freshness SLO defined | zarr `export_timestamp` checked by consumer / monitoring | Open |
+| Freshness SLO defined | `check_health.py --json \| jq .export_slo_met` returns true | **Done** (FRESHNESS_SLO_HOURS=168) |
 
 ### v2.0 — Institutional / scaled deployment
 
@@ -181,7 +181,7 @@ Meets institutional audit and compliance requirements for 50+ users.
 | 9 | Restrict SSH to PRIO/Uppsala IPs | 1h | C-88 | v1.1 | Blocked on IT CIDRs |
 | 10 | Create `views-deploy` non-root service account | 2h | C-84 | v1.1 | Procedure documented |
 | 11 | Replace personal SSH key with deploy key + named accounts | 2h | C-85/86/87 | v1.1 | Procedure documented |
-| 12 | Define measurable freshness SLO | 2h | C-89 | v1.1 | Open — code-actionable |
+| ~~12~~ | ~~Define measurable freshness SLO~~ | ~~2h~~ | C-89 | v1.1 | **Done** (2026-04-06) |
 | 13 | Migrate to OAuth2 (forward_auth + oauth2-proxy) | 1-2w | C-97 | v2.0 | — |
 | 14 | Per-user audit trail | 1w | C-97 | v2.0 | — |
 | 15 | Circuit breaker for upstream APIs | 1d | C-70 | v2.0 | — |
