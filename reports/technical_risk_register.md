@@ -200,7 +200,7 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10). DDIA Ch.7 pp.234-236, Ch.8 pp.301-303.
 
 ### C-112: Duplicate dimensionality validation across adapter files — [DEFER]
-The `_validate_dimensions()` helper in `grid_to_dataframe.py`, `grid_to_feature_frame.py`, and `feature_frame.py` contains identical logic (check ndim == 3, verify shape matches config). Three copies of ~10 lines. Not dangerous — the logic is simple and stable — but a maintenance concern if the grid contract (cells, time, features) ever changes. **Trigger: extract a shared validator into `datafactory_adapters` when the next adapter refactor occurs.**
+The dimensionality validation helper in `grid_to_dataframe.py`, `grid_to_feature_frame.py`, and `feature_frame.py` contains identical logic (check ndim == 3, verify shape matches config). Three copies of ~10 lines. Not dangerous — the logic is simple and stable — but a maintenance concern if the grid contract (cells, time, features) ever changes. **Trigger: extract a shared validator into `datafactory_adapters` when the next adapter refactor occurs.**
 **Source:** Tech debt cleanup 2026-04-06
 
 ### C-113: Inconsistent HTTP timeout values across sources — [DEFER]
