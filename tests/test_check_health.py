@@ -1,24 +1,20 @@
-"""Tests for scripts/check_health.py — resolves C-60.
+"""Tests for datafactory_provenance.health — resolves C-60.
 
 Covers the three core functions that assess pipeline health:
-_read_last_entries, _report_ledger, and _check_export_freshness.
+read_last_entries, report_ledger, and check_export_freshness.
 """
 
 from __future__ import annotations
 
-import importlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Import the script module via importlib to avoid mutating sys.path.
-_SCRIPTS = Path(__file__).parent.parent / "scripts"
-_spec = importlib.util.spec_from_file_location(
-    "check_health", _SCRIPTS / "check_health.py"
+from datafactory_provenance.health import (
+    check_export_freshness,
+    read_last_entries,
+    report_ledger,
 )
-assert _spec and _spec.loader
-check_health = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(check_health)
 
 # ── Helpers ──────────────────────────────────────────────
 
@@ -48,7 +44,7 @@ RECENT_TS = "2026-04-06T12:00:00+00:00"  # 24h ago
 STALE_TS = "2026-03-20T12:00:00+00:00"  # 18 days ago
 
 
-# ── _read_last_entries ───────────────────────────────────
+# ── read_last_entries ────────────────────────────────────
 
 
 class TestReadLastEntries:
@@ -57,7 +53,7 @@ class TestReadLastEntries:
         ledger = tmp_path / "ledger.jsonl"
         entries = [{"i": i} for i in range(10)]
         _write_ledger(ledger, entries)
-        result = check_health._read_last_entries(ledger, n=3)
+        result = read_last_entries(ledger, n=3)
         assert len(result) == 3
         # Last entries first (reversed order)
         assert result[0]["i"] == 9
@@ -66,11 +62,11 @@ class TestReadLastEntries:
     def test_empty_file(self, tmp_path: Path) -> None:
         ledger = tmp_path / "ledger.jsonl"
         ledger.write_text("")
-        assert check_health._read_last_entries(ledger) == []
+        assert read_last_entries(ledger) == []
 
     def test_missing_file(self, tmp_path: Path) -> None:
         ledger = tmp_path / "nonexistent.jsonl"
-        assert check_health._read_last_entries(ledger) == []
+        assert read_last_entries(ledger) == []
 
     def test_corrupt_lines_skipped(self, tmp_path: Path) -> None:
         ledger = tmp_path / "ledger.jsonl"
@@ -79,7 +75,7 @@ class TestReadLastEntries:
             "NOT JSON\n"
             '{"b": 2}\n'
         )
-        result = check_health._read_last_entries(ledger, n=5)
+        result = read_last_entries(ledger, n=5)
         assert len(result) == 2
         assert result[0]["b"] == 2
         assert result[1]["a"] == 1
@@ -87,11 +83,11 @@ class TestReadLastEntries:
     def test_blank_lines_skipped(self, tmp_path: Path) -> None:
         ledger = tmp_path / "ledger.jsonl"
         ledger.write_text('{"a": 1}\n\n\n{"b": 2}\n\n')
-        result = check_health._read_last_entries(ledger, n=5)
+        result = read_last_entries(ledger, n=5)
         assert len(result) == 2
 
 
-# ── _report_ledger ───────────────────────────────────────
+# ── report_ledger ────────────────────────────────────────
 
 
 class TestReportLedger:
@@ -99,19 +95,19 @@ class TestReportLedger:
     def test_ok_for_recent_success(self, tmp_path: Path) -> None:
         ledger = tmp_path / "ledger.jsonl"
         _write_ledger(ledger, [_make_entry(RECENT_TS)])
-        result = check_health._report_ledger("test", ledger, NOW)
+        result = report_ledger("test", ledger, NOW)
         assert result["status"] == "OK"
         assert result["name"] == "test"
 
     def test_stale_for_old_success(self, tmp_path: Path) -> None:
         ledger = tmp_path / "ledger.jsonl"
         _write_ledger(ledger, [_make_entry(STALE_TS)])
-        result = check_health._report_ledger("test", ledger, NOW)
+        result = report_ledger("test", ledger, NOW)
         assert result["status"] == "STALE"
 
     def test_no_data_for_missing_ledger(self, tmp_path: Path) -> None:
         ledger = tmp_path / "missing.jsonl"
-        result = check_health._report_ledger("test", ledger, NOW)
+        result = report_ledger("test", ledger, NOW)
         assert result["status"] == "NO DATA"
 
     def test_failing_when_all_failed(self, tmp_path: Path) -> None:
@@ -121,7 +117,7 @@ class TestReportLedger:
             for _ in range(5)
         ]
         _write_ledger(ledger, entries)
-        result = check_health._report_ledger("test", ledger, NOW)
+        result = report_ledger("test", ledger, NOW)
         assert result["status"] == "FAILING"
 
     def test_ok_when_no_outcome_field(self, tmp_path: Path) -> None:
@@ -129,7 +125,7 @@ class TestReportLedger:
         ledger = tmp_path / "ledger.jsonl"
         entry = {"timestamp": RECENT_TS, "content_digest": "abc"}
         _write_ledger(ledger, [entry])
-        result = check_health._report_ledger("test", ledger, NOW)
+        result = report_ledger("test", ledger, NOW)
         assert result["status"] == "OK"
 
     def test_recent_failures_counted(self, tmp_path: Path) -> None:
@@ -140,19 +136,19 @@ class TestReportLedger:
             _make_entry(RECENT_TS, outcome="failed"),
         ]
         _write_ledger(ledger, entries)
-        result = check_health._report_ledger("test", ledger, NOW)
+        result = report_ledger("test", ledger, NOW)
         assert result["status"] == "OK"
         assert "2 recent failures" in result["detail"]
 
     def test_version_and_digest_returned(self, tmp_path: Path) -> None:
         ledger = tmp_path / "ledger.jsonl"
         _write_ledger(ledger, [_make_entry(RECENT_TS, version="25.1")])
-        result = check_health._report_ledger("test", ledger, NOW)
+        result = report_ledger("test", ledger, NOW)
         assert result["version"] == "25.1"
         assert result["digest"] == "abc123"
 
 
-# ── _check_export_freshness ──────────────────────────────
+# ── check_export_freshness ───────────────────────────────
 
 
 class TestCheckExportFreshness:
@@ -163,7 +159,7 @@ class TestCheckExportFreshness:
         (zarr / ".zattrs").write_text(
             json.dumps({"export_timestamp": RECENT_TS})
         )
-        result = check_health._check_export_freshness(zarr, NOW)
+        result = check_export_freshness(zarr, NOW)
         assert result["export_slo_met"] is True
         assert result["export_age_hours"] > 0
 
@@ -173,12 +169,12 @@ class TestCheckExportFreshness:
         (zarr / ".zattrs").write_text(
             json.dumps({"export_timestamp": STALE_TS})
         )
-        result = check_health._check_export_freshness(zarr, NOW)
+        result = check_export_freshness(zarr, NOW)
         assert result["export_slo_met"] is False
 
     def test_missing_zarr(self, tmp_path: Path) -> None:
         zarr = tmp_path / "nonexistent.zarr"
-        result = check_health._check_export_freshness(zarr, NOW)
+        result = check_export_freshness(zarr, NOW)
         assert result["export_slo_met"] is False
         assert result["export_age_hours"] == -1
 
@@ -186,7 +182,7 @@ class TestCheckExportFreshness:
         zarr = tmp_path / "grid.zarr"
         zarr.mkdir()
         (zarr / ".zattrs").write_text(json.dumps({"crs": "EPSG:4326"}))
-        result = check_health._check_export_freshness(zarr, NOW)
+        result = check_export_freshness(zarr, NOW)
         assert result["export_slo_met"] is False
         assert "missing" in result["detail"]
 
@@ -194,6 +190,6 @@ class TestCheckExportFreshness:
         zarr = tmp_path / "grid.zarr"
         zarr.mkdir()
         (zarr / ".zattrs").write_text("NOT JSON")
-        result = check_health._check_export_freshness(zarr, NOW)
+        result = check_export_freshness(zarr, NOW)
         assert result["export_slo_met"] is False
         assert result["export_age_hours"] == -1

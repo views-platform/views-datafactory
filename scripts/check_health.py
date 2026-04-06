@@ -21,168 +21,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Freshness SLO: maximum acceptable age of exported data (ADR-018).
-# Monthly pipeline runs on the 21st. 7 days (168h) allows one missed
-# cycle before data is flagged as stale.
-FRESHNESS_SLO_HOURS = 168
-
-
-def _read_last_entries(
-    ledger_path: Path, n: int = 5
-) -> list[dict]:
-    """Read last N entries from a JSONL ledger."""
-    if not ledger_path.exists():
-        return []
-    lines = ledger_path.read_text().strip().splitlines()
-    entries = []
-    for line in reversed(lines):
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            entries.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-        if len(entries) >= n:
-            break
-    return entries
-
-
-def _report_ledger(
-    name: str, ledger_path: Path, now: datetime
-) -> dict:
-    """Report health for one ledger."""
-    entries = _read_last_entries(ledger_path, n=10)
-
-    if not entries:
-        return {
-            "name": name,
-            "status": "NO DATA",
-            "detail": f"Ledger not found: {ledger_path}",
-        }
-
-    # Find last success. Some ledgers (consolidation, viewpoint,
-    # compilation) don't have an "outcome" field — entries only
-    # exist for successful operations (failures raise exceptions).
-    last_success = None
-    for entry in entries:
-        outcome = entry.get("outcome")
-        if outcome is None or outcome in (
-            "success", "unchanged", "cached"
-        ):
-            last_success = entry
-            break
-
-    # Find recent failures
-    recent_failures = [
-        e for e in entries
-        if e.get("outcome") == "failed"
-    ]
-
-    if last_success:
-        ts_str = last_success.get("timestamp", "")
-        try:
-            ts = datetime.fromisoformat(ts_str)
-            age = now - ts
-            age_hours = age.total_seconds() / 3600
-            age_str = (
-                f"{age_hours:.0f}h ago"
-                if age_hours < 48
-                else f"{age_hours / 24:.0f}d ago"
-            )
-        except (ValueError, TypeError):
-            age_str = "unknown"
-            age_hours = -1
-
-        status = "OK" if age_hours < FRESHNESS_SLO_HOURS else "STALE"
-        detail = (
-            f"Last success: {ts_str[:19]} ({age_str})"
-        )
-        if recent_failures:
-            detail += (
-                f" | {len(recent_failures)} recent failures"
-            )
-
-        return {
-            "name": name,
-            "status": status,
-            "detail": detail,
-            "version": last_success.get("version", ""),
-            "digest": last_success.get(
-                "content_digest",
-                last_success.get("output_digest", ""),
-            ),
-        }
-
-    return {
-        "name": name,
-        "status": "FAILING",
-        "detail": (
-            f"No successful entries in last 10. "
-            f"{len(recent_failures)} failures."
-        ),
-    }
-
-
-def _check_export_freshness(
-    zarr_path: Path, now: datetime
-) -> dict:
-    """Check export_timestamp in zarr attrs against SLO."""
-    zattrs_path = zarr_path / ".zattrs"
-    if not zattrs_path.exists():
-        return {
-            "export_timestamp": None,
-            "export_age_hours": -1,
-            "export_slo_met": False,
-            "detail": f"No zarr store at {zarr_path}",
-        }
-
-    try:
-        attrs = json.loads(zattrs_path.read_text())
-    except (json.JSONDecodeError, OSError) as e:
-        return {
-            "export_timestamp": None,
-            "export_age_hours": -1,
-            "export_slo_met": False,
-            "detail": f"Cannot read .zattrs: {e}",
-        }
-
-    ts_str = attrs.get("export_timestamp")
-    if not ts_str:
-        return {
-            "export_timestamp": None,
-            "export_age_hours": -1,
-            "export_slo_met": False,
-            "detail": "export_timestamp missing from zarr attrs",
-        }
-
-    try:
-        ts = datetime.fromisoformat(ts_str)
-        age_hours = (now - ts).total_seconds() / 3600
-    except (ValueError, TypeError):
-        return {
-            "export_timestamp": ts_str,
-            "export_age_hours": -1,
-            "export_slo_met": False,
-            "detail": f"Cannot parse timestamp: {ts_str}",
-        }
-
-    slo_met = age_hours < FRESHNESS_SLO_HOURS
-    age_str = (
-        f"{age_hours:.0f}h ago"
-        if age_hours < 48
-        else f"{age_hours / 24:.0f}d ago"
-    )
-    return {
-        "export_timestamp": ts_str,
-        "export_age_hours": round(age_hours, 1),
-        "export_slo_met": slo_met,
-        "detail": (
-            f"Exported {ts_str[:19]} ({age_str})"
-            f" — SLO {FRESHNESS_SLO_HOURS}h: "
-            f"{'MET' if slo_met else 'BREACHED'}"
-        ),
-    }
+from datafactory_provenance.health import (
+    FRESHNESS_SLO_HOURS,
+    check_export_freshness,
+    report_ledger,
+)
 
 
 def main() -> int:
@@ -260,20 +103,18 @@ def main() -> int:
     results = []
     any_issues = False
     for name, path in ledgers.items():
-        result = _report_ledger(name, path, now)
+        result = report_ledger(name, path, now)
         results.append(result)
         if result["status"] not in ("OK", "NO DATA"):
             any_issues = True
 
     # Export freshness check (ADR-018 SLO)
     zarr_path = args.data_dir / "assembled" / "grid.zarr"
-    freshness = _check_export_freshness(zarr_path, now)
+    freshness = check_export_freshness(zarr_path, now)
     if not freshness["export_slo_met"]:
         any_issues = True
 
     if args.json:
-        import json as json_mod
-
         output = {
             "timestamp": now.isoformat(),
             "healthy": not any_issues,
@@ -282,7 +123,7 @@ def main() -> int:
             "export_slo_met": freshness["export_slo_met"],
             "sources": results,
         }
-        print(json_mod.dumps(output, indent=2))
+        print(json.dumps(output, indent=2))
         return 1 if any_issues else 0
 
     print("=" * 60)
