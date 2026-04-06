@@ -184,12 +184,13 @@ Gate: meets institutional audit and compliance requirements.
 ```
 DONE:  Phase 0-2c (UCDP production parity)
        Phase 2d  (data serving infrastructure)
+       Direction 4, Phase DH-1 -- v1.0 deployment hardening (tagged v1.0.0)
        |
-NOW:   Direction 4, Phase DH-1 -- v1.0 deployment hardening
+NOW:   Direction 4, Phase DH-2 -- v1.1 multi-user hardening (tagged v1.1.0,
+         deployment gate done, hardening documented, blocked on domain + IT)
        Direction 2 -- source investigation (V-Dem, ACLED, WID)
        |
-NEXT:  Direction 4, Phase DH-2 -- v1.1 multi-user hardening
-       Phase 5 -- V-Dem integration (country-level broadcast)
+NEXT:  Phase 5 -- V-Dem integration (country-level broadcast)
        Phase 6 -- ACLED integration (second conflict source)
        |
 LATER: Direction 4, Phase DH-3 -- v2.0 institutional
