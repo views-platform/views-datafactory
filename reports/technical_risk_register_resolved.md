@@ -229,6 +229,30 @@ Extracted `_retry_or_raise()` helper in `retry.py`. Both the `HTTPError` and `Re
 `ucdp_annual.py:295`, `ucdp_candidate.py:286`, and `ucdp_dot9.py:301` each had identical 6-line blocks extracting min/max date strings from event lists with `# type: ignore[type-var]`. Extracted `date_range()` helper to `event_validation.py` — returns typed `tuple[str | None, str | None]`, eliminates all 3 type ignores.
 **Source:** Tech debt cleanup 2026-04-02
 
+### C-60: ~~Health check logic untested~~ RESOLVED
+Added 17 tests in `tests/test_check_health.py` covering `_read_last_entries` (normal, empty, missing, corrupt), `_report_ledger` (OK, STALE, FAILING, NO DATA), and `_check_export_freshness` (SLO met, breached, missing zarr, corrupt attrs).
+**Source:** Nygard (test review), repo assimilation 2026-04-04. Resolved 2026-04-07.
+
+### C-104: ~~Date string format assumed YYYY-MM-DD~~ RESOLVED
+Added strict `_validate_date_str()` with regex `^\d{4}-\d{2}-\d{2}$` to `temporal_distribution.py` and `grid_compilation.py`. Rejects ISO datetime, slash format, missing leading zeros. 6 tests added.
+**Source:** Repo assimilation 2026-04-04. Resolved 2026-04-07.
+
+### C-105: ~~Assembly mmap write is not atomic~~ RESOLVED
+`assemble_grid.py` now writes to `grid.npy.tmp` then `os.rename()` on success. Pre-flight disk space check via `shutil.disk_usage()`. Try/finally cleanup of `.tmp` on failure. 2 tests added.
+**Source:** Repo assimilation 2026-04-04. Resolved 2026-04-07. DDIA Ch.7 pp.223-226, Ch.10 p.413.
+
+### C-106: ~~Version parsing assumes dotted-integer format~~ RESOLVED
+`survivorship.py:_parse_version()` now catches `ValueError` and returns `(0,)` with a warning. Non-numeric versions sort below all numeric ones — never preferred in survivorship. 7 tests added.
+**Source:** Repo assimilation 2026-04-04. Resolved 2026-04-07.
+
+### C-112: ~~Duplicate dimensionality validation across adapter files~~ RESOLVED
+Extracted `validate_grid_pgids()` and `validate_pgids()` into `datafactory_adapters/_validation.py`. Three call sites now use the shared helpers. 4 tests added.
+**Source:** Tech debt cleanup 2026-04-06. Resolved 2026-04-07.
+
+### C-113: ~~Inconsistent HTTP timeout values~~ RESOLVED
+Documented timeout policy in ADR-018 (per-payload-size tiers). Added inline comments to all 6 config classes referencing ADR-018. Actual values: UCDP 30s, PRIO-GRID static 60s, shapefile 120s, GAUL 300s, land mask 60s.
+**Source:** Tech debt cleanup 2026-04-06. Resolved 2026-04-07.
+
 ---
 
 ## Resolved Concerns (Early — Reference Table)

@@ -87,7 +87,7 @@ class GaulAdminConfig:
     ledger_path: Path = Path(
         "provenance/gaul_admin/ingestion_ledger.jsonl"
     )
-    timeout: int = 300
+    timeout: int = 300  # zipped shapefiles ~50 MB each (ADR-018)
     variables: tuple[str, ...] | None = field(default=None)
 
     def __post_init__(self) -> None:

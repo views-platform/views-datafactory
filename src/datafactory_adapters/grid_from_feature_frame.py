@@ -34,9 +34,9 @@ def feature_frame_to_grid(
         np.ndarray of shape [T, H, W, F] with dtype float32.
         Cells not present in the FeatureFrame are set to 0.0.
     """
-    if pgids.ndim != 2:
-        msg = f"pgids must be 2D [H, W], got {pgids.ndim}D"
-        raise ValueError(msg)
+    from datafactory_adapters._validation import validate_pgids
+
+    validate_pgids(pgids)
     n_h, n_w = pgids.shape
     n_f = ff.n_features
 
