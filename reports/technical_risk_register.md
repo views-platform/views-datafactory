@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-06)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 111 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 73 resolved, 30 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 113 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 73 resolved, 32 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -44,6 +44,8 @@
 | C-106 | 4 | `_source_version` parsing assumes dotted-integer format | Non-numeric version segments | V-Dem readiness |
 | C-108 | 4 | Parquet and zarr exports serve different feature sets | Consumer expects parity | — |
 | C-109 | 4 | Advisory file locks (fcntl) don't work across NFS | Pipeline migrates to network FS | — |
+| C-112 | 4 | Duplicate dimensionality validation across adapter files | Next adapter refactor | Code cleanup |
+| C-113 | 4 | Inconsistent HTTP timeout values across sources | Before adding V-Dem or ACLED | V-Dem readiness |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -57,11 +59,11 @@ Items that should be resolved together:
 | Package | Items | Trigger |
 |---------|-------|---------|
 | **Server hardening** | C-84, C-85, C-86, C-87, C-88 | Before 2nd user access |
-| **V-Dem readiness** | C-44, C-91, C-104, C-106 | Before V-Dem integration (C-102 resolved) |
+| **V-Dem readiness** | C-44, C-91, C-104, C-106, C-113 | Before V-Dem integration (C-102 resolved) |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
 | **Test infrastructure** | C-29, C-60, C-78, C-79 | Test suite growth |
-| **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80 resolved) |
+| **Code cleanup** | C-31, C-93, C-112 | Next refactor opportunity (C-80 resolved) |
 
 ---
 
@@ -196,6 +198,14 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10). DDIA Ch.7 pp.234-236, Ch.8 pp.301-303.
+
+### C-112: Duplicate dimensionality validation across adapter files — [DEFER]
+The dimensionality validation helper in `grid_to_dataframe.py`, `grid_to_feature_frame.py`, and `feature_frame.py` contains identical logic (check ndim == 3, verify shape matches config). Three copies of ~10 lines. Not dangerous — the logic is simple and stable — but a maintenance concern if the grid contract (cells, time, features) ever changes. **Trigger: extract a shared validator into `datafactory_adapters` when the next adapter refactor occurs.**
+**Source:** Tech debt cleanup 2026-04-06
+
+### C-113: Inconsistent HTTP timeout values across sources — [DEFER]
+Each harvester source defines its own HTTP timeout: UCDP annual uses 30s, UCDP candidate 30s, UCDP .9 uses 60s, PRIO-GRID static 120s, GAUL 90s. These values evolved independently and are not documented as intentional policy. For current sources this works — PRIO-GRID and GAUL payloads are legitimately larger. But adding a new source requires guessing a timeout. **Trigger: before adding V-Dem or ACLED, define a timeout policy (e.g., per-payload-size tiers) and document it in ADR-018 or a dedicated ADR.**
+**Source:** Tech debt cleanup 2026-04-06
 
 ---
 
