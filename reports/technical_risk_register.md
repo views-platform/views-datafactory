@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-04)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 67 resolved, 35 open/deferred (2 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 109 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 68 resolved, 34 open/deferred (2 with fired triggers accepted at v1.0), 5 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -19,7 +19,6 @@
 | C-87 | 2 | No named user accounts on server | Before 2nd user access | Server hardening |
 | C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment | Server hardening |
 | C-21 | 3 | No characterization tests for migration | Next migration batch planned | — |
-| C-102 | 3 | No tests for assembly, zarr export, or dataframe export scripts | Script modified or new source type | V-Dem readiness |
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
 | C-45 | 4 | No Parquet schema evolution strategy | UCDP removes/renames a field | UCDP schema |
@@ -61,7 +60,7 @@ Items that should be resolved together:
 | Package | Items | Trigger |
 |---------|-------|---------|
 | **Server hardening** | C-84, C-85, C-86, C-87, C-88 | Before 2nd user access |
-| **V-Dem readiness** | C-44, C-91, C-102, C-104, C-106 | Before V-Dem integration |
+| **V-Dem readiness** | C-44, C-91, C-104, C-106 | Before V-Dem integration (C-102 resolved) |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
 | **Test infrastructure** | C-29, C-60, C-78, C-79 | Test suite growth |
@@ -98,10 +97,6 @@ SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
 **Source:** Feathers
-
-### C-102: No tests for assembly, zarr export, or dataframe export scripts — [DEFER]
-`assemble_grid.py` (211 LOC), `export_zarr.py` (211 LOC), and `export_dataframe.py` (141 LOC) have no unit tests. These scripts contain production logic for dimension ordering, channel placement, mmap writes, zarr chunking, and xarray Dataset construction. Errors here corrupt the served data silently. Currently validated only by manual `verify_remote.py` runs or full pipeline execution. **Trigger: add tests when script logic is modified or a new source type is added.**
-**Source:** Repo assimilation 2026-04-04 (Phase 6)
 
 ---
 
