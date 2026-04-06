@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from collections.abc import Callable
 
 from datafactory_provenance.registry import Registry
@@ -26,6 +27,22 @@ STRATEGIES = _registry.entries
 __all__ = ["get_distribution", "even_split", "ceil_split"]
 
 _SUMMARY_DATE_PREC: int = 5  # date_prec value indicating multi-month span
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _validate_date_str(date_str: str) -> str:
+    """Validate date string is strictly YYYY-MM-DD.
+
+    Raises:
+        ValueError: For non-conforming strings (e.g., ISO datetime,
+            slash-separated, missing leading zeros).
+    """
+    if not _DATE_RE.match(date_str):
+        err_msg = (
+            f"Expected YYYY-MM-DD date format, got {date_str!r}"
+        )
+        raise ValueError(err_msg)
+    return date_str
 
 
 def get_distribution(name: str) -> Callable[[dict], list[dict]]:
@@ -42,6 +59,7 @@ def _month_first_day(date_str: str) -> str:
 
     Example: "2023-03-15" → "2023-03-01"
     """
+    _validate_date_str(date_str)
     parts = date_str.split("-")
     return f"{parts[0]}-{parts[1]}-01"
 
@@ -52,6 +70,8 @@ def _months_between(start_str: str, end_str: str) -> list[str]:
     Example: "2023-01-15" to "2023-03-31" → ["2023-01-01",
     "2023-02-01", "2023-03-01"]
     """
+    _validate_date_str(start_str)
+    _validate_date_str(end_str)
     start_parts = start_str.split("-")
     end_parts = end_str.split("-")
 

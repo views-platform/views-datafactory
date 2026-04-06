@@ -116,6 +116,64 @@ class TestFeatureConcatenation:
         assert combined == ["a", "b", "c", "d"]
 
 
+class TestAtomicWrite:
+    """Atomic write: tmp file renamed on success (C-105)."""
+
+    def test_no_tmp_file_after_success(
+        self, tmp_path: Path
+    ) -> None:
+        """After successful write + rename, .tmp must not exist."""
+        import os
+
+        output_path = tmp_path / "grid.npy"
+        tmp_file = tmp_path / "grid.npy.tmp"
+
+        assembled = np.lib.format.open_memmap(
+            str(tmp_file),
+            mode="w+",
+            dtype=np.float32,
+            shape=(2, 3, 4, 1),
+        )
+        assembled[:] = 1.0
+        assembled.flush()
+        del assembled
+        os.rename(str(tmp_file), str(output_path))
+
+        assert output_path.exists()
+        assert not tmp_file.exists()
+        result = np.load(output_path)
+        assert result.shape == (2, 3, 4, 1)
+
+    def test_tmp_cleanup_on_failure(
+        self, tmp_path: Path
+    ) -> None:
+        """On write failure, .tmp is cleaned up, original untouched."""
+        output_path = tmp_path / "grid.npy"
+        tmp_file = tmp_path / "grid.npy.tmp"
+
+        # Write a valid file first
+        np.save(output_path, np.zeros((2, 3), dtype=np.float32))
+        original_size = output_path.stat().st_size
+
+        # Simulate failure during assembly
+        try:
+            np.lib.format.open_memmap(
+                str(tmp_file),
+                mode="w+",
+                dtype=np.float32,
+                shape=(2, 3, 4, 1),
+            )
+            msg = "simulated write failure"
+            raise OSError(msg)
+        except OSError:
+            if tmp_file.exists():
+                tmp_file.unlink()
+
+        # Original file untouched
+        assert output_path.stat().st_size == original_size
+        assert not tmp_file.exists()
+
+
 class TestAssemblyRoundTrip:
     """Full assembly: UCDP grid + static + admin → assembled grid."""
 

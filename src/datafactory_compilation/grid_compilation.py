@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -31,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 DATASET_ID = "compilation"
 
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
 
 def _parse_month_index(
     date_str: str,
@@ -41,6 +44,9 @@ def _parse_month_index(
 
     Returns None if the date is outside the temporal range or malformed.
     """
+    if not _DATE_RE.match(date_str):
+        logger.warning("Malformed date string: %r", date_str)
+        return None
     try:
         parts = date_str.split("-")
         year = int(parts[0])
