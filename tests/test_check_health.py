@@ -6,16 +6,19 @@ _read_last_entries, _report_ledger, and _check_export_freshness.
 
 from __future__ import annotations
 
+import importlib
 import json
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Import the script module directly (guarded by if __name__)
+# Import the script module via importlib to avoid mutating sys.path.
 _SCRIPTS = Path(__file__).parent.parent / "scripts"
-sys.path.insert(0, str(_SCRIPTS))
-
-import check_health  # noqa: E402
+_spec = importlib.util.spec_from_file_location(
+    "check_health", _SCRIPTS / "check_health.py"
+)
+assert _spec and _spec.loader
+check_health = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(check_health)
 
 # ── Helpers ──────────────────────────────────────────────
 

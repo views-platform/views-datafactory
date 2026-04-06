@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
+__all__ = ["validate_grid_pgids", "validate_pgids"]
+
 
 def validate_grid_pgids(
     grid: np.ndarray, pgids: np.ndarray
