@@ -15,11 +15,13 @@ import pytest
 
 from datafactory_viewpoint.builders.ucdp_v1 import build_ucdp_v1
 from datafactory_viewpoint.survivorship import (
+    _parse_version,
     annual_wins,
     dot9_wins,
     get_survivorship,
 )
 from datafactory_viewpoint.temporal_distribution import (
+    _validate_date_str,
     ceil_split,
     even_split,
     get_distribution,
@@ -196,6 +198,49 @@ class TestSurvivorshipGreen:
         assert fn is dot9_wins
 
 
+# ---- Version Parsing: C-106 ----
+
+
+class TestParseVersionGreen:
+
+    def test_dotted_integers(self) -> None:
+        assert _parse_version("25.1") == (25, 1)
+
+    def test_three_part(self) -> None:
+        assert _parse_version("25.0.12") == (25, 0, 12)
+
+    def test_single_integer(self) -> None:
+        assert _parse_version("25") == (25,)
+
+
+class TestParseVersionRed:
+
+    def test_non_numeric_returns_zero(self) -> None:
+        assert _parse_version("25.1-beta") == (0,)
+
+    def test_empty_string_returns_zero(self) -> None:
+        assert _parse_version("") == (0,)
+
+    def test_non_numeric_sorts_below_numeric(self) -> None:
+        """Non-numeric versions are never preferred."""
+        assert _parse_version("beta") < _parse_version("1.0")
+
+    def test_survivorship_with_non_numeric(self) -> None:
+        """annual_wins handles non-numeric version gracefully."""
+        versions = [
+            _make_consolidated_event(
+                source_type="candidate",
+                source_version="25.1-beta",
+            ),
+            _make_consolidated_event(
+                source_type="candidate",
+                source_version="25.0.3",
+            ),
+        ]
+        winner = annual_wins(versions)
+        assert winner["_source_version"] == "25.0.3"
+
+
 # ---- Temporal Distribution: Green ----
 
 
@@ -283,6 +328,43 @@ class TestTemporalDistributionRed:
         )
         with pytest.raises(ValueError, match="zero months"):
             even_split(event)
+
+
+# ---- Date Validation: C-104 ----
+
+
+class TestDateValidation:
+
+    def test_valid_date_passes(self) -> None:
+        assert _validate_date_str("2023-03-15") == "2023-03-15"
+
+    def test_iso_datetime_rejected(self) -> None:
+        with pytest.raises(ValueError, match="YYYY-MM-DD"):
+            _validate_date_str("2023-03-15T00:00:00")
+
+    def test_slash_format_rejected(self) -> None:
+        with pytest.raises(ValueError, match="YYYY-MM-DD"):
+            _validate_date_str("2023/03/15")
+
+    def test_missing_leading_zero_rejected(self) -> None:
+        with pytest.raises(ValueError, match="YYYY-MM-DD"):
+            _validate_date_str("2023-3-15")
+
+    def test_month_first_day_rejects_bad_format(self) -> None:
+        from datafactory_viewpoint.temporal_distribution import (
+            _month_first_day,
+        )
+
+        with pytest.raises(ValueError, match="YYYY-MM-DD"):
+            _month_first_day("2023-03-15T12:00:00")
+
+    def test_months_between_rejects_bad_format(self) -> None:
+        from datafactory_viewpoint.temporal_distribution import (
+            _months_between,
+        )
+
+        with pytest.raises(ValueError, match="YYYY-MM-DD"):
+            _months_between("2023/01/15", "2023-03-31")
 
 
 # ---- Ceil Split (Production Parity): Green ----

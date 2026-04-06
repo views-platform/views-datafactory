@@ -51,7 +51,7 @@ class ShapefileHarvesterConfig:
     ledger_path: Path = Path(
         "provenance/priogrid/ingestion_ledger.jsonl"
     )
-    timeout: int = 120
+    timeout: int = 120  # zipped shapefile ~20 MB (ADR-018)
     max_retries: int = 3
 
     def __post_init__(self) -> None:

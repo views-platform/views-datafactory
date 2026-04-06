@@ -61,18 +61,9 @@ def _flatten_grid(
         ValueError: If grid is not 4D, pgids is not 2D, or
             spatial dimensions don't match.
     """
-    if grid.ndim != 4:
-        msg = f"grid must be 4D [T, H, W, C], got {grid.ndim}D"
-        raise ValueError(msg)
-    if pgids.ndim != 2:
-        msg = f"pgids must be 2D [H, W], got {pgids.ndim}D"
-        raise ValueError(msg)
-    if grid.shape[1:3] != pgids.shape:
-        msg = (
-            f"grid spatial dims {grid.shape[1:3]} "
-            f"!= pgids shape {pgids.shape}"
-        )
-        raise ValueError(msg)
+    from datafactory_adapters._validation import validate_grid_pgids
+
+    validate_grid_pgids(grid, pgids)
     n_t, n_h, n_w, _ = grid.shape
     month_ids = _compute_month_ids(time_steps, month_id_epoch)
 

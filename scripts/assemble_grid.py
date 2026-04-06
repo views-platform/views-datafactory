@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -208,41 +210,62 @@ def main() -> int:
     # peak memory is ~150 MB instead of 4.6 GB.
     args.output_dir.mkdir(parents=True, exist_ok=True)
     output_path = args.output_dir / "grid.npy"
-    assembled = np.lib.format.open_memmap(
-        str(output_path),
-        mode="w+",
-        dtype=np.float32,
-        shape=(n_t, n_h, n_w, n_total),
-    )
+    tmp_path = args.output_dir / "grid.npy.tmp"
 
-    # Copy UCDP channels
-    assembled[:, :, :, :n_ucdp] = ucdp_grid
-    del ucdp_grid  # free memory
+    # Pre-flight disk space check (C-105)
+    expected_bytes = n_t * n_h * n_w * n_total * 4
+    free_bytes = shutil.disk_usage(args.output_dir).free
+    if free_bytes < expected_bytes * 1.2:
+        print(
+            f"FAIL: insufficient disk space "
+            f"({free_bytes / 1e9:.1f} GB free, "
+            f"need {expected_bytes * 1.2 / 1e9:.1f} GB)"
+        )
+        return 1
 
-    # Fill static channels (broadcast in-place)
-    for i, spatial in enumerate(static_spatial):
-        # spatial is [H, W] — assign to every time step
-        assembled[:, :, :, n_ucdp + i] = spatial
+    try:
+        assembled = np.lib.format.open_memmap(
+            str(tmp_path),
+            mode="w+",
+            dtype=np.float32,
+            shape=(n_t, n_h, n_w, n_total),
+        )
 
-    del static_spatial  # free memory
+        # Copy UCDP channels
+        assembled[:, :, :, :n_ucdp] = ucdp_grid
+        del ucdp_grid  # free memory
 
-    # Fill admin channels (broadcast in-place)
-    for i, spatial in enumerate(admin_spatial):
-        assembled[:, :, :, n_ucdp + n_static + i] = spatial
+        # Fill static channels (broadcast in-place)
+        for i, spatial in enumerate(static_spatial):
+            # spatial is [H, W] — assign to every time step
+            assembled[:, :, :, n_ucdp + i] = spatial
 
-    del admin_spatial  # free memory
+        del static_spatial  # free memory
 
-    print(f"Assembled shape: {assembled.shape}")
-    print(f"  [T={assembled.shape[0]}, "
-          f"H={assembled.shape[1]}, "
-          f"W={assembled.shape[2]}, "
-          f"F={assembled.shape[3]}]")
-    print(f"Features ({len(all_features)}):")
-    for i, name in enumerate(all_features):
-        print(f"  {i:2d}: {name}")
+        # Fill admin channels (broadcast in-place)
+        for i, spatial in enumerate(admin_spatial):
+            assembled[:, :, :, n_ucdp + n_static + i] = spatial
 
-    # Flush mmap to disk (file already exists from open_memmap)
-    assembled.flush()
+        del admin_spatial  # free memory
+
+        print(f"Assembled shape: {assembled.shape}")
+        print(f"  [T={assembled.shape[0]}, "
+              f"H={assembled.shape[1]}, "
+              f"W={assembled.shape[2]}, "
+              f"F={assembled.shape[3]}]")
+        print(f"Features ({len(all_features)}):")
+        for i, name in enumerate(all_features):
+            print(f"  {i:2d}: {name}")
+
+        # Flush mmap to disk, then atomic rename (C-105)
+        assembled.flush()
+        del assembled  # release mmap before rename
+        os.rename(str(tmp_path), str(output_path))
+    except BaseException:
+        # Clean up partial tmp file on any failure
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise
     np.save(args.output_dir / "pgids.npy", pgids)
     np.save(args.output_dir / "time_steps.npy", time_steps)
     (args.output_dir / "feature_names.json").write_text(
