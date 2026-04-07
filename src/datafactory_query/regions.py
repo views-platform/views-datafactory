@@ -25,12 +25,15 @@ _DEFAULT_GAUL_DIR = Path("data/raw/gaul_admin")
 # These match FAO GAUL 2024 naming conventions exactly.
 
 _AFRICA: list[str] = [
+    "Abyei",  # disputed (Sudan/South Sudan)
     "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso",
     "Burundi", "Cameroon", "Central African Republic", "Chad",
     "Comoros", "Congo", "Côte D'Ivoire",
     "Democratic Republic of the Congo", "Djibouti", "Egypt",
     "Equatorial Guinea", "Eritrea", "Eswatini", "Ethiopia",
     "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau",
+    "Hala'Ib Triangle",  # disputed (Egypt/Sudan)
+    "Ilemi Triangle",  # disputed (Kenya/South Sudan)
     "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar",
     "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco",
     "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda",
@@ -41,7 +44,7 @@ _AFRICA: list[str] = [
 ]
 
 _MIDDLE_EAST: list[str] = [
-    "Bahrain", "Iran (Islamic Republic Of)", "Iraq", "Israel",
+    "Iran (Islamic Republic Of)", "Iraq", "Israel",
     "Jordan", "Kuwait", "Lebanon", "Oman", "Palestine", "Qatar",
     "Saudi Arabia", "Syrian Arab Republic", "Türkiye",
     "United Arab Emirates", "Yemen",
@@ -52,7 +55,8 @@ _AMERICAS: list[str] = [
     "Bolivia (Plurinational State of)", "Brazil", "Canada",
     "Cayman Islands", "Chile", "Colombia", "Costa Rica", "Cuba",
     "Dominican Republic", "Ecuador", "El Salvador",
-    "Falkland Islands (Malvinas)", "French Guiana", "Guatemala",
+    "Falkland Islands (Malvinas)", "French Guiana",
+    "Greenland", "Guadeloupe", "Guatemala",
     "Guyana", "Haiti", "Honduras", "Jamaica", "Mexico",
     "Nicaragua", "Panama", "Paraguay", "Peru", "Puerto Rico",
     "Saint Vincent and the Grenadines", "Suriname",
@@ -63,16 +67,19 @@ _AMERICAS: list[str] = [
 ]
 
 _EUROPE: list[str] = [
-    "Albania", "Austria", "Belarus", "Belgium",
+    "Albania", "Armenia", "Austria", "Azerbaijan", "Belarus",
+    "Belgium",
     "Bosnia and Herzegovina", "Bulgaria", "Croatia", "Cyprus",
     "Czechia", "Denmark", "Estonia", "Finland", "France",
     "Georgia", "Germany", "Greece", "Hungary", "Iceland",
-    "Ireland", "Italy", "Jersey", "Kazakhstan", "Kyrgyzstan",
+    "Ireland", "Italy", "Jersey", "Kazakhstan", "Kuril Islands",
+    "Kyrgyzstan",
     "Latvia", "Lithuania", "Luxembourg", "Montenegro",
     "Netherlands (Kingdom of the)", "North Macedonia", "Norway",
     "Poland", "Portugal", "Republic of Moldova", "Romania",
     "Russian Federation", "Serbia", "Slovakia", "Slovenia",
-    "Spain", "Sweden", "Switzerland", "Tajikistan",
+    "Spain", "Svalbard and Jan Mayen Islands",
+    "Sweden", "Switzerland", "Tajikistan",
     "Turkmenistan",
     "Ukraine",
     "United Kingdom of Great Britain and Northern Ireland",
@@ -80,17 +87,22 @@ _EUROPE: list[str] = [
 ]
 
 _ASIA_OCEANIA: list[str] = [
-    "Afghanistan", "Bangladesh", "Bhutan", "Brunei Darussalam",
+    "Afghanistan", "Aksai Chin",  # disputed (China/India)
+    "Arunachal Pradesh",  # disputed (India/China)
+    "Australia",
+    "Bangladesh", "Bhutan", "Brunei Darussalam",
     "Cambodia", "China", "China, Hong Kong SAR", "Cook Islands",
-    "Democratic People's Republic of Korea", "Fiji", "India",
-    "Indonesia", "Japan", "Kiribati",
+    "Democratic People's Republic of Korea", "Fiji",
+    "French Polynesia", "India",
+    "Indonesia", "Jammu And Kashmir",  # disputed (India/Pakistan)
+    "Japan", "Kiribati",
     "Lao People's Democratic Republic", "Malaysia", "Maldives",
     "Marshall Islands", "Mongolia", "Myanmar", "Nepal",
     "New Caledonia", "New Zealand", "Pakistan", "Papua New Guinea",
     "Philippines", "Republic Of Korea", "Samoa",
     "Solomon Islands", "Sri Lanka",
     "Taiwan Province of China", "Thailand", "Timor-Leste",
-    "Vanuatu", "Viet Nam", "Australia",
+    "Vanuatu", "Viet Nam",
 ]
 
 REGIONS: dict[str, list[str]] = {
