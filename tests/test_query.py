@@ -324,6 +324,7 @@ def _make_assembled_zarr(
             "lon": lon,
             "pgid": (["lat", "lon"], pgids),
         },
+        attrs={"feature_order": feature_names},
     )
     ds.to_zarr(zarr_path, mode="w")
 
@@ -439,6 +440,55 @@ class TestLoadDatasetZarr:
         np.testing.assert_array_equal(
             ff_npy.y_features, ff_zarr.y_features,
         )
+
+    def test_zarr_feature_order_from_attrs(
+        self, tmp_path: Path,
+    ) -> None:
+        """feature_order attr controls column ordering."""
+        import xarray as xr
+
+        from datafactory_query.dataset import load_dataset
+
+        zarr_path = tmp_path / "grid.zarr"
+        gaul_dir = tmp_path / "gaul"
+
+        # Create zarr with reverse-alphabetical feature_order
+        n_t, n_h, n_w = 3, 3, 4
+        names = ["zz_last", "aa_first"]
+        time = np.array(
+            [f"2020-{m:02d}-01" for m in range(1, n_t + 1)],
+            dtype="datetime64[ns]",
+        )
+        lat = np.linspace(-89.75, 89.75, n_h)
+        lon = np.linspace(-179.75, 179.75, n_w)
+        pgids = np.arange(1, n_h * n_w + 1).reshape(n_h, n_w)
+        data_vars = {
+            n: (["time", "lat", "lon"],
+                np.full((n_t, n_h, n_w), i, dtype=np.float32))
+            for i, n in enumerate(names)
+        }
+        ds = xr.Dataset(
+            data_vars,
+            coords={
+                "time": time, "lat": lat, "lon": lon,
+                "pgid": (["lat", "lon"], pgids),
+            },
+            attrs={"feature_order": names},
+        )
+        ds.to_zarr(zarr_path, mode="w")
+        _make_gaul_parquets(gaul_dir)
+
+        ff = load_dataset(
+            region="global",
+            output_format="feature_frame",
+            data_dir=str(zarr_path),
+            gaul_dir=gaul_dir,
+        )
+        # Order matches attrs, not alphabetical
+        assert ff.feature_names == ["zz_last", "aa_first"]
+        # Values match: zz_last=0.0, aa_first=1.0
+        assert ff.y_features[0, 0] == 0.0
+        assert ff.y_features[0, 1] == 1.0
 
     def test_zarr_nonexistent_raises(self, tmp_path: Path) -> None:
         from datafactory_query.dataset import load_dataset

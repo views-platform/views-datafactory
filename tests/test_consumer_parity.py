@@ -15,6 +15,7 @@ Gated behind --run-consumer (requires assembled grid + reference parquet).
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -24,9 +25,18 @@ import pytest
 from datafactory_query import load_dataset
 
 # ── Paths ────────────────────────────────────────────────
+_DEFAULT_PARQUET = (
+    Path(__file__).resolve().parents[1]
+    / ".."
+    / "views-models"
+    / "models"
+    / "purple_alien"
+    / "data"
+    / "raw"
+    / "calibration_viewser_df.parquet"
+)
 PURPLE_ALIEN_PARQUET = Path(
-    "/home/simon/Documents/scripts/views_platform/views-models"
-    "/models/purple_alien/data/raw/calibration_viewser_df.parquet"
+    os.environ.get("PURPLE_ALIEN_PARQUET", str(_DEFAULT_PARQUET))
 )
 DATA_DIR = Path("data/assembled")
 GAUL_DIR = Path("data/raw/gaul_admin")

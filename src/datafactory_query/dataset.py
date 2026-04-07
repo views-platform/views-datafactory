@@ -36,9 +36,16 @@ def _is_remote(data_dir: Path | str) -> bool:
     return "://" in str(data_dir)
 
 
-def _is_zarr(data_dir: Path | str) -> bool:
-    """Check if data_dir points to a zarr store."""
-    return _is_remote(data_dir) or str(data_dir).endswith(".zarr")
+def _use_zarr_loader(data_dir: Path | str) -> bool:
+    """Check if data_dir should be loaded via the zarr backend.
+
+    True for local paths ending in .zarr or remote URLs with
+    .zarr in the path component.
+    """
+    s = str(data_dir)
+    if _is_remote(data_dir):
+        return ".zarr" in urlparse(s).path
+    return s.endswith(".zarr")
 
 
 def _resolve_storage_options(
@@ -58,7 +65,7 @@ def _resolve_storage_options(
 
     # Try ~/.netrc for credentials
     try:
-        from netrc import netrc
+        from netrc import NetrcParseError, netrc
 
         nrc = netrc(str(Path.home() / ".netrc"))
         creds = nrc.authenticators(parsed.hostname)
@@ -71,7 +78,7 @@ def _resolve_storage_options(
                     "auth": aiohttp.BasicAuth(login, password),
                 },
             }
-    except (FileNotFoundError, KeyError):
+    except (FileNotFoundError, KeyError, NetrcParseError):
         pass
 
     return {}
@@ -104,7 +111,14 @@ def _load_grid_from_zarr(
 
     pgids = ds["pgid"].values  # [H, W]
     time_steps = ds["time"].values.astype("datetime64[M]")  # [T]
-    feature_names = sorted(ds.data_vars)
+
+    # Preserve canonical feature order from attrs if available,
+    # otherwise fall back to sorted variable names.
+    attrs = ds.attrs
+    if "feature_order" in attrs:
+        feature_names = list(attrs["feature_order"])
+    else:
+        feature_names = sorted(ds.data_vars)
 
     # Stack feature variables into [T, H, W, F]
     grid = np.stack(
@@ -148,7 +162,7 @@ def _load_grid(
     Returns:
         (grid, pgids, time_steps, feature_names)
     """
-    if _is_zarr(data_dir):
+    if _use_zarr_loader(data_dir):
         storage_options = _resolve_storage_options(str(data_dir))
         return _load_grid_from_zarr(str(data_dir), storage_options)
     return _load_grid_from_npy(Path(data_dir))
@@ -170,15 +184,6 @@ def _resolve_feature_indices(
             raise ValueError(msg)
         indices.append(name_to_idx[f])
     return indices
-
-
-def _build_spatial_mask(
-    pgids: np.ndarray,
-    region_pgids: set[int],
-) -> np.ndarray:
-    """Build a boolean [H, W] mask for cells in the region."""
-    flat = np.isin(pgids.ravel(), np.array(sorted(region_pgids)))
-    return flat.reshape(pgids.shape)
 
 
 def load_dataset(
