@@ -285,3 +285,189 @@ class TestLoadDataset:
                 data_dir=tmp_path / "nonexistent",
                 gaul_dir=tmp_path,
             )
+
+
+# ── Zarr Loading ────────────────────────────────────────
+
+
+def _make_assembled_zarr(
+    zarr_path: Path,
+    n_t: int = 6,
+    n_h: int = 3,
+    n_w: int = 4,
+    n_f: int = 2,
+) -> None:
+    """Create a tiny zarr store matching production structure."""
+    import xarray as xr
+
+    time = np.array(
+        [f"2020-{m:02d}-01" for m in range(1, n_t + 1)],
+        dtype="datetime64[ns]",
+    )
+    lat = np.linspace(-89.75, 89.75, n_h)
+    lon = np.linspace(-179.75, 179.75, n_w)
+    pgids = np.arange(1, n_h * n_w + 1).reshape(n_h, n_w)
+
+    feature_names = [f"feat_{i}" for i in range(n_f)]
+    data_vars = {}
+    for f in feature_names:
+        data_vars[f] = (
+            ["time", "lat", "lon"],
+            np.ones((n_t, n_h, n_w), dtype=np.float32),
+        )
+
+    ds = xr.Dataset(
+        data_vars,
+        coords={
+            "time": time,
+            "lat": lat,
+            "lon": lon,
+            "pgid": (["lat", "lon"], pgids),
+        },
+    )
+    ds.to_zarr(zarr_path, mode="w")
+
+
+class TestLoadDatasetZarr:
+
+    def test_zarr_feature_frame(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        zarr_path = tmp_path / "grid.zarr"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_zarr(zarr_path)
+        _make_gaul_parquets(gaul_dir)
+
+        ff = load_dataset(
+            region="Testland",
+            start="2020-01",
+            end="2020-03",
+            output_format="feature_frame",
+            data_dir=str(zarr_path),
+            gaul_dir=gaul_dir,
+        )
+        assert isinstance(ff, FeatureFrame)
+        assert ff.n_features == 2
+        # 6 cells in Testland * 3 months = 18 rows
+        assert ff.n_rows == 18
+
+    def test_zarr_dataframe(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        zarr_path = tmp_path / "grid.zarr"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_zarr(zarr_path)
+        _make_gaul_parquets(gaul_dir)
+
+        df = load_dataset(
+            region="Testland",
+            start="2020-01",
+            end="2020-03",
+            output_format="dataframe",
+            data_dir=str(zarr_path),
+            gaul_dir=gaul_dir,
+        )
+        assert isinstance(df, pd.DataFrame)
+        assert len(df.columns) == 2
+        assert len(df) == 18
+
+    def test_zarr_temporal_subset(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        zarr_path = tmp_path / "grid.zarr"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_zarr(zarr_path)
+        _make_gaul_parquets(gaul_dir)
+
+        ff = load_dataset(
+            region="global",
+            start="2020-02",
+            end="2020-04",
+            output_format="feature_frame",
+            data_dir=str(zarr_path),
+            gaul_dir=gaul_dir,
+        )
+        # 12 cells (3x4) * 3 months = 36 rows
+        assert ff.n_rows == 36
+
+    def test_zarr_feature_subset(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        zarr_path = tmp_path / "grid.zarr"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_zarr(zarr_path, n_f=4)
+        _make_gaul_parquets(gaul_dir)
+
+        ff = load_dataset(
+            region="global",
+            features=["feat_0", "feat_2"],
+            output_format="feature_frame",
+            data_dir=str(zarr_path),
+            gaul_dir=gaul_dir,
+        )
+        assert ff.n_features == 2
+        assert ff.feature_names == ["feat_0", "feat_2"]
+
+    def test_zarr_matches_npy(self, tmp_path: Path) -> None:
+        """Zarr and npy paths produce identical output."""
+        from datafactory_query.dataset import load_dataset
+
+        npy_dir = tmp_path / "assembled"
+        zarr_path = tmp_path / "grid.zarr"
+        gaul_dir = tmp_path / "gaul"
+
+        _make_assembled_grid(npy_dir)
+        _make_assembled_zarr(zarr_path)
+        _make_gaul_parquets(gaul_dir)
+
+        ff_npy = load_dataset(
+            region="global",
+            output_format="feature_frame",
+            data_dir=npy_dir,
+            gaul_dir=gaul_dir,
+        )
+        ff_zarr = load_dataset(
+            region="global",
+            output_format="feature_frame",
+            data_dir=str(zarr_path),
+            gaul_dir=gaul_dir,
+        )
+
+        assert ff_npy.n_rows == ff_zarr.n_rows
+        assert ff_npy.n_features == ff_zarr.n_features
+        assert ff_npy.feature_names == ff_zarr.feature_names
+        np.testing.assert_array_equal(
+            ff_npy.y_features, ff_zarr.y_features,
+        )
+
+    def test_zarr_nonexistent_raises(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        with pytest.raises(FileNotFoundError, match="[Zz]arr"):
+            load_dataset(
+                data_dir=str(tmp_path / "nonexistent.zarr"),
+                gaul_dir=tmp_path,
+            )
+
+
+class TestIsRemote:
+
+    def test_http_url(self) -> None:
+        from datafactory_query.dataset import _is_remote
+
+        assert _is_remote("http://server/grid.zarr") is True
+
+    def test_https_url(self) -> None:
+        from datafactory_query.dataset import _is_remote
+
+        assert _is_remote("https://server/grid.zarr") is True
+
+    def test_path_object(self) -> None:
+        from datafactory_query.dataset import _is_remote
+
+        assert _is_remote(Path("data/assembled")) is False
+
+    def test_local_string(self) -> None:
+        from datafactory_query.dataset import _is_remote
+
+        assert _is_remote("/tmp/grid.zarr") is False

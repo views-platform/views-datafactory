@@ -2,6 +2,10 @@
 
 Loads a subset of the assembled grid by region, time range,
 and features, returning the requested output format.
+
+Supports both local npy directories and zarr stores (local or
+remote via HTTP). Pass a Path for npy, or a string ending in
+.zarr (local path or URL) for zarr access.
 """
 
 from __future__ import annotations
@@ -9,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
@@ -24,10 +29,96 @@ logger = logging.getLogger(__name__)
 _VALID_FORMATS = ("feature_frame", "dataframe")
 
 
-def _load_grid(
+def _is_remote(data_dir: Path | str) -> bool:
+    """Check if data_dir is a remote URL."""
+    if isinstance(data_dir, Path):
+        return False
+    return "://" in str(data_dir)
+
+
+def _is_zarr(data_dir: Path | str) -> bool:
+    """Check if data_dir points to a zarr store."""
+    return _is_remote(data_dir) or str(data_dir).endswith(".zarr")
+
+
+def _resolve_storage_options(
+    zarr_path: str,
+) -> dict | None:
+    """Build fsspec storage options for remote zarr access.
+
+    Reads credentials from ~/.netrc for HTTP URLs.
+    Returns None for local paths.
+    """
+    if not _is_remote(zarr_path):
+        return None
+
+    parsed = urlparse(zarr_path)
+    if parsed.scheme not in ("http", "https"):
+        return {}
+
+    # Try ~/.netrc for credentials
+    try:
+        from netrc import netrc
+
+        nrc = netrc(str(Path.home() / ".netrc"))
+        creds = nrc.authenticators(parsed.hostname)
+        if creds:
+            import aiohttp
+
+            login, _, password = creds
+            return {
+                "client_kwargs": {
+                    "auth": aiohttp.BasicAuth(login, password),
+                },
+            }
+    except (FileNotFoundError, KeyError):
+        pass
+
+    return {}
+
+
+def _load_grid_from_zarr(
+    zarr_path: str,
+    storage_options: dict | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
+    """Load assembled grid from a zarr store.
+
+    Args:
+        zarr_path: Local path or URL to zarr store.
+        storage_options: fsspec options (auth, etc.).
+
+    Returns:
+        (grid, pgids, time_steps, feature_names)
+    """
+    import xarray as xr
+
+    kwargs: dict = {}
+    if storage_options is not None:
+        kwargs["storage_options"] = storage_options
+
+    try:
+        ds = xr.open_zarr(zarr_path, **kwargs)
+    except (FileNotFoundError, ValueError, KeyError) as exc:
+        msg = f"Zarr store not found or invalid at {zarr_path}"
+        raise FileNotFoundError(msg) from exc
+
+    pgids = ds["pgid"].values  # [H, W]
+    time_steps = ds["time"].values.astype("datetime64[M]")  # [T]
+    feature_names = sorted(ds.data_vars)
+
+    # Stack feature variables into [T, H, W, F]
+    grid = np.stack(
+        [ds[f].values for f in feature_names], axis=-1,
+    ).astype(np.float32)
+
+    ds.close()
+    return grid, pgids, time_steps, feature_names
+
+
+def _load_grid_from_npy(
     data_dir: Path,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
-    """Load assembled grid + sidecars from disk.
+    """Load assembled grid + sidecars from npy files on disk.
 
     Returns:
         (grid, pgids, time_steps, feature_names)
@@ -47,6 +138,20 @@ def _load_grid(
         (data_dir / "feature_names.json").read_text()
     )
     return grid, pgids, time_steps, feature_names
+
+
+def _load_grid(
+    data_dir: Path | str,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
+    """Load assembled grid from npy directory or zarr store.
+
+    Returns:
+        (grid, pgids, time_steps, feature_names)
+    """
+    if _is_zarr(data_dir):
+        storage_options = _resolve_storage_options(str(data_dir))
+        return _load_grid_from_zarr(str(data_dir), storage_options)
+    return _load_grid_from_npy(Path(data_dir))
 
 
 def _resolve_feature_indices(
@@ -83,7 +188,7 @@ def load_dataset(
     end: str | int | None = None,
     features: list[str] | None = None,
     output_format: str = "feature_frame",
-    data_dir: Path = Path("data/assembled"),
+    data_dir: Path | str = Path("data/assembled"),
     gaul_dir: Path = Path("data/raw/gaul_admin"),
     month_id_epoch: int = 1980,
 ) -> FeatureFrame | pd.DataFrame:
@@ -104,7 +209,8 @@ def load_dataset(
             (dataset end).
         features: List of feature names to include. None = all.
         output_format: Output format: "feature_frame" or "dataframe".
-        data_dir: Path to assembled grid directory.
+        data_dir: Path to assembled grid directory (npy), or string
+            path/URL to a zarr store.
         gaul_dir: Path to GAUL admin Parquet files.
         month_id_epoch: Epoch for month_id encoding (default 1980
             = VIEWS convention).
