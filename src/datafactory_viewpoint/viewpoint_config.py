@@ -39,6 +39,15 @@ class ViewpointConfig:
     survivorship_strategy: str = "annual_wins"
     distribution_strategy: str = "even_split"
 
+    # Pre-processing
+    filter_stale_versions: bool = True
+
+    # Per-source-type distribution overrides.
+    # Keys: source type strings ("annual", "dot9", "candidate").
+    # Values: registered distribution strategy names.
+    # When None, distribution_strategy applies uniformly.
+    source_distribution_map: dict[str, str] | None = None
+
     # Filtering (applied after survivorship + distribution)
     # None means no filter; profiles set values for production parity
     min_priogrid_gid: int | None = None
@@ -71,3 +80,15 @@ class ViewpointConfig:
             )
             logger.error(err_msg)
             raise ValueError(err_msg) from exc
+        if self.source_distribution_map is not None:
+            for src, strat in self.source_distribution_map.items():
+                try:
+                    get_distribution(strat)
+                except KeyError as exc:
+                    err_msg = (
+                        f"Unknown distribution strategy "
+                        f"'{strat}' for source type "
+                        f"'{src}' in source_distribution_map"
+                    )
+                    logger.error(err_msg)
+                    raise ValueError(err_msg) from exc

@@ -253,6 +253,10 @@ Extracted `validate_grid_pgids()` and `validate_pgids()` into `datafactory_adapt
 Documented timeout policy in ADR-018 (per-payload-size tiers). Added inline comments to all 6 config classes referencing ADR-018. Actual values: UCDP 30s, PRIO-GRID static 60s, shapefile 120s, GAUL 300s, land mask 60s.
 **Source:** Tech debt cleanup 2026-04-06. Resolved 2026-04-07.
 
+### C-114: ~~`source_aware` distribution strategy was opaque routing~~ RESOLVED
+The `source_aware` strategy hardcoded routing logic (annual → date_end_only, everything else → ceil_split) inside a strategy function, making it invisible to config inspection. A researcher reading `distribution_strategy="source_aware"` had no way to know the routing without reading source code. Replaced by `source_distribution_map` config field on ViewpointConfig that makes the routing explicit and configurable. The `source_aware` strategy is deprecated (emits DeprecationWarning) but not removed. Production parity profile now declares `distribution_strategy="ceil_split", source_distribution_map={"annual": "date_end_only"}`.
+**Source:** Parity investigation 2026-04-08. Resolved 2026-04-08.
+
 ---
 
 ## Resolved Concerns (Early — Reference Table)

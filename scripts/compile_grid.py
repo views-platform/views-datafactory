@@ -111,7 +111,7 @@ def main() -> int:
                 {"type_of_violence": 1},
             ),
             FeatureSpec(
-                "ged_sb_best", "sum_best",
+                "ged_sb_best", "sum_field",
                 {"type_of_violence": 1},
             ),
             FeatureSpec(
@@ -119,7 +119,7 @@ def main() -> int:
                 {"type_of_violence": 2},
             ),
             FeatureSpec(
-                "ged_ns_best", "sum_best",
+                "ged_ns_best", "sum_field",
                 {"type_of_violence": 2},
             ),
             FeatureSpec(
@@ -127,7 +127,7 @@ def main() -> int:
                 {"type_of_violence": 3},
             ),
             FeatureSpec(
-                "ged_os_best", "sum_best",
+                "ged_os_best", "sum_field",
                 {"type_of_violence": 3},
             ),
         ),

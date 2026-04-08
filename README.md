@@ -193,7 +193,7 @@ views-datafactory/
 │   ├── datafactory_compilation/                      # Layer 4 — grid compilation
 │   │   ├── compilation_config.py                       CompilationConfig
 │   │   ├── grid_compilation.py                         compile_grid (main function)
-│   │   └── aggregation.py                              count, sum_best, max_best strategies
+│   │   └── aggregation.py                              count, sum_field, max_field strategies
 │   └── datafactory_adapters/                         # Consumer-facing conversions
 │       ├── feature_frame.py                            FeatureFrame dataclass
 │       ├── grid_to_dataframe.py                        Grid → pandas DataFrame

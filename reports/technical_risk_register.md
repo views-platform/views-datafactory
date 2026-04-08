@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-07)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 113 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 79 resolved, 26 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 115 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 80 resolved, 27 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 17 disagreements: 17 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -40,6 +40,7 @@
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
 | C-108 | 4 | Parquet and zarr exports serve different feature sets | Consumer expects parity | — |
 | C-109 | 4 | Advisory file locks (fcntl) don't work across NFS | Pipeline migrates to network FS | — |
+| C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -134,7 +135,8 @@ Rate-limit responses get the same retry treatment as server errors. No `Retry-Af
 **Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 p.281.
 
 ### C-74: CompilationConfig leaks strategy vocabulary — [DEFER]
-Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filter dict syntax. No IDE discoverability. **Trigger: consider enum-based strategy names if user confusion is observed.**
+Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and filter dict syntax. No IDE discoverability. **Trigger: consider enum-based strategy names if user confusion is observed.**
+**Note (2026-04-08):** Renamed from `sum_best`/`max_best` to `sum_field`/`max_field` to reflect configurable `value_field`. Old names registered as backward-compatible aliases.
 **Source:** Ousterhout (expert review #4)
 
 ### C-75: FeatureFrame is shallow — adds validation but little abstraction — [DEFER]
@@ -156,6 +158,10 @@ Callers must know magic strings (`"count"`, `"sum_best"`, `"max_best"`) and filt
 ### C-91: No pipeline duration tracking — [DEFER]
 A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. Kleppmann (Ch.1 p.13) argues performance should be measured as a distribution (percentiles, not averages) and tracked over time. Ch.8 pp.281-283 notes that timeouts are the only reliable fault detector — without duration tracking, a pipeline that silently doubles in runtime is indistinguishable from one that's about to fail. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**
 **Source:** DDIA Ch.1 p.13, Ch.8 pp.281-283.
+
+### C-115: Summary detection threshold (>= vs >) is architectural — [DEFER]
+The summary event detection formula uses `best >= span` (not strict `best > span`). This threshold is documented in ADR-023 as an architectural invariant matching VIEWSER's current GED_loader0 behavior. An older VIEWSER notebook (GED_loader2) used strict `>`. If UCDP changes their summary event definition or VIEWSER reverts to strict `>`, this invariant would need updating. **Trigger: UCDP changes summary event definition or VIEWSER changes detection threshold.**
+**Source:** Parity investigation 2026-04-08, notebook archaeology (GED_loader{0,1,2}.ipynb).
 
 ### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**

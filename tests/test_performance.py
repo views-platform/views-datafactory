@@ -82,7 +82,7 @@ class TestFullScaleCompilation:
             features=(
                 FeatureSpec("ged_sb_count", "count",
                             {"type_of_violence": 1}),
-                FeatureSpec("ged_sb_best", "sum_best",
+                FeatureSpec("ged_sb_best", "sum_field",
                             {"type_of_violence": 1}),
             ),
             output_dir=tmp_path / "compiled",

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG, GridConfig
 from datafactory_priogrid.temporal_config import TemporalConfig
@@ -27,6 +27,7 @@ class FeatureSpec:
     name: str
     strategy: str
     filter: dict[str, Any] = field(default_factory=dict)
+    value_field: str = "best"
 
 
 @dataclass(frozen=True)
@@ -53,7 +54,7 @@ class CompilationConfig:
     # Features to compute
     features: tuple[FeatureSpec, ...] = (
         FeatureSpec("event_count", "count"),
-        FeatureSpec("fatalities", "sum_best"),
+        FeatureSpec("fatalities", "sum_field"),
     )
 
     # Output
@@ -65,6 +66,14 @@ class CompilationConfig:
     lon_field: str = "longitude"
     date_field: str = "date_start"
 
+    # Output array parameters
+    output_dtype: str = "float32"
+    fill_value: float = 0.0
+
+    _ALLOWED_DTYPES: ClassVar[frozenset[str]] = frozenset({
+        "float16", "float32", "float64", "int32", "int64",
+    })
+
     def __post_init__(self) -> None:
         if not self.features:
             err_msg = "features must be non-empty"
@@ -74,6 +83,14 @@ class CompilationConfig:
         if len(names) != len(set(names)):
             dupes = sorted({n for n in names if names.count(n) > 1})
             err_msg = f"duplicate feature names: {dupes}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        if self.output_dtype not in self._ALLOWED_DTYPES:
+            err_msg = (
+                f"output_dtype must be one of "
+                f"{sorted(self._ALLOWED_DTYPES)}, "
+                f"got {self.output_dtype!r}"
+            )
             logger.error(err_msg)
             raise ValueError(err_msg)
         # source_path is validated at compile time (FileNotFoundError),

@@ -23,8 +23,11 @@ from datafactory_viewpoint.survivorship import (
 from datafactory_viewpoint.temporal_distribution import (
     _validate_date_str,
     ceil_split,
+    date_end_only,
     even_split,
+    floor_split,
     get_distribution,
+    source_aware,
 )
 from datafactory_viewpoint.viewpoint_config import ViewpointConfig
 
@@ -245,6 +248,43 @@ class TestParseVersionRed:
 
 
 class TestTemporalDistributionGreen:
+
+    def test_date_end_only_single_month(self) -> None:
+        event = _make_consolidated_event(
+            date_prec=1,
+            date_start="2023-06-15",
+            date_end="2023-06-15",
+        )
+        rows = date_end_only(event)
+        assert len(rows) == 1
+        assert rows[0]["date_month"] == "2023-06-01"
+        assert rows[0]["best"] == 10
+
+    def test_date_end_only_summary_not_spread(self) -> None:
+        """Summary events are NOT spread — all assigned to date_end."""
+        event = _make_consolidated_event(
+            date_prec=5,
+            date_start="1992-07-01",
+            date_end="1992-12-31",
+            best=6,
+        )
+        rows = date_end_only(event)
+        assert len(rows) == 1
+        assert rows[0]["date_month"] == "1992-12-01"
+        assert rows[0]["best"] == 6  # unchanged
+
+    def test_date_end_only_multimonth_not_spread(self) -> None:
+        """Multi-month span with date_prec!=5 still one row."""
+        event = _make_consolidated_event(
+            date_prec=2,
+            date_start="2023-01-29",
+            date_end="2023-02-02",
+            best=299,
+        )
+        rows = date_end_only(event)
+        assert len(rows) == 1
+        assert rows[0]["date_month"] == "2023-02-01"
+        assert rows[0]["best"] == 299
 
     def test_even_split_non_summary(self) -> None:
         event = _make_consolidated_event(
@@ -471,6 +511,128 @@ class TestCeilSplitGreen:
         assert fn is ceil_split
 
 
+# ---- Floor Split: Green ----
+
+
+class TestFloorSplitGreen:
+
+    def test_non_summary_single_row(self) -> None:
+        event = _make_consolidated_event(
+            date_start="2023-06-15",
+            date_end="2023-06-15",
+            best=5,
+        )
+        rows = floor_split(event)
+        assert len(rows) == 1
+        assert rows[0]["best"] == 5
+
+    def test_summary_3_months_floor(self) -> None:
+        """best=7, span=3 → 3 rows with floor(7/3)=2 each."""
+        event = _make_consolidated_event(
+            date_start="2023-01-15",
+            date_end="2023-03-31",
+            best=7,
+            low=4,
+            high=10,
+        )
+        rows = floor_split(event)
+        assert len(rows) == 3
+        assert rows[0]["best"] == 2  # floor(7/3) = 2
+        assert rows[0]["low"] == 1   # floor(4/3) = 1
+        assert rows[0]["high"] == 3  # floor(10/3) = 3
+
+    def test_exact_divisible_matches_ceil(self) -> None:
+        """best=300, span=3 → 100 each (floor == ceil)."""
+        event = _make_consolidated_event(
+            date_start="2023-01-01",
+            date_end="2023-03-31",
+            best=300,
+        )
+        rows = floor_split(event)
+        assert len(rows) == 3
+        assert rows[0]["best"] == 100
+
+    def test_get_floor_split_by_name(self) -> None:
+        fn = get_distribution("floor_split")
+        assert fn is floor_split
+
+
+# ---- Source-Aware Distribution: Green ----
+
+
+class TestSourceAwareGreen:
+
+    def test_annual_event_not_distributed(self) -> None:
+        """Annual source → date_end_only (no spreading)."""
+        event = _make_consolidated_event(
+            source_type="annual",
+            date_start="2023-01-15",
+            date_end="2023-03-31",
+            best=300,
+        )
+        rows = source_aware(event)
+        assert len(rows) == 1
+        assert rows[0]["date_month"] == "2023-03-01"
+        assert rows[0]["best"] == 300  # unchanged
+
+    def test_dot9_summary_gets_ceil_split(self) -> None:
+        """.9 source → ceil_split distribution."""
+        event = _make_consolidated_event(
+            source_type="dot9",
+            source_version="25.9.11",
+            date_start="2023-01-15",
+            date_end="2023-03-31",
+            best=7,
+            low=4,
+            high=10,
+        )
+        rows = source_aware(event)
+        assert len(rows) == 3
+        assert rows[0]["best"] == 3  # ceil(7/3)
+
+    def test_candidate_summary_gets_ceil_split(self) -> None:
+        """Candidate source → ceil_split distribution."""
+        event = _make_consolidated_event(
+            source_type="candidate",
+            source_version="25.0.6",
+            date_start="2023-01-15",
+            date_end="2023-03-31",
+            best=7,
+        )
+        rows = source_aware(event)
+        assert len(rows) == 3
+        assert rows[0]["best"] == 3
+
+    def test_annual_summary_prec5_still_not_distributed(self) -> None:
+        """Even date_prec=5 annual events stay on date_end."""
+        event = _make_consolidated_event(
+            source_type="annual",
+            date_prec=5,
+            date_start="1992-07-01",
+            date_end="1992-12-31",
+            best=6,
+        )
+        rows = source_aware(event)
+        assert len(rows) == 1
+        assert rows[0]["best"] == 6
+
+    def test_dot9_non_summary_single_row(self) -> None:
+        """.9 non-summary event → single row from date_end."""
+        event = _make_consolidated_event(
+            source_type="dot9",
+            date_start="2023-06-15",
+            date_end="2023-06-15",
+            best=5,
+        )
+        rows = source_aware(event)
+        assert len(rows) == 1
+        assert rows[0]["best"] == 5
+
+    def test_get_source_aware_by_name(self) -> None:
+        fn = get_distribution("source_aware")
+        assert fn is source_aware
+
+
 # ---- ViewpointConfig: Green ----
 
 
@@ -482,6 +644,8 @@ class TestViewpointConfigGreen:
         )
         assert cfg.survivorship_strategy == "annual_wins"
         assert cfg.distribution_strategy == "even_split"
+        assert cfg.filter_stale_versions is True
+        assert cfg.source_distribution_map is None
         assert cfg.version == "custom"
 
     def test_frozen(self, tmp_path: Path) -> None:
@@ -490,6 +654,19 @@ class TestViewpointConfigGreen:
         )
         with pytest.raises(AttributeError):
             cfg.version = "v2"  # type: ignore[misc]
+
+    def test_source_distribution_map_valid(
+        self, tmp_path: Path,
+    ) -> None:
+        cfg = ViewpointConfig(
+            consolidated_path=tmp_path / "store.parquet",
+            source_distribution_map={
+                "annual": "date_end_only",
+            },
+        )
+        assert cfg.source_distribution_map == {
+            "annual": "date_end_only",
+        }
 
 
 # ---- ViewpointConfig: Beige ----
@@ -513,6 +690,19 @@ class TestViewpointConfigBeige:
             ViewpointConfig(
                 consolidated_path=tmp_path / "store.parquet",
                 distribution_strategy="nonexistent",
+            )
+
+    def test_source_distribution_map_invalid_strategy(
+        self, tmp_path: Path,
+    ) -> None:
+        with pytest.raises(
+            ValueError, match="source_distribution_map",
+        ):
+            ViewpointConfig(
+                consolidated_path=tmp_path / "store.parquet",
+                source_distribution_map={
+                    "annual": "nonexistent",
+                },
             )
 
     def test_empty_version(self, tmp_path: Path) -> None:
@@ -639,6 +829,99 @@ class TestBuildUcdpV1Green:
         table = pq.read_table(cfg.output_path)
         for col in ("_source_type", "_source_version", "_ingested_at"):
             assert col not in table.column_names
+
+
+# ---- Build UCDP v1: Config Fields ----
+
+
+class TestBuildConfigFields:
+
+    def test_filter_stale_versions_false_keeps_stale(
+        self, tmp_path: Path,
+    ) -> None:
+        """Disabling stale filtering keeps candidate-only events."""
+        # Event 1: in annual. Event 2: candidate-only (not in annual)
+        # within the annual coverage period → stale filtering drops it.
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_type="annual",
+                source_version="25.1",
+                best=10,
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_type="candidate",
+                source_version="25.0.6",
+                best=15,
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        # With stale filtering ON: event 2 dropped (candidate-only
+        # in annual period, id not in annual)
+        cfg_on = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "on" / "out.parquet",
+            ledger_path=tmp_path / "on" / "ledger.jsonl",
+            filter_stale_versions=True,
+        )
+        result_on = build_ucdp_v1(cfg_on)
+
+        # With stale filtering OFF: both events survive
+        cfg_off = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "off" / "out.parquet",
+            ledger_path=tmp_path / "off" / "ledger.jsonl",
+            filter_stale_versions=False,
+        )
+        result_off = build_ucdp_v1(cfg_off)
+
+        assert result_on.n_events_output == 1
+        assert result_off.n_events_output == 2
+        assert result_off.n_events_input > result_on.n_events_input
+
+    def test_source_distribution_map_routes(
+        self, tmp_path: Path,
+    ) -> None:
+        """Source distribution map routes annual differently."""
+        # Summary event from annual source (span=3, best=300)
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_type="annual",
+                date_start="2023-01-01",
+                date_end="2023-03-31",
+                best=300,
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+
+        # Without map: ceil_split distributes to 3 rows
+        cfg_uniform = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "u" / "out.parquet",
+            ledger_path=tmp_path / "u" / "ledger.jsonl",
+            distribution_strategy="ceil_split",
+        )
+        result_uniform = build_ucdp_v1(cfg_uniform)
+        assert result_uniform.n_events_output == 3
+
+        # With map: annual → date_end_only → 1 row
+        cfg_mapped = ViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "m" / "out.parquet",
+            ledger_path=tmp_path / "m" / "ledger.jsonl",
+            distribution_strategy="ceil_split",
+            source_distribution_map={
+                "annual": "date_end_only",
+            },
+        )
+        result_mapped = build_ucdp_v1(cfg_mapped)
+        assert result_mapped.n_events_output == 1
 
 
 # ---- Build UCDP v1: Beige ----
@@ -913,6 +1196,10 @@ class TestProfilesGreen:
         assert isinstance(cfg, ViewpointConfig)
         assert cfg.survivorship_strategy == "dot9_wins"
         assert cfg.distribution_strategy == "ceil_split"
+        assert cfg.source_distribution_map == {
+            "annual": "date_end_only",
+        }
+        assert cfg.filter_stale_versions is True
         assert cfg.version == "production_parity"
 
     def test_load_with_override(self, tmp_path: Path) -> None:

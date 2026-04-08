@@ -1,20 +1,18 @@
 """UCDP viewpoint v1 — production-parity materialized view.
 
-Reads the consolidated event store, applies survivorship rules
-(annual wins) and temporal distribution (even split for summary
-events), and writes a single Parquet with one row per event-month.
+Reads the consolidated event store, applies configurable
+survivorship rules and temporal distribution, then writes a
+single Parquet with one row per event-month.
 
-Targets parity with UCDP's .9 version (format YY.9.MM), a distinct
-data source containing exclusive events beyond standard annual and
-candidate releases. Note: full parity requires fetching .9 directly
-— it cannot be reconstructed from annual + candidate alone.
+Processing order:
+1. Stale-version filtering (configurable via filter_stale_versions)
+2. Survivorship — one winner per event id (strategy via config)
+3. Distribution — expand summary events (strategy via config,
+   with optional per-source-type overrides via source_distribution_map)
+4. Filtering — priogrid_gid, type_of_violence, where_prec
+5. Output — Parquet with date_month column, metadata stripped
 
-Current strategy:
-- Annual wins for months it covers
-- Latest candidate for the trailing window
-- Summary events (date_prec=5) distributed evenly
-- Month assignment from date_end
-
+Non-configurable invariants documented in ADR-023.
 Implements ADR-014 (viewpoints as derived views) and
 ADR-015 (UCDP-specific rules).
 """
@@ -22,9 +20,11 @@ ADR-015 (UCDP-specific rules).
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 from datafactory_provenance import (
@@ -138,9 +138,109 @@ def build_ucdp_v1(
         n_input, config.consolidated_path,
     )
 
+    # Filter stale non-annual versions (ADR-023).
+    # Controlled by config.filter_stale_versions.
+    if config.filter_stale_versions:
+        # VIEWSER's GedLoader processes sources in a specific order:
+        # 1. Annual is loaded first (authoritative, curated).
+        # 2. .9 monthly release overwrites the trailing 12 months.
+        # 3. Candidate updates individual months.
+        #
+        # For months covered by the annual, ONLY annual events
+        # exist in VIEWSER — candidate and .9 events for those
+        # months are replaced. We replicate this by:
+        #   a) Determining the annual's temporal coverage
+        #   b) Dropping candidate/.9 rows whose event id doesn't
+        #      appear in the annual
+        #   c) Keeping only the latest .9 version
+        source_types = table.column("_source_type")
+        source_versions = table.column("_source_version")
+        n_before = table.num_rows
+
+        # (a) Find annual coverage boundary
+        annual_mask = pc.equal(source_types, "annual")
+        annual_dates = pc.filter(
+            table.column("date_end"), annual_mask,
+        )
+        if len(annual_dates) > 0:
+            annual_cutoff = max(annual_dates.to_pylist())
+            annual_ids = set(
+                pc.filter(
+                    table.column("id"), annual_mask,
+                ).to_pylist()
+            )
+            logger.info(
+                "Annual covers through %s (%d events)",
+                annual_cutoff, len(annual_ids),
+            )
+
+            # (b) Drop non-annual rows for events NOT in
+            # annual within the annual coverage period
+            ids_col = table.column("id")
+            dates_col = table.column("date_end")
+            is_annual = annual_mask
+            in_annual_ids = pc.is_in(
+                ids_col, pa.array(sorted(annual_ids)),
+            )
+            in_annual_period = pc.less_equal(
+                dates_col, pa.scalar(annual_cutoff),
+            )
+            keep = pc.or_(
+                is_annual,
+                pc.or_(
+                    in_annual_ids,
+                    pc.invert(in_annual_period),
+                ),
+            )
+            table = table.filter(keep)
+
+        # (c) For .9 sources: keep only the latest version
+        source_types = table.column("_source_type")
+        source_versions = table.column("_source_version")
+        dot9_mask = pc.equal(source_types, "dot9")
+        dot9_versions = pc.filter(source_versions, dot9_mask)
+        if len(dot9_versions) > 0:
+            from datafactory_viewpoint.survivorship import (
+                _parse_version,
+            )
+
+            latest_dot9 = max(
+                dot9_versions.unique().to_pylist(),
+                key=_parse_version,
+            )
+            keep = pc.or_(
+                pc.not_equal(source_types, "dot9"),
+                pc.equal(source_versions, latest_dot9),
+            )
+            table = table.filter(keep)
+
+        n_stale = n_before - table.num_rows
+        if n_stale > 0:
+            logger.info(
+                "Filtered %d stale rows (%d remain)",
+                n_stale, table.num_rows,
+            )
+    else:
+        logger.info(
+            "Stale-version filtering disabled by config"
+        )
+
+    # Update count after optional stale filtering
+    n_input = table.num_rows
+
     # Look up strategies
     survivorship_fn = get_survivorship(config.survivorship_strategy)
     distribution_fn = get_distribution(config.distribution_strategy)
+
+    # Pre-resolve source-distribution overrides
+    source_dist_fns: (
+        dict[str, Callable[[dict], list[dict]]] | None
+    ) = None
+    if config.source_distribution_map is not None:
+        source_dist_fns = {
+            src: get_distribution(strat)
+            for src, strat in config.source_distribution_map.items()
+        }
 
     # Sort by event id for grouped processing
     table = table.sort_by("id")
@@ -184,7 +284,13 @@ def build_ucdp_v1(
         n_groups += 1
 
         # Distribution: expand summary events
-        distributed = distribution_fn(winner)
+        # Use per-source override if configured, else default
+        if source_dist_fns is not None:
+            src_type = winner.get("_source_type", "")
+            fn = source_dist_fns.get(src_type, distribution_fn)
+        else:
+            fn = distribution_fn
+        distributed = fn(winner)
         if len(distributed) > 1:
             n_summary += 1
 
@@ -228,6 +334,8 @@ def build_ucdp_v1(
         "version": config.version,
         "survivorship_strategy": config.survivorship_strategy,
         "distribution_strategy": config.distribution_strategy,
+        "filter_stale_versions": config.filter_stale_versions,
+        "source_distribution_map": config.source_distribution_map,
         "n_events_input": n_input,
         "n_events_output": n_output,
         "n_summary_expanded": n_summary,

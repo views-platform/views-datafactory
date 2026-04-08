@@ -14,7 +14,14 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from datafactory_compilation.aggregation import count, get_strategy, max_best, sum_best
+from datafactory_compilation.aggregation import (
+    count,
+    get_strategy,
+    max_best,
+    max_field,
+    sum_best,
+    sum_field,
+)
 from datafactory_compilation.compilation_config import (
     CompilationConfig,
     FeatureSpec,
@@ -86,17 +93,17 @@ class TestStrategiesGreen:
         events = [{"best": 10}, {"best": 5}]
         assert count(events) == 2.0
 
-    def test_sum_best(self) -> None:
+    def test_sum_field(self) -> None:
         events = [{"best": 10}, {"best": 5}]
-        assert sum_best(events) == 15.0
+        assert sum_field(events) == 15.0
 
-    def test_max_best(self) -> None:
+    def test_max_field(self) -> None:
         events = [{"best": 10}, {"best": 5}, {"best": 20}]
-        assert max_best(events) == 20.0
+        assert max_field(events) == 20.0
 
-    def test_sum_best_with_none(self) -> None:
+    def test_sum_field_with_none(self) -> None:
         events = [{"best": 10}, {"best": None}]
-        assert sum_best(events) == 10.0
+        assert sum_field(events) == 10.0
 
     def test_get_strategy_valid(self) -> None:
         fn = get_strategy("count")
@@ -105,6 +112,30 @@ class TestStrategiesGreen:
     def test_get_strategy_invalid(self) -> None:
         with pytest.raises(KeyError, match="Unknown"):
             get_strategy("nonexistent")
+
+    def test_sum_custom_field(self) -> None:
+        events = [{"low": 3}, {"low": 7}]
+        assert sum_field(events, field="low") == 10.0
+
+    def test_max_custom_field(self) -> None:
+        events = [{"high": 10}, {"high": 20}]
+        assert max_field(events, field="high") == 20.0
+
+    def test_count_ignores_field(self) -> None:
+        events = [{"low": 3}]
+        assert count(events, field="low") == 1.0
+
+    def test_backward_compat_sum_best_alias(self) -> None:
+        assert sum_best is sum_field
+
+    def test_backward_compat_max_best_alias(self) -> None:
+        assert max_best is max_field
+
+    def test_backward_compat_registry_sum_best(self) -> None:
+        assert get_strategy("sum_best") is sum_field
+
+    def test_backward_compat_registry_max_best(self) -> None:
+        assert get_strategy("max_best") is max_field
 
 
 # ---- CompilationConfig ----
@@ -116,6 +147,19 @@ class TestCompilationConfigGreen:
         cfg = CompilationConfig(source_path=tmp_path / "test.parquet")
         assert len(cfg.features) == 2
         assert cfg.lat_field == "latitude"
+        assert cfg.output_dtype == "float32"
+        assert cfg.fill_value == 0.0
+
+    def test_feature_spec_value_field_default(self) -> None:
+        spec = FeatureSpec("f", "count")
+        assert spec.value_field == "best"
+
+    def test_custom_output_dtype(self, tmp_path: Path) -> None:
+        cfg = CompilationConfig(
+            source_path=tmp_path / "test.parquet",
+            output_dtype="float64",
+        )
+        assert cfg.output_dtype == "float64"
 
     def test_frozen(self, tmp_path: Path) -> None:
         cfg = CompilationConfig(source_path=tmp_path / "test.parquet")
@@ -138,7 +182,7 @@ class TestCompilationConfigBeige:
                 source_path=tmp_path / "test.parquet",
                 features=(
                     FeatureSpec("event_count", "count"),
-                    FeatureSpec("event_count", "sum_best"),
+                    FeatureSpec("event_count", "sum_field"),
                 ),
             )
 
@@ -147,6 +191,15 @@ class TestCompilationConfigBeige:
         cfg = CompilationConfig(source_path=tmp_path / "nope.parquet")
         # Config construction succeeds; compile_grid will raise FileNotFoundError
         assert cfg.source_path == tmp_path / "nope.parquet"
+
+    def test_invalid_output_dtype_raises(
+        self, tmp_path: Path,
+    ) -> None:
+        with pytest.raises(ValueError, match="output_dtype"):
+            CompilationConfig(
+                source_path=tmp_path / "test.parquet",
+                output_dtype="not_a_type",
+            )
 
 
 # ---- Compile Grid ----
@@ -163,7 +216,7 @@ class TestCompileGridGreen:
             temporal_config=TINY_TEMPORAL,
             features=(
                 FeatureSpec("event_count", "count"),
-                FeatureSpec("fatalities", "sum_best"),
+                FeatureSpec("fatalities", "sum_field"),
             ),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
@@ -238,7 +291,7 @@ class TestCompileGridGreen:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(FeatureSpec("fatalities", "sum_best"),),
+            features=(FeatureSpec("fatalities", "sum_field"),),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
@@ -305,6 +358,70 @@ class TestCompileGridGreen:
         prov1 = json.loads((tmp_path / "out1" / "provenance.json").read_text())
         prov2 = json.loads((tmp_path / "out2" / "provenance.json").read_text())
         assert prov1["output_digest"] == prov2["output_digest"]
+
+
+class TestCompileGridConfigFields:
+
+    def test_output_dtype_float64(self, tmp_path: Path) -> None:
+        events = _make_events()
+        src = _make_parquet(tmp_path / "src.parquet", events)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+            output_dtype="float64",
+        )
+        out = compile_grid(cfg)
+        grid = np.load(out / "grid.npy")
+        assert grid.dtype == np.float64
+
+    def test_fill_value_nan(self, tmp_path: Path) -> None:
+        events = _make_events()
+        src = _make_parquet(tmp_path / "src.parquet", events)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+            fill_value=float("nan"),
+        )
+        out = compile_grid(cfg)
+        grid = np.load(out / "grid.npy")
+        # Empty cells should be NaN
+        assert np.isnan(grid[0, 0, 0, 0])
+
+    def test_value_field_custom(self, tmp_path: Path) -> None:
+        """FeatureSpec with value_field='low' sums 'low'."""
+        events = [
+            {
+                "id": 1, "latitude": -45.0, "longitude": -90.0,
+                "date_start": "2024-01-15", "best": 10, "low": 3,
+            },
+            {
+                "id": 2, "latitude": -45.0, "longitude": -90.0,
+                "date_start": "2024-01-20", "best": 5, "low": 2,
+            },
+        ]
+        src = _make_parquet(tmp_path / "src.parquet", events)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(
+                FeatureSpec(
+                    "low_sum", "sum_field", value_field="low",
+                ),
+            ),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        out = compile_grid(cfg)
+        grid = np.load(out / "grid.npy")
+        # Both events in same cell/month, low=3+2=5
+        assert grid.max() == pytest.approx(5.0)
 
 
 class TestCompileGridBeige:
@@ -458,7 +575,7 @@ class TestCompileGridRed:
             source_path=src,
             grid_config=TINY_GRID,
             temporal_config=TINY_TEMPORAL,
-            features=(FeatureSpec("fatalities", "sum_best"),),
+            features=(FeatureSpec("fatalities", "sum_field"),),
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
