@@ -356,3 +356,11 @@ Feathers: inject `read_table_fn` for faster unit tests. Beck: tests use real Par
 ### D-17: ~~Consolidated store: append-only vs replace~~ RESOLVED
 Kleppmann: store should be append-only for safety. Hickey: idempotent replace is simpler and correct. **Resolution: Hickey wins on semantics (replace is idempotent), Kleppmann wins on crash safety. Added atomic write via temp file + rename (C-67).**
 **Source:** Expert review #4
+
+### D-18: ~~Remote zarr: full materialization vs lazy subsetting~~ RESOLVED
+Kleppmann: subset before materializing (1.8 GB download for 12 MB query is unacceptable). Beck: simplest thing that works first. **Resolution: Kleppmann wins — `_load_grid_from_zarr` now accepts `time_sel` and `feature_sel` hints, applied to xarray Dataset before `.values`. Remote smoke test loads 2 features x 12 months in 1.6s instead of full grid.**
+**Source:** Expert review #5 (M12 investigation), 2026-04-08
+
+### D-19: ~~Remote zarr: error information hiding vs operator visibility~~ RESOLVED
+Ousterhout: deep module should hide error details. Nygard: operators need to distinguish auth/network/format failures. **Resolution: Nygard wins — 401 errors now raise `PermissionError` with "check ~/.netrc" message; netrc lookup failures log a warning; other network errors include the exception type and message. Generic `FileNotFoundError` only for genuinely missing stores.**
+**Source:** Expert review #5 (M12 investigation), 2026-04-08

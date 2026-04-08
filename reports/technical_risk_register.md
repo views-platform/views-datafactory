@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-07)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 115 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 80 resolved, 27 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 17 disagreements: 17 resolved.
+**Status:** 115 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 80 resolved, 27 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 19 disagreements: 19 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.

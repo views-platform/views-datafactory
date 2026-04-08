@@ -48,12 +48,16 @@ def _use_zarr_loader(data_dir: Path | str) -> bool:
     return s.endswith(".zarr")
 
 
+_REMOTE_TIMEOUT_SECONDS = 120
+
+
 def _resolve_storage_options(
     zarr_path: str,
 ) -> dict | None:
     """Build fsspec storage options for remote zarr access.
 
     Reads credentials from ~/.netrc for HTTP URLs.
+    Configures aiohttp timeout for network resilience.
     Returns None for local paths.
     """
     if not _is_remote(zarr_path):
@@ -63,6 +67,14 @@ def _resolve_storage_options(
     if parsed.scheme not in ("http", "https"):
         return {}
 
+    import aiohttp
+
+    client_kwargs: dict = {
+        "timeout": aiohttp.ClientTimeout(
+            total=_REMOTE_TIMEOUT_SECONDS,
+        ),
+    }
+
     # Try ~/.netrc for credentials
     try:
         from netrc import NetrcParseError, netrc
@@ -70,29 +82,41 @@ def _resolve_storage_options(
         nrc = netrc(str(Path.home() / ".netrc"))
         creds = nrc.authenticators(parsed.hostname)
         if creds:
-            import aiohttp
-
             login, _, password = creds
-            return {
-                "client_kwargs": {
-                    "auth": aiohttp.BasicAuth(login, password),
-                },
-            }
-    except (FileNotFoundError, KeyError, NetrcParseError):
-        pass
+            client_kwargs["auth"] = aiohttp.BasicAuth(
+                login, password,
+            )
+    except (FileNotFoundError, KeyError, NetrcParseError) as exc:
+        logger.warning(
+            "No credentials for %s: %s. "
+            "Remote access may fail with 401.",
+            parsed.hostname,
+            exc,
+        )
 
-    return {}
+    return {"client_kwargs": client_kwargs}
 
 
 def _load_grid_from_zarr(
     zarr_path: str,
     storage_options: dict | None = None,
+    *,
+    start: str | int | None = None,
+    end: str | int | None = None,
+    feature_sel: list[str] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
     """Load assembled grid from a zarr store.
 
+    Opens the store once, computes time/feature subsets lazily on
+    the xarray Dataset, then materializes only the needed data.
+    For remote stores this avoids downloading the full grid.
+
     Args:
         zarr_path: Local path or URL to zarr store.
-        storage_options: fsspec options (auth, etc.).
+        storage_options: fsspec options (auth, timeout, etc.).
+        start: Start of time range (passed to parse_time_range).
+        end: End of time range (passed to parse_time_range).
+        feature_sel: Optional feature names to load (skips others).
 
     Returns:
         (grid, pgids, time_steps, feature_names)
@@ -108,19 +132,50 @@ def _load_grid_from_zarr(
     except (FileNotFoundError, ValueError, KeyError) as exc:
         msg = f"Zarr store not found or invalid at {zarr_path}"
         raise FileNotFoundError(msg) from exc
+    except Exception as exc:
+        exc_name = type(exc).__name__
+        exc_msg = str(exc)
+        if "401" in exc_msg or "Unauthorized" in exc_msg:
+            msg = (
+                f"Authentication failed for {zarr_path}. "
+                f"Check ~/.netrc credentials."
+            )
+            raise PermissionError(msg) from exc
+        msg = (
+            f"Cannot open zarr store at {zarr_path}: "
+            f"{exc_name}: {exc_msg}"
+        )
+        raise FileNotFoundError(msg) from exc
 
     pgids = ds["pgid"].values  # [H, W]
-    time_steps = ds["time"].values.astype("datetime64[M]")  # [T]
 
-    # Preserve canonical feature order from attrs if available,
-    # otherwise fall back to sorted variable names.
+    # Determine feature order before subsetting
     attrs = ds.attrs
     if "feature_order" in attrs:
         feature_names = list(attrs["feature_order"])
     else:
         feature_names = sorted(ds.data_vars)
 
-    # Stack feature variables into [T, H, W, F]
+    # Apply feature subsetting (lazy — no data fetched yet)
+    if feature_sel is not None:
+        feature_names = [
+            f for f in feature_names if f in set(feature_sel)
+        ]
+
+    # Apply time subsetting (lazy — reduces chunk fetches)
+    all_time = ds["time"].values.astype("datetime64[M]")
+    if start is not None or end is not None:
+        start_dt, end_dt = parse_time_range(
+            start, end, time_steps=all_time,
+        )
+        t_slice = time_range_to_slice(
+            all_time, start_dt, end_dt,
+        )
+        ds = ds.isel(time=t_slice)
+
+    time_steps = ds["time"].values.astype("datetime64[M]")
+
+    # Materialize only the selected features and time range
     grid = np.stack(
         [ds[f].values for f in feature_names], axis=-1,
     ).astype(np.float32)
@@ -156,15 +211,29 @@ def _load_grid_from_npy(
 
 def _load_grid(
     data_dir: Path | str,
+    *,
+    start: str | int | None = None,
+    end: str | int | None = None,
+    feature_sel: list[str] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
     """Load assembled grid from npy directory or zarr store.
+
+    For zarr stores, start/end and feature_sel are applied lazily
+    before materializing — avoiding full-grid downloads for remote
+    stores when only a subset is needed.
 
     Returns:
         (grid, pgids, time_steps, feature_names)
     """
     if _use_zarr_loader(data_dir):
         storage_options = _resolve_storage_options(str(data_dir))
-        return _load_grid_from_zarr(str(data_dir), storage_options)
+        return _load_grid_from_zarr(
+            str(data_dir),
+            storage_options,
+            start=start,
+            end=end,
+            feature_sel=feature_sel,
+        )
     return _load_grid_from_npy(Path(data_dir))
 
 
@@ -234,20 +303,30 @@ def load_dataset(
         )
         raise ValueError(msg)
 
-    # Load grid
-    grid, pgids, time_steps, all_features = _load_grid(data_dir)
-    n_t, n_h, n_w, n_f = grid.shape
-
-    # Temporal subsetting
-    start_dt, end_dt = parse_time_range(
-        start, end, time_steps=time_steps,
+    # Load grid. For zarr: time/feature subsetting applied lazily
+    # inside _load_grid_from_zarr (single open, no probe).
+    # For npy: full grid loaded via mmap, subsetted after.
+    is_zarr = _use_zarr_loader(data_dir)
+    grid, pgids, time_steps, all_features = _load_grid(
+        data_dir,
+        start=start if is_zarr else None,
+        end=end if is_zarr else None,
+        feature_sel=features if is_zarr else None,
     )
-    t_slice = time_range_to_slice(time_steps, start_dt, end_dt)
-    grid = grid[t_slice]
-    time_steps = time_steps[t_slice]
 
-    # Feature subsetting
-    if features is not None:
+    # For npy (or zarr with no time args): post-slice
+    if not is_zarr:
+        start_dt, end_dt = parse_time_range(
+            start, end, time_steps=time_steps,
+        )
+        t_slice = time_range_to_slice(
+            time_steps, start_dt, end_dt,
+        )
+        grid = grid[t_slice]
+        time_steps = time_steps[t_slice]
+
+    # Feature subsetting (npy path — zarr already subsetted)
+    if features is not None and not is_zarr:
         f_indices = _resolve_feature_indices(all_features, features)
         grid = grid[:, :, :, f_indices]
         all_features = [all_features[i] for i in f_indices]

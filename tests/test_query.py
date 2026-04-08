@@ -521,3 +521,67 @@ class TestIsRemote:
         from datafactory_query.dataset import _is_remote
 
         assert _is_remote("/tmp/grid.zarr") is False
+
+
+# ---- Remote Zarr Smoke Tests (M12) ----
+
+REMOTE_ZARR = "http://204.168.219.108/grid.zarr"
+
+
+@pytest.mark.consumer
+class TestRemoteZarrSmoke:
+    """Smoke tests against the live Hetzner zarr store.
+
+    Gated behind --run-consumer (requires network + ~/.netrc).
+    These verify the full remote path: credential resolution,
+    HTTP fetch, lazy subsetting, and format conversion.
+    """
+
+    def test_load_single_feature_one_month(self) -> None:
+        """Minimal remote load — 1 feature, 1 month."""
+        from datafactory_query.dataset import load_dataset
+
+        df = load_dataset(
+            data_dir=REMOTE_ZARR,
+            region="land",
+            start=480,
+            end=480,
+            features=["ged_sb_best"],
+            output_format="dataframe",
+        )
+        assert df.shape[0] > 0
+        assert "ged_sb_best" in df.columns
+        assert df.index.names == ["month_id", "priogrid_gid"]
+
+    def test_load_feature_frame_africa(self) -> None:
+        """Load 12 months of Africa as FeatureFrame."""
+        from datafactory_query.dataset import load_dataset
+
+        ff = load_dataset(
+            data_dir=REMOTE_ZARR,
+            region="africa",
+            start=480,
+            end=491,
+            features=["ged_sb_best", "ged_ns_best"],
+            output_format="feature_frame",
+        )
+        assert ff.y_features.shape[1] == 2
+        assert set(ff.feature_names) == {
+            "ged_sb_best", "ged_ns_best",
+        }
+        assert len(ff.identifiers["time"]) > 0
+
+    def test_remote_nonexistent_store_raises(self) -> None:
+        """Bad URL should raise, not hang."""
+        from datafactory_query.dataset import load_dataset
+
+        with pytest.raises(
+            (FileNotFoundError, PermissionError),
+        ):
+            load_dataset(
+                data_dir="http://204.168.219.108/no.zarr",
+                region="land",
+                start=480,
+                end=480,
+                features=["ged_sb_best"],
+            )
