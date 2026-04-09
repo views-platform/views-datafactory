@@ -381,6 +381,18 @@ Ousterhout: deep module should hide error details. Nygard: operators need to dis
 Added feature validation in `_load_grid_from_zarr` (`dataset.py:159-167`): checks requested features against available features before subsetting, raises `ValueError` with list of missing features. Now matches npy path behavior (`_resolve_feature_indices`). TDD: failing test written first, then fix applied. 512 tests pass.
 **Source:** Expert review #6 (consumer API), Kleppmann + Beck. Resolved 2026-04-09.
 
+### C-119: ~~`generate_consumer_data.py` has zero tests~~ RESOLVED
+Added `tests/test_consumer_data.py` with 11 tests covering: correct columns, index names, feature rename, row/col derivation, NaN filling, sorted index, partition boundary matching (calibration, validation, forecasting), and rename map completeness. Uses `importlib.util` to load the script as a module.
+**Source:** Expert review #6 (consumer API), Feathers + Beck. Resolved 2026-04-09.
+
+### C-108: ~~Parquet and zarr exports serve different feature sets~~ RESOLVED
+Documented the intentional asymmetry in `docs/guides/consumer_data_guide.md`: zarr has 43 features (full grid), parquet has 6 (UCDP conflict only). Table with endpoints, feature counts, source paths, and use cases.
+**Source:** Repo assimilation 2026-04-04. Resolved 2026-04-09.
+
+### C-91: ~~No pipeline duration tracking~~ RESOLVED
+Added pipeline-level duration tracking to `refresh_pipeline.sh`. Records `duration_seconds`, `deploy_tag`, start/end timestamps to `logs/pipeline_duration.json` on each successful run. Per-step timing already existed in stdout; this adds machine-readable end-to-end tracking.
+**Source:** DDIA Ch.1 p.13, Ch.8 pp.281-283. Resolved 2026-04-09.
+
 ### C-120: ~~Magic number 259,201 in regions.py~~ RESOLVED
 Replaced `set(range(1, 259_201))` with `set(range(1, DEFAULT_GRID_CONFIG.n_cells + 1))` in `regions.py:184`. The global region cell count now derives from GridConfig instead of being hardcoded.
 **Source:** Expert review #6 (consumer API), Nygard. Resolved 2026-04-09.

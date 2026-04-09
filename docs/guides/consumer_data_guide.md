@@ -288,6 +288,19 @@ This uses the GAUL admin boundary Parquet files to identify which PRIO-GRID cell
 
 ---
 
+## Server endpoints: zarr vs parquet
+
+The server at `http://204.168.219.108` serves two endpoints with **different feature sets**:
+
+| Endpoint | Features | Source | Use case |
+|----------|----------|--------|----------|
+| `/grid.zarr` | **43 features** (6 UCDP + 34 static + 3 GAUL) | `data/assembled/` | Full grid access, `load_dataset()`, research |
+| `/dataframe.parquet` | **6 features** (UCDP conflict only) | `data/compiled/` | Lightweight conflict-only download |
+
+This is intentional. The zarr store contains the full assembled grid (all data sources). The parquet export contains only the compiled UCDP conflict features (counts + best estimates for state-based, non-state, and one-sided violence). Use zarr for training and analysis; use parquet for quick conflict-data checks.
+
+---
+
 ## Feature inventory
 
 The assembled grid contains 43 features across three groups:

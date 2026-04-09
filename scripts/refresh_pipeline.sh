@@ -97,10 +97,13 @@ fi
 
 git checkout "$DEPLOY_TAG" --quiet
 
+PIPELINE_START=$(date +%s)
+PIPELINE_START_ISO=$(date -Iseconds)
+
 echo "========================================"
 echo "VIEWS Data Factory — Pipeline Refresh"
 echo "Deploy tag: $DEPLOY_TAG"
-echo "Started: $(date -Iseconds)"
+echo "Started: $PIPELINE_START_ISO"
 echo "========================================"
 echo
 
@@ -153,7 +156,15 @@ echo
 # Success — remove any stale failure sentinel
 rm -f "$ALERT_FILE"
 
+# Record pipeline duration (C-91)
+PIPELINE_END=$(date +%s)
+PIPELINE_DURATION=$((PIPELINE_END - PIPELINE_START))
+DURATION_FILE="logs/pipeline_duration.json"
+mkdir -p logs
+echo "{\"deploy_tag\": \"$DEPLOY_TAG\", \"started\": \"$PIPELINE_START_ISO\", \"finished\": \"$(date -Iseconds)\", \"duration_seconds\": $PIPELINE_DURATION}" > "$DURATION_FILE"
+
 echo "========================================"
 echo "Pipeline refresh complete"
+echo "Duration: ${PIPELINE_DURATION}s"
 echo "Finished: $(date -Iseconds)"
 echo "========================================"
