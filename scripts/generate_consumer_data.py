@@ -34,6 +34,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
+from datafactory_query.dataset import _is_remote
+
 # ── Consumer contract ──────────────────────────────────────
 # These match what purple_alien, white_ranger, and other models
 # expect in their config_queryset.py files.
@@ -78,14 +81,15 @@ def _derive_row_col(
 ) -> pd.DataFrame:
     """Add row and col columns derived from priogrid_gid index.
 
-    PRIO-GRID convention: 1-indexed, 720 columns.
-    row = (pgid - 1) // 720 + 1
-    col = (pgid - 1) % 720 + 1
+    PRIO-GRID convention: 1-indexed, ncol columns per row.
+    row = (pgid - 1) // ncol + 1
+    col = (pgid - 1) % ncol + 1
     """
+    ncol = DEFAULT_GRID_CONFIG.ncol
     pgids = df.index.get_level_values("priogrid_gid")
     df = df.copy()
-    df["row"] = ((pgids - 1) // 720 + 1).astype(np.float64)
-    df["col"] = ((pgids - 1) % 720 + 1).astype(np.float64)
+    df["row"] = ((pgids - 1) // ncol + 1).astype(np.float64)
+    df["col"] = ((pgids - 1) % ncol + 1).astype(np.float64)
     return df
 
 
@@ -196,7 +200,7 @@ def main() -> int:
         }
 
     data_dir: Path | str = args.data_dir
-    if not data_dir.startswith("http"):
+    if not _is_remote(data_dir):
         data_dir = Path(data_dir)
 
     print("=" * 60)

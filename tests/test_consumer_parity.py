@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
 from datafactory_query import load_dataset
 
 # ── Paths ────────────────────────────────────────────────
@@ -80,8 +81,9 @@ def build_parity_df(df: pd.DataFrame) -> pd.DataFrame:
 
     pgids = result.index.get_level_values("priogrid_gid")
     result = result.copy()
-    result["row"] = ((pgids - 1) // 720 + 1).astype(np.float64)
-    result["col"] = ((pgids - 1) % 720 + 1).astype(np.float64)
+    ncol = DEFAULT_GRID_CONFIG.ncol
+    result["row"] = ((pgids - 1) // ncol + 1).astype(np.float64)
+    result["col"] = ((pgids - 1) % ncol + 1).astype(np.float64)
 
     result = result.fillna(0.0)
     result = result[PARITY_COLS].astype(np.float64)
