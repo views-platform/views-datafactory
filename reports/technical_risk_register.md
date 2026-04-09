@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-07)
+**Date:** 2026-03-17 (updated 2026-04-09)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 115 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 80 resolved, 27 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 19 disagreements: 19 resolved.
+**Status:** 117 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 83 resolved, 26 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 19 disagreements: 19 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -13,9 +13,6 @@
 
 | ID | Tier | Title | Trigger | Package |
 |----|------|-------|---------|---------|
-| C-84 | 2 | Server runs everything as root | Before 2nd user access | Server hardening |
-| C-85 | 2 | Personal GitHub SSH key on shared server | Before 2nd user access | Server hardening |
-| C-86 | 2 | No deploy key — repo access tied to personal account | Before 2nd user access | Server hardening |
 | C-87 | 2 | No named user accounts on server | Before 2nd user access | Server hardening |
 | C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment | Server hardening |
 | C-21 | 3 | No characterization tests for migration | Next migration batch planned | — |
@@ -41,6 +38,8 @@
 | C-108 | 4 | Parquet and zarr exports serve different feature sets | Consumer expects parity | — |
 | C-109 | 4 | Advisory file locks (fcntl) don't work across NFS | Pipeline migrates to network FS | — |
 | C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
+| C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
+| C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -53,7 +52,7 @@ Items that should be resolved together:
 
 | Package | Items | Trigger |
 |---------|-------|---------|
-| **Server hardening** | C-84, C-85, C-86, C-87, C-88 | Before 2nd user access |
+| **Server hardening** | C-87, C-88 (C-84, C-85, C-86 resolved) | Before 2nd user access |
 | **V-Dem readiness** | C-44, C-91 | Before V-Dem integration (C-102, C-104, C-106, C-113 resolved) |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
@@ -63,18 +62,6 @@ Items that should be resolved together:
 ---
 
 ## Tier 2 — Fix Before Sharing Server Access
-
-### C-84: Server runs everything as root — [DEFER]
-All pipeline operations, git, and Caddy configuration run as `root` on the Hetzner server. No separation of privileges. A mistake as root can destroy the OS. IT head explicitly advised "limit who can sudo." **Trigger: create a non-root service account (e.g., `views-deploy`) before granting anyone else server access.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.1.
-**Source:** PRIO IT security guidance, server setup 2026-03-28
-
-### C-85: Personal GitHub SSH key on shared server — [DEFER]
-The server's SSH key (`/root/.ssh/id_ed25519`) is registered on Simon's personal GitHub account. If another user gets root access, they effectively have Simon's GitHub credentials for all repos. **Trigger: replace with a repo-scoped deploy key before granting second user access.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.2.
-**Source:** Server setup 2026-03-28
-
-### C-86: No deploy key — repo access tied to personal account — [DEFER]
-GitHub access from the server uses a personal SSH key, not a deploy key. Deploy keys are scoped to a single repo, are read-only by default, and don't grant access to other repos on the account. **Trigger: create a GitHub deploy key for `views-platform/views-datafactory` and remove the personal key from the server.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.2.
-**Source:** Server setup 2026-03-28
 
 ### C-87: No named user accounts on server — [DEFER]
 Only `root` exists. IT head advised: named accounts per person, no shared accounts, plus a break-glass emergency account with securely stored credentials. **Trigger: create named accounts before granting second user access.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.3.
@@ -162,6 +149,14 @@ A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether 
 ### C-115: Summary detection threshold (>= vs >) is architectural — [DEFER]
 The summary event detection formula uses `best >= span` (not strict `best > span`). This threshold is documented in ADR-023 as an architectural invariant matching VIEWSER's current GED_loader0 behavior. An older VIEWSER notebook (GED_loader2) used strict `>`. If UCDP changes their summary event definition or VIEWSER reverts to strict `>`, this invariant would need updating. **Trigger: UCDP changes summary event definition or VIEWSER changes detection threshold.**
 **Source:** Parity investigation 2026-04-08, notebook archaeology (GED_loader{0,1,2}.ipynb).
+
+### C-116: No retry on remote zarr network failures — [DEFER]
+`_load_grid_from_zarr` in `dataset.py` opens a remote zarr store via xarray/fsspec/aiohttp. Transient network errors (DNS timeout, TCP reset, server restart) fail immediately — no retry, no backoff. `datafactory_http.retry.request_with_retry()` exists but is designed for `requests`-based harvester calls, not the xarray/fsspec path. For consumers, a transient failure at 2am during automated training means a full pipeline retry. **Trigger: consumer reports intermittent failures loading remote data.** Cross-ref: C-70 (circuit breaker, harvester path).
+**Source:** Expert review #5 (M12 investigation), Nygard perspective, 2026-04-08.
+
+### C-117: Remote zarr downloads all spatial cells before region filter — [DEFER]
+`_load_grid_from_zarr` applies temporal and feature subsetting lazily (xarray isel/variable selection), but spatial subsetting (region → pgid set) happens AFTER full grid materialization in `load_dataset`. For remote stores, this means downloading all 259,200 cells even when only ~13,000 are needed (e.g., Africa). The spatial dimension is 360x720 per time step per feature — less impactful than temporal (which IS subsetted), but still ~20x more data than needed for typical region queries. xarray does not support efficient irregular spatial selection on chunked stores without rechunking. **Trigger: consumer queries a single country over a slow connection and complains about latency.**
+**Source:** Expert review #5 (M12 investigation), Kleppmann perspective, 2026-04-08.
 
 ### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**

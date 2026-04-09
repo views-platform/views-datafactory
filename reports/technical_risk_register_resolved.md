@@ -253,6 +253,18 @@ Extracted `validate_grid_pgids()` and `validate_pgids()` into `datafactory_adapt
 Documented timeout policy in ADR-018 (per-payload-size tiers). Added inline comments to all 6 config classes referencing ADR-018. Actual values: UCDP 30s, PRIO-GRID static 60s, shapefile 120s, GAUL 300s, land mask 60s.
 **Source:** Tech debt cleanup 2026-04-06. Resolved 2026-04-07.
 
+### C-85: ~~Personal GitHub SSH key on shared server~~ RESOLVED
+Generated ED25519 deploy key as `views-deploy` user. Registered on GitHub as read-only deploy key scoped to `views-platform/views-datafactory`. Personal key (`/root/.ssh/id_ed25519`) removed from server. `git fetch --tags` works as `views-deploy`. `verify_server_hardening.py` check 20 passes (personal key removed) and check 21 passes (deploy key exists).
+**Source:** PRIO IT security guidance, executed 2026-04-09
+
+### C-86: ~~No deploy key — repo access tied to personal account~~ RESOLVED
+Deploy key registered on GitHub repo settings (title: `views-datafactory-00 (views-deploy)`, read-only, no write access). Org deploy key policy enabled at `views-platform` org level. Key is scoped to this single repo — cannot access any other repository in the org or on Simon's personal account.
+**Source:** PRIO IT security guidance, executed 2026-04-09
+
+### C-84: ~~Server runs everything as root~~ RESOLVED
+Created `views-deploy` service account (uid=1000) on Hetzner server. Pipeline repository (code + 26 GB data) migrated from `/root/` to `/home/views-deploy/`. Cron job migrated from root to `views-deploy`. Symlinks in `/srv/views-data/` updated to new paths. Caddy traversal permission set (`chmod o+x /home/views-deploy`). Account has no sudo, no password, cannot install packages or modify system config. `verify_server_hardening.py` passes 19/21 (2 remaining are Phase 6.2 — deploy key). `verify_remote.py` passes 10/10 (data serving unaffected). Deployment guide Phase 6.1 rewritten with verbose what/why/how/permission-model/rollback documentation.
+**Source:** PRIO IT security guidance, executed 2026-04-09
+
 ### C-114: ~~`source_aware` distribution strategy was opaque routing~~ RESOLVED
 The `source_aware` strategy hardcoded routing logic (annual → date_end_only, everything else → ceil_split) inside a strategy function, making it invisible to config inspection. A researcher reading `distribution_strategy="source_aware"` had no way to know the routing without reading source code. Replaced by `source_distribution_map` config field on ViewpointConfig that makes the routing explicit and configurable. The `source_aware` strategy is deprecated (emits DeprecationWarning) but not removed. Production parity profile now declares `distribution_strategy="ceil_split", source_distribution_map={"annual": "date_end_only"}`.
 **Source:** Parity investigation 2026-04-08. Resolved 2026-04-08.

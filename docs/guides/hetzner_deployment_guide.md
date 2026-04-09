@@ -645,43 +645,201 @@ All commands run as `root` on the Hetzner server.
 
 ### 6.1 Create service account (C-84)
 
-The pipeline should not run as root. Create a dedicated service account:
+#### What `views-deploy` IS
+
+A non-root Unix user dedicated to running the data pipeline. It owns:
+
+- `/home/views-deploy/views-datafactory/` — the repository clone (code + scripts)
+- `/home/views-deploy/views-datafactory/data/` — all harvested, consolidated, compiled, and exported data (~35 GB)
+- `/home/views-deploy/views-datafactory/logs/` — pipeline execution logs
+- `/home/views-deploy/.views-deploy-tag` — the deployment gate file (ADR-022)
+- `/home/views-deploy/.profile` — environment variables (UCDP_API_TOKEN)
+- `/home/views-deploy/.ssh/id_ed25519` — repo-scoped deploy key (Phase 6.2)
+
+The pipeline cron job runs as `views-deploy`. The `refresh_pipeline.sh` script uses `$HOME` throughout, so all paths resolve to `/home/views-deploy/` automatically.
+
+#### What `views-deploy` CANNOT do
+
+- **Cannot install packages.** Not in the sudo group. `apt install`, `pip install --system`, and `uv tool install --global` all fail with permission denied.
+- **Cannot modify system configuration.** `/etc/caddy/Caddyfile`, `/etc/ssh/sshd_config`, and firewall rules are owned by root. `views-deploy` cannot change how the server serves data or accepts connections.
+- **Cannot read other users' files.** `/root/` has permissions `drwx------` (700). Other named accounts' homes are similarly restricted. `views-deploy` cannot access SSH keys, credentials, or data belonging to other accounts.
+- **Cannot push to GitHub.** The deploy key (Phase 6.2) is registered as read-only on the `views-platform/views-datafactory` repository. `git push` fails. The account can only `git fetch --tags` and `git checkout`.
+- **Cannot escalate privileges.** Not in the sudo group, not in the admin group, no SUID binaries, no sudoers entry.
+
+#### Why `views-deploy` exists
+
+**1. Blast radius limitation.** A bug in a pipeline script — or a compromised dependency — can write, delete, and execute anything the running user can. As `root`, that means the entire operating system. As `views-deploy`, damage is confined to `/home/views-deploy/`. The OS, Caddy, SSH config, and other users' data are untouched.
+
+**2. Credential isolation.** The current setup has Simon's personal GitHub SSH key on the server. Anyone with root access can use that key to push to any repository on Simon's account, read private repos, and impersonate Simon on GitHub. The `views-deploy` account uses a repo-scoped deploy key that can only read this one repository.
+
+**3. Audit trail.** System logs show which user performed an action. With only `root`, all actions appear as "root." With `views-deploy` + named accounts, pipeline operations are attributed to `views-deploy`, and administrative actions to the specific human who performed them.
+
+**4. Least privilege (principle of minimal authority).** The pipeline needs exactly three capabilities: (a) read/write files in the data directory, (b) make HTTP requests to UCDP/PRIO-GRID APIs, and (c) fetch git tags. It does not need to install packages, change firewall rules, or modify the web server. `views-deploy` has exactly the first three and none of the rest.
+
+**5. Multi-user safety.** When a second researcher gets server access, they get their own named account (Phase 6.3). They can `sudo` for system administration and `su views-deploy` for pipeline operations. They cannot accidentally break the pipeline by modifying files as their own user, and the pipeline cannot accidentally break their work.
+
+#### Permission model
+
+```
+root (system administration only — never for routine operations)
+├── /etc/caddy/Caddyfile       — web server configuration
+├── /etc/ssh/sshd_config       — SSH daemon configuration
+├── Package management (apt)   — system packages
+└── Firewall (ufw / Hetzner)   — network access control
+
+views-deploy (pipeline operations — non-interactive, no sudo)
+├── ~/views-datafactory/       — repository clone + all data
+├── ~/.views-deploy-tag        — deployment gate (which tag to run)
+├── ~/.ssh/id_ed25519          — deploy key (read-only, repo-scoped)
+├── ~/.profile                 — UCDP_API_TOKEN
+├── ~/.cargo/bin/uv            — Python tool manager
+└── crontab                    — monthly pipeline refresh
+
+caddy (web server — systemd-managed, runs as 'caddy' user)
+├── Reads /srv/views-data/     — static file serving root
+│   ├── grid.zarr → /home/views-deploy/.../data/assembled/grid.zarr
+│   └── dataframe.parquet → /home/views-deploy/.../data/compiled/...
+└── Traverses /home/views-deploy/ (requires o+x permission)
+
+simon, <colleague> (human operators — named accounts with sudo)
+├── SSH access with personal keys
+├── sudo for system administration
+└── su views-deploy (or sudo -u views-deploy) for pipeline operations
+```
+
+#### Step-by-step procedure
+
+All commands run as `root` on the Hetzner server.
 
 ```bash
-# Create user with home directory, no password login
+# ── Step 1: Create the user ──
+# -m creates a home directory at /home/views-deploy
+# -s /bin/bash gives the account a login shell (needed for cron, su)
+# No password is set — the account cannot be used for SSH login directly.
+# Operators access it via: su - views-deploy (from a named account)
 useradd -m -s /bin/bash views-deploy
 
-# Copy the repo (excluding data — large, handled separately)
+# ── Step 2: Copy the repository ──
+# rsync copies the repo with correct permissions and symlinks.
+# --exclude='data/' because data is ~35 GB — we move it instead of copying.
 rsync -a --exclude='data/' /root/views-datafactory/ /home/views-deploy/views-datafactory/
 
-# Move data directory to service account (avoids 35 GB duplication)
+# ── Step 3: Move the data directory ──
+# mv is atomic on the same filesystem — no duplication, no data loss.
+# This transfers ownership of the ~35 GB data directory in one operation.
 mv /root/views-datafactory/data /home/views-deploy/views-datafactory/data
+
+# ── Step 4: Set ownership ──
+# Everything under the service account's home must be owned by it.
+# -R is recursive. This covers code, data, logs, provenance, everything.
 chown -R views-deploy:views-deploy /home/views-deploy/views-datafactory
 
-# Install uv for the service account
+# ── Step 5: Install uv ──
+# The pipeline uses uv to manage Python dependencies and run scripts.
+# This installs uv to /home/views-deploy/.cargo/bin/uv.
+# refresh_pipeline.sh adds $HOME/.cargo/bin to PATH (line 43).
 su - views-deploy -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
 
-# Copy environment (UCDP_API_TOKEN) to service account's profile
+# ── Step 6: Copy environment variables ──
+# UCDP_API_TOKEN is required by the harvester scripts.
+# We put it in .profile (not .bashrc) because cron runs non-interactive
+# shells where .bashrc exits early when PS1 is unset.
+# refresh_pipeline.sh sources $HOME/.profile explicitly (line 48).
+# IMPORTANT: Replace <token> with the actual token from /root/.bashrc
+# or /root/.profile. You can find it with: grep UCDP_API_TOKEN /root/.bashrc
 echo 'export UCDP_API_TOKEN="<token>"' >> /home/views-deploy/.profile
 
-# Copy deploy tag
+# ── Step 7: Copy the deployment gate file ──
+# ~/.views-deploy-tag tells refresh_pipeline.sh which git tag to run.
+# Without this file, the pipeline refuses to start (ADR-022).
+# The file must be owned by views-deploy so operators can update it
+# via: sudo -u views-deploy sh -c 'echo "v1.2.0" > ~/.views-deploy-tag'
 cp /root/.views-deploy-tag /home/views-deploy/.views-deploy-tag
 chown views-deploy:views-deploy /home/views-deploy/.views-deploy-tag
 
-# Update Caddy symlinks to point to new location
+# ── Step 8: Update Caddy symlinks ──
+# Caddy serves data from /srv/views-data/ which contains symlinks.
+# These symlinks currently point to /root/views-datafactory/data/...
+# We update them to point to /home/views-deploy/views-datafactory/data/...
+# -sf overwrites the old symlink atomically.
 ln -sf /home/views-deploy/views-datafactory/data/assembled/grid.zarr /srv/views-data/grid.zarr
 ln -sf /home/views-deploy/views-datafactory/data/compiled/dataframe.parquet /srv/views-data/dataframe.parquet
-chmod o+x /home/views-deploy  # Allow Caddy to traverse
 
-# Migrate cron from root to views-deploy
-crontab -u views-deploy -e
-# Add: 0 0 21 * * cd /home/views-deploy/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+# Caddy runs as the 'caddy' user. To follow the symlinks, it must be
+# able to traverse /home/views-deploy/ (execute permission on directory).
+# o+x grants "others" execute-only — they can cd through the directory
+# but cannot list its contents (no o+r). This is the minimum permission
+# Caddy needs to resolve symlink paths.
+chmod o+x /home/views-deploy
 
-# Remove the old root cron entry
-crontab -e  # Remove the pipeline line
+# ── Step 9: Migrate the cron job ──
+# The pipeline cron currently runs in root's crontab.
+# We move it to views-deploy's crontab so it runs as the service account.
+# $HOME in refresh_pipeline.sh will now resolve to /home/views-deploy.
+
+# Add to views-deploy's crontab:
+crontab -u views-deploy -l 2>/dev/null | {
+    cat
+    echo "0 0 21 * * cd /home/views-deploy/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1"
+} | crontab -u views-deploy -
+
+# Remove from root's crontab:
+# Open root's crontab and delete the pipeline line.
+crontab -e
+# Delete the line containing refresh_pipeline.sh, save, and exit.
 ```
 
-Verify: `su - views-deploy -c "cd views-datafactory && uv run pytest"` — 410 tests pass.
+#### Verification
+
+After completing all steps, verify the migration:
+
+```bash
+# 1. Pipeline runs as views-deploy
+su - views-deploy -c "cd views-datafactory && uv run pytest"
+# Expected: 511 tests pass
+
+# 2. Cron is in views-deploy's crontab
+crontab -u views-deploy -l | grep refresh_pipeline
+# Expected: shows the cron entry
+
+# 3. Root crontab does NOT have the pipeline
+crontab -l | grep refresh_pipeline
+# Expected: no output (empty grep)
+
+# 4. Deploy tag file is accessible
+su - views-deploy -c "cat ~/.views-deploy-tag"
+# Expected: v1.1.0 (or current tag)
+
+# 5. Data serving still works
+uv run python scripts/verify_remote.py
+# Expected: 10/10 checks pass
+
+# 6. views-deploy cannot sudo
+su - views-deploy -c "sudo ls /"
+# Expected: permission denied (not in sudo group)
+
+# 7. Automated verification (run on server)
+python3 scripts/verify_server_hardening.py
+# Expected: all checks pass
+```
+
+#### Rollback
+
+If anything goes wrong, revert in 3 commands:
+
+```bash
+# Move data back to root
+mv /home/views-deploy/views-datafactory/data /root/views-datafactory/data
+
+# Restore symlinks to root's paths
+ln -sf /root/views-datafactory/data/assembled/grid.zarr /srv/views-data/grid.zarr
+ln -sf /root/views-datafactory/data/compiled/dataframe.parquet /srv/views-data/dataframe.parquet
+
+# Restore root's cron
+crontab -e  # Re-add the pipeline line
+```
+
+The service account can be removed later with `userdel -r views-deploy`.
 
 ### 6.2 Deploy key for GitHub (C-85, C-86)
 
