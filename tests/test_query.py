@@ -490,6 +490,24 @@ class TestLoadDatasetZarr:
         assert ff.y_features[0, 0] == 0.0
         assert ff.y_features[0, 1] == 1.0
 
+    def test_zarr_unknown_feature_raises(
+        self, tmp_path: Path,
+    ) -> None:
+        """Requesting a nonexistent feature on zarr must raise."""
+        from datafactory_query.dataset import load_dataset
+
+        zarr_path = tmp_path / "grid.zarr"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_zarr(zarr_path)
+        _make_gaul_parquets(gaul_dir)
+
+        with pytest.raises(ValueError, match="nonexistent"):
+            load_dataset(
+                data_dir=str(zarr_path),
+                features=["feat_a", "nonexistent"],
+                gaul_dir=gaul_dir,
+            )
+
     def test_zarr_nonexistent_raises(self, tmp_path: Path) -> None:
         from datafactory_query.dataset import load_dataset
 

@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
 from datafactory_priogrid.land_mask import fetch_land_pgids
 
 __all__ = ["list_regions", "load_region_pgids"]
@@ -181,7 +182,7 @@ def load_region_pgids(
         FileNotFoundError: If GAUL data is not available.
     """
     if region == "global":
-        return set(range(1, 259_201))
+        return set(range(1, DEFAULT_GRID_CONFIG.n_cells + 1))
 
     if region == "land":
         return fetch_land_pgids()

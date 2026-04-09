@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-09)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 117 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 83 resolved, 26 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 19 disagreements: 19 resolved.
+**Status:** 120 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 88 resolved, 24 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -31,11 +31,9 @@
 | C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s | Test infra |
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
 | C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed | — |
-| C-91 | 4 | No pipeline duration tracking | Before adding V-Dem or ACLED | V-Dem readiness |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
 | C-96 | 4 | fsspec does not auto-read `~/.netrc` | If fsspec adds netrc support | — |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
-| C-108 | 4 | Parquet and zarr exports serve different feature sets | Consumer expects parity | — |
 | C-109 | 4 | Advisory file locks (fcntl) don't work across NFS | Pipeline migrates to network FS | — |
 | C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
@@ -53,11 +51,15 @@ Items that should be resolved together:
 | Package | Items | Trigger |
 |---------|-------|---------|
 | **Server hardening** | C-87, C-88 (C-84, C-85, C-86 resolved) | Before 2nd user access |
-| **V-Dem readiness** | C-44, C-91 | Before V-Dem integration (C-102, C-104, C-106, C-113 resolved) |
+| **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
 | **Test infrastructure** | C-29, C-78, C-79 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80, C-112 resolved) |
+
+---
+
+## Tier 1 — Fix Immediately
 
 ---
 
@@ -142,9 +144,6 @@ Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and fi
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
 **Source:** GoF, Hickey
 
-### C-91: No pipeline duration tracking — [DEFER]
-A clean pipeline run takes ~2.5 hours but there's no mechanism to track whether it's getting slower over time. Kleppmann (Ch.1 p.13) argues performance should be measured as a distribution (percentiles, not averages) and tracked over time. Ch.8 pp.281-283 notes that timeouts are the only reliable fault detector — without duration tracking, a pipeline that silently doubles in runtime is indistinguishable from one that's about to fail. **Trigger: add timing to provenance ledger before adding V-Dem or ACLED.**
-**Source:** DDIA Ch.1 p.13, Ch.8 pp.281-283.
 
 ### C-115: Summary detection threshold (>= vs >) is architectural — [DEFER]
 The summary event detection formula uses `best >= span` (not strict `best > span`). This threshold is documented in ADR-023 as an architectural invariant matching VIEWSER's current GED_loader0 behavior. An older VIEWSER notebook (GED_loader2) used strict `>`. If UCDP changes their summary event definition or VIEWSER reverts to strict `>`, this invariant would need updating. **Trigger: UCDP changes summary event definition or VIEWSER changes detection threshold.**
@@ -170,9 +169,6 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Source:** Falsification audit 2026-04-01 (F2)
 
-### C-108: Parquet and zarr exports serve different feature sets — [DEFER]
-`export_dataframe.py` defaults to `--input data/compiled` (6 UCDP features), while `export_zarr.py` defaults to `--input data/assembled` (43 features including PRIO-GRID static + GAUL admin). A consumer using the parquet endpoint gets a different feature set than one using zarr. This may be intentional (parquet = conflict-only, zarr = full grid) but is not documented. The `data_serving_guide.md` and `zarr_consumer_guide.md` do not mention the difference. **Trigger: document the intended asymmetry, or align both exports to data/assembled.**
-**Source:** Repo assimilation 2026-04-04 (Phase 3)
 
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
