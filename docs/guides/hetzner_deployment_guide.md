@@ -843,34 +843,125 @@ The service account can be removed later with `userdel -r views-deploy`.
 
 ### 6.2 Deploy key for GitHub (C-85, C-86)
 
-Replace the personal SSH key with a repo-scoped deploy key:
+#### What a deploy key IS
+
+An SSH key pair registered on a single GitHub repository. The server
+holds the private key; GitHub holds the matching public key. When
+the server runs `git fetch`, SSH presents the private key. GitHub
+checks it against registered deploy keys and grants access to that
+one repo only.
+
+| Property | Personal SSH key (before) | Deploy key (after) |
+|----------|-------------------------|--------------------|
+| Scope | All repos the person can access | This one repo only |
+| Write access | Yes (push, delete branches) | No (read-only) |
+| Identity | A human (Simon) | A machine (views-datafactory-00) |
+| Stored at | `/root/.ssh/id_ed25519` | `/home/views-deploy/.ssh/id_ed25519` |
+| If compromised | All repos exposed | One repo, read-only, revoke in 30s |
+
+The pipeline needs exactly two git operations: `git fetch --tags`
+(download tag list) and `git checkout v1.1.0` (switch to a release).
+Both are read-only. The deploy key grants exactly this.
+
+#### Why it replaces the personal key
+
+The personal SSH key at `/root/.ssh/id_ed25519` is registered on
+Simon's GitHub account. Anyone with root access can use it to push
+to any repository Simon has write access to, read private repos,
+and impersonate Simon. The deploy key eliminates this risk: it is
+repo-scoped, read-only, and owned by the service account.
+
+#### Prerequisite: GitHub org policy
+
+Deploy keys may be disabled at the organization level. Before
+proceeding, verify the setting:
+
+1. Go to `https://github.com/organizations/views-platform/settings/member_privileges`
+2. Find **"Deploy keys"** section
+3. Ensure **"Enabled"** is selected
+4. Click **Save** if changed
+
+You need **org owner** permissions for this. If "Disabled" and you
+cannot change it, ask an org admin. Without this, the repo settings
+page will show "Disabled by views-platform" and the "Add deploy key"
+button will be absent.
+
+#### Step-by-step procedure
 
 ```bash
-# Generate a new key as the service account
+# ── Step 1: Generate the key pair ──
+# Run as views-deploy (the service account).
+# -t ed25519: modern, fast, small key.
+# -C: comment field — a human-readable label baked into the public
+#     key so you can tell keys apart. Not used for authentication.
+# -f: output path. Goes in views-deploy's .ssh, not root's.
+# -N "": empty passphrase. The pipeline runs unattended via cron —
+#        there is nobody to type a passphrase at 00:00 on the 21st.
 su - views-deploy
 ssh-keygen -t ed25519 -C "views-deploy@views-datafactory-00" -f ~/.ssh/id_ed25519 -N ""
+
+# ── Step 2: Copy the public key ──
+# This is the key you paste into GitHub. The private key (without .pub)
+# NEVER leaves the server.
 cat ~/.ssh/id_ed25519.pub
 exit
 ```
 
-Then on GitHub:
-1. Go to `views-platform/views-datafactory` → Settings → Deploy keys
-2. Add the public key, title: `views-datafactory-00 (views-deploy)`
-3. Leave "Allow write access" **unchecked** (read-only — the server only needs `git fetch --tags` and `git checkout`)
-4. Save
+Copy the output line (starts with `ssh-ed25519 AAAA...`).
+
+```
+# ── Step 3: Register on GitHub (web UI) ──
+```
+
+1. Go to `https://github.com/views-platform/views-datafactory/settings/keys`
+2. Click **"Add deploy key"**
+3. Title: `views-datafactory-00 (views-deploy)`
+4. Key: paste the public key from Step 2
+5. **Leave "Allow write access" UNCHECKED** — the server only needs
+   read access. Checking this would allow the service account to push
+   code, which violates least privilege.
+6. Click **"Add key"**
 
 ```bash
-# Test as views-deploy
+# ── Step 4: Test SSH authentication ──
+# First connection to github.com will prompt to accept the host
+# fingerprint. Type "yes". GitHub's ED25519 fingerprint is:
+# SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU
+# (documented at docs.github.com/en/authentication)
 su - views-deploy -c "ssh -T git@github.com"
-# Should say: "You've successfully authenticated..."
+# Expected: "Hi views-platform/views-datafactory! You've
+# successfully authenticated, but GitHub does not provide
+# shell access."
+#
+# If it says "Hi <username>!" instead, the personal key is
+# being used — check ~/.ssh/config or key ordering.
 
-# Remove the personal key from root
+# ── Step 5: Test git operations ──
+su - views-deploy -c "cd views-datafactory && git fetch --tags && git tag -l 'v*' | tail -3"
+# Expected: lists the latest tags (e.g., v1.0.0, v1.1.0).
+
+# ── Step 6: Remove the personal key from root ──
+# ONLY after Steps 4-5 succeed. This is irreversible — if the
+# deploy key doesn't work, you'll lose git access to the server.
 rm /root/.ssh/id_ed25519 /root/.ssh/id_ed25519.pub
 ```
 
-**Important:** The deploy key is scoped to this single repo. It cannot
-access any other repository on the `views-platform` organization or
-Simon's personal account.
+#### Verification
+
+```bash
+python3 /home/views-deploy/views-datafactory/scripts/verify_server_hardening.py
+# Expected: 21/21 checks pass
+# Check 20: "Personal SSH key removed from /root — removed"
+# Check 21: "Deploy key exists for service user"
+```
+
+#### Revocation
+
+If the server is compromised:
+1. Go to `https://github.com/views-platform/views-datafactory/settings/keys`
+2. Click **"Delete"** next to the deploy key
+3. The key is dead instantly — no token rotation, no credential
+   propagation, no other repos affected
 
 ### 6.3 Named user accounts (C-87)
 
