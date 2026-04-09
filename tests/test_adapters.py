@@ -610,3 +610,42 @@ class TestGridShapeValidationBeige:
         )
         with pytest.raises(ValueError, match="2D"):
             feature_frame_to_grid(ff, pgids.ravel())
+
+
+class TestSharedValidation:
+    """Direct tests for _validation.py shared helpers (C-112)."""
+
+    def test_valid_grid_pgids(self) -> None:
+        from datafactory_adapters._validation import (
+            validate_grid_pgids,
+        )
+
+        grid = np.zeros((2, 3, 4, 2), dtype=np.float32)
+        pgids = np.arange(12).reshape(3, 4)
+        validate_grid_pgids(grid, pgids)  # should not raise
+
+    def test_grid_not_4d(self) -> None:
+        from datafactory_adapters._validation import (
+            validate_grid_pgids,
+        )
+
+        grid = np.zeros((2, 12, 2), dtype=np.float32)
+        pgids = np.arange(12).reshape(3, 4)
+        with pytest.raises(ValueError, match="4D"):
+            validate_grid_pgids(grid, pgids)
+
+    def test_pgids_not_2d(self) -> None:
+        from datafactory_adapters._validation import validate_pgids
+
+        with pytest.raises(ValueError, match="2D"):
+            validate_pgids(np.arange(12))
+
+    def test_shape_mismatch(self) -> None:
+        from datafactory_adapters._validation import (
+            validate_grid_pgids,
+        )
+
+        grid = np.zeros((2, 3, 4, 2), dtype=np.float32)
+        pgids = np.arange(12).reshape(4, 3)  # transposed
+        with pytest.raises(ValueError, match="spatial dims"):
+            validate_grid_pgids(grid, pgids)

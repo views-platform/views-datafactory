@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-22
-**Related ADRs:** ADR-001, ADR-003, ADR-009, ADR-012
+**Last reviewed:** 2026-04-08
+**Related ADRs:** ADR-001, ADR-003, ADR-009, ADR-012, ADR-024
 
 ---
 
@@ -11,7 +11,7 @@
 
 > Immutable compilation configuration declaring the source file, grid/temporal backbone, features to compute, output location, and source Parquet column mappings.
 
-Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, `strategy`, and optional `filter` dict). The compiler never infers features from Parquet columns (ADR-003). Per-feature filters enable disaggregation (e.g., by violence type).
+Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, `strategy`, optional `filter` dict, and `value_field`). The compiler never infers features from Parquet columns (ADR-003). Per-feature filters enable disaggregation (e.g., by violence type). The `value_field` parameter controls which event field is aggregated (default: `"best"`).
 
 ---
 
@@ -33,7 +33,7 @@ Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, 
 - Guarantees feature names are unique (`__post_init__` validation)
 - Guarantees all field names are explicit — column mappings (`lat_field`, `lon_field`, `date_field`) are declared in config, never hardcoded in the compiler
 - Guarantees grid and temporal configs use standard defaults when not overridden
-- Provides default features: `FeatureSpec("event_count", "count")` and `FeatureSpec("fatalities", "sum_best")`
+- Provides default features: `FeatureSpec("event_count", "count")` and `FeatureSpec("fatalities", "sum_field")`
 - Grid output uses canonical `[T, H, W, C]` dimension order (time, height, width, channels)
 
 ---
@@ -43,10 +43,12 @@ Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, 
 - `source_path`: Path to a Parquet file. **Not validated at config time** — existence is checked by `compile_grid` at compile time.
 - `grid_config`: GridConfig instance (defaults to standard PRIO-GRID)
 - `temporal_config`: TemporalConfig instance (defaults to 1989-2024)
-- `features`: Non-empty tuple of `FeatureSpec(name, strategy, filter={})` instances
+- `features`: Non-empty tuple of `FeatureSpec(name, strategy, filter={}, value_field="best")` instances
 - `output_dir`: Path for compiled npy output
 - `ledger_path`: Path for provenance JSONL ledger
 - `lat_field`, `lon_field`, `date_field`: Column names in the source Parquet
+- `output_dtype`: str, numpy dtype for output grid (default: `"float32"`, validated against whitelist)
+- `fill_value`: float, fill value for empty (cell, month) bins (default: `0.0`)
 
 Empty `features` causes immediate `ValueError`. Duplicate feature names cause immediate `ValueError`.
 
@@ -63,6 +65,7 @@ Empty `features` causes immediate `ValueError`. Duplicate feature names cause im
 
 - `ValueError` on empty `features` tuple
 - `ValueError` on duplicate feature names
+- `ValueError` on invalid `output_dtype` (not in allowed set)
 - `AttributeError` on any attempt to mutate fields (frozen)
 - Source file existence is NOT checked — `FileNotFoundError` is raised later by `compile_grid`
 
@@ -104,7 +107,7 @@ cfg = CompilationConfig(
     source_path=path,
     features=(
         FeatureSpec("ged_sb_count", "count", {"type_of_violence": 1}),
-        FeatureSpec("ged_sb_best", "sum_best", {"type_of_violence": 1}),
+        FeatureSpec("ged_sb_best", "sum_field", {"type_of_violence": 1}),
     ),
 )
 ```
@@ -120,7 +123,7 @@ CompilationConfig(source_path=path, features=())
 # WRONG: Duplicate feature names — will raise ValueError
 CompilationConfig(source_path=path, features=(
     FeatureSpec("event_count", "count"),
-    FeatureSpec("event_count", "sum_best"),  # duplicate name
+    FeatureSpec("event_count", "sum_field"),  # duplicate name
 ))
 
 # WRONG: Inferring features from Parquet columns

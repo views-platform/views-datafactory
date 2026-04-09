@@ -106,7 +106,7 @@ class TestHarvestCompileBoundary:
             temporal_config=TINY_TEMPORAL,
             features=(
                 FeatureSpec("event_count", "count"),
-                FeatureSpec("fatalities", "sum_best"),
+                FeatureSpec("fatalities", "sum_field"),
             ),
             output_dir=tmp_path / "compiled",
             ledger_path=tmp_path / "ledger.jsonl",

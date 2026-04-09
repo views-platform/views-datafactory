@@ -10,25 +10,34 @@ import pytest
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    """Register --run-falsification CLI option."""
+    """Register gated test CLI options."""
     parser.addoption(
         "--run-falsification",
         action="store_true",
         default=False,
         help="Show falsification stubs (skipped by default)",
     )
+    parser.addoption(
+        "--run-consumer",
+        action="store_true",
+        default=False,
+        help="Run consumer parity tests (skipped by default)",
+    )
 
 
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item],
 ) -> None:
-    """Deselect @pytest.mark.falsification unless flag is passed."""
-    if config.getoption("--run-falsification"):
-        return
+    """Deselect gated markers unless their flag is passed."""
+    run_falsification = config.getoption("--run-falsification")
+    run_consumer = config.getoption("--run-consumer")
     kept: list[pytest.Item] = []
     for item in items:
-        if "falsification" not in item.keywords:
-            kept.append(item)
+        if "falsification" in item.keywords and not run_falsification:
+            continue
+        if "consumer" in item.keywords and not run_consumer:
+            continue
+        kept.append(item)
     items[:] = kept
 
 

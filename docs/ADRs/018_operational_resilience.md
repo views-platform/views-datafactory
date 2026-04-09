@@ -97,6 +97,22 @@ When the system reaches production deployment, the following should be implement
 
 ---
 
+## Timeout Policy
+
+HTTP timeouts are sized by expected payload and upstream behavior:
+
+| Source | Timeout | Rationale |
+|--------|---------|-----------|
+| UCDP annual / candidate / .9 | 30s | Paginated JSON, ~100 KB/page |
+| PRIO-GRID static | 60s | Per-variable JSON, ~1 MB |
+| PRIO-GRID shapefile | 120s | Zipped shapefile, ~20 MB |
+| PRIO-GRID land mask | 60s | Single JSON response |
+| GAUL admin | 300s | Zipped shapefiles, ~50 MB each |
+
+All timeouts are per-request (connect + read). Retries use exponential backoff with jitter (`datafactory_http.retry`). When adding a new source, choose a timeout proportional to the expected payload size. Document the choice in the config class.
+
+---
+
 ## References
 
 - ADR-008 (Observability and Explicit Failure)

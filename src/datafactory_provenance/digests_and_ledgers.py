@@ -42,6 +42,10 @@ DIGEST_ALGORITHM: str = "sha256"
 DIGEST_TRUNCATE: int = 16
 DIGEST_SCHEME: str = f"{DIGEST_ALGORITHM}_{DIGEST_TRUNCATE}"
 
+# I/O buffer sizes — tune for throughput vs. memory tradeoff.
+_FILE_CHUNK_SIZE: int = 65536  # 64 KB — file digest streaming reads
+_LEDGER_READ_CHUNK: int = 4096  # 4 KB — reverse-read for last_digest
+
 
 def compute_content_digest(
     data: bytes,
@@ -87,7 +91,7 @@ def compute_file_digest(
     *,
     algorithm: str = DIGEST_ALGORITHM,
     truncate: int = DIGEST_TRUNCATE,
-    chunk_size: int = 65536,
+    chunk_size: int = _FILE_CHUNK_SIZE,
 ) -> str:
     """Compute a content digest from a file without loading it all.
 
@@ -274,7 +278,7 @@ def _read_last_line(path: Path) -> str | None:
             return None
         buf = b""
         while pos > 0:
-            read_size = min(4096, pos)
+            read_size = min(_LEDGER_READ_CHUNK, pos)
             pos -= read_size
             f.seek(pos)
             buf = f.read(read_size) + buf

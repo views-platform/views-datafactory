@@ -10,9 +10,12 @@ Adding a new strategy means adding a function here with the
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 from datafactory_provenance.registry import Registry
+
+logger = logging.getLogger(__name__)
 
 _registry: Registry[Callable[[list[dict]], dict]] = Registry(
     "survivorship strategy"
@@ -35,8 +38,21 @@ def _parse_version(version_str: str) -> tuple[int, ...]:
     """Parse a version string into a tuple of ints for comparison.
 
     Examples: "25.1" → (25, 1), "25.0.12" → (25, 0, 12)
+
+    Non-numeric versions return (0,) with a warning — they sort
+    below all numeric versions, ensuring unknown formats are never
+    preferred in survivorship strategies.
     """
-    return tuple(int(p) for p in version_str.split("."))
+    parts = version_str.split(".")
+    try:
+        return tuple(int(p) for p in parts)
+    except ValueError:
+        logger.warning(
+            "Non-numeric version string %r, "
+            "treating as lowest priority",
+            version_str,
+        )
+        return (0,)
 
 
 @_registry.decorator("annual_wins")

@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-22
-**Related ADRs:** ADR-009, ADR-014, ADR-016
+**Last reviewed:** 2026-04-08
+**Related ADRs:** ADR-009, ADR-014, ADR-016, ADR-023
 
 ---
 
@@ -31,6 +31,7 @@ Combines strategy selection (survivorship, distribution), event filtering (priog
 - Guarantees `version` is non-empty
 - Guarantees `survivorship_strategy` is a registered strategy name
 - Guarantees `distribution_strategy` is a registered strategy name
+- Guarantees all strategies in `source_distribution_map` values are registered distribution strategy names
 - All guarantees enforced via `__post_init__` validation
 
 ---
@@ -42,6 +43,8 @@ Combines strategy selection (survivorship, distribution), event filtering (priog
 - `ledger_path`: Path, provenance ledger (default: `provenance/viewpoint/ucdp_v1_ledger.jsonl`)
 - `survivorship_strategy`: str, must be registered (default: `"annual_wins"`)
 - `distribution_strategy`: str, must be registered (default: `"even_split"`)
+- `filter_stale_versions`: bool, controls stale-version filtering in builder (default: `True`)
+- `source_distribution_map`: dict[str, str] | None, per-source-type distribution strategy overrides. Keys are source type strings, values are registered strategy names. When None, `distribution_strategy` applies uniformly. (default: `None`)
 - `min_priogrid_gid`: int | None, spatial filter threshold (default: None = no filter)
 - `max_type_of_violence`: int | None, violence type filter (default: None = no filter)
 - `exclude_where_prec`: tuple[int, ...], precision exclusion list (default: empty)
@@ -63,6 +66,7 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on empty `version`
 - `ValueError` on unregistered `survivorship_strategy` (chained from `KeyError` via `from exc` for debuggability)
 - `ValueError` on unregistered `distribution_strategy` (chained from `KeyError` via `from exc` for debuggability)
+- `ValueError` on unregistered strategy in `source_distribution_map` values
 - `AttributeError` on any attempt to mutate fields (frozen)
 
 All failures are immediate and loud. No silent fallbacks.

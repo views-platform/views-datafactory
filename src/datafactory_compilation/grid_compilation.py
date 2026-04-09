@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -31,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 DATASET_ID = "compilation"
 
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
 
 def _parse_month_index(
     date_str: str,
@@ -41,6 +44,9 @@ def _parse_month_index(
 
     Returns None if the date is outside the temporal range or malformed.
     """
+    if not _DATE_RE.match(date_str):
+        logger.warning("Malformed date string: %r", date_str)
+        return None
     try:
         parts = date_str.split("-")
         year = int(parts[0])
@@ -208,8 +214,11 @@ def compile_grid(config: CompilationConfig) -> Path:
     ncol = config.grid_config.ncol
     n_steps = config.temporal_config.n_steps
     n_features = len(config.features)
-    grid_array = np.zeros(
-        (n_steps, nrow, ncol, n_features), dtype=np.float32
+    dtype = np.dtype(config.output_dtype)
+    grid_array = np.full(
+        (n_steps, nrow, ncol, n_features),
+        config.fill_value,
+        dtype=dtype,
     )
 
     # Resolve strategies
@@ -237,7 +246,7 @@ def compile_grid(config: CompilationConfig) -> Path:
             else:
                 filtered = cell_events
             grid_array[time_idx, row, col, feat_idx] = (
-                strategy_fn(filtered)
+                strategy_fn(filtered, spec.value_field)
             )
 
     # Generate coordinate arrays

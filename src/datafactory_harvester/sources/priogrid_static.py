@@ -58,7 +58,7 @@ class PriogridStaticConfig:
     ledger_path: Path = Path(
         "provenance/priogrid_static/ingestion_ledger.jsonl"
     )
-    timeout: int = 60
+    timeout: int = 60  # per-variable JSON ~1 MB (ADR-018)
     variables: tuple[str, ...] | None = field(default=None)
 
     def __post_init__(self) -> None:

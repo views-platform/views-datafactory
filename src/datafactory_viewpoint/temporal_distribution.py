@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import logging
 import math
+import re
+import warnings
 from collections.abc import Callable
 
 from datafactory_provenance.registry import Registry
@@ -23,9 +25,32 @@ _registry: Registry[Callable[[dict], list[dict]]] = Registry(
 )
 STRATEGIES = _registry.entries
 
-__all__ = ["get_distribution", "even_split", "ceil_split"]
+__all__ = [
+    "get_distribution",
+    "date_end_only",
+    "even_split",
+    "ceil_split",
+    "floor_split",
+    "source_aware",
+]
 
 _SUMMARY_DATE_PREC: int = 5  # date_prec value indicating multi-month span
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _validate_date_str(date_str: str) -> str:
+    """Validate date string is strictly YYYY-MM-DD.
+
+    Raises:
+        ValueError: For non-conforming strings (e.g., ISO datetime,
+            slash-separated, missing leading zeros).
+    """
+    if not _DATE_RE.match(date_str):
+        err_msg = (
+            f"Expected YYYY-MM-DD date format, got {date_str!r}"
+        )
+        raise ValueError(err_msg)
+    return date_str
 
 
 def get_distribution(name: str) -> Callable[[dict], list[dict]]:
@@ -42,6 +67,7 @@ def _month_first_day(date_str: str) -> str:
 
     Example: "2023-03-15" → "2023-03-01"
     """
+    _validate_date_str(date_str)
     parts = date_str.split("-")
     return f"{parts[0]}-{parts[1]}-01"
 
@@ -52,6 +78,8 @@ def _months_between(start_str: str, end_str: str) -> list[str]:
     Example: "2023-01-15" to "2023-03-31" → ["2023-01-01",
     "2023-02-01", "2023-03-01"]
     """
+    _validate_date_str(start_str)
+    _validate_date_str(end_str)
     start_parts = start_str.split("-")
     end_parts = end_str.split("-")
 
@@ -70,6 +98,19 @@ def _months_between(start_str: str, end_str: str) -> list[str]:
             year += 1
 
     return months
+
+
+@_registry.decorator("date_end_only")
+def date_end_only(event: dict) -> list[dict]:
+    """Assign all events to their date_end month. No distribution.
+
+    Matches VIEWSER GedLoader behavior when fix_summary_events
+    is not enabled. Every event produces exactly one output row
+    with date_month derived from date_end, regardless of whether
+    the event spans multiple months.
+    """
+    date_end = event.get("date_end") or event.get("date_start")
+    return [{**event, "date_month": _month_first_day(str(date_end))}]
 
 
 @_registry.decorator("even_split")
@@ -129,6 +170,71 @@ def even_split(event: dict) -> list[dict]:
     return rows
 
 
+def _split_summary(
+    event: dict,
+    rounding_fn: Callable[[float], float],
+) -> list[dict]:
+    """Shared detection + distribution for summary events.
+
+    Detection (ADR-023 invariant): event is summary if best > 0,
+    spans > 1 month, AND best >= span. Non-summary events produce
+    a single row with date_month from date_end.
+
+    Summary events are expanded to one row per spanned month, with
+    fatalities divided by the rounding function (ceil or floor).
+    """
+    date_end = event.get("date_end") or event.get("date_start")
+    date_start = event.get("date_start")
+    best = event.get("best") or 0
+
+    if date_start and date_end:
+        months = _months_between(date_start, date_end)
+        summary_period = len(months)
+    else:
+        summary_period = 1
+        months = []
+
+    is_summary = (
+        best > 0
+        and summary_period > 1
+        and best >= summary_period
+    )
+
+    if not is_summary:
+        row = {
+            **event,
+            "date_month": _month_first_day(str(date_end)),
+        }
+        return [row]
+
+    if not months:
+        err_msg = (
+            f"Summary event has no month span: "
+            f"date_start={date_start}, date_end={date_end}"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    low = event.get("low") or 0
+    high = event.get("high") or 0
+    r_best = int(rounding_fn(best / summary_period))
+    r_low = int(rounding_fn(low / summary_period))
+    r_high = int(rounding_fn(high / summary_period))
+
+    rows: list[dict] = []
+    for month_str in months:
+        row = {
+            **event,
+            "best": r_best,
+            "low": r_low,
+            "high": r_high,
+            "date_month": month_str,
+        }
+        rows.append(row)
+
+    return rows
+
+
 @_registry.decorator("ceil_split")
 def ceil_split(event: dict) -> list[dict]:
     """Production-parity summary event distribution.
@@ -145,54 +251,46 @@ def ceil_split(event: dict) -> list[dict]:
 
     Non-summary events get date_month from date_end.
     """
-    date_end = event.get("date_end") or event.get("date_start")
-    date_start = event.get("date_start")
-    best = event.get("best") or 0
+    return _split_summary(event, math.ceil)
 
-    # Compute month span for detection
-    if date_start and date_end:
-        months = _months_between(date_start, date_end)
-        summary_period = len(months)
-    else:
-        summary_period = 1
-        months = []
 
-    # Production detection: best>0 AND span>1 AND best>=span
-    is_summary = (
-        best > 0
-        and summary_period > 1
-        and best >= summary_period
+@_registry.decorator("floor_split")
+def floor_split(event: dict) -> list[dict]:
+    """Summary event distribution with floor rounding.
+
+    Same detection logic as ceil_split but uses
+    floor(fatalities / span). Matches older VIEWSER .9 loader
+    versions (pre-v25.9.11).
+
+    Non-summary events get date_month from date_end.
+    """
+    return _split_summary(event, math.floor)
+
+
+@_registry.decorator("source_aware")
+def source_aware(event: dict) -> list[dict]:
+    """Source-type-aware distribution matching VIEWSER behavior.
+
+    .. deprecated::
+        Use ``source_distribution_map={"annual": "date_end_only"}``
+        with ``distribution_strategy="ceil_split"`` in
+        ViewpointConfig instead.
+
+    VIEWSER loads data sources sequentially with different settings:
+    - Annual loader: fix_summary_events=False → date_end_only
+    - .9 / candidate loader: fix_summary_events=True → ceil_split
+
+    This composite strategy reads _source_type from the event and
+    delegates to the appropriate strategy.
+    """
+    warnings.warn(
+        "source_aware strategy is deprecated; use "
+        "source_distribution_map={'annual': 'date_end_only'} "
+        "with distribution_strategy='ceil_split' instead.",
+        DeprecationWarning,
+        stacklevel=2,
     )
-
-    if not is_summary:
-        # Non-summary: single row, month from date_end
-        row = {**event, "date_month": _month_first_day(str(date_end))}
-        return [row]
-
-    # Summary event: distribute with ceil
-    if not months:
-        err_msg = (
-            f"Summary event has no month span: "
-            f"date_start={date_start}, date_end={date_end}"
-        )
-        logger.error(err_msg)
-        raise ValueError(err_msg)
-
-    ceil_best = int(math.ceil(best / summary_period))
-    low = event.get("low") or 0
-    high = event.get("high") or 0
-    ceil_low = int(math.ceil(low / summary_period))
-    ceil_high = int(math.ceil(high / summary_period))
-
-    rows: list[dict] = []
-    for month_str in months:
-        row = {
-            **event,
-            "best": ceil_best,
-            "low": ceil_low,
-            "high": ceil_high,
-            "date_month": month_str,
-        }
-        rows.append(row)
-
-    return rows
+    source_type = event.get("_source_type", "")
+    if source_type == "annual":
+        return date_end_only(event)
+    return ceil_split(event)

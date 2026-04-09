@@ -14,18 +14,28 @@ from datafactory_provenance.digests_and_ledgers import (
     last_digest,
     last_digest_for_version,
 )
+from datafactory_provenance.health import (
+    FRESHNESS_SLO_HOURS,
+    check_export_freshness,
+    read_last_entries,
+    report_ledger,
+)
 from datafactory_provenance.registry import Registry
 
 __all__ = [
     "DIGEST_SCHEME",
+    "FRESHNESS_SLO_HOURS",
     "LEDGER_VERSION",
     "Registry",
     "append_ledger_entry",
+    "check_export_freshness",
     "compute_content_digest",
     "compute_file_digest",
     "file_lock",
     "last_digest",
     "last_digest_for_version",
+    "read_last_entries",
+    "report_ledger",
 ]
 
 from importlib.metadata import version as _pkg_version

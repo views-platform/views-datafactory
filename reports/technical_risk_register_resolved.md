@@ -193,6 +193,10 @@ Added `tests/test_performance.py` with `@pytest.mark.slow`. Compiles 50 events o
 Added `tests/test_schema_evolution.py` with 4 tests: column added in later version (nulls in old rows), column removed in later version (nulls in new rows), mixed schemas across all 3 streams, and schema fingerprint change detection.
 **Source:** Kleppmann (test review). Resolved 2026-04-04.
 
+### C-89: ~~No formal SLO for data freshness~~ RESOLVED
+`check_health.py` now defines `FRESHNESS_SLO_HOURS = 168` (7 days, per ADR-018) as a named constant. Export freshness is checked against the zarr `export_timestamp` attr and reported in both human and `--json` output. `verify_remote.py` check 5 now computes and displays export age, warning on SLO breach. Consumers can programmatically verify freshness via `check_health.py --json | jq .export_slo_met`.
+**Source:** DDIA Ch.1 pp.13-14, Ch.2 pp.41-42, Ch.8 pp.237-240. Resolved 2026-04-06.
+
 ### C-103: ~~Feature name uniqueness not enforced in CompilationConfig~~ RESOLVED
 Added uniqueness check in `CompilationConfig.__post_init__`: duplicate feature names now raise `ValueError` at config construction time, preventing silent data loss in zarr export. Test added in `test_compiler.py`.
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 16). Resolved 2026-04-06.
@@ -206,7 +210,7 @@ Updated `rd_roadmap04.md` and `product_development_plan03.md` to current state (
 **Source:** PR #6 review 2026-04-06. Resolved 2026-04-06.
 
 ### C-98: ~~No deployment gate~~ RESOLVED
-`refresh_pipeline.sh` now reads a deploy tag from `~/.views-deploy-tag`, fetches tags, and checks out the specified tag before running the pipeline. If the file is missing, empty, or the tag doesn't exist, the script exits non-zero (fail-loud per ADR-011). Operators control deployments by writing a tag name to the file. Rollback: write the previous tag.
+`refresh_pipeline.sh` now reads a deploy tag from `~/.views-deploy-tag`, fetches tags, and checks out the specified tag before running the pipeline. If the file is missing, empty, or the tag doesn't exist, the script exits non-zero (fail-loud per ADR-011). Operators control deployments by writing a tag name to the file. Rollback: write the previous tag. See **ADR-022** for the full design rationale and alternatives considered.
 **Source:** Falsification audit 2026-04-01 (F5). Resolved 2026-04-06.
 
 ### C-102: ~~No tests for assembly, zarr export, or dataframe export scripts~~ RESOLVED
@@ -224,6 +228,46 @@ Extracted `_retry_or_raise()` helper in `retry.py`. Both the `HTTPError` and `Re
 ### C-101: ~~3x duplicated min/max date code with type: ignore~~ RESOLVED
 `ucdp_annual.py:295`, `ucdp_candidate.py:286`, and `ucdp_dot9.py:301` each had identical 6-line blocks extracting min/max date strings from event lists with `# type: ignore[type-var]`. Extracted `date_range()` helper to `event_validation.py` — returns typed `tuple[str | None, str | None]`, eliminates all 3 type ignores.
 **Source:** Tech debt cleanup 2026-04-02
+
+### C-60: ~~Health check logic untested~~ RESOLVED
+Added 17 tests in `tests/test_check_health.py` covering `_read_last_entries` (normal, empty, missing, corrupt), `_report_ledger` (OK, STALE, FAILING, NO DATA), and `_check_export_freshness` (SLO met, breached, missing zarr, corrupt attrs).
+**Source:** Nygard (test review), repo assimilation 2026-04-04. Resolved 2026-04-07.
+
+### C-104: ~~Date string format assumed YYYY-MM-DD~~ RESOLVED
+Added strict `_validate_date_str()` with regex `^\d{4}-\d{2}-\d{2}$` to `temporal_distribution.py` and `grid_compilation.py`. Rejects ISO datetime, slash format, missing leading zeros. 6 tests added.
+**Source:** Repo assimilation 2026-04-04. Resolved 2026-04-07.
+
+### C-105: ~~Assembly mmap write is not atomic~~ RESOLVED
+`assemble_grid.py` now writes to `grid.npy.tmp` then `os.rename()` on success. Pre-flight disk space check via `shutil.disk_usage()`. Try/finally cleanup of `.tmp` on failure. 2 tests added.
+**Source:** Repo assimilation 2026-04-04. Resolved 2026-04-07. DDIA Ch.7 pp.223-226, Ch.10 p.413.
+
+### C-106: ~~Version parsing assumes dotted-integer format~~ RESOLVED
+`survivorship.py:_parse_version()` now catches `ValueError` and returns `(0,)` with a warning. Non-numeric versions sort below all numeric ones — never preferred in survivorship. 7 tests added.
+**Source:** Repo assimilation 2026-04-04. Resolved 2026-04-07.
+
+### C-112: ~~Duplicate dimensionality validation across adapter files~~ RESOLVED
+Extracted `validate_grid_pgids()` and `validate_pgids()` into `datafactory_adapters/_validation.py`. Three call sites now use the shared helpers. 4 tests added.
+**Source:** Tech debt cleanup 2026-04-06. Resolved 2026-04-07.
+
+### C-113: ~~Inconsistent HTTP timeout values~~ RESOLVED
+Documented timeout policy in ADR-018 (per-payload-size tiers). Added inline comments to all 6 config classes referencing ADR-018. Actual values: UCDP 30s, PRIO-GRID static 60s, shapefile 120s, GAUL 300s, land mask 60s.
+**Source:** Tech debt cleanup 2026-04-06. Resolved 2026-04-07.
+
+### C-85: ~~Personal GitHub SSH key on shared server~~ RESOLVED
+Generated ED25519 deploy key as `views-deploy` user. Registered on GitHub as read-only deploy key scoped to `views-platform/views-datafactory`. Personal key (`/root/.ssh/id_ed25519`) removed from server. `git fetch --tags` works as `views-deploy`. `verify_server_hardening.py` check 20 passes (personal key removed) and check 21 passes (deploy key exists).
+**Source:** PRIO IT security guidance, executed 2026-04-09
+
+### C-86: ~~No deploy key — repo access tied to personal account~~ RESOLVED
+Deploy key registered on GitHub repo settings (title: `views-datafactory-00 (views-deploy)`, read-only, no write access). Org deploy key policy enabled at `views-platform` org level. Key is scoped to this single repo — cannot access any other repository in the org or on Simon's personal account.
+**Source:** PRIO IT security guidance, executed 2026-04-09
+
+### C-84: ~~Server runs everything as root~~ RESOLVED
+Created `views-deploy` service account (uid=1000) on Hetzner server. Pipeline repository (code + 26 GB data) migrated from `/root/` to `/home/views-deploy/`. Cron job migrated from root to `views-deploy`. Symlinks in `/srv/views-data/` updated to new paths. Caddy traversal permission set (`chmod o+x /home/views-deploy`). Account has no sudo, no password, cannot install packages or modify system config. `verify_server_hardening.py` passes 19/21 (2 remaining are Phase 6.2 — deploy key). `verify_remote.py` passes 10/10 (data serving unaffected). Deployment guide Phase 6.1 rewritten with verbose what/why/how/permission-model/rollback documentation.
+**Source:** PRIO IT security guidance, executed 2026-04-09
+
+### C-114: ~~`source_aware` distribution strategy was opaque routing~~ RESOLVED
+The `source_aware` strategy hardcoded routing logic (annual → date_end_only, everything else → ceil_split) inside a strategy function, making it invisible to config inspection. A researcher reading `distribution_strategy="source_aware"` had no way to know the routing without reading source code. Replaced by `source_distribution_map` config field on ViewpointConfig that makes the routing explicit and configurable. The `source_aware` strategy is deprecated (emits DeprecationWarning) but not removed. Production parity profile now declares `distribution_strategy="ceil_split", source_distribution_map={"annual": "date_end_only"}`.
+**Source:** Parity investigation 2026-04-08. Resolved 2026-04-08.
 
 ---
 
@@ -324,3 +368,11 @@ Feathers: inject `read_table_fn` for faster unit tests. Beck: tests use real Par
 ### D-17: ~~Consolidated store: append-only vs replace~~ RESOLVED
 Kleppmann: store should be append-only for safety. Hickey: idempotent replace is simpler and correct. **Resolution: Hickey wins on semantics (replace is idempotent), Kleppmann wins on crash safety. Added atomic write via temp file + rename (C-67).**
 **Source:** Expert review #4
+
+### D-18: ~~Remote zarr: full materialization vs lazy subsetting~~ RESOLVED
+Kleppmann: subset before materializing (1.8 GB download for 12 MB query is unacceptable). Beck: simplest thing that works first. **Resolution: Kleppmann wins — `_load_grid_from_zarr` now accepts `time_sel` and `feature_sel` hints, applied to xarray Dataset before `.values`. Remote smoke test loads 2 features x 12 months in 1.6s instead of full grid.**
+**Source:** Expert review #5 (M12 investigation), 2026-04-08
+
+### D-19: ~~Remote zarr: error information hiding vs operator visibility~~ RESOLVED
+Ousterhout: deep module should hide error details. Nygard: operators need to distinguish auth/network/format failures. **Resolution: Nygard wins — 401 errors now raise `PermissionError` with "check ~/.netrc" message; netrc lookup failures log a warning; other network errors include the exception type and message. Generic `FileNotFoundError` only for genuinely missing stores.**
+**Source:** Expert review #5 (M12 investigation), 2026-04-08

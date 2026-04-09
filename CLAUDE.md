@@ -44,8 +44,8 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 
 ## Strategic Documents
 
-- `reports/rd_roadmap04.md` — R&D roadmap with 4 directions (serving, sources, raster, deployment hardening)
-- `reports/product_development_plan03.md` — Product plan with v1.0/v1.1/v2.0 gate criteria
+- `reports/rd_roadmap06.md` — R&D roadmap (consumer parity achieved, next: training integration)
+- `reports/product_development_plan05.md` — Product plan with v1.0/v1.1/v1.2/v2.0 gate criteria
 
 ## Vocabulary (aligned with Kleppmann & Riccomini, DDIA 2nd ed., 2026)
 

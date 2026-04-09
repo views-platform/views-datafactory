@@ -93,7 +93,7 @@ class UcdpAnnualConfig:
     # API transport
     base_url: str = "https://ucdpapi.pcr.uu.se/api/gedevents"
     page_size: int = 1000
-    timeout: int = 30
+    timeout: int = 30  # paginated JSON ~100 KB/page (ADR-018)
     max_retries: int = 3
     page_delay: float = 2.0  # seconds between paginated requests
 

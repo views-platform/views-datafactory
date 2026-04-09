@@ -21,102 +21,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-
-def _read_last_entries(
-    ledger_path: Path, n: int = 5
-) -> list[dict]:
-    """Read last N entries from a JSONL ledger."""
-    if not ledger_path.exists():
-        return []
-    lines = ledger_path.read_text().strip().splitlines()
-    entries = []
-    for line in reversed(lines):
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            entries.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-        if len(entries) >= n:
-            break
-    return entries
-
-
-def _report_ledger(
-    name: str, ledger_path: Path, now: datetime
-) -> dict:
-    """Report health for one ledger."""
-    entries = _read_last_entries(ledger_path, n=10)
-
-    if not entries:
-        return {
-            "name": name,
-            "status": "NO DATA",
-            "detail": f"Ledger not found: {ledger_path}",
-        }
-
-    # Find last success. Some ledgers (consolidation, viewpoint,
-    # compilation) don't have an "outcome" field — entries only
-    # exist for successful operations (failures raise exceptions).
-    last_success = None
-    for entry in entries:
-        outcome = entry.get("outcome")
-        if outcome is None or outcome in (
-            "success", "unchanged", "cached"
-        ):
-            last_success = entry
-            break
-
-    # Find recent failures
-    recent_failures = [
-        e for e in entries
-        if e.get("outcome") == "failed"
-    ]
-
-    if last_success:
-        ts_str = last_success.get("timestamp", "")
-        try:
-            ts = datetime.fromisoformat(ts_str)
-            age = now - ts
-            age_hours = age.total_seconds() / 3600
-            age_str = (
-                f"{age_hours:.0f}h ago"
-                if age_hours < 48
-                else f"{age_hours / 24:.0f}d ago"
-            )
-        except (ValueError, TypeError):
-            age_str = "unknown"
-            age_hours = -1
-
-        status = "OK" if age_hours < 168 else "STALE"
-        detail = (
-            f"Last success: {ts_str[:19]} ({age_str})"
-        )
-        if recent_failures:
-            detail += (
-                f" | {len(recent_failures)} recent failures"
-            )
-
-        return {
-            "name": name,
-            "status": status,
-            "detail": detail,
-            "version": last_success.get("version", ""),
-            "digest": last_success.get(
-                "content_digest",
-                last_success.get("output_digest", ""),
-            ),
-        }
-
-    return {
-        "name": name,
-        "status": "FAILING",
-        "detail": (
-            f"No successful entries in last 10. "
-            f"{len(recent_failures)} failures."
-        ),
-    }
+from datafactory_provenance.health import (
+    FRESHNESS_SLO_HOURS,
+    check_export_freshness,
+    report_ledger,
+)
 
 
 def main() -> int:
@@ -131,6 +40,12 @@ def main() -> int:
         type=Path,
         default=Path("provenance"),
         help="Base provenance directory",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=Path("data"),
+        help="Base data directory",
     )
     parser.add_argument(
         "--json",
@@ -188,25 +103,42 @@ def main() -> int:
     results = []
     any_issues = False
     for name, path in ledgers.items():
-        result = _report_ledger(name, path, now)
+        result = report_ledger(name, path, now)
         results.append(result)
         if result["status"] not in ("OK", "NO DATA"):
             any_issues = True
 
-    if args.json:
-        import json as json_mod
+    # Export freshness check (ADR-018 SLO)
+    zarr_path = args.data_dir / "assembled" / "grid.zarr"
+    freshness = check_export_freshness(zarr_path, now)
+    if not freshness["export_slo_met"]:
+        any_issues = True
 
+    if args.json:
         output = {
             "timestamp": now.isoformat(),
             "healthy": not any_issues,
+            "freshness_slo_hours": FRESHNESS_SLO_HOURS,
+            "export_age_hours": freshness["export_age_hours"],
+            "export_slo_met": freshness["export_slo_met"],
             "sources": results,
         }
-        print(json_mod.dumps(output, indent=2))
+        print(json.dumps(output, indent=2))
         return 1 if any_issues else 0
 
     print("=" * 60)
     print(f"DATAFACTORY HEALTH — {now.isoformat()[:19]}Z")
+    print(f"Freshness SLO: {FRESHNESS_SLO_HOURS}h (ADR-018)")
     print("=" * 60)
+    print()
+
+    # Export freshness
+    slo_marker = "  " if freshness["export_slo_met"] else "! "
+    slo_status = "MET" if freshness["export_slo_met"] else "BREACH"
+    print(
+        f"{slo_marker}[{slo_status:7s}] "
+        f"{'Export freshness':20s} {freshness['detail']}"
+    )
     print()
 
     for result in results:
@@ -225,9 +157,9 @@ def main() -> int:
 
     print()
     if any_issues:
-        print("Issues detected. Check ledger details.")
+        print("Issues detected. Check details above.")
         return 1
-    print("All sources healthy.")
+    print("All sources healthy. Export SLO met.")
     return 0
 
 
