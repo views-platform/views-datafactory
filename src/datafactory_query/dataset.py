@@ -158,6 +158,14 @@ def _load_grid_from_zarr(
 
     # Apply feature subsetting (lazy — no data fetched yet)
     if feature_sel is not None:
+        available = set(feature_names)
+        missing = [f for f in feature_sel if f not in available]
+        if missing:
+            msg = (
+                f"Unknown feature(s) {missing}. "
+                f"Available: {feature_names}"
+            )
+            raise ValueError(msg)
         feature_names = [
             f for f in feature_names if f in set(feature_sel)
         ]

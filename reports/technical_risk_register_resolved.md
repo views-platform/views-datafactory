@@ -376,3 +376,23 @@ Kleppmann: subset before materializing (1.8 GB download for 12 MB query is unacc
 ### D-19: ~~Remote zarr: error information hiding vs operator visibility~~ RESOLVED
 Ousterhout: deep module should hide error details. Nygard: operators need to distinguish auth/network/format failures. **Resolution: Nygard wins — 401 errors now raise `PermissionError` with "check ~/.netrc" message; netrc lookup failures log a warning; other network errors include the exception type and message. Generic `FileNotFoundError` only for genuinely missing stores.**
 **Source:** Expert review #5 (M12 investigation), 2026-04-08
+
+### C-118: ~~Zarr feature subsetting silently drops unknown features~~ RESOLVED
+Added feature validation in `_load_grid_from_zarr` (`dataset.py:159-167`): checks requested features against available features before subsetting, raises `ValueError` with list of missing features. Now matches npy path behavior (`_resolve_feature_indices`). TDD: failing test written first, then fix applied. 512 tests pass.
+**Source:** Expert review #6 (consumer API), Kleppmann + Beck. Resolved 2026-04-09.
+
+### C-120: ~~Magic number 259,201 in regions.py~~ RESOLVED
+Replaced `set(range(1, 259_201))` with `set(range(1, DEFAULT_GRID_CONFIG.n_cells + 1))` in `regions.py:184`. The global region cell count now derives from GridConfig instead of being hardcoded.
+**Source:** Expert review #6 (consumer API), Nygard. Resolved 2026-04-09.
+
+### D-20: ~~Should generate_partition be a library function or stay as a script?~~ RESOLVED
+Ousterhout: make it importable from `datafactory_query` — saves consumers from reimplementing the rename/derive/fill pipeline. Hickey: scripts are fine; don't complect the library with consumer-specific transforms. **Resolution: Ousterhout wins — expose when a second consumer needs it. Currently one script; monitor.**
+**Source:** Expert review #6 (consumer API), 2026-04-09
+
+### D-21: ~~Should _load_grid be public?~~ RESOLVED
+Hickey: expose for advanced consumers who want raw arrays. Martin: fewer entry points, simpler contract. **Resolution: defer — no consumer has asked for raw arrays yet. Expose when needed.**
+**Source:** Expert review #6 (consumer API), 2026-04-09
+
+### D-22: ~~Should the consumer contract (FEATURE_RENAME, PARTITIONS) be in a module or a script?~~ RESOLVED
+GoF: extract to `datafactory_query.consumer_contract` for reuse. Beck: test the script directly, don't create modules for one-use code. **Resolution: GoF wins if a second consumer needs the same transforms. Beck wins today. Monitor.**
+**Source:** Expert review #6 (consumer API), 2026-04-09

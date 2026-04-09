@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-09)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 117 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 83 resolved, 26 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 19 disagreements: 19 resolved.
+**Status:** 120 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 85 resolved, 27 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -40,6 +40,7 @@
 | C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
+| C-119 | 3 | `generate_consumer_data.py` untested | Rename or partition regression reaches models | Consumer contract |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -61,6 +62,10 @@ Items that should be resolved together:
 
 ---
 
+## Tier 1 — Fix Immediately
+
+---
+
 ## Tier 2 — Fix Before Sharing Server Access
 
 ### C-87: No named user accounts on server — [DEFER]
@@ -78,6 +83,10 @@ SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
 **Source:** Feathers
+
+### C-119: `generate_consumer_data.py` has zero tests — [DEFER]
+The consumer data generator script (`scripts/generate_consumer_data.py`) is the most deployment-visible output of the data factory — 68 training models depend on its correctness. Its `FEATURE_RENAME` dict, `PARTITIONS` boundaries, `_derive_row_col` formula, and `fillna(0.0)` behavior are all untested. Any regression in these would produce wrong training data with no detection until model performance degrades. **Trigger: add tests before modifying the rename map, partition boundaries, or row/col derivation.**
+**Source:** Expert review #6 (consumer API), Feathers + Beck perspectives, 2026-04-09.
 
 ---
 
