@@ -965,42 +965,210 @@ If the server is compromised:
 
 ### 6.3 Named user accounts (C-87)
 
-Create named accounts for each administrator:
+#### What named user accounts ARE
+
+Per-human Unix accounts on the server. Each account belongs to one person:
+- Owns their own home directory (`/home/<username>/`)
+- Has their own SSH key for login
+- Has their own password for `sudo`
+- Has their own audit trail in system logs
+
+These are distinct from `views-deploy` (the pipeline service account)
+and from `root` (the system administrator account, which we will
+eventually disable for SSH).
+
+#### What named accounts CANNOT do
+
+Without `sudo`, a named account:
+- Cannot read other users' home directories (700 perms enforce this)
+- Cannot modify `/etc/` (system config)
+- Cannot restart services (Caddy, sshd, cron)
+- Cannot impersonate `views-deploy` (must use `sudo su - views-deploy` or `sudo -u views-deploy`)
+
+With `sudo`, the account can do everything root can — but every
+sudo invocation is logged with the human's username, providing
+the audit trail that shared `root` lacks.
+
+#### Why each admin needs BOTH a key AND a password
+
+This is the most common mistake. The two are separate authentication
+paths for different purposes:
+
+| Auth path | Used for | Required |
+|-----------|----------|----------|
+| **SSH key** | Logging into the server | Yes (no password prompt at SSH) |
+| **Password** | Running `sudo` | Yes (`sudo` always requires a password, even after key-based SSH) |
+
+If you set up only the SSH key (which is what `useradd -m` produces),
+the user can SSH in but `sudo` fails with "no password set". The
+account is functionally crippled — they can read files but not
+administer anything.
+
+`useradd -m` creates an account in **locked** state (`passwd -S`
+shows `L`). You must set a password explicitly with `chpasswd` or
+`passwd`. The break-glass `emergency` account in this guide uses
+`passwd`; admin accounts should use the safer flow below.
+
+#### Why named accounts exist
+
+1. **Audit trail** — system logs show *who* did what. With shared
+   `root`, every action is "root did it." With named accounts, you
+   know which human ran every sudo command.
+2. **Personal credentials** — each user manages their own SSH key
+   and password independently. No shared secret.
+3. **Revocation simplicity** — `userdel <username>` removes one
+   person's access without affecting anyone else.
+4. **Sudo accountability** — `/var/log/auth.log` records each sudo
+   invocation by username, command, and timestamp.
+
+#### Step-by-step procedure
+
+You need three things from the new user before starting:
+1. **Preferred username** (lowercase, e.g., `firstname` or `firstname_org`)
+2. **SSH public key** (their `cat ~/.ssh/id_ed25519.pub` output)
+3. **Whether they need sudo** (admin access) or pipeline-only
+
+Then on the server as `root`:
 
 ```bash
-# For each admin (example: simon, colleague)
-useradd -m -s /bin/bash simon
-useradd -m -s /bin/bash <colleague-username>
+# ── Step 1: Create the user ──
+# -m creates /home/<username>
+# -s /bin/bash gives a login shell
+useradd -m -s /bin/bash <username>
 
-# Add to sudo group
-usermod -aG sudo simon
-usermod -aG sudo <colleague-username>
+# ── Step 2: Grant sudo (if they need admin access) ──
+# Adds the user to the 'sudo' group (Debian/Ubuntu).
+# Skip this if they only need pipeline operations via su views-deploy.
+usermod -aG sudo <username>
 
-# Add their SSH public keys
-mkdir -p /home/simon/.ssh
-echo "<simon-public-key>" >> /home/simon/.ssh/authorized_keys
-chmod 700 /home/simon/.ssh
-chmod 600 /home/simon/.ssh/authorized_keys
-chown -R simon:simon /home/simon/.ssh
+# ── Step 3: Install their SSH public key ──
+# Permissions matter. SSH refuses to read .ssh if it's world-readable.
+# 700 on the directory, 600 on authorized_keys.
+mkdir -p /home/<username>/.ssh
+echo "<their-public-key>" > /home/<username>/.ssh/authorized_keys
+chmod 700 /home/<username>/.ssh
+chmod 600 /home/<username>/.ssh/authorized_keys
+chown -R <username>:<username> /home/<username>/.ssh
 
-# Repeat for each admin
-
-# Create break-glass emergency account
-useradd -m -s /bin/bash emergency
-usermod -aG sudo emergency
-# Set a strong password (store securely, e.g., PRIO password manager)
-passwd emergency
+# ── Step 4: Set a temporary password and force first-login change ──
+# REQUIRED for sudo to work. Without this, the account is locked
+# (passwd -S shows 'L'). SSH login still works via key, but sudo
+# fails with "no password set".
+#
+# We use a generated random temp password + chage -d 0 to force
+# the user to change it on first authentication. This avoids:
+#   - sending the user our chosen password (weak credential reuse)
+#   - asking the user for a password we then know (we shouldn't)
+#   - leaving the temp password valid for any meaningful time
+TEMP_PW=$(openssl rand -base64 18)
+echo "Temp password: $TEMP_PW"  # send to user via Slack DM
+echo "<username>:$TEMP_PW" | chpasswd
+chage -d 0 <username>  # forces change on next auth
+unset TEMP_PW  # don't leave it in the shell environment
 ```
 
-After verifying named accounts work:
+#### Credential delivery (the temp password)
+
+The temp password from Step 4 must be delivered to the user
+**out-of-band** — not in the same channel you use for code.
+
+| Channel | Acceptable? |
+|---------|-------------|
+| Slack DM | Yes |
+| Signal | Yes |
+| Password manager share | Yes (best) |
+| Email | **No** (logged, archived, often unencrypted) |
+| Public Slack channel | **No** |
+| Issue tracker / git commit | **No** (permanent record) |
+
+The password is single-use: `chage -d 0` forces the user to change
+it on first authentication. Within minutes of delivery, the temp
+password is dead.
+
+#### What the new user does
+
+Send them this checklist:
+
 ```bash
-# Disable root SSH login
+# 1. SSH to the server (uses your key — no password prompt)
+ssh <username>@204.168.219.108
+
+# 2. The system will say:
+#    "You are required to change your password immediately"
+#    (current) UNIX password: ← type the temp password from Slack
+#    New password:            ← choose your real password
+#    Retype new password:     ← confirm
+#
+# 3. SSH will close the connection after the password change.
+#    This is normal — the auth stage finished but no shell opened.
+#    SSH back in (no password prompt this time, key-based auth):
+ssh <username>@204.168.219.108
+
+# 4. Test sudo
+sudo whoami
+# Expected: "root" (sudo will prompt for your new password the first time)
+
+# 5. Test pipeline operations as views-deploy
+sudo su - views-deploy
+cd views-datafactory
+uv run pytest --co -q | tail -3
+exit  # back to your own shell
+```
+
+#### Verify on the server (as root)
+
+After the user confirms their access works:
+
+```bash
+ssh root@204.168.219.108 "passwd -S <username>"
+# Expected output:
+#   <username> P <today's date> 0 99999 7 -1
+# The 'P' means password is set (not 'L' = locked).
+# The date is when the user changed it (should be today).
+```
+
+Or run the automated check:
+
+```bash
+python3 /home/views-deploy/views-datafactory/scripts/verify_server_hardening.py
+# Looks for named accounts with sudo, verifies each has a password
+# and an authorized_keys file.
+```
+
+#### Break-glass emergency account
+
+In addition to per-human accounts, create one shared `emergency`
+account whose password is stored in the PRIO password manager. This
+is the "break the glass" account used only when normal admin
+accounts are inaccessible (forgot password, key lost, etc.).
+
+```bash
+useradd -m -s /bin/bash emergency
+usermod -aG sudo emergency
+passwd emergency  # interactive — type a strong password
+# Store the password in PRIO password manager, NOT in a file.
+```
+
+#### Disabling root SSH login
+
+After at least one named admin account is verified working, disable
+root SSH:
+
+```bash
+# DO NOT RUN until a named account has been verified end-to-end:
+#   - SSH login works
+#   - Password change worked (passwd -S shows 'P')
+#   - sudo whoami returns "root"
+#
+# Test from a SECOND SSH session before disabling. If something
+# is wrong with sshd_config, you don't want to lose your only
+# way in.
 sed -i 's/^PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
 systemctl restart sshd
 ```
 
-**Test before disabling root:** SSH in with a named account, verify
-`sudo` works, then disable root login.
+If you disable root SSH before verifying the named account works,
+you may lock yourself out and need Hetzner console access to recover.
 
 ### 6.4 SSH IP restriction (C-88)
 

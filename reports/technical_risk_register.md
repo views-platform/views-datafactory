@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-09)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 120 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 88 resolved, 24 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Status:** 121 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 89 resolved, 24 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -13,8 +13,8 @@
 
 | ID | Tier | Title | Trigger | Package |
 |----|------|-------|---------|---------|
-| C-87 | 2 | No named user accounts on server | Before 2nd user access | Server hardening |
 | C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment | Server hardening |
+| C-121 | 4 | Phase 6.4 documented but unexecuted (lessons from C-87) | Before executing Phase 6.4 | Server hardening |
 | C-21 | 3 | No characterization tests for migration | Next migration batch planned | — |
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
@@ -50,7 +50,7 @@ Items that should be resolved together:
 
 | Package | Items | Trigger |
 |---------|-------|---------|
-| **Server hardening** | C-87, C-88 (C-84, C-85, C-86 resolved) | Before 2nd user access |
+| **Server hardening** | C-88, C-121 (C-84, C-85, C-86, C-87 resolved) | Before production deployment |
 | **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
@@ -64,10 +64,6 @@ Items that should be resolved together:
 ---
 
 ## Tier 2 — Fix Before Sharing Server Access
-
-### C-87: No named user accounts on server — [DEFER]
-Only `root` exists. IT head advised: named accounts per person, no shared accounts, plus a break-glass emergency account with securely stored credentials. **Trigger: create named accounts before granting second user access.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.3.
-**Source:** PRIO IT security guidance, server setup 2026-03-28
 
 ### C-88: SSH not restricted to PRIO/Uppsala IPs — [DEFER]
 SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
@@ -84,6 +80,10 @@ The metric lab code being migrated has its own tests, but this repo has no "gold
 ---
 
 ## Tier 4 — Accept or Defer
+
+### C-121: Phase 6.4 (SSH IP restriction) is documented but unexecuted — [DEFER]
+Phase 6.4 of `hetzner_deployment_guide.md` documents SSH IP restriction via Hetzner Cloud Firewall or ufw, but has never been executed end-to-end. C-87 surfaced the same pattern: Phase 6.3 was documented in March but only executed today (2026-04-10), revealing a missing `passwd` step that locked the new user out of `sudo`. The fix took 30 minutes; the bug was in the documentation since v1.0. **Lesson: untested documentation is broken documentation.** Phase 6.4 should be audited and ideally dry-run before the first real execution. **Trigger: before executing Phase 6.4 (which itself is blocked on PRIO IT CIDRs).** Resolution: walk through Phase 6.4 line-by-line, verify each command, add missing edge cases, then execute on the server.
+**Source:** Lessons from C-87 incident, 2026-04-10
 
 ### C-37: `date_prec=5` semantics hardcoded — [DEFER]
 `temporal_distribution.py:22` defines `_SUMMARY_DATE_PREC = 5`. If UCDP changes `date_prec` semantics, temporal distribution silently produces wrong results. No UCDP documentation exists for `date_prec` values. **Trigger: UCDP publishes a codebook or changes observed empirically.**
