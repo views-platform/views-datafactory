@@ -381,6 +381,13 @@ Ousterhout: deep module should hide error details. Nygard: operators need to dis
 Added feature validation in `_load_grid_from_zarr` (`dataset.py:159-167`): checks requested features against available features before subsetting, raises `ValueError` with list of missing features. Now matches npy path behavior (`_resolve_feature_indices`). TDD: failing test written first, then fix applied. 512 tests pass.
 **Source:** Expert review #6 (consumer API), Kleppmann + Beck. Resolved 2026-04-09.
 
+### C-87: ~~No named user accounts on server~~ RESOLVED
+Created `sonja_prio` account on Hetzner server: uid=1001, in sudo group, SSH key installed, password set via temp+chage flow (user changed it on first login). `passwd -S sonja_prio` returns `P 2026-04-10`. Sonja verified: SSH login works, sudo whoami returns root.
+
+**Incident note:** First execution of Phase 6.3 surfaced a documentation gap — the original procedure created accounts with `useradd -m` (no password), which leaves the account locked (`passwd -S` shows `L`). SSH key login worked but `sudo` failed with "no password set". Fix: temp password generation with `openssl rand`, set via `chpasswd`, force change via `chage -d 0`, deliver via Slack DM. Phase 6.3 rewritten to verbose what/why/how/cannot-do/permission-model standard matching Phase 6.1/6.2. `verify_server_hardening.py` extended with named-account check that catches this exact failure mode. New concern C-121 registered to track unexecuted Phase 6.4.
+
+**Source:** PRIO IT security guidance, executed 2026-04-10
+
 ### C-119: ~~`generate_consumer_data.py` has zero tests~~ RESOLVED
 Added `tests/test_consumer_data.py` with 11 tests covering: correct columns, index names, feature rename, row/col derivation, NaN filling, sorted index, partition boundary matching (calibration, validation, forecasting), and rename map completeness. Uses `importlib.util` to load the script as a module.
 **Source:** Expert review #6 (consumer API), Feathers + Beck. Resolved 2026-04-09.

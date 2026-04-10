@@ -247,6 +247,59 @@ def main() -> int:
     )
     print()
 
+    # ── 9. Named user accounts (C-87) ──
+    print("9. Named user accounts")
+    try:
+        sudo_group = grp.getgrnam("sudo")
+        sudo_members = sudo_group.gr_mem
+    except KeyError:
+        sudo_members = []
+
+    # Exclude root and the service account from "named admins"
+    named_admins = [
+        u for u in sudo_members if u not in ("root", SERVICE_USER)
+    ]
+
+    check(
+        "At least one named admin account exists",
+        len(named_admins) > 0,
+        f"found: {named_admins}" if named_admins else "none",
+    )
+
+    for user in named_admins:
+        # Check password is set (not locked, not "no password")
+        try:
+            result = subprocess.run(
+                ["passwd", "-S", user],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            parts = result.stdout.split()
+            pw_status = parts[1] if len(parts) >= 2 else "?"
+            check(
+                f"{user}: password is set",
+                pw_status == "P",
+                f"status={pw_status}"
+                + (" (locked or no password)"
+                   if pw_status != "P" else ""),
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            check(f"{user}: password check", False, "passwd -S failed")
+
+        # Check SSH key is installed
+        try:
+            user_pw = pwd.getpwnam(user)
+            auth_keys = Path(user_pw.pw_dir) / ".ssh" / "authorized_keys"
+            check(
+                f"{user}: SSH authorized_keys exists",
+                auth_keys.is_file(),
+                str(auth_keys),
+            )
+        except KeyError:
+            check(f"{user}: home directory check", False, "user not found")
+    print()
+
     # ── Summary ──
     total = passed + failed
     print("=" * 60)
