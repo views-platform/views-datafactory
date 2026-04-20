@@ -4,12 +4,14 @@ Data factory for the VIEWS conflict forecasting platform.
 
 ## Architecture
 
-The system is a **graph, not a pipeline** (ADR-012):
-- **Source nodes** (`datafactory_harvester`, `datafactory_synthetic`) produce raw data independently
-- **Consolidation** (`datafactory_consolidation`) combines raw vintages into lossless event stores
-- **Viewpoints** (`datafactory_viewpoint`) apply opinionated rules to produce materialized views
-- **Compilation** (`datafactory_compilation`) places viewpoint output onto the spatiotemporal grid
-- **Consumer nodes** (metric lab, other VIEWS repos) read compiled outputs
+The system is a **graph, not a pipeline** (ADR-012). Layers are decoupled by the filesystem, not by imports. No layer imports from the layer above or below it — data flows as files on disk, and each layer reads/writes independently:
+- **Source nodes** (`datafactory_harvester`, `datafactory_synthetic`) produce raw data independently → `data/raw/`
+- **Consolidation** (`datafactory_consolidation`) reads raw Parquet, writes lossless event store → `data/consolidated/`
+- **Viewpoints** (`datafactory_viewpoint`) reads consolidated store, writes materialized views → `data/viewpoint/`
+- **Compilation** (`datafactory_compilation`) reads viewpoint Parquet, writes grid npy → `data/compiled/`
+- **Assembly** (`scripts/assemble_grid.py`) combines compiled UCDP + static + admin → `data/assembled/`
+- **Query** (`datafactory_query`) reads assembled grid (npy or zarr), provides `load_dataset()` API
+- **Consumer bridge** (`scripts/generate_consumer_data.py`) translates factory → VIEWSER vocabulary
 - Not all paths traverse all layers. Synthetic data reaches consumers directly (skips consolidation, viewpoint, and compilation).
 
 ## Package Layout
@@ -24,6 +26,7 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 - `datafactory_viewpoint` — opinionated, versioned views over consolidated data (Layer 3, imports provenance only)
 - `datafactory_compilation` — viewpoint output → grid npy (Layer 4, imports provenance + priogrid)
 - `datafactory_adapters` — consumer-facing conversions: grid → DataFrame, grid → FeatureFrame (no datafactory_* imports; sits alongside the graph, not inside it)
+- `datafactory_query` — consumer entry point: `load_dataset()`, region/time/feature subsetting, dual npy/zarr backend (imports priogrid + adapters, reads assembled files)
 
 ## Tooling
 

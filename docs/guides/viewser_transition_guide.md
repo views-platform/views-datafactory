@@ -112,9 +112,9 @@ HydraNet's architecture treats `c_id` as an **identity column** — it's carried
 
 ### The new system (datafactory)
 
-The data factory's `c_id` uses **FAO GAUL codes** (Global Administrative Unit Layers). These are **time-invariant**: each grid cell maps to exactly one country code across all months.
+The data factory's `c_id` uses **FAO GAUL 2024 codes** (Global Administrative Unit Layers). The boundary shapefiles and country codes come from FAO's official distribution at `https://storage.googleapis.com/fao-maps-catalog-data/boundaries/GAUL_2024_L{1,2}.zip` (CC-BY-4.0 license). The data factory harvester downloads these shapefiles and performs a spatial join (point-in-polygon against PRIO-GRID centroids) to assign each grid cell a `gaul0_code`.
 
-This means `c_id` is a reliable spatial grouping key. You can group predictions by country, aggregate evaluation metrics by country, or filter by country — and the grouping is consistent regardless of which month you look at.
+GAUL codes are **time-invariant**: each grid cell maps to exactly one country code across all months. This means `c_id` is a reliable spatial grouping key. You can group predictions by country, aggregate evaluation metrics by country, or filter by country — and the grouping is consistent regardless of which month you look at.
 
 ### What about historical borders?
 

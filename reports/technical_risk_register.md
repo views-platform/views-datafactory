@@ -174,18 +174,6 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 **Source:** Falsification audit 2026-04-01 (F2)
 
 
-### C-122: Consumer model has no runtime data fetch from Hetzner — RESOLVED
-~~bright_starship in views-models has no code path to obtain data from the datafactory at runtime.~~ **Resolved 2026-04-19:** `main.py` now calls `_ensure_data()` before HydranetManager starts. If `data/raw/{run_type}_viewser_df.parquet` is missing, `config_queryset.fetch_data()` calls `load_dataset()` from the Hetzner zarr store, renames columns to VIEWSER convention, derives row/col, and saves the parquet. `requirements.txt` includes `views-datafactory`. Cross-ref: C-116 (no retry on remote zarr), C-117 (spatial over-fetch).
-**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.
-
-### C-123: `africa_me_legacy` region file not distributed — RESOLVED
-~~`africa_me_legacy_pgids.json` exists only in the developer's local `data/raw/gaul_admin/`.~~ **Resolved 2026-04-19:** The 13,110 pgids are now bundled as `africa_me_legacy_pgids.json` inside the `datafactory_query` package (`src/datafactory_query/`). `_load_legacy_pgids()` reads from `Path(__file__).parent`, not from `gaul_dir`. Any `pip install views-datafactory` includes the file. Cross-ref: C-122.
-**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.
-
-### C-124: No consumer onboarding for remote zarr credentials — RESOLVED
-~~No documentation in views-models explains the `~/.netrc` requirement.~~ **Resolved 2026-04-19:** bright_starship's `README.md` now includes a Prerequisites section with `~/.netrc` setup instructions (machine, login, password format, chmod 600). Cross-ref: C-96 (fsspec netrc), C-97 (auth scalability).
-**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.
-
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10). DDIA Ch.7 pp.234-236, Ch.8 pp.301-303.

@@ -40,5 +40,8 @@ provenance/
 reports/audit/
 reports/presentation/
 
+# Graphify output (generated knowledge graph artifacts)
+graphify-out/
+
 # Session
 resume_session.md

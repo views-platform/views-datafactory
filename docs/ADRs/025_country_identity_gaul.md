@@ -19,7 +19,7 @@ This conflation caused problems:
 2. **Implicit feature leakage.** A "bookkeeping" column that changes over time carries predictive signal (border changes correlate with conflict). If consumed as an identity, this signal is invisible and uncontrolled. If consumed as a feature, its temporal dynamics are undocumented.
 3. **Reproducibility.** The G&W/C-Shapes coding depends on which version of the state system list is loaded. Different viewser snapshots produce different `c_id` values for the same cell and month.
 
-The data factory uses GAUL (FAO Global Administrative Unit Layers) as its administrative boundary system. GAUL codes are **time-invariant per grid cell** — a cell belongs to the same country in all months.
+The data factory uses **FAO GAUL 2024** (Global Administrative Unit Layers) as its administrative boundary system. The shapefiles are downloaded from FAO's official distribution at `https://storage.googleapis.com/fao-maps-catalog-data/boundaries/GAUL_2024_L{1,2}.zip` (CC-BY-4.0 license). Both the boundary polygons and the country codes (`gaul0_code`) come from the same source dataset. GAUL codes are **time-invariant per grid cell** — a cell belongs to the same country in all months.
 
 ---
 
@@ -81,7 +81,7 @@ The audit script (`bright_starship/scripts/audit_data_parity.py`) confirmed that
 ## Implementation Notes
 
 - `config_queryset.py` in bright_starship renames `gaul0_code` → `c_id` via `FEATURE_RENAME`. This is the single point where the GAUL code enters the HydraNet pipeline as `c_id`.
-- The GAUL admin data is harvested by `datafactory_harvester` and stored in `data/raw/gaul_admin/gaul0_name.parquet`. The mapping from GAUL code to country name is authoritative.
+- The GAUL admin data is harvested by `datafactory_harvester` from FAO's official GAUL 2024 shapefiles (`https://storage.googleapis.com/fao-maps-catalog-data/boundaries/GAUL_2024_L{1,2}.zip`, CC-BY-4.0). The harvester performs a spatial join (pyshp + shapely STRtree point-in-polygon) against PRIO-GRID centroids. Output is stored in `data/raw/gaul_admin/gaul0_name.parquet`. The mapping from GAUL code to country name is authoritative.
 - GAUL codes include `-1` for ocean or unassigned cells. HydraNet treats `c_id` as float64 metadata, so `-1.0` is valid.
 - If a GAUL-to-G&W mapping is ever needed for cross-system comparison, it should be a standalone utility, not embedded in the pipeline.
 
@@ -101,6 +101,6 @@ The audit script (`bright_starship/scripts/audit_data_parity.py`) confirmed that
 - HydraNet ADR-030 §2.1: Standard Identity Registry (`priogrid_gid`, `row`, `col`, `month_id`, `c_id`)
 - `bright_starship/scripts/audit_data_parity.py`: Parity audit confirming 1 c_id per pgid (factory) vs 7 (viewser)
 - `reports/consumer_parity_investigation.md`: Overall parity findings
-- FAO GAUL: Global Administrative Unit Layers (2024 naming conventions)
+- FAO GAUL 2024: `https://www.fao.org/agroinformatics/training-and-resources/data-sets/data-set-detail/global-gaul-new-2024-release/en` (CC-BY-4.0)
 - Gleditsch & Ward (1999): State system membership list
 - Weidmann, Kuse, Gleditsch (2010): CShapes dataset
