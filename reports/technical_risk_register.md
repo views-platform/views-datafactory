@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-09)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 126 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 26 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Status:** 127 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 27 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -38,6 +38,7 @@
 | C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
+| C-127 | 2 | Zarr backend returns features in alphabetical order, npy preserves feature_names.json order | Consumer switches from npy to zarr backend | Query correctness |
 | C-125 | 3 | No cm aggregation — 48/70 models cannot migrate | First cm model attempts datafactory migration | Migration scope |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
@@ -62,6 +63,7 @@ Items that should be resolved together:
 | **Test infrastructure** | C-29, C-78, C-79 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80, C-112 resolved) |
 | **Consumer integration** | C-122, C-123, C-124 | Before bright_starship can be used by anyone other than the developer |
+| **Query correctness** | C-127 | Before consumer switches from npy to zarr backend |
 | **Migration scope** | C-125, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -76,6 +78,14 @@ Items that should be resolved together:
 SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
 
+### C-127: Zarr backend returns features in different order than npy backend
+The zarr loader in `dataset.py:154-157` falls back to `sorted(ds.data_vars)` (alphabetical) when the zarr store lacks a `feature_order` attr. The npy loader (`dataset.py:215`) reads `feature_names.json`, which preserves the compilation-time order. A consumer using FeatureFrame and indexing `y_features` by column position (e.g., `ff.y_features[:, 0]`) will silently get different features depending on which backend is used. The current zarr store at `data/assembled/grid.zarr` has no `feature_order` attr. **This is silent data divergence with no error signal.**
+
+**Trigger:** Consumer switches from local npy to zarr backend (local or remote) and uses positional indexing on FeatureFrame.
+**Location:** `src/datafactory_query/dataset.py:154-157` (zarr fallback), `src/datafactory_query/dataset.py:215` (npy path). Zarr store at `data/assembled/grid.zarr` (missing attr).
+**Resolution:** Either (a) write `feature_order` attr during zarr export (`scripts/export_zarr.py`), or (b) reorder zarr output to match `features` parameter order in `_load_grid_from_zarr`, or (c) both.
+**Source:** Verification examples suite (M13), `ex_zarr_local.py` discovered column order mismatch during TDD, 2026-04-21. Cross-ref: C-117 (zarr spatial subsetting).
+
 ---
 
 ## Tier 3 — Improve Quality
@@ -83,6 +93,7 @@ SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
 **Source:** Feathers
+**Update 2026-04-21:** Partially addressed by M13 (verification examples suite). 15 `examples/ex_*.py` scripts verify consumer-facing API contracts end-to-end. Not full characterization tests, but covers the consumer surface model developers depend on.
 
 ---
 

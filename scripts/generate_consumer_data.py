@@ -21,7 +21,7 @@ Usage:
     uv run python scripts/generate_consumer_data.py
     uv run python scripts/generate_consumer_data.py --output-dir /path/to/model/data/raw
     uv run python scripts/generate_consumer_data.py --partition calibration
-    uv run python scripts/generate_consumer_data.py --data-dir http://204.168.219.108/grid.zarr
+    uv run python scripts/generate_consumer_data.py --data-dir <zarr-url>
 """
 
 from __future__ import annotations

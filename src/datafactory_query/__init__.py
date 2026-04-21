@@ -7,10 +7,13 @@ assembled output via filesystem.
 """
 
 from datafactory_query.dataset import load_dataset
+from datafactory_query.defaults import DEFAULT_REMOTE, RemoteConfig
 from datafactory_query.regions import list_regions, load_region_pgids
 from datafactory_query.temporal import parse_time_range
 
 __all__ = [
+    "DEFAULT_REMOTE",
+    "RemoteConfig",
     "list_regions",
     "load_dataset",
     "load_region_pgids",

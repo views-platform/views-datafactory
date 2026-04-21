@@ -53,6 +53,7 @@ datafactory_query/
 - **Fail-loud on missing data:** Raises `FileNotFoundError` if assembled grid or zarr store is not found. Raises `ValueError` for unknown features or invalid regions.
 - **Format validation:** Only "feature_frame" and "dataframe" are valid output formats. Invalid format raises `ValueError`.
 - **Credential warning:** If ~/.netrc lacks credentials for a remote zarr host, logs a warning before attempting unauthenticated access (may fail with 401).
+- **Feature ordering (C-127):** The npy backend returns features in `feature_names.json` order. The zarr backend uses the `feature_order` dataset attribute if present; otherwise falls back to alphabetical (`sorted(ds.data_vars)`). Consumers must access features by name, not by position index. The zarr export should write `feature_order` to ensure backend parity.
 
 ## Intent Contracts
 

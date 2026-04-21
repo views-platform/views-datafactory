@@ -1,7 +1,7 @@
-# R&D Roadmap v06 — Consumer Parity Achieved
+# R&D Roadmap v07 — Verification Suite Complete
 
-**Date:** 2026-04-08
-**Supersedes:** rd_roadmap05.md (2026-04-07)
+**Date:** 2026-04-21
+**Supersedes:** rd_roadmap06.md (2026-04-08)
 **Status:** Active
 
 ---
@@ -12,7 +12,9 @@ The data factory produces UCDP conflict data at verified consumer parity, serves
 
 The consumer API (`datafactory_query`) is feature-complete for local access: `load_dataset()` handles regions, temporal subsetting, feature selection, and multiple output formats. Consumer parity tests against the VIEWSER gold set pass. The focus shifts to **first real consumer integration** and **remote access validation**.
 
-**System snapshot:** 10 packages, 511 tests, 25 ADRs, 15 CICs. 115 concern IDs tracked: 80 resolved, 27 open/deferred, 6 accepted by design.
+A verification examples suite (`examples/run_examples.sh`) now demonstrates every user-facing capability: both output formats, all region types, all time parsing formats, feature subsetting, both storage backends (npy + zarr), and the full consumer bridge pattern. 15 scripts, all passing. Remote zarr smoke test against the live Hetzner server also passes.
+
+**System snapshot:** 10 packages, 530 tests + 15 verification examples, 25 ADRs, 16 CICs. 126 concern IDs tracked: 92 resolved, 26 open/deferred, 6 accepted by design.
 
 ---
 
@@ -47,6 +49,17 @@ Config promotion (same phase):
 - CompilationConfig: `output_dtype`, `fill_value`, `FeatureSpec.value_field` — grid output parameters configurable
 - Aggregation strategies renamed: `sum_field`/`max_field` (old `sum_best`/`max_best` kept as aliases)
 
+### Phase CA-2a: Verification Examples Suite — COMPLETE (2026-04-21)
+15 standalone verification scripts (`examples/ex_*.py`) + bash runner (`examples/run_examples.sh`):
+- Output formats: DataFrame contract, FeatureFrame contract
+- Regions: 3 predefined macro-regions (global/land/africa_me_legacy), country-name lookup (Ethiopia, case-insensitive), unknown-country error handling
+- Time parsing: VIEWS month_id, ISO year/year-month/full-date, None defaults
+- Feature subsetting: explicit list vs all features
+- Backends: local npy, local zarr, remote zarr over HTTP
+- Consumer integration: partition generation, full bridge pattern (load → rename → derive → fillna → parquet round-trip)
+- Documented gaps: 2 xfail scripts (country_month C-125, transforms C-126)
+- Remote zarr smoke test against live Hetzner server passes (M12 resolved)
+
 ---
 
 ## Active Directions
@@ -67,10 +80,10 @@ Config promotion (same phase):
 | CQ-6 | Where should transformations live? | Deferred |
 
 **Next steps:**
-1. Integrate with first training script (purple_alien) — let friction surface
-2. Smoke test remote zarr path against live server
+1. ~~Smoke test remote zarr path against live server~~ — **Done** (M12/CA-2a, `ex_zarr_remote.py`)
+2. Integrate with first training script (bright_starship) — let friction surface
 3. Merge development → main, tag v1.2
-4. Write ADR-025 (query layer architecture) once interface is proven with real consumers
+4. Write ADR-026 (query layer architecture) once interface is proven with real consumers
 
 ### Direction 2: New Data Sources — PAUSED
 
@@ -146,11 +159,13 @@ DONE:   Phase 0-2c   (UCDP production parity)
         Phase DH-2a  (v1.1 code work, tagged v1.1.0)
         Phase CA-1   (consumer API MVP + parity investigation)
         |
-NOW:    Phase CA-2   (first training script integration)
+DONE:   Phase CA-2a  (verification examples suite — M13, 15 scripts all pass)
+        Phase CA-3   (remote zarr smoke test — M12, folded into CA-2a)
+        |
+NOW:    Phase CA-2b  (first training script integration — M11)
         Phase DH-2b  (v1.1 operator work — blocked on domain + IT)
         |
-NEXT:   Phase CA-3   (remote zarr smoke test)
-        Merge to main + tag v1.2
+NEXT:   Merge to main + tag v1.2
         |
 THEN:   Phase 5      (V-Dem integration — country-level broadcast)
         Phase 6      (ACLED integration — second conflict source)
@@ -167,12 +182,12 @@ LATER:  Phase DH-3   (v2.0 institutional — OAuth2, audit trail)
 
 Active concerns tracked in `reports/technical_risk_register.md` (ADR-020).
 
-**Current:** 115 concern IDs: 80 resolved, 27 open/deferred, 6 accepted by design.
+**Current:** 126 concern IDs: 92 resolved, 26 open/deferred, 6 accepted by design.
 
 | Category | Count | Key items |
 |----------|-------|-----------|
 | Tier 1 | 0 open | All resolved |
 | Tier 2 | 5 open | C-84-C-88 (server hardening, blocked on external) |
-| Tier 3 | 1 open | C-21 (characterization tests) |
+| Tier 3 | 3 open | C-21 (characterization tests — partially addressed by M13), C-125 (cm gap), C-126 (transform gap) |
 | Tier 4 | 15 open | Most untriggered; 2 accepted at v1.0; C-115 new (summary detection threshold) |
 | Accepted | 6 | C-06, C-07, C-10, C-32, C-38, C-41 |

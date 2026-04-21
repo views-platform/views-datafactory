@@ -231,6 +231,12 @@ Accepts multiple formats:
 | `"data/assembled/grid.zarr"` | Local zarr store |
 | `"http://204.168.219.108/grid.zarr"` | Remote server (requires `~/.netrc`) |
 
+**Feature ordering caveat:** The npy backend returns features in
+`feature_names.json` order (compilation-time order). The zarr backend
+returns features alphabetically unless the store includes a
+`feature_order` attribute. Always access features by name, not by
+position index. See C-127 in the risk register and ADR-021.
+
 ---
 
 ## Remote access

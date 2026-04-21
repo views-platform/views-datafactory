@@ -12,6 +12,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from datafactory_adapters import FeatureFrame
+from datafactory_query.defaults import DEFAULT_REMOTE
 from datafactory_query.regions import (
     REGIONS,
     list_regions,
@@ -543,7 +544,7 @@ class TestIsRemote:
 
 # ---- Remote Zarr Smoke Tests (M12) ----
 
-REMOTE_ZARR = "http://204.168.219.108/grid.zarr"
+REMOTE_ZARR = DEFAULT_REMOTE.zarr_url
 
 
 @pytest.mark.consumer

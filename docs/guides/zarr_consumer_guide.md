@@ -241,6 +241,14 @@ Terrain, resources, land cover variables. Static across time
 These are categorical integers stored as float32. Use them for
 masking (e.g., select all cells in country X), not arithmetic.
 
+**Feature ordering:** Zarr stores have no intrinsic variable order.
+When accessing features via `load_dataset()`, the order depends on
+whether the store includes a `feature_order` attribute. Without it,
+features are returned alphabetically — which may differ from the npy
+backend's `feature_names.json` order. Always access features by name
+(e.g., `ds["ged_sb_best"]`), not by position. See C-127 in the risk
+register.
+
 ---
 
 ## Performance tips

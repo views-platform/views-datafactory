@@ -34,7 +34,9 @@ from pathlib import Path
 
 import requests
 
-DEFAULT_SERVER = "204.168.219.108"
+from datafactory_query.defaults import DEFAULT_REMOTE
+
+DEFAULT_SERVER = DEFAULT_REMOTE.server
 DEFAULT_PORT = 80
 
 EXPECTED_N_FEATURES = 43
