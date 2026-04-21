@@ -43,5 +43,10 @@ reports/presentation/
 # Graphify output (generated knowledge graph artifacts)
 graphify-out/
 
+# Credentials (never commit secrets)
+.env
+.env.*
+credentials.toml
+
 # Session
 resume_session.md

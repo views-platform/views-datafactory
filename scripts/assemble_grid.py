@@ -96,6 +96,8 @@ def main() -> int:
     import numpy as np
     import pyarrow.parquet as pq
 
+    from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
+
     t0 = time.monotonic()
 
     # Load UCDP grid (mmap to reduce peak memory)
@@ -105,6 +107,7 @@ def main() -> int:
     ucdp_features = json.loads(features_path.read_text())
 
     n_t, n_h, n_w, n_ucdp = ucdp_grid.shape
+    DEFAULT_GRID_CONFIG.assert_grid_shape(ucdp_grid)
     print(
         f"UCDP grid: [T={n_t}, H={n_h}, W={n_w}, "
         f"C={n_ucdp}]"

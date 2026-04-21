@@ -15,6 +15,8 @@ from __future__ import annotations
 import sys
 from datetime import date
 
+from datafactory_query.defaults import PARTITIONS
+
 
 def _current_month_id() -> int:
     today = date.today()
@@ -23,21 +25,14 @@ def _current_month_id() -> int:
 
 def generate(steps: int = 36) -> dict:
     def forecasting_train_range():
-        return (121, _current_month_id() - 1)
+        return (PARTITIONS["calibration"]["train"][0], _current_month_id() - 1)
 
     def forecasting_test_range(steps):
         month_last = _current_month_id() - 1
         return (month_last + 1, month_last + 1 + steps)
 
     return {
-        "calibration": {
-            "train": (121, 444),
-            "test": (445, 492),
-        },
-        "validation": {
-            "train": (121, 492),
-            "test": (493, 540),
-        },
+        **PARTITIONS,
         "forecasting": {
             "train": forecasting_train_range(),
             "test": forecasting_test_range(steps=steps),
@@ -69,26 +64,30 @@ def main() -> int:
             f"{key}.test: start {test_start} > end {test_end}"
         )
 
+    cal_expected = PARTITIONS["calibration"]
+    val_expected = PARTITIONS["validation"]
+
     cal = partitions["calibration"]
-    assert cal["train"] == (121, 444), (
-        f"calibration.train: expected (121, 444), got {cal['train']}"
+    assert cal["train"] == cal_expected["train"], (
+        f"cal.train: {cal['train']} != {cal_expected['train']}"
     )
-    assert cal["test"] == (445, 492), (
-        f"calibration.test: expected (445, 492), got {cal['test']}"
+    assert cal["test"] == cal_expected["test"], (
+        f"cal.test: {cal['test']} != {cal_expected['test']}"
     )
 
     val = partitions["validation"]
-    assert val["train"] == (121, 492), (
-        f"validation.train: expected (121, 492), got {val['train']}"
+    assert val["train"] == val_expected["train"], (
+        f"val.train: {val['train']} != {val_expected['train']}"
     )
-    assert val["test"] == (493, 540), (
-        f"validation.test: expected (493, 540), got {val['test']}"
+    assert val["test"] == val_expected["test"], (
+        f"val.test: {val['test']} != {val_expected['test']}"
     )
 
     fc = partitions["forecasting"]
     current = _current_month_id()
-    assert fc["train"][0] == 121, (
-        f"forecasting.train start: expected 121, got {fc['train'][0]}"
+    train_start = cal_expected["train"][0]
+    assert fc["train"][0] == train_start, (
+        f"fc.train start: {fc['train'][0]} != {train_start}"
     )
     assert fc["train"][1] == current - 1, (
         f"forecasting.train end: expected {current - 1}, got {fc['train'][1]}"

@@ -8,6 +8,7 @@ from datafactory_priogrid.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import MappingProxyType
 
 
 @dataclass(frozen=True)
@@ -32,3 +33,16 @@ class RemoteConfig:
 
 
 DEFAULT_REMOTE = RemoteConfig()
+
+# VIEWS operational calendar — single source of truth for partition
+# boundaries used by consumer scripts, examples, and tests.
+# Forecasting is excluded (computed dynamically from current date).
+_PARTITIONS_RAW: dict[str, dict[str, tuple[int, int]]] = {
+    "calibration": {"train": (121, 444), "test": (445, 492)},
+    "validation": {"train": (121, 492), "test": (493, 540)},
+}
+PARTITIONS: MappingProxyType[
+    str, MappingProxyType[str, tuple[int, int]]
+] = MappingProxyType(
+    {k: MappingProxyType(v) for k, v in _PARTITIONS_RAW.items()}
+)

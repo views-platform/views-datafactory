@@ -81,6 +81,8 @@ uv sync
 
 ### 1.6 Set API token
 
+> See [`credential_setup.md`](credential_setup.md) for the full credential management guide and ADR-026 for the architectural decision.
+
 ```bash
 # Add to ~/.profile (NOT .bashrc — .bashrc exits early in non-interactive
 # shells like cron, making env vars unreachable for automated jobs)
@@ -275,6 +277,8 @@ cat logs/refresh.log
 ## Phase 5: Set up credentials and verify consumer access
 
 ### 5.1 Consumer credential setup (one-time, per machine)
+
+> See [`credential_setup.md`](credential_setup.md) for the consolidated credential guide.
 
 All data access uses HTTP basic auth. Credentials are stored in
 `~/.netrc` — the standard Unix credential file, read natively by

@@ -34,6 +34,7 @@ from pathlib import Path
 
 import requests
 
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
 from datafactory_query.defaults import DEFAULT_REMOTE
 
 DEFAULT_SERVER = DEFAULT_REMOTE.server
@@ -41,10 +42,10 @@ DEFAULT_PORT = 80
 
 EXPECTED_N_FEATURES = 43
 EXPECTED_N_TIME = 456
-EXPECTED_N_LAT = 360
-EXPECTED_N_LON = 720
+EXPECTED_N_LAT = DEFAULT_GRID_CONFIG.nrow
+EXPECTED_N_LON = DEFAULT_GRID_CONFIG.ncol
 EXPECTED_CRS = "EPSG:4326"
-EXPECTED_RESOLUTION = 0.5
+EXPECTED_RESOLUTION = DEFAULT_GRID_CONFIG.resolution
 EXPECTED_SOURCE = "views-datafactory"
 
 EXPECTED_UCDP = {

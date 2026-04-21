@@ -57,8 +57,9 @@ machine 204.168.219.108
 login views
 password yourpassword
 ```
-Then `chmod 600 ~/.netrc`. See `docs/guides/hetzner_deployment_guide.md`
-Phase 5 for full instructions.
+Then `chmod 600 ~/.netrc`. See [`credential_setup.md`](credential_setup.md)
+for the full credential guide, or `hetzner_deployment_guide.md` Phase 5
+for server-side setup.
 
 ### From a local path
 

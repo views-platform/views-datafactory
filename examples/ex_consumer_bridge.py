@@ -15,13 +15,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
 from datafactory_query import load_dataset
 
 DATA_DIR = Path("data/assembled")
 REGION = "africa_me_legacy"
 START = 481
 END = 483
-NCOL = 720
+NCOL = DEFAULT_GRID_CONFIG.ncol
 
 FACTORY_FEATURES = ["ged_sb_best", "ged_ns_best", "ged_os_best", "gaul0_code"]
 FEATURE_RENAME = {
@@ -52,10 +53,12 @@ def main() -> int:
     df["row"] = ((pgids - 1) // NCOL + 1).astype(np.float64)
     df["col"] = ((pgids - 1) % NCOL + 1).astype(np.float64)
 
+    nrow = DEFAULT_GRID_CONFIG.nrow
+    ncol = DEFAULT_GRID_CONFIG.ncol
     assert (df["row"] >= 1).all(), "Row values must be >= 1"
-    assert (df["row"] <= 360).all(), "Row values must be <= 360"
+    assert (df["row"] <= nrow).all(), f"Row > {nrow}"
     assert (df["col"] >= 1).all(), "Col values must be >= 1"
-    assert (df["col"] <= 720).all(), "Col values must be <= 720"
+    assert (df["col"] <= ncol).all(), f"Col > {ncol}"
 
     df = df.fillna(0.0)
     nan_count = df.isna().sum().sum()

@@ -90,5 +90,14 @@ class GridConfig:
     def n_cells(self) -> int:
         return self.nrow * self.ncol
 
+    def assert_grid_shape(self, grid: object) -> None:
+        """Validate that a [T, H, W, C] array's spatial dims match this config."""
+        shape = grid.shape  # type: ignore[union-attr]
+        if shape[1] != self.nrow or shape[2] != self.ncol:
+            raise AssertionError(
+                f"Grid spatial dims ({shape[1]}, {shape[2]}) "
+                f"!= expected ({self.nrow}, {self.ncol})"
+            )
+
 
 DEFAULT_GRID_CONFIG = GridConfig()

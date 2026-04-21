@@ -241,6 +241,8 @@ position index. See C-127 in the risk register and ADR-021.
 
 ## Remote access
 
+> See [`credential_setup.md`](credential_setup.md) for the full credential management guide.
+
 ### Prerequisites
 
 Create a `~/.netrc` file with the server credentials:

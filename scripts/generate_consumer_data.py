@@ -36,6 +36,7 @@ import pandas as pd
 
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
 from datafactory_query.dataset import _is_remote
+from datafactory_query.defaults import PARTITIONS as _BASE_PARTITIONS
 
 # ── Consumer contract ──────────────────────────────────────
 # These match what purple_alien, white_ranger, and other models
@@ -50,12 +51,10 @@ FEATURE_RENAME = {
 
 FACTORY_FEATURES = list(FEATURE_RENAME.keys())
 
-# VIEWS month_id convention: (year - 1980) * 12 + month
-# month_id 121 = 1990-01, month_id 492 = 2021-12
-PARTITIONS = {
-    "calibration": {"train": (121, 444), "test": (445, 492)},
-    "validation": {"train": (121, 492), "test": (493, 540)},
-    "forecasting": None,  # computed dynamically
+# Calibration/validation from single source of truth; forecasting computed dynamically.
+PARTITIONS: dict[str, dict[str, tuple[int, int]] | None] = {
+    **_BASE_PARTITIONS,
+    "forecasting": None,
 }
 
 
