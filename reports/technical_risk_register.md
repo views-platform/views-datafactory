@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-09)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 124 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 24 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Status:** 126 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 26 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -38,6 +38,8 @@
 | C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
+| C-125 | 3 | No cm aggregation — 48/70 models cannot migrate | First cm model attempts datafactory migration | Migration scope |
+| C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
@@ -60,6 +62,7 @@ Items that should be resolved together:
 | **Test infrastructure** | C-29, C-78, C-79 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80, C-112 resolved) |
 | **Consumer integration** | C-122, C-123, C-124 | Before bright_starship can be used by anyone other than the developer |
+| **Migration scope** | C-125, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
 
@@ -173,6 +176,14 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Source:** Falsification audit 2026-04-01 (F2)
 
+
+### C-125: No country-month (cm) aggregation — 48/70 models cannot migrate — [DEFER]
+`load_dataset()` returns data indexed on `(month_id, priogrid_gid)` only. 48 of 70 VIEWS models use `country_month` level of analysis, requiring grid-to-country aggregation that the factory does not provide. These models remain dependent on viewser until a cm aggregation layer exists — either in datafactory, in a separate feature-engineering repo, or in the model classes themselves. The factory's scope is data access, not feature engineering; this is a known boundary, not an omission. **Trigger: first cm model attempts migration from viewser to datafactory.**
+**Source:** Falsification audit 2026-04-20 (F3). Cross-ref: S1 in `test_falsification_viewser_replacement.py`.
+
+### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
+14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
+**Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
 
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
