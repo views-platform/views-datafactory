@@ -91,6 +91,31 @@ class TestGridConfigRed:
             cfg.resolution = 1.0  # type: ignore[misc]
 
 
+class TestAssertGridShape:
+
+    def test_valid_shape_passes(self) -> None:
+        cfg = GridConfig()
+        grid = np.zeros((1, cfg.nrow, cfg.ncol, 2))
+        cfg.assert_grid_shape(grid)
+
+    def test_wrong_height_raises(self) -> None:
+        cfg = GridConfig()
+        grid = np.zeros((1, 180, cfg.ncol, 2))
+        with pytest.raises(AssertionError, match="spatial dims"):
+            cfg.assert_grid_shape(grid)
+
+    def test_wrong_width_raises(self) -> None:
+        cfg = GridConfig()
+        grid = np.zeros((1, cfg.nrow, 360, 2))
+        with pytest.raises(AssertionError, match="spatial dims"):
+            cfg.assert_grid_shape(grid)
+
+    def test_non_array_raises_type_error(self) -> None:
+        cfg = GridConfig()
+        with pytest.raises(TypeError, match="Expected array"):
+            cfg.assert_grid_shape("not an array")
+
+
 class TestTemporalConfigRed:
     """CIC: TemporalConfig must be immutable (frozen dataclass)."""
 
