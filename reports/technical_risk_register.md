@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-09)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 121 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 89 resolved, 24 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-04-21)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit
+**Status:** 129 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 29 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -38,6 +38,14 @@
 | C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
+| C-128 | 2 | Scripts infer grid shape without config validation (ADR-003 forbidden) | Compilation produces unexpected spatial dims | ADR-003 compliance |
+| C-127 | 2 | Zarr backend returns features in alphabetical order, npy preserves feature_names.json order | Consumer switches from npy to zarr backend | Query correctness |
+| C-129 | 3 | Partition boundaries (month IDs) have no single source of truth | VIEWS shifts partition boundaries | ADR-003 compliance |
+| C-125 | 3 | No cm aggregation — 48/70 models cannot migrate | First cm model attempts datafactory migration | Migration scope |
+| C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
+| ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
+| ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
+| ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -56,6 +64,10 @@ Items that should be resolved together:
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
 | **Test infrastructure** | C-29, C-78, C-79 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80, C-112 resolved) |
+| **Consumer integration** | C-122, C-123, C-124 | Before bright_starship can be used by anyone other than the developer |
+| **Query correctness** | C-127 | Before consumer switches from npy to zarr backend |
+| **ADR-003 compliance** | C-128, C-129 | Before next assembly/compilation change |
+| **Migration scope** | C-125, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
 
@@ -69,13 +81,38 @@ Items that should be resolved together:
 SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
 
+### C-128: Scripts infer grid shape from arrays without config validation
+`assemble_grid.py:107` unpacks `n_t, n_h, n_w, n_ucdp = ucdp_grid.shape` and uses the inferred `n_h`, `n_w` for all subsequent operations (row/col loops, gid lookups) without asserting they match `GridConfig`. Same pattern in `export_dataframe.py:102`. ADR-003 explicitly lists "inferring grid resolution from the shape of a compiled npy array" as a **forbidden** inference pattern. A corrupted or mis-assembled npy (wrong spatial dimensions) would silently produce wrong output — incorrect gid→cell mappings, wrong feature assignments — with no error signal.
+
+**Trigger:** Compilation bug or manual assembly produces a grid with unexpected spatial dimensions (e.g., 180x360 from a half-resolution run).
+**Location:** `scripts/assemble_grid.py:107`, `scripts/export_dataframe.py:102`, `scripts/compile_grid.py:160-163`, `scripts/presentation_plots.py:174,231,293`.
+**Resolution:** Add `assert n_h == DEFAULT_GRID_CONFIG.nrow` and `assert n_w == DEFAULT_GRID_CONFIG.ncol` after shape unpacking in all affected scripts.
+**Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (forbidden inference patterns).
+
+### C-127: Zarr backend returns features in different order than npy backend
+The zarr loader in `dataset.py:154-157` falls back to `sorted(ds.data_vars)` (alphabetical) when the zarr store lacks a `feature_order` attr. The npy loader (`dataset.py:215`) reads `feature_names.json`, which preserves the compilation-time order. A consumer using FeatureFrame and indexing `y_features` by column position (e.g., `ff.y_features[:, 0]`) will silently get different features depending on which backend is used. The current zarr store at `data/assembled/grid.zarr` has no `feature_order` attr. **This is silent data divergence with no error signal.**
+
+**Trigger:** Consumer switches from local npy to zarr backend (local or remote) and uses positional indexing on FeatureFrame.
+**Location:** `src/datafactory_query/dataset.py:154-157` (zarr fallback), `src/datafactory_query/dataset.py:215` (npy path). Zarr store at `data/assembled/grid.zarr` (missing attr).
+**Resolution:** Either (a) write `feature_order` attr during zarr export (`scripts/export_zarr.py`), or (b) reorder zarr output to match `features` parameter order in `_load_grid_from_zarr`, or (c) both.
+**Source:** Verification examples suite (M13), `ex_zarr_local.py` discovered column order mismatch during TDD, 2026-04-21. Cross-ref: C-117 (zarr spatial subsetting).
+
 ---
 
 ## Tier 3 — Improve Quality
 
+### C-129: Partition boundaries (month IDs) have no single source of truth
+The calibration/validation/forecasting partition boundaries (121/444, 445/492, 493/540) appear as bare literals in 4+ independent locations: `scripts/generate_consumer_data.py:56` (`PARTITIONS` dict), `examples/ex_partitions.py` (6+ occurrences in assertions), `tests/test_consumer_data.py:162,169`, and downstream in `bright_starship/configs/config_partitions.py`. No shared authoritative definition exists. Adding a new partition type or shifting a boundary (e.g., extending calibration) requires coordinated find-and-replace across repos with no compiler or test to catch a missed update. Per ADR-003: "a single source of truth must be designated."
+
+**Trigger:** VIEWS operational calendar shifts partition boundaries (e.g., extending calibration end from month 444 to 456).
+**Location:** `scripts/generate_consumer_data.py:56`, `examples/ex_partitions.py:21-101`, `tests/test_consumer_data.py:162,169`, `tests/test_consumer_parity.py:57`, downstream `bright_starship/configs/config_partitions.py`.
+**Resolution:** Define a `PARTITIONS` frozen dict or dataclass in a shared location within `src/` and have all consumers import from it.
+**Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (single source of truth).
+
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
 **Source:** Feathers
+**Update 2026-04-21:** Partially addressed by M13 (verification examples suite). 15 `examples/ex_*.py` scripts verify consumer-facing API contracts end-to-end. Not full characterization tests, but covers the consumer surface model developers depend on.
 
 ---
 
@@ -100,6 +137,7 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 ### C-31: Candidate source depends on annual source — [DEFER]
 `ucdp_candidate.py` imports 4 symbols and `ucdp_dot9.py` imports 5 symbols from `ucdp_annual.py` (including `UcdpAnnualConfig`, `fetch_paginated`, `FIELD_TYPES`, `REQUIRED_FIELDS`, and `get_ucdp_token`). Changing annual's API client could break candidate. Additionally, `ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated` — sends unnecessary 100-year date range (works correctly but is a workaround). **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed. Resolution also addresses former C-28.**
 **Source:** Martin (expert review 5), falsification audit DoD005
+**Update 2026-04-21:** Magic-values audit found the UCDP API base URL `"https://ucdpapi.pcr.uu.se/api/gedevents"` hardcoded identically in all 3 config classes (`ucdp_annual.py:94`, `ucdp_candidate.py:86`, `ucdp_dot9.py:90`). This is a specific ADR-003 violation (no single source of truth) and a symptom of the same coupling. Extracting `_ucdp_common.py` would also centralize this URL.
 
 ### C-44: Harvest pipeline template is implicit — [DEFER]
 All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
@@ -169,6 +207,14 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Source:** Falsification audit 2026-04-01 (F2)
 
+
+### C-125: No country-month (cm) aggregation — 48/70 models cannot migrate — [DEFER]
+`load_dataset()` returns data indexed on `(month_id, priogrid_gid)` only. 48 of 70 VIEWS models use `country_month` level of analysis, requiring grid-to-country aggregation that the factory does not provide. These models remain dependent on viewser until a cm aggregation layer exists — either in datafactory, in a separate feature-engineering repo, or in the model classes themselves. The factory's scope is data access, not feature engineering; this is a known boundary, not an omission. **Trigger: first cm model attempts migration from viewser to datafactory.**
+**Source:** Falsification audit 2026-04-20 (F3). Cross-ref: S1 in `test_falsification_viewser_replacement.py`.
+
+### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
+14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
+**Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
 
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**

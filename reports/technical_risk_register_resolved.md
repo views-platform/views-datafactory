@@ -415,3 +415,15 @@ Hickey: expose for advanced consumers who want raw arrays. Martin: fewer entry p
 ### D-22: ~~Should the consumer contract (FEATURE_RENAME, PARTITIONS) be in a module or a script?~~ RESOLVED
 GoF: extract to `datafactory_query.consumer_contract` for reuse. Beck: test the script directly, don't create modules for one-use code. **Resolution: GoF wins if a second consumer needs the same transforms. Beck wins today. Monitor.**
 **Source:** Expert review #6 (consumer API), 2026-04-09
+
+### C-122: Consumer model has no runtime data fetch from Hetzner — RESOLVED
+~~bright_starship in views-models has no code path to obtain data from the datafactory at runtime.~~ **Resolved 2026-04-19:** `main.py` now calls `_ensure_data()` before HydranetManager starts. If `data/raw/{run_type}_viewser_df.parquet` is missing, `config_queryset.fetch_data()` calls `load_dataset()` from the Hetzner zarr store, renames columns to VIEWSER convention, derives row/col, and saves the parquet. `requirements.txt` includes `views-datafactory`. Cross-ref: C-116 (no retry on remote zarr), C-117 (spatial over-fetch).
+**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.
+
+### C-123: `africa_me_legacy` region file not distributed — RESOLVED
+~~`africa_me_legacy_pgids.json` exists only in the developer's local `data/raw/gaul_admin/`.~~ **Resolved 2026-04-19:** The 13,110 pgids are now bundled as `africa_me_legacy_pgids.json` inside the `datafactory_query` package (`src/datafactory_query/`). `_load_legacy_pgids()` reads from `Path(__file__).parent`, not from `gaul_dir`. Any `pip install views-datafactory` includes the file. Cross-ref: C-122.
+**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.
+
+### C-124: No consumer onboarding for remote zarr credentials — RESOLVED
+~~No documentation in views-models explains the `~/.netrc` requirement.~~ **Resolved 2026-04-19:** bright_starship's `README.md` now includes a Prerequisites section with `~/.netrc` setup instructions (machine, login, password format, chmod 600). Cross-ref: C-96 (fsspec netrc), C-97 (auth scalability).
+**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.

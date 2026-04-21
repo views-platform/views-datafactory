@@ -375,10 +375,13 @@ def main() -> int:
     matplotlib.use("Agg")
     import numpy as np
 
+    from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
+
     features = json.loads(
         (args.input / "feature_names.json").read_text()
     )
     grid = np.load(grid_path, mmap_mode="r")
+    DEFAULT_GRID_CONFIG.assert_grid_shape(grid)
     n_t = grid.shape[0]
 
     args.output.mkdir(parents=True, exist_ok=True)

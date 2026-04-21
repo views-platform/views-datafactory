@@ -91,6 +91,7 @@ def main() -> int:
     import numpy as np
 
     from datafactory_adapters import grid_to_dataframe
+    from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
 
     t0 = time.monotonic()
 
@@ -100,6 +101,7 @@ def main() -> int:
     feature_names = json.loads(features_path.read_text())
 
     n_t, n_h, n_w, n_c = grid.shape
+    DEFAULT_GRID_CONFIG.assert_grid_shape(grid)
     print(f"Grid: [T={n_t}, H={n_h}, W={n_w}, C={n_c}]")
     print(f"Features: {feature_names}")
 

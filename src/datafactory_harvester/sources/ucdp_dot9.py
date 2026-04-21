@@ -35,6 +35,7 @@ from datafactory_harvester.sources import register_source
 from datafactory_harvester.sources.ucdp_annual import (
     FIELD_TYPES,
     REQUIRED_FIELDS,
+    UCDP_GED_API_BASE,
     UcdpAnnualConfig,
     fetch_paginated,
     get_ucdp_token,
@@ -87,9 +88,7 @@ class UcdpDot9Config:
     start_month: int = DOT9_FIRST_MONTH
 
     # API transport
-    base_url: str = (
-        "https://ucdpapi.pcr.uu.se/api/gedevents"
-    )
+    base_url: str = UCDP_GED_API_BASE
     page_size: int = 1000
     timeout: int = 30  # paginated JSON ~100 KB/page (ADR-018)
     max_retries: int = 3

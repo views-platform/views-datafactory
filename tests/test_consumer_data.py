@@ -15,6 +15,8 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from datafactory_query.defaults import PARTITIONS as _DEFAULTS_PARTITIONS
+
 # Load the script as a module (scripts/ is not a package)
 _SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "generate_consumer_data.py"
 _spec = importlib.util.spec_from_file_location("generate_consumer_data", _SCRIPT)
@@ -154,27 +156,30 @@ class TestGeneratePartition:
 
 
 class TestPartitionBoundaries:
+    """Pin exact partition values (contract with downstream models)
+    AND cross-check they match the canonical defaults.py source of truth."""
 
     def test_calibration_matches_models(self) -> None:
-        """PARTITIONS must match views-models config_partitions.py."""
-
         cal = PARTITIONS["calibration"]
         assert cal["train"] == (121, 444)
         assert cal["test"] == (445, 492)
+        assert cal["train"] == _DEFAULTS_PARTITIONS["calibration"]["train"]
+        assert cal["test"] == _DEFAULTS_PARTITIONS["calibration"]["test"]
 
     def test_validation_matches_models(self) -> None:
-
         val = PARTITIONS["validation"]
         assert val["train"] == (121, 492)
         assert val["test"] == (493, 540)
+        assert val["train"] == _DEFAULTS_PARTITIONS["validation"]["train"]
+        assert val["test"] == _DEFAULTS_PARTITIONS["validation"]["test"]
 
     def test_forecasting_is_dynamic(self) -> None:
-
         assert PARTITIONS["forecasting"] is None
 
     def test_forecasting_partition_computes(self) -> None:
         fp = _forecasting_partition(steps=36)
         assert fp["train"][0] == 121
+        assert fp["train"][0] == _DEFAULTS_PARTITIONS["calibration"]["train"][0]
         assert fp["test"][1] == fp["test"][0] + 36
 
 

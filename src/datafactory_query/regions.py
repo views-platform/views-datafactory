@@ -6,6 +6,7 @@ Region groupings are curated mappings of GAUL country names.
 
 from __future__ import annotations
 
+import json
 import logging
 from functools import lru_cache
 from pathlib import Path
@@ -123,7 +124,22 @@ def list_regions() -> list[str]:
     Special values "global" and "land" are always available.
     Individual country names (matching GAUL) also work.
     """
-    return sorted(["global", "land", *REGIONS.keys()])
+    return sorted(["global", "land", "africa_me_legacy", *REGIONS.keys()])
+
+
+@lru_cache(maxsize=1)
+def _load_legacy_pgids(_gaul_dir: Path | None = None) -> set[int]:
+    """Load the VIEWSER-era Africa+ME pgid set (13,110 cells).
+
+    Bundled with the package as africa_me_legacy_pgids.json.
+    This is the exact spatial coverage used by VIEWSER's
+    priogrid_month table, extracted from purple_alien's cached
+    data. It does not correspond exactly to any GAUL-based
+    region due to VIEWSER's independent land mask.
+    """
+    path = Path(__file__).parent / "africa_me_legacy_pgids.json"
+    pgids = json.loads(path.read_text())
+    return set(pgids)
 
 
 @lru_cache(maxsize=1)
@@ -186,6 +202,9 @@ def load_region_pgids(
 
     if region == "land":
         return fetch_land_pgids()
+
+    if region == "africa_me_legacy":
+        return _load_legacy_pgids(gaul_dir)
 
     # Predefined macro-region
     if region in REGIONS:

@@ -53,6 +53,16 @@ Attributes:
     resolution_degrees: 0.5
 ```
 
+### Feature ordering
+
+Zarr stores features as separate data variables with no intrinsic order.
+When `load_dataset()` reads a zarr store, it uses the `feature_order`
+attribute (list of feature names) if present; otherwise it falls back
+to alphabetical order (`sorted(ds.data_vars)`). The npy backend always
+uses `feature_names.json` order. To ensure consistent column ordering
+across backends, zarr exports should include `feature_order` in
+`ds.attrs`. See C-127 in the technical risk register.
+
 ### Chunking
 
 12-month temporal chunks, full spatial extent per chunk:
