@@ -82,6 +82,33 @@ class TestCandidateConfigGreen:
             cfg.start_year = 2026  # type: ignore[misc]
 
 
+class TestCandidateConfigRed:
+
+    def test_mutation_rejected(self) -> None:
+        cfg = UcdpCandidateConfig()
+        with pytest.raises(AttributeError):
+            cfg.start_month = 6  # type: ignore[misc]
+
+
+class TestCandidateADR008:
+
+    _logger_name = "datafactory_harvester.sources.ucdp_candidate"
+
+    def test_invalid_month_logged(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        import logging
+
+        with (
+            caplog.at_level(logging.ERROR, logger=self._logger_name),
+            pytest.raises(ValueError, match="start_month"),
+        ):
+            UcdpCandidateConfig(start_month=0)
+        assert len(
+            [r for r in caplog.records if r.levelno >= logging.ERROR]
+        ) >= 1
+
+
 class TestCandidateConfigBeige:
 
     def test_rejects_month_0(self) -> None:

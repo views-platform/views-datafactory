@@ -12,13 +12,19 @@ from __future__ import annotations
 
 import json
 import logging
+import warnings
 from pathlib import Path
 from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
 
-from datafactory_adapters import FeatureFrame, grid_to_dataframe, grid_to_feature_frame
+from datafactory_adapters import (
+    FeatureFrame,
+    grid_to_country_month,
+    grid_to_dataframe,
+    grid_to_feature_frame,
+)
 from datafactory_query.regions import load_region_pgids
 from datafactory_query.temporal import parse_time_range, time_range_to_slice
 
@@ -26,7 +32,7 @@ __all__ = ["load_dataset"]
 
 logger = logging.getLogger(__name__)
 
-_VALID_FORMATS = ("feature_frame", "dataframe")
+_VALID_FORMATS = ("feature_frame", "dataframe", "country_month")
 
 
 def _is_remote(data_dir: Path | str) -> bool:
@@ -104,7 +110,7 @@ def _load_grid_from_zarr(
     start: str | int | None = None,
     end: str | int | None = None,
     feature_sel: list[str] | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], int | None]:
     """Load assembled grid from a zarr store.
 
     Opens the store once, computes time/feature subsets lazily on
@@ -119,7 +125,7 @@ def _load_grid_from_zarr(
         feature_sel: Optional feature names to load (skips others).
 
     Returns:
-        (grid, pgids, time_steps, feature_names)
+        (grid, pgids, time_steps, feature_names, last_valid_month_id)
     """
     import xarray as xr
 
@@ -148,6 +154,9 @@ def _load_grid_from_zarr(
         raise FileNotFoundError(msg) from exc
 
     pgids = ds["pgid"].values  # [H, W]
+    last_valid_month_id: int | None = ds.attrs.get(
+        "last_valid_month_id",
+    )
 
     # Determine feature order before subsetting
     attrs = ds.attrs
@@ -189,16 +198,16 @@ def _load_grid_from_zarr(
     ).astype(np.float32)
 
     ds.close()
-    return grid, pgids, time_steps, feature_names
+    return grid, pgids, time_steps, feature_names, last_valid_month_id
 
 
 def _load_grid_from_npy(
     data_dir: Path,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], int | None]:
     """Load assembled grid + sidecars from npy files on disk.
 
     Returns:
-        (grid, pgids, time_steps, feature_names)
+        (grid, pgids, time_steps, feature_names, last_valid_month_id)
     """
     grid_path = data_dir / "grid.npy"
     if not grid_path.exists():
@@ -214,7 +223,14 @@ def _load_grid_from_npy(
     feature_names = json.loads(
         (data_dir / "feature_names.json").read_text()
     )
-    return grid, pgids, time_steps, feature_names
+
+    last_valid_month_id: int | None = None
+    provenance_path = data_dir / "provenance.json"
+    if provenance_path.exists():
+        prov = json.loads(provenance_path.read_text())
+        last_valid_month_id = prov.get("last_valid_month_id")
+
+    return grid, pgids, time_steps, feature_names, last_valid_month_id
 
 
 def _load_grid(
@@ -223,7 +239,7 @@ def _load_grid(
     start: str | int | None = None,
     end: str | int | None = None,
     feature_sel: list[str] | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], int | None]:
     """Load assembled grid from npy directory or zarr store.
 
     For zarr stores, start/end and feature_sel are applied lazily
@@ -231,7 +247,7 @@ def _load_grid(
     stores when only a subset is needed.
 
     Returns:
-        (grid, pgids, time_steps, feature_names)
+        (grid, pgids, time_steps, feature_names, last_valid_month_id)
     """
     if _use_zarr_loader(data_dir):
         storage_options = _resolve_storage_options(str(data_dir))
@@ -290,7 +306,8 @@ def load_dataset(
         end: End of time range (inclusive). Same formats, or None
             (dataset end).
         features: List of feature names to include. None = all.
-        output_format: Output format: "feature_frame" or "dataframe".
+        output_format: Output format: "feature_frame", "dataframe",
+            or "country_month" (sums grid cells per country).
         data_dir: Path to assembled grid directory (npy), or string
             path/URL to a zarr store.
         gaul_dir: Path to GAUL admin Parquet files.
@@ -311,15 +328,25 @@ def load_dataset(
         )
         raise ValueError(msg)
 
+    # Auto-include gaul0_code for country_month aggregation
+    _country_feature = "gaul0_code"
+    feature_sel = features
+    if (
+        output_format == "country_month"
+        and features is not None
+        and _country_feature not in features
+    ):
+        feature_sel = [*features, _country_feature]
+
     # Load grid. For zarr: time/feature subsetting applied lazily
     # inside _load_grid_from_zarr (single open, no probe).
     # For npy: full grid loaded via mmap, subsetted after.
     is_zarr = _use_zarr_loader(data_dir)
-    grid, pgids, time_steps, all_features = _load_grid(
+    grid, pgids, time_steps, all_features, last_valid_month_id = _load_grid(
         data_dir,
         start=start if is_zarr else None,
         end=end if is_zarr else None,
-        feature_sel=features if is_zarr else None,
+        feature_sel=feature_sel if is_zarr else None,
     )
 
     # For npy (or zarr with no time args): post-slice
@@ -333,9 +360,24 @@ def load_dataset(
         grid = grid[t_slice]
         time_steps = time_steps[t_slice]
 
+    # Warn if loaded data extends beyond observed UCDP data
+    if last_valid_month_id is not None and len(time_steps) > 0:
+        from datafactory_priogrid import to_views_month_id
+
+        effective_end_mid = int(to_views_month_id(time_steps[-1]))
+        if effective_end_mid > last_valid_month_id:
+            warnings.warn(
+                f"Loaded data through month {effective_end_mid} "
+                f"exceeds last observed data month "
+                f"({last_valid_month_id}). Months "
+                f"{last_valid_month_id + 1}–{effective_end_mid} "
+                f"contain zeros, not observed data.",
+                stacklevel=2,
+            )
+
     # Feature subsetting (npy path — zarr already subsetted)
-    if features is not None and not is_zarr:
-        f_indices = _resolve_feature_indices(all_features, features)
+    if feature_sel is not None and not is_zarr:
+        f_indices = _resolve_feature_indices(all_features, feature_sel)
         grid = grid[:, :, :, f_indices]
         all_features = [all_features[i] for i in f_indices]
 
@@ -357,6 +399,16 @@ def load_dataset(
     # Convert to requested format
     if output_format == "feature_frame":
         return grid_to_feature_frame(
+            grid,
+            pgids,
+            time_steps,
+            all_features,
+            land_pgids=region_pgids,
+            month_id_epoch=month_id_epoch,
+        )
+
+    if output_format == "country_month":
+        return grid_to_country_month(
             grid,
             pgids,
             time_steps,

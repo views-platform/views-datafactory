@@ -853,3 +853,39 @@ def test_parity_provenance_recording(tmp_path: Path) -> None:
     assert entry["valid"] is True
     assert entry["n_matched"] == 8
     assert "timestamp" in entry  # auto-added by core
+
+
+# ---------------------------------------------------------------------------
+# ShapefileHarvesterConfig (G10)
+# ---------------------------------------------------------------------------
+
+
+class TestShapefileHarvesterConfigGreen:
+
+    def test_defaults(self) -> None:
+        from datafactory_priogrid.shapefile_harvester import (
+            ShapefileHarvesterConfig,
+        )
+
+        cfg = ShapefileHarvesterConfig()
+        assert cfg.timeout == 120
+        assert cfg.max_retries == 3
+
+
+class TestShapefileHarvesterConfigBeige:
+
+    def test_rejects_zero_timeout(self) -> None:
+        from datafactory_priogrid.shapefile_harvester import (
+            ShapefileHarvesterConfig,
+        )
+
+        with pytest.raises(ValueError, match="timeout"):
+            ShapefileHarvesterConfig(timeout=0)
+
+    def test_rejects_zero_retries(self) -> None:
+        from datafactory_priogrid.shapefile_harvester import (
+            ShapefileHarvesterConfig,
+        )
+
+        with pytest.raises(ValueError, match="max_retries"):
+            ShapefileHarvesterConfig(max_retries=0)

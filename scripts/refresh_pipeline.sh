@@ -156,6 +156,12 @@ echo
 # Success — remove any stale failure sentinel
 rm -f "$ALERT_FILE"
 
+# Optional heartbeat for external monitoring (C-131).
+# Set HEARTBEAT_URL to a healthchecks.io/cronitor/uptimerobot ping URL.
+if [ -n "${HEARTBEAT_URL:-}" ]; then
+    curl -fsS --max-time 10 "$HEARTBEAT_URL" >/dev/null 2>&1 || true
+fi
+
 # Record pipeline duration (C-91)
 PIPELINE_END=$(date +%s)
 PIPELINE_DURATION=$((PIPELINE_END - PIPELINE_START))

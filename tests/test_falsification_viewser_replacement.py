@@ -105,28 +105,17 @@ class TestF5MonthIdEncoding:
 
 
 class TestS1CountryMonthGap:
-    """S1 (soft falsification): factory cannot serve country_month models."""
+    """S1 (resolved): factory now supports country_month aggregation."""
 
-    @pytest.mark.xfail(
-        reason="country_month aggregation not yet implemented in datafactory_query",
-        strict=True,
-    )
     def test_load_dataset_country_month(self) -> None:
-        """load_dataset() should support output_format='country_month'.
+        """load_dataset() accepts output_format='country_month'.
 
-        48/70 VIEWS models use country_month LOA. Until the factory
-        can aggregate grid cells to country-month level, these models
-        cannot migrate from viewser.
+        Validates that the format is recognized (no ValueError).
+        Full integration tested in test_country_month.py.
         """
-        from datafactory_query import load_dataset
+        from datafactory_query.dataset import _VALID_FORMATS
 
-        load_dataset(
-            region="Ethiopia",
-            start=445,
-            end=492,
-            output_format="country_month",
-            data_dir="data/assembled",
-        )
+        assert "country_month" in _VALID_FORMATS
 
 
 class TestS2TransformGap:
