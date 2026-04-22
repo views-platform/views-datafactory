@@ -52,7 +52,7 @@ def get_last_valid_month_id(
 
     import base64
     import urllib.request
-    from netrc import netrc
+    from netrc import NetrcParseError, netrc
     from pathlib import Path
     from urllib.parse import urlparse
 
@@ -68,7 +68,7 @@ def get_last_valid_month_id(
                 f"{login}:{password}".encode(),
             ).decode()
             req.add_header("Authorization", f"Basic {encoded}")
-    except Exception:
+    except (FileNotFoundError, NetrcParseError, KeyError):
         pass
 
     try:
