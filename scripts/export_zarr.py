@@ -137,6 +137,7 @@ def main() -> int:
         "resolution_degrees": resolution,
         "source": "views-datafactory",
         "n_features": n_f,
+        "feature_order": feature_names,
     }
     if provenance_path.exists():
         prov = json.loads(provenance_path.read_text())

@@ -65,6 +65,8 @@ Contracts must be clear enough that:
 - `PriogridStaticConfig.md` -- immutable PRIO-GRID static feature harvest configuration
 - `ShapefileHarvesterConfig.md` -- immutable PRIO-GRID shapefile download configuration
 - `GaulAdminConfig.md` -- immutable GAUL 2024 admin boundary harvest configuration
+- `RemoteConfig.md` -- immutable remote server configuration (address, URL paths, scheme)
+- `grid_to_country_month.md` -- grid-to-country-month aggregation function contract
 
 ---
 
