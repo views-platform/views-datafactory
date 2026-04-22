@@ -1,7 +1,7 @@
-# Product Development Plan v05 — Consumer Parity Achieved
+# Product Development Plan v06 — Verification Suite
 
-**Date:** 2026-04-08
-**Supersedes:** product_development_plan04.md (2026-04-07)
+**Date:** 2026-04-21
+**Supersedes:** product_development_plan05.md (2026-04-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity.
 
@@ -35,8 +35,10 @@
 | — | Falsification stubs (UCDP, deployment, netrc) | Done | 15 (marker-gated) |
 | — | HTTP serving (Caddy, basic auth, cron) | Done | 0 (operational) |
 | — | Consumer verification (`verify_remote.py`) | Done | 0 (script) |
+| — | Verification examples (`examples/run_examples.sh`) | Done | 15 scripts (12 pass, 2 xfail, 1 remote) |
+| — | Falsification stubs (viewser replacement claim) | Done | 7 (marker-gated) |
 
-**Total: 511 passed**
+**Total: 530 passed (pytest) + 15 verification examples**
 
 ### Architecture
 
@@ -63,8 +65,9 @@
 | M9 | Multi-user readiness v1.1 (code work) | Complete (2026-04-07, tag v1.1.0; operator work blocked) |
 | M10 | Consumer API MVP (`datafactory_query`) | Complete (2026-04-08) |
 | M10a | Consumer parity investigation — source_aware distribution + config promotion | Complete (2026-04-08) |
+| M13 | Verification examples suite — every API capability demonstrated | Complete (2026-04-21) |
 | **M11** | **First training script integration** | **Not started** |
-| M12 | Remote data access (zarr path smoke test) | Not started (code exists, untested on live server) |
+| M12 | Remote data access (zarr path smoke test) | Complete (2026-04-21, via `ex_zarr_remote.py`) |
 
 ---
 
@@ -106,7 +109,8 @@ A training script can pull the data it needs without hacks.
 | Region definitions validated | Parity tests cover 13,110 VIEWSER pgids | **Done** |
 | Consumer parity tests pass | 3 tests vs gold set | **Done** (0.014-0.023% residual) |
 | Viewpoint choices configurable | `source_distribution_map`, `filter_stale_versions` | **Done** |
-| Remote/zarr path in `load_dataset()` | `load_dataset(data_dir="http://...")` | Code exists, **untested on live server** |
+| Remote/zarr path in `load_dataset()` | `load_dataset(data_dir="http://...")` | **Done** (M12, `ex_zarr_remote.py` passes) |
+| Verification examples pass | `bash examples/run_examples.sh` exits 0 | **Done** (M13, 15 scripts) |
 | First consumer integrated | Training script runs end-to-end | **Not started** |
 
 ### v2.0 — Institutional / scaled deployment
@@ -145,9 +149,10 @@ A training script can pull the data it needs without hacks.
 
 | # | Task | Effort | Ref | Target | Status |
 |---|------|--------|-----|--------|--------|
+| 14a | Verification examples suite | 1d | M13 | v1.2 | Complete (2026-04-21) |
 | 14 | First training script integration | 1-2d | CQ-4 | v1.2 | Not started |
-| 15 | Remote zarr smoke test on live server | 2h | CQ-3 | v1.2 | Not started |
-| 16 | Merge development → main + tag v1.2 | 1h | — | v1.2 | After M11/M12 |
+| 15 | Remote zarr smoke test on live server | 2h | CQ-3 | v1.2 | Complete (via M13 `ex_zarr_remote.py`) |
+| 16 | Merge development → main + tag v1.2 | 1h | — | v1.2 | After M11 |
 
 ### Blocked (v1.1 operator work)
 

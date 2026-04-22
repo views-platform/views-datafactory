@@ -113,6 +113,8 @@ def main() -> int:
     freshness = check_export_freshness(zarr_path, now)
     if not freshness["export_slo_met"]:
         any_issues = True
+    if freshness.get("data_boundary_current") is False:
+        any_issues = True
 
     if args.json:
         output = {
@@ -121,6 +123,12 @@ def main() -> int:
             "freshness_slo_hours": FRESHNESS_SLO_HOURS,
             "export_age_hours": freshness["export_age_hours"],
             "export_slo_met": freshness["export_slo_met"],
+            "last_valid_month_id": freshness.get(
+                "last_valid_month_id"
+            ),
+            "data_boundary_current": freshness.get(
+                "data_boundary_current"
+            ),
             "sources": results,
         }
         print(json.dumps(output, indent=2))
@@ -139,6 +147,30 @@ def main() -> int:
         f"{slo_marker}[{slo_status:7s}] "
         f"{'Export freshness':20s} {freshness['detail']}"
     )
+
+    # Data boundary (last month with real UCDP data)
+    last_valid = freshness.get("last_valid_month_id")
+    boundary_current = freshness.get("data_boundary_current")
+    if last_valid is not None:
+        if boundary_current:
+            print(
+                f"  [{'OK':7s}] "
+                f"{'Data boundary':20s} "
+                f"last_valid_month_id={last_valid}"
+            )
+        else:
+            print(
+                f"! [{'STALE':7s}] "
+                f"{'Data boundary':20s} "
+                f"last_valid_month_id={last_valid} "
+                f"— data has not advanced"
+            )
+    elif freshness["export_slo_met"]:
+        print(
+            f"? [{'UNKNOWN':7s}] "
+            f"{'Data boundary':20s} "
+            f"last_valid_month_id missing from zarr attrs"
+        )
     print()
 
     for result in results:

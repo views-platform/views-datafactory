@@ -73,6 +73,9 @@ FIELD_TYPES: dict[str, tuple[type, ...]] = {
 
 ENVELOPE_KEYS: set[str] = {"TotalCount", "TotalPages", "Result"}
 
+# Single source of truth for the UCDP GED API endpoint (ADR-003).
+UCDP_GED_API_BASE: str = "https://ucdpapi.pcr.uu.se/api/gedevents"
+
 
 # ---- Config ----
 
@@ -91,7 +94,7 @@ class UcdpAnnualConfig:
     end_year: int = 2024
 
     # API transport
-    base_url: str = "https://ucdpapi.pcr.uu.se/api/gedevents"
+    base_url: str = UCDP_GED_API_BASE
     page_size: int = 1000
     timeout: int = 30  # paginated JSON ~100 KB/page (ADR-018)
     max_retries: int = 3

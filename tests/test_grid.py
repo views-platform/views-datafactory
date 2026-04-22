@@ -91,6 +91,31 @@ class TestGridConfigRed:
             cfg.resolution = 1.0  # type: ignore[misc]
 
 
+class TestAssertGridShape:
+
+    def test_valid_shape_passes(self) -> None:
+        cfg = GridConfig()
+        grid = np.zeros((1, cfg.nrow, cfg.ncol, 2))
+        cfg.assert_grid_shape(grid)
+
+    def test_wrong_height_raises(self) -> None:
+        cfg = GridConfig()
+        grid = np.zeros((1, 180, cfg.ncol, 2))
+        with pytest.raises(AssertionError, match="spatial dims"):
+            cfg.assert_grid_shape(grid)
+
+    def test_wrong_width_raises(self) -> None:
+        cfg = GridConfig()
+        grid = np.zeros((1, cfg.nrow, 360, 2))
+        with pytest.raises(AssertionError, match="spatial dims"):
+            cfg.assert_grid_shape(grid)
+
+    def test_non_array_raises_type_error(self) -> None:
+        cfg = GridConfig()
+        with pytest.raises(TypeError, match="Expected array"):
+            cfg.assert_grid_shape("not an array")
+
+
 class TestTemporalConfigRed:
     """CIC: TemporalConfig must be immutable (frozen dataclass)."""
 
@@ -828,3 +853,39 @@ def test_parity_provenance_recording(tmp_path: Path) -> None:
     assert entry["valid"] is True
     assert entry["n_matched"] == 8
     assert "timestamp" in entry  # auto-added by core
+
+
+# ---------------------------------------------------------------------------
+# ShapefileHarvesterConfig (G10)
+# ---------------------------------------------------------------------------
+
+
+class TestShapefileHarvesterConfigGreen:
+
+    def test_defaults(self) -> None:
+        from datafactory_priogrid.shapefile_harvester import (
+            ShapefileHarvesterConfig,
+        )
+
+        cfg = ShapefileHarvesterConfig()
+        assert cfg.timeout == 120
+        assert cfg.max_retries == 3
+
+
+class TestShapefileHarvesterConfigBeige:
+
+    def test_rejects_zero_timeout(self) -> None:
+        from datafactory_priogrid.shapefile_harvester import (
+            ShapefileHarvesterConfig,
+        )
+
+        with pytest.raises(ValueError, match="timeout"):
+            ShapefileHarvesterConfig(timeout=0)
+
+    def test_rejects_zero_retries(self) -> None:
+        from datafactory_priogrid.shapefile_harvester import (
+            ShapefileHarvesterConfig,
+        )
+
+        with pytest.raises(ValueError, match="max_retries"):
+            ShapefileHarvesterConfig(max_retries=0)

@@ -152,7 +152,10 @@ def main() -> int:
         output_dir = compile_grid(config)
         elapsed = time.monotonic() - t0
 
+        from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
+
         grid = np.load(output_dir / "grid.npy")
+        DEFAULT_GRID_CONFIG.assert_grid_shape(grid)
         # [T, H, W, C] — sum first feature across all dims
         first_feat = grid[:, :, :, 0]
 

@@ -12,6 +12,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from datafactory_adapters import FeatureFrame
+from datafactory_query.defaults import DEFAULT_REMOTE
 from datafactory_query.regions import (
     REGIONS,
     list_regions,
@@ -518,6 +519,242 @@ class TestLoadDatasetZarr:
             )
 
 
+# ── Data Boundary Consistency (G2) ──────────────────────
+
+
+class TestDataBoundaryConsistency:
+
+    def test_last_valid_month_id_roundtrip(
+        self, tmp_path: Path,
+    ) -> None:
+        """Metadata survives assemble → zarr export → query load."""
+        import xarray as xr
+
+        from datafactory_query.dataset import _load_grid_from_zarr
+
+        zarr_path = tmp_path / "grid.zarr"
+        n_t, n_h, n_w = 6, 3, 4
+
+        time = np.array(
+            [f"2020-{m:02d}-01" for m in range(1, n_t + 1)],
+            dtype="datetime64[ns]",
+        )
+        lat = np.linspace(-89.75, 89.75, n_h)
+        lon = np.linspace(-179.75, 179.75, n_w)
+        pgids = np.arange(1, n_h * n_w + 1).reshape(n_h, n_w)
+
+        names = ["ged_sb_best", "pop_total"]
+        data_vars = {
+            n: (
+                ["time", "lat", "lon"],
+                np.ones((n_t, n_h, n_w), dtype=np.float32),
+            )
+            for n in names
+        }
+
+        expected_mid = 485
+        ds = xr.Dataset(
+            data_vars,
+            coords={
+                "time": time,
+                "lat": lat,
+                "lon": lon,
+                "pgid": (["lat", "lon"], pgids),
+            },
+            attrs={
+                "feature_order": names,
+                "last_valid_month_id": expected_mid,
+            },
+        )
+        ds.to_zarr(zarr_path, mode="w")
+
+        _, _, _, _, last_valid = _load_grid_from_zarr(str(zarr_path))
+        assert last_valid == expected_mid
+
+
+# ── Feature Order Parity (G5, C-127) ───────────────────
+
+
+class TestFeatureOrderParity:
+
+    def test_npy_and_zarr_feature_order_match(
+        self, tmp_path: Path,
+    ) -> None:
+        """npy and zarr backends must return identical feature order."""
+        import xarray as xr
+
+        from datafactory_query.dataset import (
+            _load_grid_from_npy,
+            _load_grid_from_zarr,
+        )
+
+        names = ["zz_last", "bb_mid", "aa_first"]
+        n_t, n_h, n_w = 3, 3, 4
+        n_f = len(names)
+
+        # Build npy
+        npy_dir = tmp_path / "npy"
+        npy_dir.mkdir()
+        grid = np.ones((n_t, n_h, n_w, n_f), dtype=np.float32)
+        np.save(npy_dir / "grid.npy", grid)
+        np.save(
+            npy_dir / "pgids.npy",
+            np.arange(1, n_h * n_w + 1).reshape(n_h, n_w),
+        )
+        np.save(
+            npy_dir / "time_steps.npy",
+            np.array(
+                [f"2020-{m:02d}" for m in range(1, n_t + 1)],
+                dtype="datetime64[M]",
+            ),
+        )
+        (npy_dir / "feature_names.json").write_text(json.dumps(names))
+
+        # Build zarr with same feature_order
+        zarr_path = tmp_path / "grid.zarr"
+        time = np.array(
+            [f"2020-{m:02d}-01" for m in range(1, n_t + 1)],
+            dtype="datetime64[ns]",
+        )
+        lat = np.linspace(-89.75, 89.75, n_h)
+        lon = np.linspace(-179.75, 179.75, n_w)
+        pgids = np.arange(1, n_h * n_w + 1).reshape(n_h, n_w)
+        data_vars = {
+            n: (
+                ["time", "lat", "lon"],
+                np.ones((n_t, n_h, n_w), dtype=np.float32),
+            )
+            for n in names
+        }
+        ds = xr.Dataset(
+            data_vars,
+            coords={
+                "time": time,
+                "lat": lat,
+                "lon": lon,
+                "pgid": (["lat", "lon"], pgids),
+            },
+            attrs={"feature_order": names},
+        )
+        ds.to_zarr(zarr_path, mode="w")
+
+        _, _, _, npy_features, _ = _load_grid_from_npy(npy_dir)
+        _, _, _, zarr_features, _ = _load_grid_from_zarr(
+            str(zarr_path),
+        )
+        assert npy_features == zarr_features
+
+
+# ── Edge Cases (G8) ────────────────────────────────────
+
+
+class TestLoadDatasetEdgeCases:
+
+    def test_single_time_step(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir, n_t=1)
+        _make_gaul_parquets(gaul_dir)
+
+        ff = load_dataset(
+            region="Testland",
+            output_format="feature_frame",
+            data_dir=data_dir,
+            gaul_dir=gaul_dir,
+        )
+        assert isinstance(ff, FeatureFrame)
+        assert ff.n_rows == 6  # 6 cells * 1 month
+
+    def test_time_range_producing_single_month(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir, n_t=6)
+        _make_gaul_parquets(gaul_dir)
+
+        ff = load_dataset(
+            region="global",
+            start="2020-03",
+            end="2020-03",
+            output_format="feature_frame",
+            data_dir=data_dir,
+            gaul_dir=gaul_dir,
+        )
+        assert ff.n_rows == 12  # 12 cells * 1 month
+
+
+# ── get_last_valid_month_id (G9, C-134) ────────────────
+
+
+class TestGetLastValidMonthId:
+
+    def test_returns_none_on_network_error(self) -> None:
+        from unittest.mock import patch
+        from urllib.error import URLError
+
+        from datafactory_query.defaults import get_last_valid_month_id
+
+        with patch(
+            "urllib.request.urlopen",
+            side_effect=URLError("network down"),
+        ):
+            result = get_last_valid_month_id("http://fake/grid.zarr")
+        assert result is None
+
+    def test_returns_none_on_auth_failure(self) -> None:
+        from unittest.mock import patch
+        from urllib.error import HTTPError
+
+        from datafactory_query.defaults import get_last_valid_month_id
+
+        with patch(
+            "urllib.request.urlopen",
+            side_effect=HTTPError(
+                "http://fake/.zattrs", 401, "Unauthorized",
+                {}, None,  # type: ignore[arg-type]
+            ),
+        ):
+            result = get_last_valid_month_id("http://fake/grid.zarr")
+        assert result is None
+
+    def test_returns_int_on_success(self) -> None:
+        from unittest.mock import MagicMock, patch
+
+        from datafactory_query.defaults import get_last_valid_month_id
+
+        fake_resp = MagicMock()
+        fake_resp.read.return_value = json.dumps(
+            {"last_valid_month_id": 540}
+        ).encode()
+        fake_resp.__enter__ = lambda s: s
+        fake_resp.__exit__ = MagicMock(return_value=False)
+
+        with patch("urllib.request.urlopen", return_value=fake_resp):
+            result = get_last_valid_month_id("http://fake/grid.zarr")
+        assert result == 540
+
+    def test_returns_none_when_attr_missing(self) -> None:
+        from unittest.mock import MagicMock, patch
+
+        from datafactory_query.defaults import get_last_valid_month_id
+
+        fake_resp = MagicMock()
+        fake_resp.read.return_value = json.dumps(
+            {"export_timestamp": "2026-01-01T00:00:00"}
+        ).encode()
+        fake_resp.__enter__ = lambda s: s
+        fake_resp.__exit__ = MagicMock(return_value=False)
+
+        with patch("urllib.request.urlopen", return_value=fake_resp):
+            result = get_last_valid_month_id("http://fake/grid.zarr")
+        assert result is None
+
+
 class TestIsRemote:
 
     def test_http_url(self) -> None:
@@ -543,7 +780,7 @@ class TestIsRemote:
 
 # ---- Remote Zarr Smoke Tests (M12) ----
 
-REMOTE_ZARR = "http://204.168.219.108/grid.zarr"
+REMOTE_ZARR = DEFAULT_REMOTE.zarr_url
 
 
 @pytest.mark.consumer

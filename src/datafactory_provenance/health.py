@@ -24,6 +24,12 @@ __all__ = [
 FRESHNESS_SLO_HOURS = 168
 
 
+def _format_age(age_hours: float) -> str:
+    if age_hours < 48:
+        return f"{age_hours:.0f}h ago"
+    return f"{age_hours / 24:.0f}d ago"
+
+
 def read_last_entries(
     ledger_path: Path, n: int = 5
 ) -> list[dict]:
@@ -82,11 +88,7 @@ def report_ledger(
             ts = datetime.fromisoformat(ts_str)
             age = now - ts
             age_hours = age.total_seconds() / 3600
-            age_str = (
-                f"{age_hours:.0f}h ago"
-                if age_hours < 48
-                else f"{age_hours / 24:.0f}d ago"
-            )
+            age_str = _format_age(age_hours)
         except (ValueError, TypeError):
             age_str = "unknown"
             age_hours = -1
@@ -165,18 +167,30 @@ def check_export_freshness(
         }
 
     slo_met = age_hours < FRESHNESS_SLO_HOURS
-    age_str = (
-        f"{age_hours:.0f}h ago"
-        if age_hours < 48
-        else f"{age_hours / 24:.0f}d ago"
+    age_str = _format_age(age_hours)
+
+    # Data boundary: last month with real UCDP observations.
+    # UCDP releases around the 20th with data for the prior month,
+    # so expected minimum is (current_month - 2) to allow lag.
+    last_valid = attrs.get("last_valid_month_id")
+    expected_min = (now.year - 1980) * 12 + now.month - 2
+    data_boundary_current: bool | None = None
+    if last_valid is not None:
+        last_valid = int(last_valid)
+        data_boundary_current = last_valid >= expected_min
+
+    detail = (
+        f"Exported {ts_str[:19]} ({age_str})"
+        f" — SLO {FRESHNESS_SLO_HOURS}h: "
+        f"{'MET' if slo_met else 'BREACHED'}"
     )
-    return {
+
+    result: dict = {
         "export_timestamp": ts_str,
         "export_age_hours": round(age_hours, 1),
         "export_slo_met": slo_met,
-        "detail": (
-            f"Exported {ts_str[:19]} ({age_str})"
-            f" — SLO {FRESHNESS_SLO_HOURS}h: "
-            f"{'MET' if slo_met else 'BREACHED'}"
-        ),
+        "last_valid_month_id": last_valid,
+        "data_boundary_current": data_boundary_current,
+        "detail": detail,
     }
+    return result

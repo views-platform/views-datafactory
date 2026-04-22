@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import io
+import logging
 import zipfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
+
+from datafactory_harvester.sources.gaul_admin import GaulAdminConfig
 
 
 def _make_fake_shp_zip() -> bytes:
@@ -67,3 +72,69 @@ class TestDownloadShapefileZip:
 
         mock_get.assert_not_called()
         assert result.name == "test.shp"
+
+
+# ---- GaulAdminConfig Green ----
+
+
+class TestGaulAdminConfigGreen:
+
+    def test_defaults(self) -> None:
+        cfg = GaulAdminConfig()
+        assert cfg.timeout == 300
+        assert cfg.variables is None
+        assert "gaul_admin" in str(cfg.data_dir)
+
+    def test_frozen(self) -> None:
+        cfg = GaulAdminConfig()
+        with pytest.raises(AttributeError):
+            cfg.timeout = 1  # type: ignore[misc]
+
+    def test_custom_variables(self) -> None:
+        cfg = GaulAdminConfig(variables=("gaul0_code",))
+        assert cfg.variables == ("gaul0_code",)
+
+
+# ---- GaulAdminConfig Beige ----
+
+
+class TestGaulAdminConfigBeige:
+
+    def test_rejects_zero_timeout(self) -> None:
+        with pytest.raises(ValueError, match="timeout"):
+            GaulAdminConfig(timeout=0)
+
+    def test_rejects_negative_timeout(self) -> None:
+        with pytest.raises(ValueError, match="timeout"):
+            GaulAdminConfig(timeout=-5)
+
+
+# ---- GaulAdminConfig Red ----
+
+
+class TestGaulAdminConfigRed:
+
+    def test_mutation_rejected(self) -> None:
+        cfg = GaulAdminConfig()
+        with pytest.raises(AttributeError):
+            cfg.variables = ("gaul0_code",)  # type: ignore[misc]
+
+
+# ---- ADR-008 compliance ----
+
+
+class TestGaulAdminADR008:
+
+    _logger_name = "datafactory_harvester.sources.gaul_admin"
+
+    def test_timeout_error_logged(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        with (
+            caplog.at_level(logging.ERROR, logger=self._logger_name),
+            pytest.raises(ValueError, match="timeout"),
+        ):
+            GaulAdminConfig(timeout=0)
+        assert len(
+            [r for r in caplog.records if r.levelno >= logging.ERROR]
+        ) >= 1

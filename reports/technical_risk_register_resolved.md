@@ -381,6 +381,13 @@ Ousterhout: deep module should hide error details. Nygard: operators need to dis
 Added feature validation in `_load_grid_from_zarr` (`dataset.py:159-167`): checks requested features against available features before subsetting, raises `ValueError` with list of missing features. Now matches npy path behavior (`_resolve_feature_indices`). TDD: failing test written first, then fix applied. 512 tests pass.
 **Source:** Expert review #6 (consumer API), Kleppmann + Beck. Resolved 2026-04-09.
 
+### C-87: ~~No named user accounts on server~~ RESOLVED
+Created `sonja_prio` account on Hetzner server: uid=1001, in sudo group, SSH key installed, password set via temp+chage flow (user changed it on first login). `passwd -S sonja_prio` returns `P 2026-04-10`. Sonja verified: SSH login works, sudo whoami returns root.
+
+**Incident note:** First execution of Phase 6.3 surfaced a documentation gap — the original procedure created accounts with `useradd -m` (no password), which leaves the account locked (`passwd -S` shows `L`). SSH key login worked but `sudo` failed with "no password set". Fix: temp password generation with `openssl rand`, set via `chpasswd`, force change via `chage -d 0`, deliver via Slack DM. Phase 6.3 rewritten to verbose what/why/how/cannot-do/permission-model standard matching Phase 6.1/6.2. `verify_server_hardening.py` extended with named-account check that catches this exact failure mode. New concern C-121 registered to track unexecuted Phase 6.4.
+
+**Source:** PRIO IT security guidance, executed 2026-04-10
+
 ### C-119: ~~`generate_consumer_data.py` has zero tests~~ RESOLVED
 Added `tests/test_consumer_data.py` with 11 tests covering: correct columns, index names, feature rename, row/col derivation, NaN filling, sorted index, partition boundary matching (calibration, validation, forecasting), and rename map completeness. Uses `importlib.util` to load the script as a module.
 **Source:** Expert review #6 (consumer API), Feathers + Beck. Resolved 2026-04-09.
@@ -408,3 +415,15 @@ Hickey: expose for advanced consumers who want raw arrays. Martin: fewer entry p
 ### D-22: ~~Should the consumer contract (FEATURE_RENAME, PARTITIONS) be in a module or a script?~~ RESOLVED
 GoF: extract to `datafactory_query.consumer_contract` for reuse. Beck: test the script directly, don't create modules for one-use code. **Resolution: GoF wins if a second consumer needs the same transforms. Beck wins today. Monitor.**
 **Source:** Expert review #6 (consumer API), 2026-04-09
+
+### C-122: Consumer model has no runtime data fetch from Hetzner — RESOLVED
+~~bright_starship in views-models has no code path to obtain data from the datafactory at runtime.~~ **Resolved 2026-04-19:** `main.py` now calls `_ensure_data()` before HydranetManager starts. If `data/raw/{run_type}_viewser_df.parquet` is missing, `config_queryset.fetch_data()` calls `load_dataset()` from the Hetzner zarr store, renames columns to VIEWSER convention, derives row/col, and saves the parquet. `requirements.txt` includes `views-datafactory`. Cross-ref: C-116 (no retry on remote zarr), C-117 (spatial over-fetch).
+**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.
+
+### C-123: `africa_me_legacy` region file not distributed — RESOLVED
+~~`africa_me_legacy_pgids.json` exists only in the developer's local `data/raw/gaul_admin/`.~~ **Resolved 2026-04-19:** The 13,110 pgids are now bundled as `africa_me_legacy_pgids.json` inside the `datafactory_query` package (`src/datafactory_query/`). `_load_legacy_pgids()` reads from `Path(__file__).parent`, not from `gaul_dir`. Any `pip install views-datafactory` includes the file. Cross-ref: C-122.
+**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.
+
+### C-124: No consumer onboarding for remote zarr credentials — RESOLVED
+~~No documentation in views-models explains the `~/.netrc` requirement.~~ **Resolved 2026-04-19:** bright_starship's `README.md` now includes a Prerequisites section with `~/.netrc` setup instructions (machine, login, password format, chmod 600). Cross-ref: C-96 (fsspec netrc), C-97 (auth scalability).
+**Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.

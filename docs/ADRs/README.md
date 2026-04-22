@@ -93,6 +93,12 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-022** -- Tag-Based Deployment Gate
   Server runs a specific tagged release, not a branch tip. Operator controls version via `~/.views-deploy-tag`. Fail-loud on misconfiguration.
 
+- **ADR-025** -- Country Identity Uses GAUL Codes
+  GAUL-2014 as the authoritative country coding system. No G&W or C-Shapes.
+
+- **ADR-026** -- Credential Management Strategy
+  Env vars + netrc for credential resolution. Credentials are not configuration. Fail-loud on missing. No `.env` files, no `python-dotenv`.
+
 These must comply with the constitutional ADRs above.
 
 ---

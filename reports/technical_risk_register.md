@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-09)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck)
-**Status:** 120 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 88 resolved, 24 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-04-22)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit
+**Status:** 136 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 36 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -13,8 +13,8 @@
 
 | ID | Tier | Title | Trigger | Package |
 |----|------|-------|---------|---------|
-| C-87 | 2 | No named user accounts on server | Before 2nd user access | Server hardening |
 | C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment | Server hardening |
+| C-121 | 4 | Phase 6.4 documented but unexecuted (lessons from C-87) | Before executing Phase 6.4 | Server hardening |
 | C-21 | 3 | No characterization tests for migration | Next migration batch planned | — |
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
@@ -38,6 +38,21 @@
 | C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
+| C-128 | 2 | Scripts infer grid shape without config validation (ADR-003 forbidden) | Compilation produces unexpected spatial dims | ADR-003 compliance |
+| C-127 | 2 | Zarr backend returns features in alphabetical order, npy preserves feature_names.json order | Consumer switches from npy to zarr backend | Query correctness |
+| C-129 | 3 | Partition boundaries (month IDs) have no single source of truth | VIEWS shifts partition boundaries | ADR-003 compliance |
+| C-130 | 2 | Zero-filled future months indistinguishable from observed zeros | Model trains on months beyond last UCDP update | Data boundary |
+| C-131 | 2 | No external monitoring for cron job failure on Hetzner | Server reboots without cron re-enable or user deletion | Operational monitoring |
+| C-132 | 2 | Health check validates export timestamp, not data recency | UCDP API returns empty/stale data during pipeline run | Operational monitoring |
+| C-133 | 3 | Zero-padding warning only fires for integer `end` parameter | Consumer calls load_dataset with string date or end=None | Data boundary |
+| C-134 | 3 | `get_last_valid_month_id()` silently returns None on all errors | Consumer netrc misconfigured, loses zero-padding warning | Data boundary |
+| C-135 | 4 | No runtime type validation for zarr `.zattrs` values | Manual edit of `.zattrs` on server | Data boundary |
+| C-136 | 4 | `read_last_entries()` crashes on non-UTF8 ledger files | Disk corruption or binary append to JSONL ledger | Operational monitoring |
+| ~~C-125~~ | ~~3~~ | ~~No cm aggregation — 48/70 models cannot migrate~~ | Resolved 2026-04-21 | Migration scope |
+| C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
+| ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
+| ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
+| ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -50,12 +65,18 @@ Items that should be resolved together:
 
 | Package | Items | Trigger |
 |---------|-------|---------|
-| **Server hardening** | C-87, C-88 (C-84, C-85, C-86 resolved) | Before 2nd user access |
+| **Server hardening** | C-88, C-121 (C-84, C-85, C-86, C-87 resolved) | Before production deployment |
 | **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
 | **Test infrastructure** | C-29, C-78, C-79 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80, C-112 resolved) |
+| **Consumer integration** | C-122, C-123, C-124 | Before bright_starship can be used by anyone other than the developer |
+| **Query correctness** | C-127 | Before consumer switches from npy to zarr backend |
+| **ADR-003 compliance** | C-128, C-129 | Before next assembly/compilation change |
+| **Operational monitoring** | C-131, C-132, C-136 | Before relying on Hetzner pipeline without manual checks |
+| **Data boundary** | C-130, C-133, C-134, C-135 | Before consumer models train on data from the factory |
+| **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
 
@@ -65,25 +86,94 @@ Items that should be resolved together:
 
 ## Tier 2 — Fix Before Sharing Server Access
 
-### C-87: No named user accounts on server — [DEFER]
-Only `root` exists. IT head advised: named accounts per person, no shared accounts, plus a break-glass emergency account with securely stored credentials. **Trigger: create named accounts before granting second user access.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.3.
-**Source:** PRIO IT security guidance, server setup 2026-03-28
-
 ### C-88: SSH not restricted to PRIO/Uppsala IPs — [DEFER]
 SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
+
+### C-128: Scripts infer grid shape from arrays without config validation
+`assemble_grid.py:107` unpacks `n_t, n_h, n_w, n_ucdp = ucdp_grid.shape` and uses the inferred `n_h`, `n_w` for all subsequent operations (row/col loops, gid lookups) without asserting they match `GridConfig`. Same pattern in `export_dataframe.py:102`. ADR-003 explicitly lists "inferring grid resolution from the shape of a compiled npy array" as a **forbidden** inference pattern. A corrupted or mis-assembled npy (wrong spatial dimensions) would silently produce wrong output — incorrect gid→cell mappings, wrong feature assignments — with no error signal.
+
+**Trigger:** Compilation bug or manual assembly produces a grid with unexpected spatial dimensions (e.g., 180x360 from a half-resolution run).
+**Location:** `scripts/assemble_grid.py:107`, `scripts/export_dataframe.py:102`, `scripts/compile_grid.py:160-163`, `scripts/presentation_plots.py:174,231,293`.
+**Resolution:** Add `assert n_h == DEFAULT_GRID_CONFIG.nrow` and `assert n_w == DEFAULT_GRID_CONFIG.ncol` after shape unpacking in all affected scripts.
+**Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (forbidden inference patterns).
+
+### C-130: Zero-filled future months indistinguishable from observed zeros — [RESOLVING]
+The assembled grid is pre-allocated through `--end-year 2026` (456 months) but UCDP data only covers through the most recent release (~Feb/Mar 2026 as of April 2026). Months beyond the last UCDP update contain zeros in all `ged_*` features. `load_dataset()` returns these zero-filled months without any signal that they are padding, not observations. A model training on months 121–560 would learn that conflict drops to zero after the data boundary — silent data corruption.
+
+**Fix applied:** Added `last_valid_month_id` metadata to zarr `.zattrs` (via `export_zarr.py`) and npy `provenance.json` (via `assemble_grid.py`). `load_dataset()` now emits `UserWarning` when `end` exceeds the boundary. `get_last_valid_month_id()` exposed in `datafactory_query.defaults` for consumer partition logic. **Remaining:** Remote zarr store on Hetzner still lacks the attribute (confirmed 2026-04-22, falsification P5). All remote consumers get `None` and no warning until redeploy. Cross-ref: C-133 (warning bypass for non-integer end).
+
+**Trigger:** Model trains on months beyond last UCDP update without awareness.
+**Location:** `scripts/export_zarr.py`, `scripts/assemble_grid.py`, `src/datafactory_query/dataset.py`, `src/datafactory_query/defaults.py`.
+**Source:** Falsification audit F9 (2026-04-22), updated with P5 finding (2026-04-22).
+
+### C-131: No external monitoring for cron job failure on Hetzner — [RESOLVING]
+The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-deploy` user. If the cron daemon crashes, the server reboots without re-enabling cron, or the `views-deploy` user is deleted during maintenance, the pipeline silently stops running. No external monitoring (cronitor, uptime check, systemd watchdog) exists to detect this. ADR-018 explicitly defers monitoring to operators (line 76: "Operators must monitor and intervene during outages") but no operator-side monitoring has been configured. The `ALERT_EMAIL` variable in `refresh_pipeline.sh:68` is a documented TODO (deployment log line 332) and is not set on the server.
+
+**Fix applied (2026-04-22):** Added optional heartbeat ping to `refresh_pipeline.sh` — on successful pipeline completion, pings `$HEARTBEAT_URL` (env var) if set. Operator must configure a healthchecks.io/cronitor service and set the URL on the server. Architectural review confirmed this is a deployment concern (not a new module) per ADR-018.
+
+**Trigger:** Hetzner server reboots and cron daemon fails to restart, or `views-deploy` user is removed during server maintenance.
+**Location:** Server crontab (`views-deploy` user), `scripts/refresh_pipeline.sh:61-72` (failure trap), `docs/ADRs/018_operational_resilience.md:76,90`.
+**Source:** Falsification audit P1/P2 (2026-04-22).
+
+### C-132: Health check validates export timestamp, not data recency — [RESOLVING]
+`check_export_freshness()` in `health.py:124-182` reads `export_timestamp` from zarr `.zattrs` and compares against the 168-hour SLO. Previously did not read `last_valid_month_id`. A pipeline run where the UCDP API returns empty pages or cached data (API outage, rate limit, network issue) would still complete all 7 steps, update `export_timestamp`, and pass the health check — while the actual data boundary has not advanced.
+
+**Fix applied (2026-04-22):** `check_export_freshness()` now reads `last_valid_month_id` from `.zattrs`, computes expected minimum from current date (allowing 2-month UCDP release lag), and returns `data_boundary_current` boolean. `check_health.py` displays data boundary status and flags `STALE` when boundary hasn't advanced. **Remaining:** Takes effect on Hetzner after redeploy (same as C-130).
+
+**Trigger:** UCDP API returns empty pages or cached data during the monthly pipeline run.
+**Location:** `src/datafactory_provenance/health.py:124-195` (`check_export_freshness`), `scripts/check_health.py:111-128`.
+**Source:** Falsification audit P3 (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
+
+### C-127: Zarr backend returns features in different order than npy backend
+The zarr loader in `dataset.py:154-157` falls back to `sorted(ds.data_vars)` (alphabetical) when the zarr store lacks a `feature_order` attr. The npy loader (`dataset.py:215`) reads `feature_names.json`, which preserves the compilation-time order. A consumer using FeatureFrame and indexing `y_features` by column position (e.g., `ff.y_features[:, 0]`) will silently get different features depending on which backend is used. The current zarr store at `data/assembled/grid.zarr` has no `feature_order` attr. **This is silent data divergence with no error signal.**
+
+**Trigger:** Consumer switches from local npy to zarr backend (local or remote) and uses positional indexing on FeatureFrame.
+**Location:** `src/datafactory_query/dataset.py:154-157` (zarr fallback), `src/datafactory_query/dataset.py:215` (npy path). Zarr store at `data/assembled/grid.zarr` (missing attr).
+**Resolution:** Either (a) write `feature_order` attr during zarr export (`scripts/export_zarr.py`), or (b) reorder zarr output to match `features` parameter order in `_load_grid_from_zarr`, or (c) both.
+**Source:** Verification examples suite (M13), `ex_zarr_local.py` discovered column order mismatch during TDD, 2026-04-21. Cross-ref: C-117 (zarr spatial subsetting).
 
 ---
 
 ## Tier 3 — Improve Quality
 
+### C-133: Zero-padding warning only fires for integer `end` parameter — [RESOLVING]
+Previously the `UserWarning` in `load_dataset()` only fired when `end` was an integer. String dates (`"2027-06"`) and `end=None` silently returned zero-filled months.
+
+**Fix applied (2026-04-22):** Warning moved to after time slicing. Now computes effective end month_id from `time_steps[-1]` (the actual loaded data), not from the `end` parameter. Fires for all three calling patterns: integer end, string end, and `end=None`. Confirmed by falsification tests P4 and P6.
+
+**Trigger:** New consumer or notebook calls `load_dataset()` with string end date or without explicit `end` parameter.
+**Location:** `src/datafactory_query/dataset.py` (warning gate, post-time-slice).
+**Source:** Falsification audit P4/P6 (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
+
+### C-129: Partition boundaries (month IDs) have no single source of truth
+The calibration/validation/forecasting partition boundaries (121/444, 445/492, 493/540) appear as bare literals in 4+ independent locations: `scripts/generate_consumer_data.py:56` (`PARTITIONS` dict), `examples/ex_partitions.py` (6+ occurrences in assertions), `tests/test_consumer_data.py:162,169`, and downstream in `bright_starship/configs/config_partitions.py`. No shared authoritative definition exists. Adding a new partition type or shifting a boundary (e.g., extending calibration) requires coordinated find-and-replace across repos with no compiler or test to catch a missed update. Per ADR-003: "a single source of truth must be designated."
+
+**Trigger:** VIEWS operational calendar shifts partition boundaries (e.g., extending calibration end from month 444 to 456).
+**Location:** `scripts/generate_consumer_data.py:56`, `examples/ex_partitions.py:21-101`, `tests/test_consumer_data.py:162,169`, `tests/test_consumer_parity.py:57`, downstream `bright_starship/configs/config_partitions.py`.
+**Resolution:** Define a `PARTITIONS` frozen dict or dataclass in a shared location within `src/` and have all consumers import from it.
+**Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (single source of truth).
+
+### C-134: `get_last_valid_month_id()` silently returns None on all errors
+`get_last_valid_month_id()` in `defaults.py:42-84` catches all exceptions (network errors, auth failures, JSON parse errors, timeout) and returns `None`. The caller cannot distinguish "attribute not yet written to zarr store" from "network down" from "netrc credentials wrong." This means a misconfigured consumer silently loses the zero-padding warning (C-130) with no error signal. The broad `except Exception` on line 79 violates ADR-008's requirement that failures be raised explicitly.
+
+**Trigger:** Consumer's `~/.netrc` is misconfigured or expired; `get_last_valid_month_id()` returns None; consumer trains on zero-padded months with no warning.
+**Location:** `src/datafactory_query/defaults.py:71,79` (broad exception handlers).
+**Resolution:** Distinguish expected None (attribute absent) from error None (network/auth failure). Either raise on non-200 HTTP status, or return a result object with error context.
+**Source:** Tech-debt-cleanup audit (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
+
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
 **Source:** Feathers
+**Update 2026-04-21:** Partially addressed by M13 (verification examples suite). 15 `examples/ex_*.py` scripts verify consumer-facing API contracts end-to-end. Not full characterization tests, but covers the consumer surface model developers depend on.
 
 ---
 
 ## Tier 4 — Accept or Defer
+
+### C-121: Phase 6.4 (SSH IP restriction) is documented but unexecuted — [DEFER]
+Phase 6.4 of `hetzner_deployment_guide.md` documents SSH IP restriction via Hetzner Cloud Firewall or ufw, but has never been executed end-to-end. C-87 surfaced the same pattern: Phase 6.3 was documented in March but only executed today (2026-04-10), revealing a missing `passwd` step that locked the new user out of `sudo`. The fix took 30 minutes; the bug was in the documentation since v1.0. **Lesson: untested documentation is broken documentation.** Phase 6.4 should be audited and ideally dry-run before the first real execution. **Trigger: before executing Phase 6.4 (which itself is blocked on PRIO IT CIDRs).** Resolution: walk through Phase 6.4 line-by-line, verify each command, add missing edge cases, then execute on the server.
+**Source:** Lessons from C-87 incident, 2026-04-10
 
 ### C-37: `date_prec=5` semantics hardcoded — [DEFER]
 `temporal_distribution.py:22` defines `_SUMMARY_DATE_PREC = 5`. If UCDP changes `date_prec` semantics, temporal distribution silently produces wrong results. No UCDP documentation exists for `date_prec` values. **Trigger: UCDP publishes a codebook or changes observed empirically.**
@@ -100,6 +190,7 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 ### C-31: Candidate source depends on annual source — [DEFER]
 `ucdp_candidate.py` imports 4 symbols and `ucdp_dot9.py` imports 5 symbols from `ucdp_annual.py` (including `UcdpAnnualConfig`, `fetch_paginated`, `FIELD_TYPES`, `REQUIRED_FIELDS`, and `get_ucdp_token`). Changing annual's API client could break candidate. Additionally, `ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated` — sends unnecessary 100-year date range (works correctly but is a workaround). **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed. Resolution also addresses former C-28.**
 **Source:** Martin (expert review 5), falsification audit DoD005
+**Update 2026-04-21:** Magic-values audit found the UCDP API base URL `"https://ucdpapi.pcr.uu.se/api/gedevents"` hardcoded identically in all 3 config classes (`ucdp_annual.py:94`, `ucdp_candidate.py:86`, `ucdp_dot9.py:90`). This is a specific ADR-003 violation (no single source of truth) and a symptom of the same coupling. Extracting `_ucdp_common.py` would also centralize this URL.
 
 ### C-44: Harvest pipeline template is implicit — [DEFER]
 All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
@@ -169,6 +260,27 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Source:** Falsification audit 2026-04-01 (F2)
 
+
+### ~~C-125: No country-month (cm) aggregation — 48/70 models cannot migrate~~ — [RESOLVED]
+Resolved 2026-04-21. `load_dataset(output_format="country_month")` now aggregates grid cells by country per month using `gaul0_code` as the grouping key. Adapter: `grid_to_country_month()` in `datafactory_adapters`. Active conflict features (ged_sb/ns/os_best) summed per (month_id, country_id). WDI/V-DEM/topic features remain out of scope (C-126 covers the transform gap).
+**Source:** Falsification audit 2026-04-20 (F3). Cross-ref: S1 in `test_falsification_viewser_replacement.py`.
+
+### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
+14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
+**Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
+
+### C-135: No runtime type validation for zarr `.zattrs` values — [DEFER]
+`ds.attrs.get("last_valid_month_id")` in `dataset.py` is type-annotated as `int | None` but no runtime check validates the type. `health.py` applies `int(last_valid)` which would raise `ValueError` on a non-numeric string but silently truncate a float. The attrs are written by our own `export_zarr.py` (which produces correct types), so the only risk vector is manual server-side editing of `.zattrs`. **Trigger: manual edit of `.zattrs` on Hetzner server sets a zarr attribute to an unexpected type.**
+
+**Location:** `src/datafactory_query/dataset.py:157-159`, `src/datafactory_provenance/health.py:179-182`.
+**Source:** Tech-debt-cleanup audit (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
+
+### C-136: `read_last_entries()` crashes on non-UTF8 ledger files — [DEFER]
+`read_last_entries()` in `health.py:39` calls `ledger_path.read_text()` which raises `UnicodeDecodeError` on binary-corrupted JSONL files. Since `report_ledger()` and `check_health.py` depend on this function without a try/except, a single corrupted byte in any ledger file crashes the entire health check. The ledger files are append-only JSONL written by `append_ledger_entry()` which always writes valid UTF-8, so the only risk vector is disk corruption or an external process writing binary data to the ledger path. Discovered by Red test `TestReportLedgerRed::test_binary_garbage_in_ledger`. **Trigger: disk corruption or misconfigured log rotation appends binary data to a JSONL ledger file.**
+
+**Location:** `src/datafactory_provenance/health.py:39` (`read_text()` call).
+**Resolution:** Wrap `read_text()` in try/except `UnicodeDecodeError`, or use `read_bytes().decode(errors="replace")`.
+**Source:** Test review gap implementation (2026-04-22). Cross-ref: C-131, C-132 (operational monitoring).
 
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
