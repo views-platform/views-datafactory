@@ -108,7 +108,7 @@ This design conflated two things:
 1. **Spatial identity** — "which country does this cell belong to?" (metadata for grouping and tracing)
 2. **Temporal political signal** — "has this cell's sovereignty changed?" (a predictive feature)
 
-HydraNet's architecture treats `c_id` as an **identity column** — it's carried through the pipeline for bookkeeping (ADR-032 §3.2) but not used as a training feature. A column that changes value over time is a feature pretending to be metadata. If the model learned from those changes, it would be learning from an undocumented, uncontrolled signal.
+HydraNet's architecture treats `c_id` as an **identity column** — it's carried through the pipeline for bookkeeping but not used as a training feature. A column that changes value over time is a feature pretending to be metadata. If the model learned from those changes, it would be learning from an undocumented, uncontrolled signal.
 
 ### The new system (datafactory)
 

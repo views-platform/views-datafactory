@@ -66,7 +66,7 @@ for server-side setup.
 ```python
 import xarray as xr
 
-ds = xr.open_zarr("data/zarr/grid.zarr")
+ds = xr.open_zarr("data/assembled/grid.zarr")
 print(ds)
 ```
 
@@ -286,7 +286,7 @@ No other dependencies needed for reading zarr stores.
 **"No module named 'xarray'"** — Install it: `pip install xarray zarr`
 
 **"FileNotFoundError" on open_zarr** — Check the path. For local:
-`data/zarr/grid.zarr`. For remote: the full URL including `.zarr`.
+`data/assembled/grid.zarr`. For remote: the full URL including `.zarr`.
 
 **"Out of memory"** — You're loading too much. Use `.sel()` to subset
 before `.values` or `.load()`.
