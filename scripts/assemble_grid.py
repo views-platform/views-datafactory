@@ -283,6 +283,23 @@ def main() -> int:
     )
     ucdp_digest = compute_file_digest(grid_path)
 
+    # Data boundary: last month with observed UCDP data
+    ucdp_grid_ro = np.load(grid_path, mmap_mode="r")
+    has_data = ucdp_grid_ro.sum(axis=(1, 2, 3)) > 0
+    valid_steps = np.where(has_data)[0]
+    from datafactory_priogrid import to_views_month_id
+
+    last_valid_month_id: int | None = None
+    if len(valid_steps) > 0:
+        last_idx = int(valid_steps[-1])
+        last_dt = time_steps[last_idx]
+        last_valid_month_id = int(to_views_month_id(last_dt))
+        print(
+            f"Last valid UCDP month: {last_valid_month_id} "
+            f"({last_dt})"
+        )
+    del ucdp_grid_ro
+
     provenance = {
         "sources": {
             "ucdp_grid": str(grid_path),
@@ -297,6 +314,8 @@ def main() -> int:
         "feature_names": all_features,
         "output_digest": output_digest,
     }
+    if last_valid_month_id is not None:
+        provenance["last_valid_month_id"] = last_valid_month_id
     (args.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)
     )

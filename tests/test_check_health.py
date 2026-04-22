@@ -7,10 +7,13 @@ read_last_entries, report_ledger, and check_export_freshness.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from datafactory_provenance.health import (
+    FRESHNESS_SLO_HOURS,
     check_export_freshness,
     read_last_entries,
     report_ledger,
@@ -39,9 +42,9 @@ def _make_entry(
     }
 
 
-NOW = datetime(2026, 4, 7, 12, 0, 0, tzinfo=timezone.utc)
-RECENT_TS = "2026-04-06T12:00:00+00:00"  # 24h ago
-STALE_TS = "2026-03-20T12:00:00+00:00"  # 18 days ago
+NOW = datetime(2030, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+RECENT_TS = (NOW - timedelta(hours=24)).isoformat()
+STALE_TS = (NOW - timedelta(hours=FRESHNESS_SLO_HOURS + 32)).isoformat()
 
 
 # ── read_last_entries ────────────────────────────────────
@@ -193,3 +196,91 @@ class TestCheckExportFreshness:
         result = check_export_freshness(zarr, NOW)
         assert result["export_slo_met"] is False
         assert result["export_age_hours"] == -1
+
+    def test_data_boundary_current(self, tmp_path: Path) -> None:
+        """last_valid_month_id present and recent."""
+        zarr = tmp_path / "grid.zarr"
+        zarr.mkdir()
+        expected_min = (NOW.year - 1980) * 12 + NOW.month - 2
+        (zarr / ".zattrs").write_text(json.dumps({
+            "export_timestamp": RECENT_TS,
+            "last_valid_month_id": expected_min,
+        }))
+        result = check_export_freshness(zarr, NOW)
+        assert result["data_boundary_current"] is True
+        assert result["last_valid_month_id"] == expected_min
+
+    def test_data_boundary_stale(self, tmp_path: Path) -> None:
+        """last_valid_month_id present but too old."""
+        zarr = tmp_path / "grid.zarr"
+        zarr.mkdir()
+        expected_min = (NOW.year - 1980) * 12 + NOW.month - 2
+        (zarr / ".zattrs").write_text(json.dumps({
+            "export_timestamp": RECENT_TS,
+            "last_valid_month_id": expected_min - 3,
+        }))
+        result = check_export_freshness(zarr, NOW)
+        assert result["data_boundary_current"] is False
+
+
+# ── Red tests: check_export_freshness ───────────────────
+
+
+class TestCheckExportFreshnessRed:
+
+    def test_corrupted_zattrs_json(self, tmp_path: Path) -> None:
+        zarr = tmp_path / "grid.zarr"
+        zarr.mkdir()
+        (zarr / ".zattrs").write_text("{truncated")
+        result = check_export_freshness(zarr, NOW)
+        assert result["export_slo_met"] is False
+        assert result["export_age_hours"] == -1
+
+    def test_missing_export_timestamp(self, tmp_path: Path) -> None:
+        zarr = tmp_path / "grid.zarr"
+        zarr.mkdir()
+        (zarr / ".zattrs").write_text(json.dumps({
+            "last_valid_month_id": 540,
+        }))
+        result = check_export_freshness(zarr, NOW)
+        assert result["export_slo_met"] is False
+        assert "missing" in result["detail"]
+
+    def test_unparseable_timestamp(self, tmp_path: Path) -> None:
+        zarr = tmp_path / "grid.zarr"
+        zarr.mkdir()
+        (zarr / ".zattrs").write_text(json.dumps({
+            "export_timestamp": "not-a-date",
+        }))
+        result = check_export_freshness(zarr, NOW)
+        assert result["export_slo_met"] is False
+        assert "Cannot parse" in result["detail"]
+
+
+# ── Red tests: report_ledger ────────────────────────────
+
+
+class TestReportLedgerRed:
+
+    def test_corrupted_ledger_line(self, tmp_path: Path) -> None:
+        """Mixed valid + invalid JSON lines should not crash."""
+        ledger = tmp_path / "ledger.jsonl"
+        ledger.write_text(
+            "NOT JSON AT ALL\n"
+            + json.dumps(_make_entry(RECENT_TS)) + "\n"
+        )
+        result = report_ledger("test", ledger, NOW)
+        assert result["status"] == "OK"
+
+    def test_empty_ledger_file(self, tmp_path: Path) -> None:
+        ledger = tmp_path / "ledger.jsonl"
+        ledger.write_text("")
+        result = report_ledger("test", ledger, NOW)
+        assert result["status"] == "NO DATA"
+
+    def test_binary_garbage_in_ledger(self, tmp_path: Path) -> None:
+        """Binary garbage crashes read_text — documents C-136."""
+        ledger = tmp_path / "ledger.jsonl"
+        ledger.write_bytes(b"\x80\x81\x82\n")
+        with pytest.raises(UnicodeDecodeError):
+            report_ledger("test", ledger, NOW)

@@ -151,6 +151,31 @@ def main() -> int:
         datetime.now(tz=timezone.utc).isoformat()
     )
 
+    # Data boundary: last month with real UCDP observations.
+    # The grid is pre-allocated through --end-year (ADR-003) but
+    # only months through this boundary have observed data; later
+    # months are zero-filled padding.
+    ucdp_indices = [
+        i for i, name in enumerate(feature_names)
+        if name.startswith("ged_")
+    ]
+    if ucdp_indices:
+        ucdp_slice = grid[:, :, :, ucdp_indices]
+        has_data = ucdp_slice.sum(axis=(1, 2, 3)) > 0
+        valid_steps = np.where(has_data)[0]
+        if len(valid_steps) > 0:
+            from datafactory_priogrid import to_views_month_id
+
+            last_idx = int(valid_steps[-1])
+            last_dt = time_steps[last_idx]
+            last_mid = int(to_views_month_id(last_dt))
+            attrs["last_valid_month_id"] = last_mid
+            attrs["last_valid_date"] = str(last_dt)
+            print(
+                f"Last valid UCDP month: {last_mid} "
+                f"({last_dt})"
+            )
+
     ds = xr.Dataset(
         data_vars=data_vars,
         coords=coords,

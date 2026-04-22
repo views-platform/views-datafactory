@@ -128,7 +128,7 @@ def list_regions() -> list[str]:
 
 
 @lru_cache(maxsize=1)
-def _load_legacy_pgids(_gaul_dir: Path | None = None) -> set[int]:
+def _load_legacy_pgids() -> set[int]:
     """Load the VIEWSER-era Africa+ME pgid set (13,110 cells).
 
     Bundled with the package as africa_me_legacy_pgids.json.
@@ -204,7 +204,7 @@ def load_region_pgids(
         return fetch_land_pgids()
 
     if region == "africa_me_legacy":
-        return _load_legacy_pgids(gaul_dir)
+        return _load_legacy_pgids()
 
     # Predefined macro-region
     if region in REGIONS:
