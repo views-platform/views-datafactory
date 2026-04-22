@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-22
+**Last reviewed:** 2026-04-22
 **Related ADRs:** ADR-009, ADR-012, ADR-015
 
 ---
@@ -66,6 +66,8 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on `end_year < start_year`
 - `ValueError` on `page_size < 1`
 - `ValueError` on `max_retries < 1`
+- `ValueError` on `page_delay <= 0`
+- `ValueError` on `timeout < 1`
 - `ValueError` on empty `version`
 - `AttributeError` on any attempt to mutate fields (frozen)
 

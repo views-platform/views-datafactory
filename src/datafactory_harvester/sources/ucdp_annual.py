@@ -120,6 +120,14 @@ class UcdpAnnualConfig:
             err_msg = f"max_retries must be >= 1, got {self.max_retries}"
             logger.error(err_msg)
             raise ValueError(err_msg)
+        if self.page_delay <= 0:
+            err_msg = f"page_delay must be > 0, got {self.page_delay}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        if self.timeout < 1:
+            err_msg = f"timeout must be >= 1, got {self.timeout}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         if not self.version:
             err_msg = "version must be non-empty"
             logger.error(err_msg)

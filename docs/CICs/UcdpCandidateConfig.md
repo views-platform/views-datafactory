@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-22
+**Last reviewed:** 2026-04-22
 **Related ADRs:** ADR-009, ADR-012, ADR-015
 
 ---
@@ -33,6 +33,7 @@ Governs version discovery (automatic sequential probing from a start date), API 
 - Guarantees `start_year >= 1`
 - Guarantees `page_size >= 1`
 - Guarantees `max_retries >= 1`
+- Guarantees `timeout >= 1`
 - Guarantees `discovery_rate_limit > 0`
 - Guarantees `max_versions >= 1`
 
@@ -68,6 +69,7 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on `start_year < 1`
 - `ValueError` on `page_size < 1`
 - `ValueError` on `max_retries < 1`
+- `ValueError` on `timeout < 1`
 - `ValueError` on `discovery_rate_limit <= 0`
 - `ValueError` on `max_versions < 1`
 - `AttributeError` on any attempt to mutate fields (frozen)

@@ -93,6 +93,12 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-022** -- Tag-Based Deployment Gate
   Server runs a specific tagged release, not a branch tip. Operator controls version via `~/.views-deploy-tag`. Fail-loud on misconfiguration.
 
+- **ADR-023** -- Viewpoint Builder Invariants
+  Defines invariants for viewpoint construction: survivorship, distribution, and filtering rules.
+
+- **ADR-024** -- Compilation Grid Invariants
+  Defines invariants for grid compilation: spatial join, temporal alignment, feature ordering.
+
 - **ADR-025** -- Country Identity Uses GAUL Codes
   GAUL-2014 as the authoritative country coding system. No G&W or C-Shapes.
 

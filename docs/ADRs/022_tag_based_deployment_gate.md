@@ -154,7 +154,7 @@ Full operational procedures are in `docs/guides/hetzner_deployment_guide.md`, se
 
 - ADR-011 (Fail Loud, No Stale Data Serving) — justifies fail-loud on misconfiguration
 - ADR-018 (Operational Resilience Policy) — operator-mediated bounded staleness
-- `scripts/refresh_pipeline.sh` lines 62-85 — implementation
+- `scripts/refresh_pipeline.sh` lines 76-98 — implementation
 - `reports/technical_risk_register_resolved.md` C-98 — risk that motivated this ADR
 - `docs/guides/hetzner_deployment_guide.md` — operational procedures
 - `docs/guides/data_serving_guide.md` section 9 — conceptual explanation

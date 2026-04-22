@@ -125,6 +125,10 @@ class UcdpCandidateConfig:
             )
             logger.error(err_msg)
             raise ValueError(err_msg)
+        if self.timeout < 1:
+            err_msg = f"timeout must be >= 1, got {self.timeout}"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         if self.max_versions < 1:
             err_msg = (
                 f"max_versions must be >= 1, got {self.max_versions}"

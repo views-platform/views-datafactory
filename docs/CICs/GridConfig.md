@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-20
+**Last reviewed:** 2026-04-22
 **Related ADRs:** ADR-001, ADR-009
 
 ---
@@ -33,6 +33,7 @@ Default values reproduce the standard PRIO-GRID: 360 rows x 720 columns of 0.5 x
 - Guarantees west < east and south < north
 - Guarantees resolution evenly divides both lat and lon extents
 - Provides derived dimensions as properties: `nrow`, `ncol`, `n_cells`
+- Provides `assert_grid_shape(grid)` to validate that a [T, H, W, C] array's spatial dims match this config
 
 ---
 
@@ -59,6 +60,8 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on resolution <= 0
 - `ValueError` on inverted bounds (west >= east, south >= north)
 - `ValueError` on indivisible resolution
+- `TypeError` from `assert_grid_shape` if input lacks `.shape` attribute
+- `AssertionError` from `assert_grid_shape` if spatial dims (H, W) do not match `(nrow, ncol)`
 - `AttributeError` on any attempt to mutate fields (frozen)
 
 All failures are immediate and loud. No silent fallbacks.
