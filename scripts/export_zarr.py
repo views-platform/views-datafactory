@@ -220,18 +220,20 @@ def main() -> int:
     print()
     print("Round-trip integrity check...")
     ds_check = xr.open_zarr(output)
-    n_checked = 0
-    for i, name in enumerate(feature_names):
-        src_sum = float(np.asarray(grid[:, :, :, i]).sum())
-        zarr_sum = float(ds_check[name].values.sum())
-        if abs(src_sum - zarr_sum) > 0.5:
-            print(
-                f"FAIL: {name} sum mismatch — "
-                f"grid={src_sum:.1f}, zarr={zarr_sum:.1f}"
-            )
-            return 1
-        n_checked += 1
-    ds_check.close()
+    try:
+        n_checked = 0
+        for i, name in enumerate(feature_names):
+            src_sum = float(np.asarray(grid[:, :, :, i]).sum())
+            zarr_sum = float(ds_check[name].values.sum())
+            if abs(src_sum - zarr_sum) > 0.5:
+                print(
+                    f"FAIL: {name} sum mismatch — "
+                    f"grid={src_sum:.1f}, zarr={zarr_sum:.1f}"
+                )
+                return 1
+            n_checked += 1
+    finally:
+        ds_check.close()
     print(f"  {n_checked} features verified (sums match)")
 
     elapsed = time.monotonic() - t0
