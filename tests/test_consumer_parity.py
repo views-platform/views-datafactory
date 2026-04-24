@@ -123,7 +123,7 @@ def assert_consumer_parity(
         result["col"].values, reference["col"].values,
     )
 
-    # Features — within mismatch threshold
+    # Features — within mismatch threshold (per-cell)
     n_total = len(result)
     for col in FEATURE_COLS:
         diff = np.abs(result[col].values - reference[col].values)
@@ -132,6 +132,20 @@ def assert_consumer_parity(
         assert rate <= MAX_MISMATCH_RATE, (
             f"{col}: {n_mismatch} mismatches ({rate:.4%}) "
             f"exceeds threshold {MAX_MISMATCH_RATE:.2%}"
+        )
+
+    # Features — global sum parity (catches systematic under/over-counting
+    # that per-cell checks miss when many cells have zero vs nonzero)
+    for col in FEATURE_COLS:
+        result_total = float(result[col].sum())
+        ref_total = float(reference[col].sum())
+        if ref_total == 0:
+            continue
+        gap = abs(result_total - ref_total) / ref_total
+        assert gap <= MAX_MISMATCH_RATE, (
+            f"{col}: global sum gap {gap:.4%} — "
+            f"factory={result_total:,.0f}, "
+            f"reference={ref_total:,.0f}"
         )
 
 
