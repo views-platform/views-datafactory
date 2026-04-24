@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-22)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit
-**Status:** 136 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 36 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-04-24)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24
+**Status:** 139 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 39 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -48,6 +48,9 @@
 | C-134 | 3 | `get_last_valid_month_id()` silently returns None on all errors | Consumer netrc misconfigured, loses zero-padding warning | Data boundary |
 | C-135 | 4 | No runtime type validation for zarr `.zattrs` values | Manual edit of `.zattrs` on server | Data boundary |
 | C-136 | 4 | `read_last_entries()` crashes on non-UTF8 ledger files | Disk corruption or binary append to JSONL ledger | Operational monitoring |
+| C-137 | 2 | No round-trip integrity check after zarr export | Pipeline export produces truncated or partial zarr store | Data integrity |
+| C-138 | 2 | No post-deploy data correctness verification | Pipeline completes but served data doesn't match assembled grid | Data integrity |
+| C-139 | 2 | Consumer parity tests check per-cell rates but not aggregate totals | Systematic undercounting passes per-cell threshold | Data integrity |
 | ~~C-125~~ | ~~3~~ | ~~No cm aggregation — 48/70 models cannot migrate~~ | Resolved 2026-04-21 | Migration scope |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
@@ -75,6 +78,7 @@ Items that should be resolved together:
 | **Query correctness** | C-127 | Before consumer switches from npy to zarr backend |
 | **ADR-003 compliance** | C-128, C-129 | Before next assembly/compilation change |
 | **Operational monitoring** | C-131, C-132, C-136 | Before relying on Hetzner pipeline without manual checks |
+| **Data integrity** | C-137, C-138, C-139 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, C-134, C-135 | Before consumer models train on data from the factory |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
@@ -132,6 +136,32 @@ The zarr loader in `dataset.py:154-157` falls back to `sorted(ds.data_vars)` (al
 **Location:** `src/datafactory_query/dataset.py:154-157` (zarr fallback), `src/datafactory_query/dataset.py:215` (npy path). Zarr store at `data/assembled/grid.zarr` (missing attr).
 **Resolution:** Either (a) write `feature_order` attr during zarr export (`scripts/export_zarr.py`), or (b) reorder zarr output to match `features` parameter order in `_load_grid_from_zarr`, or (c) both.
 **Source:** Verification examples suite (M13), `ex_zarr_local.py` discovered column order mismatch during TDD, 2026-04-21. Cross-ref: C-117 (zarr spatial subsetting).
+
+### C-137: No round-trip integrity check after zarr export — [RESOLVING]
+`export_zarr.py` writes the assembled grid to a zarr store but never reads it back to verify the data survived the write. A truncated write, chunking bug, or partial store would produce a zarr store with wrong values and no error signal. This is the exact failure mode that caused the 46% fatality gap on the Hetzner server: the served zarr store had missing pre-2014 data, but the export step reported success.
+
+**Fix applied (2026-04-24):** Added round-trip sum verification to `export_zarr.py` — after writing and consolidating the zarr store, reads back each feature and asserts `zarr_sum == grid_sum`. Exits with code 1 on mismatch, halting the pipeline.
+
+**Trigger:** Pipeline export produces a truncated or partial zarr store (disk full, timeout, corrupted chunk).
+**Location:** `scripts/export_zarr.py` (after `ds.to_zarr()` and `zarr.consolidate_metadata()`).
+**Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-130 (zero-padding), C-132 (health check gap).
+
+### C-138: No post-deploy data correctness verification — [DEFER]
+The health check (`check_health.py`) validates metadata freshness (export timestamp, data boundary month) but never checks whether the data values in the served zarr store are correct. A zarr store that passes all metadata checks but contains wrong values (stale data, partial export, corrupted chunks) is invisible to the current monitoring stack. The Hetzner zarr store served data with 46% missing fatalities for weeks while all health checks passed.
+
+**Trigger:** Pipeline completes successfully but the HTTP-served zarr store doesn't match the local assembled grid.
+**Location:** `scripts/check_health.py`, `scripts/refresh_pipeline.sh` (step 7).
+**Resolution:** Add a `verify_remote_data.py` script that fetches a small slice from the HTTP endpoint and compares totals against the local grid. Run as pipeline step 8.
+**Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-137 (export integrity), C-132 (health check gap).
+
+### C-139: Consumer parity tests check per-cell rates but not aggregate totals — [RESOLVING]
+`test_consumer_parity.py` asserts that per-cell mismatches stay below 0.1% but does not check whether the global sum of fatalities matches between the data factory and the reference dataset. Systematic undercounting — where many cells have 0 instead of small nonzero values — passes the per-cell threshold (each zero-vs-nonzero cell is one mismatch out of 4.8M rows) while producing a 46% total gap. This is exactly what happened: per-cell parity was 99.98% while the aggregate total was off by 347,797 fatalities.
+
+**Fix applied (2026-04-24):** Added global sum assertion to `assert_consumer_parity()` in `test_consumer_parity.py`. For each feature column, asserts `abs(factory_total - reference_total) / reference_total <= 0.1%`.
+
+**Trigger:** Systematic event loss affecting many cells (e.g., missing year range, filtered violence type, wrong aggregation strategy).
+**Location:** `tests/test_consumer_parity.py:127-145` (`assert_consumer_parity` feature checks).
+**Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-137 (export integrity).
 
 ---
 
