@@ -113,10 +113,13 @@ def main() -> int:
 
     # Build xarray Dataset — one variable per feature
     data_vars = {}
+    source_sums: dict[str, float] = {}
     for i, name in enumerate(feature_names):
+        feature_data = np.asarray(grid[:, :, :, i])
+        source_sums[name] = float(feature_data.sum())
         data_vars[name] = (
             ["time", "lat", "lon"],
-            np.asarray(grid[:, :, :, i]),
+            feature_data,
         )
         print(f"  {i:2d}: {name}")
 
@@ -217,23 +220,23 @@ def main() -> int:
     # Round-trip integrity check: read back the zarr store and verify
     # feature sums match the input grid. Catches silent data loss during
     # export (e.g., partial writes, chunking bugs, stale stores).
+    # Uses zarr directly and sums one feature at a time to stay within
+    # the 8 GB RAM budget on the production server.
     print()
     print("Round-trip integrity check...")
-    ds_check = xr.open_zarr(output)
-    try:
-        n_checked = 0
-        for i, name in enumerate(feature_names):
-            src_sum = float(np.asarray(grid[:, :, :, i]).sum())
-            zarr_sum = float(ds_check[name].values.sum())
-            if abs(src_sum - zarr_sum) > 0.5:
-                print(
-                    f"FAIL: {name} sum mismatch — "
-                    f"grid={src_sum:.1f}, zarr={zarr_sum:.1f}"
-                )
-                return 1
-            n_checked += 1
-    finally:
-        ds_check.close()
+    store = zarr.open(str(output), mode="r")
+    n_checked = 0
+    for name in feature_names:
+        zarr_sum = float(np.array(store[name]).sum())
+        src_sum = source_sums[name]
+        if abs(src_sum - zarr_sum) > 0.5:
+            print(
+                f"FAIL: {name} sum mismatch — "
+                f"grid={src_sum:.1f}, zarr={zarr_sum:.1f}"
+            )
+            return 1
+        n_checked += 1
+    del store
     print(f"  {n_checked} features verified (sums match)")
 
     elapsed = time.monotonic() - t0
