@@ -246,6 +246,34 @@ def fetch_paginated(
         page += 1
 
     logger.info("Fetched %d total events", len(all_events))
+
+    # Assert fetched count against API's TotalCount. The API may
+    # count events it doesn't return (e.g., type_of_violence=4),
+    # so allow up to 1% shortfall. A larger gap indicates a silent
+    # partial fetch (rate limiting, pagination failure).
+    if max_pages is None and total_count and total_count > 0:
+        shortfall = total_count - len(all_events)
+        shortfall_pct = shortfall / total_count
+        if shortfall_pct > 0.01:
+            err_msg = (
+                f"Fetch count mismatch: API reports {total_count} "
+                f"events but only {len(all_events)} fetched "
+                f"({shortfall_pct:.1%} shortfall). "
+                f"Likely a silent partial fetch due to rate limiting."
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        if shortfall > 0:
+            logger.info(
+                "TotalCount=%d, fetched=%d (shortfall=%d, %.2f%% "
+                "— within tolerance, likely type_of_violence=4 "
+                "filtering)",
+                total_count,
+                len(all_events),
+                shortfall,
+                shortfall_pct * 100,
+            )
+
     return all_events
 
 
