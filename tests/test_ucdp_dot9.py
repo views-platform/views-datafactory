@@ -131,6 +131,18 @@ class TestDot9ConfigBeige:
         with pytest.raises(ValueError, match="max_versions"):
             UcdpDot9Config(max_versions=0)
 
+    def test_rejects_zero_page_size(self) -> None:
+        with pytest.raises(ValueError, match="page_size"):
+            UcdpDot9Config(page_size=0)
+
+    def test_rejects_zero_retries(self) -> None:
+        with pytest.raises(ValueError, match="max_retries"):
+            UcdpDot9Config(max_retries=0)
+
+    def test_rejects_zero_timeout(self) -> None:
+        with pytest.raises(ValueError, match="timeout"):
+            UcdpDot9Config(timeout=0)
+
 
 # ---- Version Discovery ----
 

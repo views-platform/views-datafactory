@@ -135,6 +135,18 @@ class TestCandidateConfigBeige:
         with pytest.raises(ValueError, match="max_versions"):
             UcdpCandidateConfig(max_versions=0)
 
+    def test_rejects_zero_page_size(self) -> None:
+        with pytest.raises(ValueError, match="page_size"):
+            UcdpCandidateConfig(page_size=0)
+
+    def test_rejects_zero_retries(self) -> None:
+        with pytest.raises(ValueError, match="max_retries"):
+            UcdpCandidateConfig(max_retries=0)
+
+    def test_rejects_zero_timeout(self) -> None:
+        with pytest.raises(ValueError, match="timeout"):
+            UcdpCandidateConfig(timeout=0)
+
 
 # ---- Version Discovery ----
 

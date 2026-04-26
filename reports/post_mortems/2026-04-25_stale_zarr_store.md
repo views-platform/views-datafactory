@@ -2,13 +2,13 @@
 
 **Date:** 2026-04-25 (updated 2026-04-26)
 **Severity:** Critical (blocked model training with silently wrong data)
-**Status:** All sources fixed — annual (v1.2.6), candidate (v1.2.7). Awaiting server redeployment.
+**Status:** Resolved. v1.2.7 deployed to Hetzner 2026-04-26. Full pipeline passed. ged_sb_best = 1,956,320 (expected ~1,955,000).
 
 ## Summary
 
 The Hetzner-served zarr store had 46% fewer fatalities than the gold set for the calibration period (months 121–492). Models trained on this data (bright_starship) would have learned from systematically undercounted conflict data. The issue was discovered during a consumer parity investigation, not by any automated check.
 
-The root cause was a combination of two independent bugs: (1) `harvest_ucdp.py` used `page_size=50000`, which the UCDP API silently truncates — returning only 335,918 of 384,918 events regardless of which machine makes the request; and (2) no TotalCount assertion existed to detect the shortfall. The fix reverts to `page_size=1000` (which returns correct data) and adds rate-limit backoff to `fetch_paginated()` so the 386-page fetch survives the API's ~40-request rate limit.
+The root cause was three compounding bugs: (1) `harvest_ucdp.py` used `page_size=50000`, which the UCDP API silently truncates — returning only 335,918 of 384,918 events regardless of which machine makes the request; (2) no TotalCount assertion existed to detect the shortfall; and (3) when the TotalCount assertion was added, its percentage-based 1% tolerance failed for small candidate versions where the UCDP API's consistent ~1000-event type_of_violence=4 offset is 40–100% of the total. The fixes: revert to `page_size=1000` with rate-limit backoff (v1.2.6), and change the assertion to a dual threshold requiring BOTH >1% AND >1100 absolute events (v1.2.7).
 
 ## Timeline
 
@@ -40,6 +40,8 @@ The root cause was a combination of two independent bugs: (1) `harvest_ucdp.py` 
 | 2026-04-26 | **Experiment Step 1 (cold-start probe):** Fetched 8 candidate versions from laptop with zero rate-limit pressure. ALL versions show exactly 1000-event shortfall between TotalCount and actual events (e.g., 26.0.3: TotalCount=1787, fetched=787). This is the same type_of_violence=4 offset as annual (385,918 vs 384,918). **The candidate failure was caused by our own TotalCount assertion being percentage-based (1%) — for small datasets, 1000/1787 = 56% shortfall, far exceeding 1%.** Not rate limiting at all. |
 | 2026-04-26 | Fix: changed TotalCount assertion to dual threshold — shortfall must exceed BOTH 1% AND 1100 absolute events to raise. This tolerates the ~1000 type_of_violence=4 offset for small candidate versions while still catching genuine truncation (e.g., page_size=50000 → 50,000-event shortfall). |
 | 2026-04-26 | Local verification: candidate harvest PASS — 64 versions served, 0 failed (285.8s). |
+| 2026-04-26 | v1.2.7 deployed to Hetzner. Full pipeline completed: annual 384,918 events PASS, candidate 64 versions PASS (0 failed), dot9 99 versions PASS. Consolidation: 2,322,421 records. Assembly: (456, 360, 720, 43). Zarr export: 43 features, round-trip sums match. |
+| 2026-04-26 | **Final verification:** `ged_sb_best = 1,956,320`, `ged_ns_best = 285,346`, `ged_os_best = 1,232,241`. All within expected ranges. Data boundary: month 556 (2026-04). Export freshness: 0h. **Incident resolved.** |
 
 ## Root causes
 
@@ -116,9 +118,15 @@ Two changes that work together:
 - `page_size=1000` with rate-limit backoff: 384,918 events in 1952s (~32 min). Hit rate limit around page 307, backed off 30s, resumed successfully.
 - `page_size=50000` page-by-page test: confirmed truncation — page 7 returns 35,918 instead of 50,000, page 8 returns 0. Total 335,918. This is an API bug, not rate limiting.
 
-### Server re-harvest (partially complete)
+### Server re-harvest (complete)
 
-v1.2.6 deployed to Hetzner on Apr 26. Annual: 384,918 events PASS. Candidate: FAIL (0 of 307 events). dot9: PASS (all cached). The annual fix works. The candidate failure is a separate, unresolved issue.
+v1.2.7 deployed to Hetzner on Apr 26. Full pipeline completed successfully:
+- Annual: 384,918 events PASS
+- Candidate: 64 versions served, 0 failed PASS
+- Dot9: 99 versions cached PASS
+- Assembly: (456, 360, 720, 43), 43 features
+- Zarr export: round-trip integrity check passed (43 features verified)
+- Final totals: ged_sb_best = 1,956,320, ged_ns_best = 285,346, ged_os_best = 1,232,241
 
 ### Candidate harvest failure (resolved)
 
@@ -183,9 +191,10 @@ If a raw file is re-fetched with fewer events (as happened here), the consolidat
 
 - [ ] **ADR or addendum on harvest reliability**: document the TotalCount assertion, rate-limit mitigation, and the principle that harvest success requires count verification, not just schema validation
 - [ ] **Runbook update**: add "verify raw data totals" step to server operations after harvest
-- [ ] **Risk register**: review C-137/C-138/C-139 status; consider new entries for TotalCount discrepancy, .9 governance, rate-limit non-determinism, version discovery rate limiting
+- [x] **Risk register**: C-137/C-138/C-139 updated. C-140 (incident fix test coverage), C-141–C-143 (test gaps) registered 2026-04-26. 21 new tests added.
 - [ ] **Deployment log update**: correct the "page_size=50000 → success" entry to note that it was a silent failure producing 335,918 instead of 384,918 events
 - [x] **CIC update**: `UcdpAnnualConfig.md` line 46 references "production override: 50000" — needs updating now that production uses default 1000
+- [x] **Health check SLO per source**: implemented in `SOURCE_SLO` dict (`health.py`). Static=never, annual=yearly (8760h), candidate/dot9=monthly (744h). Health check now shows `[SLO: static]` for PRIO-GRID instead of false STALE.
 
 ## Lessons
 

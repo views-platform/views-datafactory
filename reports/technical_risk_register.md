@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-24)
+**Date:** 2026-03-17 (updated 2026-04-26)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24
-**Status:** 139 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 39 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Status:** 143 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 43 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -51,6 +51,10 @@
 | C-137 | 2 | No round-trip integrity check after zarr export | Pipeline export produces truncated or partial zarr store | Data integrity |
 | C-138 | 2 | No post-deploy data correctness verification | Pipeline completes but served data doesn't match assembled grid | Data integrity |
 | C-139 | 2 | Consumer parity tests check per-cell rates but not aggregate totals | Systematic undercounting passes per-cell threshold | Data integrity |
+| ~~C-140~~ | ~~2~~ | ~~v1.2.6/v1.2.7 incident fixes have zero test coverage~~ | Resolved 2026-04-26 | Data integrity |
+| ~~C-141~~ | ~~3~~ | ~~UCDP config class validation partially untested~~ | Resolved 2026-04-26 | Test coverage |
+| ~~C-142~~ | ~~3~~ | ~~datafactory_query consumer entry point has zero Red/Beige tests~~ | Resolved 2026-04-26 | Test coverage |
+| ~~C-143~~ | ~~4~~ | ~~request_with_retry has no Red tests~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-125~~ | ~~3~~ | ~~No cm aggregation — 48/70 models cannot migrate~~ | Resolved 2026-04-21 | Migration scope |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
@@ -80,6 +84,7 @@ Items that should be resolved together:
 | **Operational monitoring** | C-131, C-132, C-136 | Before relying on Hetzner pipeline without manual checks |
 | **Data integrity** | C-137, C-138, C-139 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, C-134, C-135 | Before consumer models train on data from the factory |
+| ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -163,6 +168,10 @@ The health check (`check_health.py`) validates metadata freshness (export timest
 **Location:** `tests/test_consumer_parity.py:127-145` (`assert_consumer_parity` feature checks).
 **Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-137 (export integrity).
 
+### ~~C-140: v1.2.6/v1.2.7 incident fixes have zero test coverage~~ — RESOLVED
+**Resolved 2026-04-26.** Added 7 tests: `TestTotalCountAssertionBeige` (4 tests: tolerance pass, truncation raises, exact boundary, max_pages skip) and `TestRateLimitBackoffRed` (3 tests: HTTP 400 retry with backoff, exhaustion raises, non-400 bypass). Also added `TestValidateEnvelopeRed` (3 tests) and `TestUcdpAnnualRegistration` (1 test).
+**Source:** Test review 2026-04-26. Cross-ref: C-137, C-138, C-139 (data integrity).
+
 ---
 
 ## Tier 3 — Improve Quality
@@ -191,6 +200,14 @@ The calibration/validation/forecasting partition boundaries (121/444, 445/492, 4
 **Location:** `src/datafactory_query/defaults.py:71,79` (broad exception handlers).
 **Resolution:** Distinguish expected None (attribute absent) from error None (network/auth failure). Either raise on non-200 HTTP status, or return a result object with error context.
 **Source:** Tech-debt-cleanup audit (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
+
+### ~~C-141: UCDP config class validation partially untested~~ — RESOLVED
+**Resolved 2026-04-26.** Added 8 Beige tests across three config classes: `UcdpAnnualConfig` (page_delay, timeout), `UcdpCandidateConfig` (page_size, max_retries, timeout), `UcdpDot9Config` (page_size, max_retries, timeout). All CIC-guaranteed fail-loud branches now tested.
+**Source:** Test review 2026-04-26. Cross-ref: C-31, C-07.
+
+### ~~C-142: datafactory_query consumer entry point has zero Red/Beige tests~~ — RESOLVED
+**Resolved 2026-04-26.** Added `TestLoadDatasetBeige` (2 tests: single-feature request, explicit-matches-default) and `TestLoadDatasetRed` (5 tests: corrupted grid, mismatched feature count, mismatched pgids shape, NaN-filled grid, zero time steps).
+**Source:** Test review 2026-04-26. Cross-ref: C-127, C-130.
 
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
@@ -234,7 +251,8 @@ All five harvesters follow config->fetch->validate->compare->archive->store->pro
 ### C-29: No end-to-end integration test — [DEFER]
 Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
 **Note (2026-04-04):** Trigger condition met — server in production at 204.168.219.108. Accepted at v1.0 scope: integration test covers the critical harvest→compile path, `verify_remote.py` validates the deployed output (10/10 checks). Reassess before V-Dem.
-**Source:** Repo assimilation, Feathers
+**Update (2026-04-26):** Test review identified specific gap: no harvest→consolidation integration test. `test_integration.py` tests the full pipeline but with synthetic events. No test verifies that actual UCDP Parquet output (column names, types, date format) is consumed correctly by `consolidate_ucdp()`. The stale-zarr incident showed that harvester changes (page_size, assertion thresholds) can produce subtly different output that breaks downstream.
+**Source:** Repo assimilation, Feathers, Test review 2026-04-26
 
 ### C-70: No circuit breaker for UCDP API — [DEFER]
 After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. Kleppmann (Ch.7 p.231) warns that retrying overload "will make the problem worse, not better" and recommends exponential backoff with distinct handling for overload vs transient errors. Ch.8 pp.281-283 discusses timeout-based fault detection and network congestion amplification. **Trigger: implement before multi-operator or automated deployment.**
@@ -265,6 +283,10 @@ Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and fi
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
 **Source:** GoF, Hickey
 
+
+### ~~C-143: request_with_retry has no Red tests~~ — RESOLVED
+**Resolved 2026-04-26.** Added `TestRequestWithRetryRed` (2 tests: `requests.Timeout` retried, `HTTPError` with `response=None` retried not treated as 4xx).
+**Source:** Test review 2026-04-26. Cross-ref: C-70, C-72.
 
 ### C-115: Summary detection threshold (>= vs >) is architectural — [DEFER]
 The summary event detection formula uses `best >= span` (not strict `best > span`). This threshold is documented in ADR-023 as an architectural invariant matching VIEWSER's current GED_loader0 behavior. An older VIEWSER notebook (GED_loader2) used strict `>`. If UCDP changes their summary event definition or VIEWSER reverts to strict `>`, this invariant would need updating. **Trigger: UCDP changes summary event definition or VIEWSER changes detection threshold.**

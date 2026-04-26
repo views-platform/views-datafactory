@@ -11,9 +11,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from datafactory_harvester.sources.ucdp_annual import (
     UcdpAnnualConfig,
+    fetch_paginated,
     fetch_ucdp_annual,
 )
 
@@ -51,6 +53,14 @@ class TestUcdpAnnualConfigBeige:
     def test_rejects_empty_version(self) -> None:
         with pytest.raises(ValueError, match="version"):
             UcdpAnnualConfig(version="")
+
+    def test_rejects_nonpositive_page_delay(self) -> None:
+        with pytest.raises(ValueError, match="page_delay"):
+            UcdpAnnualConfig(page_delay=0)
+
+    def test_rejects_zero_timeout(self) -> None:
+        with pytest.raises(ValueError, match="timeout"):
+            UcdpAnnualConfig(timeout=0)
 
 
 # ---- Mock API Helpers ----
@@ -186,8 +196,153 @@ class TestFetchUcdpAnnualBeige:
         assert entry["outcome"] == "failed"
 
 
-# ---- Retry Logic ----
+# ---- TotalCount Assertion (v1.2.7 dual-threshold fix) ----
 
+
+class TestTotalCountAssertionBeige:
+
+    def _fetch_with_inflated_count(
+        self,
+        tmp_path: Path,
+        total_count: int,
+        n_events: int = 3,
+        *,
+        max_pages: int | None = None,
+    ) -> list[dict]:
+        events = _make_events(n_events)
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "TotalCount": total_count,
+            "TotalPages": 1,
+            "Result": events,
+        }
+        mock_resp.raise_for_status = MagicMock()
+
+        config = UcdpAnnualConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        with (
+            patch(
+                "datafactory_http.retry.requests.get",
+                return_value=mock_resp,
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+        ):
+            return fetch_paginated(config, max_pages=max_pages)
+
+    def test_type_of_violence_offset_passes(self, tmp_path: Path) -> None:
+        """Shortfall of 1000 passes: exceeds pct but not abs threshold."""
+        result = self._fetch_with_inflated_count(tmp_path, total_count=1003)
+        assert len(result) == 3
+
+    def test_genuine_truncation_raises(self, tmp_path: Path) -> None:
+        """Shortfall exceeding both thresholds raises ValueError."""
+        with pytest.raises(ValueError, match="Fetch count mismatch"):
+            self._fetch_with_inflated_count(tmp_path, total_count=50003)
+
+    def test_shortfall_at_exact_boundary_passes(self, tmp_path: Path) -> None:
+        """Shortfall of exactly 1100 passes (> not >=)."""
+        result = self._fetch_with_inflated_count(tmp_path, total_count=1103)
+        assert len(result) == 3
+
+    def test_max_pages_skips_assertion(self, tmp_path: Path) -> None:
+        """Partial fetches (max_pages set) skip the assertion entirely."""
+        result = self._fetch_with_inflated_count(
+            tmp_path, total_count=50000, max_pages=1,
+        )
+        assert len(result) == 3
+
+
+# ---- Rate-Limit Backoff (v1.2.6 fix) ----
+
+
+class TestRateLimitBackoffRed:
+
+    def test_http_400_retried_with_backoff(self, tmp_path: Path) -> None:
+        """HTTP 400 triggers rate-limit backoff, then retry succeeds."""
+        events = _make_events(3)
+        ok_resp = MagicMock()
+        ok_resp.json.return_value = _make_api_response(events)
+
+        fail_resp = MagicMock()
+        fail_resp.status_code = 400
+        http_err = requests.HTTPError(response=fail_resp)
+
+        config = UcdpAnnualConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        with (
+            patch(
+                "datafactory_harvester.sources.ucdp_annual.request_with_retry",
+                side_effect=[http_err, ok_resp],
+            ),
+            patch(
+                "datafactory_harvester.sources.ucdp_annual.time.sleep",
+            ) as mock_sleep,
+            patch(
+                "datafactory_harvester.sources.ucdp_annual.random.uniform",
+                return_value=0,
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+        ):
+            result = fetch_paginated(config)
+
+        assert len(result) == 3
+        assert mock_sleep.call_count >= 1
+
+    def test_rate_limit_exhaustion_raises(self, tmp_path: Path) -> None:
+        """All rate-limit retries exhausted raises HTTPError."""
+        fail_resp = MagicMock()
+        fail_resp.status_code = 400
+        http_err = requests.HTTPError(response=fail_resp)
+
+        config = UcdpAnnualConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        with (
+            patch(
+                "datafactory_harvester.sources.ucdp_annual.request_with_retry",
+                side_effect=http_err,
+            ),
+            patch(
+                "datafactory_harvester.sources.ucdp_annual.time.sleep",
+            ),
+            patch(
+                "datafactory_harvester.sources.ucdp_annual.random.uniform",
+                return_value=0,
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+            pytest.raises(requests.HTTPError),
+        ):
+            fetch_paginated(config)
+
+    def test_non_400_4xx_not_caught(self, tmp_path: Path) -> None:
+        """Non-400 client errors (e.g. 401) bypass rate-limit handler."""
+        fail_resp = MagicMock()
+        fail_resp.status_code = 401
+        http_err = requests.HTTPError(response=fail_resp)
+
+        config = UcdpAnnualConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        with (
+            patch(
+                "datafactory_harvester.sources.ucdp_annual.request_with_retry",
+                side_effect=http_err,
+            ),
+            patch(
+                "datafactory_harvester.sources.ucdp_annual.time.sleep",
+            ) as mock_sleep,
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+            pytest.raises(requests.HTTPError),
+        ):
+            fetch_paginated(config)
+
+        mock_sleep.assert_not_called()
 
 
 # ---- Envelope Validation ----

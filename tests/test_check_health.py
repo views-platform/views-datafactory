@@ -14,6 +14,7 @@ import pytest
 
 from datafactory_provenance.health import (
     FRESHNESS_SLO_HOURS,
+    SOURCE_SLO,
     check_export_freshness,
     read_last_entries,
     report_ledger,
@@ -149,6 +150,89 @@ class TestReportLedger:
         result = report_ledger("test", ledger, NOW)
         assert result["version"] == "25.1"
         assert result["digest"] == "abc123"
+
+
+# ── Per-source SLO (report_ledger with slo_hours) ────────
+
+
+class TestPerSourceSLO:
+
+    def test_static_source_never_stale(self, tmp_path: Path) -> None:
+        """slo_hours=None means the source is static — always OK."""
+        very_old_ts = (NOW - timedelta(days=365)).isoformat()
+        ledger = tmp_path / "ledger.jsonl"
+        _write_ledger(ledger, [_make_entry(very_old_ts)])
+        result = report_ledger("PRIO-GRID Static", ledger, NOW, slo_hours=None)
+        assert result["status"] == "OK"
+        assert result["slo"] == "static"
+
+    def test_yearly_source_ok_within_window(self, tmp_path: Path) -> None:
+        """UCDP Annual with 8760h SLO: 6 months old is OK."""
+        six_months_ago = (NOW - timedelta(days=180)).isoformat()
+        ledger = tmp_path / "ledger.jsonl"
+        _write_ledger(ledger, [_make_entry(six_months_ago)])
+        result = report_ledger("UCDP Annual", ledger, NOW, slo_hours=8760)
+        assert result["status"] == "OK"
+        assert result["slo"] == "1y"
+
+    def test_yearly_source_stale_beyond_window(self, tmp_path: Path) -> None:
+        """UCDP Annual with 8760h SLO: 400 days old is STALE."""
+        old_ts = (NOW - timedelta(days=400)).isoformat()
+        ledger = tmp_path / "ledger.jsonl"
+        _write_ledger(ledger, [_make_entry(old_ts)])
+        result = report_ledger("UCDP Annual", ledger, NOW, slo_hours=8760)
+        assert result["status"] == "STALE"
+
+    def test_monthly_source_ok_within_window(self, tmp_path: Path) -> None:
+        """UCDP Candidate with 744h SLO: 20 days old is OK."""
+        twenty_days = (NOW - timedelta(days=20)).isoformat()
+        ledger = tmp_path / "ledger.jsonl"
+        _write_ledger(ledger, [_make_entry(twenty_days)])
+        result = report_ledger("UCDP Candidate", ledger, NOW, slo_hours=744)
+        assert result["status"] == "OK"
+        assert result["slo"] == "31d"
+
+    def test_monthly_source_stale_beyond_window(self, tmp_path: Path) -> None:
+        """UCDP Candidate with 744h SLO: 35 days old is STALE."""
+        old_ts = (NOW - timedelta(days=35)).isoformat()
+        ledger = tmp_path / "ledger.jsonl"
+        _write_ledger(ledger, [_make_entry(old_ts)])
+        result = report_ledger("UCDP Candidate", ledger, NOW, slo_hours=744)
+        assert result["status"] == "STALE"
+
+    def test_default_slo_backwards_compatible(self, tmp_path: Path) -> None:
+        """Without slo_hours, uses FRESHNESS_SLO_HOURS (168h)."""
+        ledger = tmp_path / "ledger.jsonl"
+        _write_ledger(ledger, [_make_entry(STALE_TS)])
+        result = report_ledger("test", ledger, NOW)
+        assert result["status"] == "STALE"
+
+    def test_source_slo_dict_has_all_known_sources(self) -> None:
+        """SOURCE_SLO covers all sources used in check_health.py."""
+        expected = {
+            "UCDP Annual", "UCDP Candidate", "UCDP .9",
+            "PRIO-GRID Static", "PRIO-GRID Shapefile",
+            "Consolidation", "Viewpoint", "Compilation",
+        }
+        assert expected == set(SOURCE_SLO.keys())
+
+    def test_static_sources_have_none_slo(self) -> None:
+        assert SOURCE_SLO["PRIO-GRID Static"] is None
+        assert SOURCE_SLO["PRIO-GRID Shapefile"] is None
+
+    def test_slo_label_in_no_data_result(self, tmp_path: Path) -> None:
+        """Missing ledger still reports the SLO label."""
+        ledger = tmp_path / "nonexistent.jsonl"
+        result = report_ledger("test", ledger, NOW, slo_hours=None)
+        assert result["slo"] == "static"
+
+    def test_slo_label_in_failing_result(self, tmp_path: Path) -> None:
+        """All-failed ledger still reports the SLO label."""
+        ledger = tmp_path / "ledger.jsonl"
+        entries = [_make_entry(RECENT_TS, outcome="failed") for _ in range(5)]
+        _write_ledger(ledger, entries)
+        result = report_ledger("test", ledger, NOW, slo_hours=744)
+        assert result["slo"] == "31d"
 
 
 # ── check_export_freshness ───────────────────────────────
