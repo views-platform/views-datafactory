@@ -194,7 +194,7 @@ If a raw file is re-fetched with fewer events (as happened here), the consolidat
 - [x] **Risk register**: C-137/C-138/C-139 updated. C-140 (incident fix test coverage), C-141–C-143 (test gaps) registered 2026-04-26. 21 new tests added.
 - [ ] **Deployment log update**: correct the "page_size=50000 → success" entry to note that it was a silent failure producing 335,918 instead of 384,918 events
 - [x] **CIC update**: `UcdpAnnualConfig.md` line 46 references "production override: 50000" — needs updating now that production uses default 1000
-- [ ] **Health check SLO per source**: health check uses 168h SLO for all sources including static datasets (PRIO-GRID). Need per-source expected update frequency so that static=never, annual=yearly, candidate/dot9=monthly, future ACLED=biweekly.
+- [x] **Health check SLO per source**: implemented in `SOURCE_SLO` dict (`health.py`). Static=never, annual=yearly (8760h), candidate/dot9=monthly (744h). Health check now shows `[SLO: static]` for PRIO-GRID instead of false STALE.
 
 ## Lessons
 
