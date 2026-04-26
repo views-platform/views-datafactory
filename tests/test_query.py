@@ -688,6 +688,157 @@ class TestLoadDatasetEdgeCases:
         assert ff.n_rows == 12  # 12 cells * 1 month
 
 
+# ── Beige: Boundary Conditions ─────────────────────────
+
+
+class TestLoadDatasetBeige:
+
+    def test_single_feature_request(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir, n_f=4)
+        _make_gaul_parquets(gaul_dir)
+
+        ff = load_dataset(
+            region="global",
+            features=["feat_0"],
+            output_format="feature_frame",
+            data_dir=data_dir,
+            gaul_dir=gaul_dir,
+        )
+        assert ff.n_features == 1
+        assert ff.feature_names == ["feat_0"]
+
+    def test_all_features_explicit_matches_default(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir, n_f=2)
+        _make_gaul_parquets(gaul_dir)
+
+        ff_default = load_dataset(
+            region="global",
+            output_format="feature_frame",
+            data_dir=data_dir,
+            gaul_dir=gaul_dir,
+        )
+        ff_explicit = load_dataset(
+            region="global",
+            features=["feat_0", "feat_1"],
+            output_format="feature_frame",
+            data_dir=data_dir,
+            gaul_dir=gaul_dir,
+        )
+        assert ff_default.feature_names == ff_explicit.feature_names
+        np.testing.assert_array_equal(
+            ff_default.y_features, ff_explicit.y_features,
+        )
+
+
+# ── Red: Adversarial Inputs ───────────────────────────
+
+
+class TestLoadDatasetRed:
+
+    def test_corrupted_grid_file(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir)
+        _make_gaul_parquets(gaul_dir)
+
+        (data_dir / "grid.npy").write_bytes(b"NOT A NPY FILE")
+
+        with pytest.raises(ValueError):
+            load_dataset(
+                region="global",
+                data_dir=data_dir,
+                gaul_dir=gaul_dir,
+            )
+
+    def test_mismatched_feature_count(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir, n_f=2)
+        _make_gaul_parquets(gaul_dir)
+
+        (data_dir / "feature_names.json").write_text(
+            json.dumps(["a", "b", "c"]),
+        )
+
+        with pytest.raises(ValueError, match="feature_names length"):
+            load_dataset(
+                region="global",
+                data_dir=data_dir,
+                gaul_dir=gaul_dir,
+            )
+
+    def test_mismatched_pgids_shape(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir, n_h=3, n_w=4)
+        _make_gaul_parquets(gaul_dir)
+
+        wrong_pgids = np.arange(1, 7).reshape(2, 3)
+        np.save(data_dir / "pgids.npy", wrong_pgids)
+
+        with pytest.raises(ValueError, match="pgids shape"):
+            load_dataset(
+                region="global",
+                data_dir=data_dir,
+                gaul_dir=gaul_dir,
+            )
+
+    def test_nan_filled_grid_loads(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir)
+        _make_gaul_parquets(gaul_dir)
+
+        grid = np.full((6, 3, 4, 2), np.nan, dtype=np.float32)
+        np.save(data_dir / "grid.npy", grid)
+
+        ff = load_dataset(
+            region="global",
+            output_format="feature_frame",
+            data_dir=data_dir,
+            gaul_dir=gaul_dir,
+        )
+        assert np.all(np.isnan(ff.y_features))
+
+    def test_zero_time_steps(self, tmp_path: Path) -> None:
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_grid(data_dir)
+        _make_gaul_parquets(gaul_dir)
+
+        np.save(
+            data_dir / "time_steps.npy",
+            np.array([], dtype="datetime64[M]"),
+        )
+
+        with pytest.raises(IndexError):
+            load_dataset(
+                region="global",
+                data_dir=data_dir,
+                gaul_dir=gaul_dir,
+            )
+
+
 # ── get_last_valid_month_id (G9, C-134) ────────────────
 
 
