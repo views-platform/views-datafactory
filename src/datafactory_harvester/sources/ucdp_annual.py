@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import logging
 import os
+import random
 import time
 from dataclasses import dataclass
 from pathlib import Path
+
+import requests
 
 from datafactory_harvester.event_validation import (
     ComparisonResult,
@@ -37,6 +40,8 @@ logger = logging.getLogger(__name__)
 DATASET_ID = "ucdp_annual"
 _LOG_EVERY_N_PAGES: int = 50
 _FETCH_DURATION_PRECISION: int = 1  # Decimal places for fetch_duration_s in ledger
+_RATE_LIMIT_MAX_RETRIES: int = 5
+_RATE_LIMIT_BASE_DELAY: float = 30.0  # seconds; UCDP rate window is ~1 minute
 
 # ---- UCDP-specific schema definition ----
 
@@ -200,13 +205,44 @@ def fetch_paginated(
 
     while True:
         params["page"] = page
-        response = request_with_retry(
-            url,
-            headers=headers,
-            params=params,
-            max_retries=config.max_retries,
-            timeout=config.timeout,
-        )
+
+        # The UCDP API rate-limits after ~40 requests with HTTP 400.
+        # request_with_retry correctly fails fast on 4xx (non-retryable
+        # in general), but rate limiting IS retryable — just not
+        # immediately. Catch 400s here and back off before retrying
+        # the same page.
+        for rate_attempt in range(_RATE_LIMIT_MAX_RETRIES):
+            try:
+                response = request_with_retry(
+                    url,
+                    headers=headers,
+                    params=params,
+                    max_retries=config.max_retries,
+                    timeout=config.timeout,
+                )
+                break
+            except requests.HTTPError as exc:
+                if (
+                    exc.response is not None
+                    and exc.response.status_code == 400
+                    and rate_attempt < _RATE_LIMIT_MAX_RETRIES - 1
+                ):
+                    delay = (
+                        _RATE_LIMIT_BASE_DELAY * (2 ** rate_attempt)
+                        + random.uniform(0, 5)
+                    )
+                    logger.warning(
+                        "Rate limited at page %d (attempt %d/%d), "
+                        "backing off %.0fs",
+                        page,
+                        rate_attempt + 1,
+                        _RATE_LIMIT_MAX_RETRIES,
+                        delay,
+                    )
+                    time.sleep(delay)
+                else:
+                    raise
+
         data = response.json()
 
         if page == 1:

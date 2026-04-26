@@ -43,7 +43,7 @@ Separates harvesting concerns from reporting concerns (SRP). Contains dataset id
 - `start_year`: int, first year of data range (default: `1989`)
 - `end_year`: int, last year of data range (default: `2024`)
 - `base_url`: str, UCDP API base URL
-- `page_size`: int, >= 1, records per API page (default: `1000`; production override: `50000` in `harvest_ucdp.py` to avoid API rate-limiting)
+- `page_size`: int, >= 1, records per API page (default: `1000`). Must not exceed 1000 for UCDP GED — larger values trigger an undocumented API pagination bug that silently truncates results.
 - `timeout`: int, HTTP request timeout in seconds (default: `30`)
 - `max_retries`: int, >= 1, retry attempts on transient failure (default: `3`)
 - `page_delay`: float, > 0, seconds between paginated requests (default: `2.0`)
