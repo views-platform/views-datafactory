@@ -95,6 +95,20 @@ When the system reaches production deployment, the following should be implement
 - Alerting: fire when no successful compilation exists within the staleness threshold.
 - Freshness indicator: compute from the timestamp of the last successful compilation ledger entry.
 
+### Per-source SLO (implemented v1.2.7)
+
+The "default: 7 days" staleness threshold above is a global fallback. In practice, different sources have different release cadences. `SOURCE_SLO` in `datafactory_provenance.health` maps each source to an appropriate threshold:
+
+| Source | SLO | Rationale |
+|--------|-----|-----------|
+| PRIO-GRID Static / Shapefile | `None` (static) | Dataset is immutable — age alone never indicates staleness |
+| UCDP Annual | 8760h (1 year) | Yearly release cycle |
+| UCDP Candidate / .9 | 744h (~31 days) | Monthly release cycle |
+| Consolidation / Viewpoint / Compilation | 744h (~31 days) | Runs after upstream source updates |
+| Export freshness | 168h (7 days) | Global SLO — one missed monthly cycle |
+
+`check_health.py` displays per-source SLO labels (`[SLO: static]`, `[SLO: 1y]`, `[SLO: 31d]`). Static sources report OK regardless of age; dynamic sources are compared against their specific threshold. This eliminates false STALE warnings for datasets that are correct but old by design.
+
 ---
 
 ## Timeout Policy
@@ -103,7 +117,7 @@ HTTP timeouts are sized by expected payload and upstream behavior:
 
 | Source | Timeout | Rationale |
 |--------|---------|-----------|
-| UCDP annual / candidate / .9 | 30s | Paginated JSON, ~100 KB/page |
+| UCDP annual / candidate / .9 | 120s | Paginated JSON, ~100 KB/page (120s provides margin for slow API responses under rate-limit backoff; config default is 30s) |
 | PRIO-GRID static | 60s | Per-variable JSON, ~1 MB |
 | PRIO-GRID shapefile | 120s | Zipped shapefile, ~20 MB |
 | PRIO-GRID land mask | 60s | Single JSON response |

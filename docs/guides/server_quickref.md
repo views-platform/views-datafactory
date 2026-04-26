@@ -59,14 +59,23 @@ for i, name in enumerate(features):
 "'
 ```
 
-Expected totals (UCDP GED v25.1):
+Expected totals (as of v1.2.7, UCDP GED v25.1, verified 2026-04-26):
 
 | Feature | Expected |
 |---------|----------|
-| `ged_sb_best` | ~1,955,000 |
-| `ged_sb_count` | ~255,000 |
-| `ged_ns_best` | ~285,000 |
-| `ged_os_best` | ~1,232,000 |
+| `ged_sb_best` | ~1,956,320 |
+| `ged_ns_best` | ~285,346 |
+| `ged_os_best` | ~1,232,241 |
+
+The script also prints `ged_sb_count`, `ged_ns_count`, `ged_os_count`
+— compare against prior runs rather than a fixed reference value.
+
+## Check health
+
+```bash
+# Per-source freshness + export SLO (run after any pipeline run)
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/check_health.py'
+```
 
 ## Check status
 
