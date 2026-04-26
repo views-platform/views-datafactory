@@ -13,6 +13,7 @@ from pathlib import Path
 
 __all__ = [
     "FRESHNESS_SLO_HOURS",
+    "SOURCE_SLO",
     "check_export_freshness",
     "read_last_entries",
     "report_ledger",
@@ -22,6 +23,20 @@ __all__ = [
 # Monthly pipeline runs on the 21st. 7 days (168h) allows one missed
 # cycle before data is flagged as stale.
 FRESHNESS_SLO_HOURS = 168
+
+# Per-source freshness SLO (hours). None = static (never stale from age).
+# Downstream layers (consolidation, viewpoint, compilation) inherit the
+# cadence of the most-frequent upstream source (monthly).
+SOURCE_SLO: dict[str, int | None] = {
+    "UCDP Annual": 8760,          # yearly release
+    "UCDP Candidate": 744,        # monthly release (~31 days)
+    "UCDP .9": 744,               # monthly release (~31 days)
+    "PRIO-GRID Static": None,     # static dataset — never stale
+    "PRIO-GRID Shapefile": None,  # static dataset — never stale
+    "Consolidation": 744,         # runs after source updates
+    "Viewpoint": 744,             # runs after consolidation
+    "Compilation": 744,           # runs after viewpoint
+}
 
 
 def _format_age(age_hours: float) -> str:
@@ -51,10 +66,30 @@ def read_last_entries(
     return entries
 
 
+def _slo_label(slo_hours: int | None) -> str:
+    if slo_hours is None:
+        return "static"
+    if slo_hours >= 8760:
+        return f"{slo_hours // 8760}y"
+    if slo_hours >= 720:
+        return f"{slo_hours // 24}d"
+    return f"{slo_hours}h"
+
+
 def report_ledger(
-    name: str, ledger_path: Path, now: datetime
+    name: str,
+    ledger_path: Path,
+    now: datetime,
+    slo_hours: int | None = FRESHNESS_SLO_HOURS,
 ) -> dict:
-    """Report health for one ledger."""
+    """Report health for one ledger.
+
+    Parameters
+    ----------
+    slo_hours : int | None
+        Maximum acceptable age in hours. ``None`` means the source is
+        static and never stale from age alone (only from missing data).
+    """
     entries = read_last_entries(ledger_path, n=10)
 
     if not entries:
@@ -62,6 +97,7 @@ def report_ledger(
             "name": name,
             "status": "NO DATA",
             "detail": f"Ledger not found: {ledger_path}",
+            "slo": _slo_label(slo_hours),
         }
 
     # Find last success. Some ledgers (consolidation, viewpoint,
@@ -93,7 +129,11 @@ def report_ledger(
             age_str = "unknown"
             age_hours = -1
 
-        status = "OK" if age_hours < FRESHNESS_SLO_HOURS else "STALE"
+        if slo_hours is None:
+            status = "OK"
+        else:
+            status = "OK" if age_hours < slo_hours else "STALE"
+
         detail = (
             f"Last success: {ts_str[:19]} ({age_str})"
         )
@@ -106,6 +146,7 @@ def report_ledger(
             "name": name,
             "status": status,
             "detail": detail,
+            "slo": _slo_label(slo_hours),
             "version": last_success.get("version", ""),
             "digest": last_success.get(
                 "content_digest",
@@ -120,6 +161,7 @@ def report_ledger(
             f"No successful entries in last 10. "
             f"{len(recent_failures)} failures."
         ),
+        "slo": _slo_label(slo_hours),
     }
 
 
