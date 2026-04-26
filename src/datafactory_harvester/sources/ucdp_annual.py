@@ -42,6 +42,8 @@ _LOG_EVERY_N_PAGES: int = 50
 _FETCH_DURATION_PRECISION: int = 1  # Decimal places for fetch_duration_s in ledger
 _RATE_LIMIT_MAX_RETRIES: int = 5
 _RATE_LIMIT_BASE_DELAY: float = 30.0  # seconds; UCDP rate window is ~1 minute
+_TOTALCOUNT_ABS_TOLERANCE: int = 1100
+_TOTALCOUNT_PCT_TOLERANCE: float = 0.01
 
 # ---- UCDP-specific schema definition ----
 
@@ -283,19 +285,25 @@ def fetch_paginated(
 
     logger.info("Fetched %d total events", len(all_events))
 
-    # Assert fetched count against API's TotalCount. The API may
-    # count events it doesn't return (e.g., type_of_violence=4),
-    # so allow up to 1% shortfall. A larger gap indicates a silent
-    # partial fetch (rate limiting, pagination failure).
+    # Assert fetched count against API's TotalCount. The UCDP API
+    # includes type_of_violence=4 events in TotalCount but excludes
+    # them from Result — a consistent offset of ~1000 events across
+    # all versions (annual and candidate). For annual (384K events)
+    # this is 0.26%; for small candidate versions (200–2300 events)
+    # it can be 40–100%. Use both absolute and percentage thresholds:
+    # only raise if shortfall exceeds BOTH 1% AND 1100 events.
     if max_pages is None and total_count and total_count > 0:
         shortfall = total_count - len(all_events)
         shortfall_pct = shortfall / total_count
-        if shortfall_pct > 0.01:
+        exceeds_pct = shortfall_pct > _TOTALCOUNT_PCT_TOLERANCE
+        exceeds_abs = shortfall > _TOTALCOUNT_ABS_TOLERANCE
+        if exceeds_pct and exceeds_abs:
             err_msg = (
                 f"Fetch count mismatch: API reports {total_count} "
                 f"events but only {len(all_events)} fetched "
-                f"({shortfall_pct:.1%} shortfall). "
-                f"Likely a silent partial fetch due to rate limiting."
+                f"({shortfall_pct:.1%} shortfall, {shortfall} events). "
+                f"Exceeds both {_TOTALCOUNT_PCT_TOLERANCE:.0%} and "
+                f"{_TOTALCOUNT_ABS_TOLERANCE} absolute tolerance."
             )
             logger.error(err_msg)
             raise ValueError(err_msg)
