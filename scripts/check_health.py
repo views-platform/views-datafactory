@@ -23,6 +23,7 @@ from pathlib import Path
 
 from datafactory_provenance.health import (
     FRESHNESS_SLO_HOURS,
+    SOURCE_SLO,
     check_export_freshness,
     report_ledger,
 )
@@ -103,7 +104,8 @@ def main() -> int:
     results = []
     any_issues = False
     for name, path in ledgers.items():
-        result = report_ledger(name, path, now)
+        slo = SOURCE_SLO.get(name, FRESHNESS_SLO_HOURS)
+        result = report_ledger(name, path, now, slo_hours=slo)
         results.append(result)
         if result["status"] not in ("OK", "NO DATA"):
             any_issues = True
@@ -177,6 +179,7 @@ def main() -> int:
         status = result["status"]
         name = result["name"]
         detail = result["detail"]
+        slo_label = result.get("slo", "")
 
         if status == "OK":
             marker = "  "
@@ -185,7 +188,8 @@ def main() -> int:
         else:
             marker = "! "
 
-        print(f"{marker}[{status:7s}] {name:20s} {detail}")
+        slo_suffix = f" [SLO: {slo_label}]" if slo_label else ""
+        print(f"{marker}[{status:7s}] {name:20s} {detail}{slo_suffix}")
 
     print()
     if any_issues:

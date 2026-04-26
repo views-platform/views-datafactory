@@ -16,6 +16,7 @@ from datafactory_provenance.digests_and_ledgers import (
 )
 from datafactory_provenance.health import (
     FRESHNESS_SLO_HOURS,
+    SOURCE_SLO,
     check_export_freshness,
     read_last_entries,
     report_ledger,
@@ -27,6 +28,7 @@ __all__ = [
     "FRESHNESS_SLO_HOURS",
     "LEDGER_VERSION",
     "Registry",
+    "SOURCE_SLO",
     "append_ledger_entry",
     "check_export_freshness",
     "compute_content_digest",
