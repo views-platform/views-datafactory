@@ -222,7 +222,7 @@ pgid = int(ds["pgid"].sel(lat=9.0, lon=38.7, method="nearest"))
 
 ## Data variables (features)
 
-The dataset contains ~39 features from three sources:
+The dataset contains ~43 features from three sources:
 
 **UCDP conflict (6 features):**
 - `ged_sb_count` / `ged_sb_best` — state-based violence (type 1)
