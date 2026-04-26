@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-04-24)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24
-**Status:** 139 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 39 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Status:** 143 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 43 open/deferred (2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -51,6 +51,10 @@
 | C-137 | 2 | No round-trip integrity check after zarr export | Pipeline export produces truncated or partial zarr store | Data integrity |
 | C-138 | 2 | No post-deploy data correctness verification | Pipeline completes but served data doesn't match assembled grid | Data integrity |
 | C-139 | 2 | Consumer parity tests check per-cell rates but not aggregate totals | Systematic undercounting passes per-cell threshold | Data integrity |
+| C-140 | 2 | v1.2.6/v1.2.7 incident fixes have zero test coverage | Refactor of fetch_paginated() or threshold constants | Data integrity |
+| C-141 | 3 | UCDP config class validation partially untested | Refactoring config classes or extracting _ucdp_common.py | Test coverage |
+| C-142 | 3 | datafactory_query consumer entry point has zero Red/Beige tests | Consumer reports wrong values from load_dataset() | Test coverage |
+| C-143 | 4 | request_with_retry has no Red tests | UCDP API returns unexpected response format | Test coverage |
 | ~~C-125~~ | ~~3~~ | ~~No cm aggregation — 48/70 models cannot migrate~~ | Resolved 2026-04-21 | Migration scope |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
@@ -80,6 +84,7 @@ Items that should be resolved together:
 | **Operational monitoring** | C-131, C-132, C-136 | Before relying on Hetzner pipeline without manual checks |
 | **Data integrity** | C-137, C-138, C-139 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, C-134, C-135 | Before consumer models train on data from the factory |
+| **Test coverage** | C-140, C-141, C-142, C-143 | Before next harvester refactor or consumer onboarding |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -163,6 +168,14 @@ The health check (`check_health.py`) validates metadata freshness (export timest
 **Location:** `tests/test_consumer_parity.py:127-145` (`assert_consumer_parity` feature checks).
 **Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-137 (export integrity).
 
+### C-140: v1.2.6/v1.2.7 incident fixes have zero test coverage
+The two critical harvester changes from the stale-zarr incident — rate-limit backoff (`fetch_paginated()` lines 216-246, catches HTTP 400 and retries with exponential backoff) and dual-threshold TotalCount assertion (lines 294-319, requires shortfall to exceed BOTH 1% AND 1100 events) — have no tests. The `# ---- Retry Logic ----` section in `test_ucdp_annual.py` is empty. A future refactor could silently remove the rate-limit backoff or break the assertion thresholds, re-enabling the exact page_size truncation bug (50K events instead of 384K) and candidate harvest failure (1000-event offset triggers false positive) that this incident exposed.
+
+**Trigger:** Refactor of `fetch_paginated()` or threshold constants without realizing these are incident-driven fixes.
+**Location:** `src/datafactory_harvester/sources/ucdp_annual.py:216-246` (rate-limit backoff), `src/datafactory_harvester/sources/ucdp_annual.py:294-319` (dual-threshold assertion), `tests/test_ucdp_annual.py:189-192` (empty retry section).
+**Resolution:** Add Beige tests for: (1) TotalCount shortfall within tolerance (e.g., 1000 of 385000 — within both thresholds), (2) shortfall exceeding both thresholds raises ValueError, (3) shortfall exceeding one but not other passes. Add Red tests for rate-limit backoff: mock HTTP 400 on specific page, verify retry with backoff, verify gives up after max retries.
+**Source:** Test review 2026-04-26. Cross-ref: C-137, C-138, C-139 (data integrity).
+
 ---
 
 ## Tier 3 — Improve Quality
@@ -191,6 +204,22 @@ The calibration/validation/forecasting partition boundaries (121/444, 445/492, 4
 **Location:** `src/datafactory_query/defaults.py:71,79` (broad exception handlers).
 **Resolution:** Distinguish expected None (attribute absent) from error None (network/auth failure). Either raise on non-200 HTTP status, or return a result object with error context.
 **Source:** Tech-debt-cleanup audit (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
+
+### C-141: UCDP config class validation partially untested
+Eight `__post_init__` validation branches across three UCDP config classes have zero test coverage. `UcdpAnnualConfig`: `page_delay <= 0` (line 130) and `timeout < 1` (line 135). `UcdpCandidateConfig`: `page_size < 1` (line 113), `max_retries < 1` (line 119), `timeout < 1` (line 129). `UcdpDot9Config`: `page_size < 1` (line 122), `max_retries < 1` (line 129), `timeout < 1` (line 139). These are CIC-guaranteed fail-loud behaviors (ADR-008). Missing tests mean a future refactor could remove a validation without breaking any test.
+
+**Trigger:** Refactoring config classes or extracting `_ucdp_common.py` (C-31) without verifying all validation branches survive.
+**Location:** `tests/test_ucdp_annual.py:37-53`, `tests/test_ucdp_candidate.py:112-137`, `tests/test_ucdp_dot9.py:110-133`.
+**Resolution:** Add Beige tests for each missing validation branch in the existing `TestXxxConfigBeige` classes.
+**Source:** Test review 2026-04-26. Cross-ref: C-31 (candidate→annual coupling), C-07 (frozen dataclass pattern).
+
+### C-142: datafactory_query consumer entry point has zero Red/Beige tests
+`test_query.py` has 30 tests, all Green (happy-path). No tests for adversarial inputs: corrupted grid file, NaN-filled grid, feature_names.json with wrong count, zarr store missing coordinates, mismatched pgids shape, empty region returning zero rows, concurrent access to zarr store. The query layer is the primary consumer entry point — every downstream model depends on it. Without adversarial tests, a subtle loader bug (like the C-127 feature ordering issue) has no test to catch it.
+
+**Trigger:** Consumer reports wrong values from `load_dataset()` or model training produces unexpected results.
+**Location:** `tests/test_query.py` (all classes are Green), `src/datafactory_query/dataset.py`.
+**Resolution:** Add `TestLoadDatasetBeige` (boundary: single-cell region, single-feature request, start==end, global with all features) and `TestLoadDatasetRed` (adversarial: corrupted grid, mismatched dimensions, NaN data, missing metadata files).
+**Source:** Test review 2026-04-26. Cross-ref: C-127 (feature order), C-130 (zero-padding).
 
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
@@ -234,7 +263,8 @@ All five harvesters follow config->fetch->validate->compare->archive->store->pro
 ### C-29: No end-to-end integration test — [DEFER]
 Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
 **Note (2026-04-04):** Trigger condition met — server in production at 204.168.219.108. Accepted at v1.0 scope: integration test covers the critical harvest→compile path, `verify_remote.py` validates the deployed output (10/10 checks). Reassess before V-Dem.
-**Source:** Repo assimilation, Feathers
+**Update (2026-04-26):** Test review identified specific gap: no harvest→consolidation integration test. `test_integration.py` tests the full pipeline but with synthetic events. No test verifies that actual UCDP Parquet output (column names, types, date format) is consumed correctly by `consolidate_ucdp()`. The stale-zarr incident showed that harvester changes (page_size, assertion thresholds) can produce subtly different output that breaks downstream.
+**Source:** Repo assimilation, Feathers, Test review 2026-04-26
 
 ### C-70: No circuit breaker for UCDP API — [DEFER]
 After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. Kleppmann (Ch.7 p.231) warns that retrying overload "will make the problem worse, not better" and recommends exponential backoff with distinct handling for overload vs transient errors. Ch.8 pp.281-283 discusses timeout-based fault detection and network congestion amplification. **Trigger: implement before multi-operator or automated deployment.**
@@ -265,6 +295,14 @@ Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and fi
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
 **Source:** GoF, Hickey
 
+
+### C-143: request_with_retry has no Red tests
+`test_http_retry.py` has 6 Green tests covering retry, exhaustion, headers, params, 4xx fail-fast, and 5xx retry. No Red tests for: `None` URL, malformed URL, `requests.Timeout` exception, `response.json()` parse failure, response with no `status_code` attribute. The retry module is shared by all 5 harvesters — an edge case bug affects every data source.
+
+**Trigger:** UCDP API returns unexpected response format (e.g., HTML error page instead of JSON) causing silent retry loop or unhandled exception.
+**Location:** `tests/test_http_retry.py`, `src/datafactory_http/retry.py`.
+**Resolution:** Add `TestRequestWithRetryRed` class with adversarial input tests.
+**Source:** Test review 2026-04-26. Cross-ref: C-70 (circuit breaker), C-72 (429 vs 500).
 
 ### C-115: Summary detection threshold (>= vs >) is architectural — [DEFER]
 The summary event detection formula uses `best >= span` (not strict `best > span`). This threshold is documented in ADR-023 as an architectural invariant matching VIEWSER's current GED_loader0 behavior. An older VIEWSER notebook (GED_loader2) used strict `>`. If UCDP changes their summary event definition or VIEWSER reverts to strict `>`, this invariant would need updating. **Trigger: UCDP changes summary event definition or VIEWSER changes detection threshold.**

@@ -163,3 +163,61 @@ class TestRequestWithRetryGreen:
             )
 
         assert mock_get.call_count == 2  # Retried once
+
+
+class TestRequestWithRetryRed:
+
+    def test_timeout_exception_retried(self) -> None:
+        """requests.Timeout is retried like other transient errors."""
+        from datafactory_http import request_with_retry
+
+        ok_resp = MagicMock()
+        ok_resp.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.get",
+                side_effect=[
+                    requests.Timeout("timed out"),
+                    ok_resp,
+                ],
+            ) as mock_get,
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            patch(
+                "datafactory_http.retry.random.uniform",
+                return_value=0.5,
+            ),
+        ):
+            request_with_retry(
+                "http://test", max_retries=3, timeout=5,
+            )
+
+        assert mock_get.call_count == 2
+        assert mock_sleep.call_count == 1
+
+    def test_http_error_with_no_response_retried(self) -> None:
+        """HTTPError with response=None is retried (not treated as 4xx)."""
+        from datafactory_http import request_with_retry
+
+        ok_resp = MagicMock()
+        ok_resp.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.get",
+                side_effect=[
+                    requests.HTTPError(response=None),
+                    ok_resp,
+                ],
+            ) as mock_get,
+            patch("datafactory_http.retry.time.sleep"),
+            patch(
+                "datafactory_http.retry.random.uniform",
+                return_value=0.0,
+            ),
+        ):
+            request_with_retry(
+                "http://test", max_retries=3, timeout=5,
+            )
+
+        assert mock_get.call_count == 2
