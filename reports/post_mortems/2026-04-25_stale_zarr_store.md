@@ -189,10 +189,10 @@ If a raw file is re-fetched with fewer events (as happened here), the consolidat
 
 ## Documentation updates needed
 
-- [ ] **ADR or addendum on harvest reliability**: document the TotalCount assertion, rate-limit mitigation, and the principle that harvest success requires count verification, not just schema validation
-- [ ] **Runbook update**: add "verify raw data totals" step to server operations after harvest
+- [x] **ADR on harvest reliability**: ADR-027 (Harvest Count Verification) — documents TotalCount assertion, dual-threshold tolerance, rate-limit backoff at pagination layer, and the principle that count verification is required for harvest success
+- [x] **Runbook update**: `server_operations.md` updated — added "Verify raw data totals after harvest" and "Run health check" sections with per-source SLO documentation
 - [x] **Risk register**: C-137/C-138/C-139 updated. C-140 (incident fix test coverage), C-141–C-143 (test gaps) registered 2026-04-26. 21 new tests added.
-- [ ] **Deployment log update**: correct the "page_size=50000 → success" entry to note that it was a silent failure producing 335,918 instead of 384,918 events
+- [x] **Deployment log update**: `hetzner_deployment_log.md` §4 Failure 3 corrected — added warning block noting page_size=50000 was silent truncation, updated final config to show page_size=1000, annotated "335,918 annual events" verification line as truncated
 - [x] **CIC update**: `UcdpAnnualConfig.md` line 46 references "production override: 50000" — needs updating now that production uses default 1000
 - [x] **Health check SLO per source**: implemented in `SOURCE_SLO` dict (`health.py`). Static=never, annual=yearly (8760h), candidate/dot9=monthly (744h). Health check now shows `[SLO: static]` for PRIO-GRID instead of false STALE.
 

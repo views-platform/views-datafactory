@@ -143,14 +143,18 @@ for i, name in enumerate(features):
 "'
 ```
 
-Expected totals (as of v1.2.3, UCDP GED v25.1):
+Expected totals (as of v1.2.7, UCDP GED v25.1, verified 2026-04-26):
 
 | Feature | Expected total |
 |---------|---------------|
-| `ged_sb_best` | ~1,955,000 |
-| `ged_sb_count` | ~255,000 |
-| `ged_ns_best` | ~285,000 |
-| `ged_os_best` | ~1,232,000 |
+| `ged_sb_best` | ~1,956,320 |
+| `ged_ns_best` | ~285,346 |
+| `ged_os_best` | ~1,232,241 |
+
+The script also prints `ged_sb_count`, `ged_ns_count`, and `ged_os_count`
+(event counts per violence type). These are not listed above because
+they were not independently verified — compare against prior runs rather
+than a fixed reference value.
 
 From your laptop (verifies the HTTP-served zarr):
 
@@ -165,6 +169,39 @@ print(f'Remote ged_sb_best: {df[\"ged_sb_best\"].sum():,.0f}')
 print(f'Expected:           ~744,956')
 "
 ```
+
+### Verify raw data totals after harvest
+
+After a harvest completes, verify the annual event count matches the
+API's expected total. A shortfall here means downstream data will be
+silently wrong (see post-mortem: 2026-04-25 stale zarr store).
+
+```bash
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python3 -c "
+import pyarrow.parquet as pq
+t = pq.read_table(\"data/raw/ucdp_annual/ged_v25_1.parquet\")
+print(f\"Annual events: {len(t):,}\")
+# Expected: 384,918 for GED v25.1 (page_size=1000 with rate-limit backoff)
+# If significantly lower, the harvest hit the page_size=50000 truncation bug
+# or rate limiting silently truncated results.
+"'
+```
+
+### Run health check
+
+After any pipeline run, check per-source freshness and export SLO:
+
+```bash
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/check_health.py'
+```
+
+Output shows per-source status with SLO labels:
+- `[SLO: static]` — PRIO-GRID datasets; never stale from age
+- `[SLO: 1y]` — UCDP Annual; yearly release cycle
+- `[SLO: 31d]` — UCDP Candidate/.9, consolidation, viewpoint, compilation; monthly cycle
+- `[SLO: 168h]` — export freshness (ADR-018 default)
+
+For JSON output (monitoring integration): add `--json` flag.
 
 ### Force a full data rebuild
 

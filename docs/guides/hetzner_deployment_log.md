@@ -181,20 +181,34 @@ requests.
 1. Added `page_delay=0.5s` between pages → still failed at page 38
 2. Increased to `page_delay=2.0s` → still failed at page 46
 3. Increased `page_size` to 10000 (39 pages) → still failed
-4. Increased `page_size` to 50000 (8 pages) → **success**
+4. Increased `page_size` to 50000 (8 pages) → appeared to succeed
 
-**Final config:**
+> **⚠ CORRECTION (2026-04-26):** `page_size=50000` silently truncated
+> results. The UCDP API accepted the page size but returned only
+> 335,918 of 384,918 events — page 7 was short and page 8 was empty.
+> This produced a 46% fatality gap in the served zarr store, discovered
+> a month later during a consumer parity investigation. The fix was to
+> revert to `page_size=1000` with rate-limit backoff (exponential
+> backoff on HTTP 400, 30s base, 5 attempts). See post-mortem:
+> `reports/post_mortems/2026-04-25_stale_zarr_store.md`.
+
+**Final config (as of v1.2.7):**
 ```python
 UcdpAnnualConfig(
     timeout=120,       # 30s default too short for large pages
-    page_size=50000,   # API rate-limits after ~40 requests
-    page_delay=2.0,    # Extra safety margin between pages
+    page_size=1000,    # default — page_size=50000 silently truncates
+    page_delay=2.0,    # spacing between pages
 )
 ```
 
-**Lesson:** When an API rate-limits, reducing request count is more
-effective than increasing delay. Check how production does it before
-inventing your own approach.
+Rate-limit backoff (added in v1.2.6) handles the ~300-request rate
+limit by retrying with exponential backoff when HTTP 400 is received
+during pagination.
+
+**Lesson:** When an API rate-limits, reducing request count seems
+effective — but verify the total event count. `page_size=50000` avoided
+rate limits by making only 8 requests, but the API silently dropped
+49,000 events. Always assert `len(fetched) ≈ TotalCount`.
 
 ### Failure 4: Viewpoint builder OOM (Step 3)
 
@@ -523,7 +537,7 @@ fi
 After the third fix, cron successfully:
 - Found `uv`
 - Loaded `UCDP_API_TOKEN` from `.profile`
-- Harvested 335,918 annual events
+- Harvested 335,918 annual events (⚠ truncated — actual total is 384,918; see correction in §4 Failure 3)
 - Continued through candidate and dot9 discovery
 - Full pipeline running end-to-end (March 31 10:50 UTC)
 

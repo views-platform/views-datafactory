@@ -105,6 +105,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-026** -- Credential Management Strategy
   Env vars + netrc for credential resolution. Credentials are not configuration. Fail-loud on missing. No `.env` files, no `python-dotenv`.
 
+- **ADR-027** -- Harvest Count Verification
+  Harvest success requires count verification against the API's declared total. Dual-threshold assertions for APIs with fixed-count inconsistencies. Rate-limit recovery at the pagination layer.
+
 These must comply with the constitutional ADRs above.
 
 ---

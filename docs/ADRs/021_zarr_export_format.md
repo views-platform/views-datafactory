@@ -12,7 +12,7 @@
 The assembled grid is a 19 GB float32 npy file. Consumers must download
 the entire file to access any subset — there is no way to fetch "just
 Ethiopia 2020-2024" without loading all 456 months, 259,200 cells, and
-39 features.
+43 features.
 
 The CLAUDE.md contract ("npy now, zarr-ready") anticipated this moment:
 the dimension order `[T, H, W, C]` and sidecar coordinate files were
@@ -137,7 +137,7 @@ practice for gridded spatiotemporal datasets (cf. ERA5, CMIP6).
 
 - `scripts/export_zarr.py` — conversion script following `export_dataframe.py` pattern
 - Dependencies added to `pyproject.toml`: `xarray>=2024.1,<2026`, `zarr>=2.16,<3`
-- Output: `data/zarr/grid.zarr/` (gitignored under `data/`)
+- Output: `data/assembled/grid.zarr` (default; inside assembled directory, gitignored under `data/`)
 - Chunking configurable via `--chunks-time` (default: 12 months)
 - Consumer guide: `docs/guides/zarr_consumer_guide.md`
 
@@ -147,6 +147,7 @@ practice for gridded spatiotemporal datasets (cf. ERA5, CMIP6).
 
 - Script produces a zarr store that opens cleanly with `xarray.open_zarr()`
 - Dimension names, coordinate values, and feature count match the source grid
+- Round-trip integrity check (v1.2.4): after export, reads back every feature from the zarr store and verifies per-feature sums match the source grid within floating-point tolerance (>0.5 absolute). Catches partial writes, chunking bugs, and stale stores. Memory-efficient — loads one feature at a time.
 - Store size is within 10% of source npy size (no unexpected bloat)
 - Consumer guide examples are copy-pasteable and produce correct output
 
