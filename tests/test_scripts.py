@@ -186,6 +186,22 @@ class TestGridValidationOrder:
             "assert_grid_shape must come before .shape unpacking"
         )
 
+    def test_export_zarr_validates_before_unpack(self) -> None:
+        lines = (
+            self._SCRIPTS_DIR / "export_zarr.py"
+        ).read_text().splitlines()
+        validate = self._first_line_containing(
+            lines, "assert_grid_shape"
+        )
+        unpack = self._first_line_containing(
+            lines, ".shape"
+        )
+        assert validate is not None
+        assert unpack is not None
+        assert validate < unpack, (
+            "assert_grid_shape must come before .shape unpacking"
+        )
+
     def test_compile_validates_before_use(self) -> None:
         lines = (
             self._SCRIPTS_DIR / "compile_grid.py"

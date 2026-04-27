@@ -138,8 +138,7 @@ def _load_grid_from_zarr(
     except (FileNotFoundError, ValueError, KeyError) as exc:
         msg = f"Zarr store not found or invalid at {zarr_path}"
         raise FileNotFoundError(msg) from exc
-    except Exception as exc:
-        exc_name = type(exc).__name__
+    except OSError as exc:
         exc_msg = str(exc)
         if "401" in exc_msg or "Unauthorized" in exc_msg:
             msg = (
@@ -149,7 +148,7 @@ def _load_grid_from_zarr(
             raise PermissionError(msg) from exc
         msg = (
             f"Cannot open zarr store at {zarr_path}: "
-            f"{exc_name}: {exc_msg}"
+            f"{type(exc).__name__}: {exc_msg}"
         )
         raise FileNotFoundError(msg) from exc
 
@@ -157,6 +156,15 @@ def _load_grid_from_zarr(
     last_valid_month_id: int | None = ds.attrs.get(
         "last_valid_month_id",
     )
+    if last_valid_month_id is None:
+        warnings.warn(
+            f"Zarr store at {zarr_path} lacks 'last_valid_month_id' "
+            f"attribute. Zero-padding boundary unknown — consumer "
+            f"cannot distinguish observed zeros from padding. "
+            f"Re-export with export_zarr.py to fix.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     # Determine feature order before subsetting
     attrs = ds.attrs
