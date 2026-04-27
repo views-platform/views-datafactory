@@ -187,7 +187,7 @@ Active concerns tracked in `reports/technical_risk_register.md` (ADR-020).
 | Category | Count | Key items |
 |----------|-------|-----------|
 | Tier 1 | 0 open | All resolved |
-| Tier 2 | 5 open | C-84-C-88 (server hardening, blocked on external) |
-| Tier 3 | 3 open | C-21 (characterization tests — partially addressed by M13), C-125 (cm gap), C-126 (transform gap) |
-| Tier 4 | 15 open | Most untriggered; 2 accepted at v1.0; C-115 new (summary detection threshold) |
+| Tier 2 | 7 open | C-88 (SSH), C-130–C-132 (data boundary/monitoring), C-137–C-139 (data integrity) |
+| Tier 3 | 4 open | C-21 (characterization tests), C-126 (transform gap), C-129 (partition boundaries), C-133 (zero-padding edge case) |
+| Tier 4 | 23 open | Most untriggered; 2 accepted at v1.0 |
 | Accepted | 6 | C-06, C-07, C-10, C-32, C-38, C-41 |
