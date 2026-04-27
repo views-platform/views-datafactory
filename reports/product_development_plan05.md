@@ -38,15 +38,15 @@
 | — | Verification examples (`examples/run_examples.sh`) | Done | 15 scripts (12 pass, 2 xfail, 1 remote) |
 | — | Falsification stubs (viewser replacement claim) | Done | 7 (marker-gated) |
 
-**Total: 530 passed (pytest) + 15 verification examples**
+**Total: 636 passed (pytest) + 15 verification examples**
 
 ### Architecture
 
 - **10 packages** under `src/datafactory_*`: provenance, http, priogrid, harvester, synthetic (stub), consolidation, viewpoint, compilation, adapters, query
 - **5 data sources**: UCDP annual, UCDP candidate, UCDP .9, PRIO-GRID static, GAUL admin boundaries
-- **25 ADRs** (10 constitutional + 15 project-specific)
-- **15 CICs** (class intent contracts)
-- **Technical risk register** (ADR-020): 115 concern IDs tracked, 80 resolved, 27 open/deferred, 6 accepted by design
+- **30 ADRs** (10 constitutional + 20 project-specific)
+- **19 CICs** (class intent contracts)
+- **Technical risk register** (ADR-020): 143 concern IDs tracked, 96 resolved, 39 open/deferred, 6 accepted by design
 
 ---
 

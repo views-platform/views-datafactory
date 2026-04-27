@@ -1,6 +1,6 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-26)
+**Date:** 2026-03-17 (updated 2026-04-27)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24
 **Status:** 143 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 39 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
