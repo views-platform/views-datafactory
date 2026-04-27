@@ -157,15 +157,21 @@ class TestDiscoverVersionsGreen:
         """Mock API: 2 versions available, 3rd returns 0 events."""
         responses = [
             MagicMock(
-                json=MagicMock(return_value={"TotalCount": 100}),
+                json=MagicMock(return_value={
+                    "TotalCount": 100, "TotalPages": 1, "Result": [],
+                }),
                 raise_for_status=MagicMock(),
             ),
             MagicMock(
-                json=MagicMock(return_value={"TotalCount": 50}),
+                json=MagicMock(return_value={
+                    "TotalCount": 50, "TotalPages": 1, "Result": [],
+                }),
                 raise_for_status=MagicMock(),
             ),
             MagicMock(
-                json=MagicMock(return_value={"TotalCount": 0}),
+                json=MagicMock(return_value={
+                    "TotalCount": 0, "TotalPages": 0, "Result": [],
+                }),
                 raise_for_status=MagicMock(),
             ),
         ]
@@ -184,7 +190,9 @@ class TestDiscoverVersionsGreen:
 
     def test_returns_empty_when_no_versions(self) -> None:
         resp = MagicMock(
-            json=MagicMock(return_value={"TotalCount": 0}),
+            json=MagicMock(return_value={
+                "TotalCount": 0, "TotalPages": 0, "Result": [],
+            }),
             raise_for_status=MagicMock(),
         )
 
@@ -199,6 +207,32 @@ class TestDiscoverVersionsGreen:
             versions = discover_versions(config)
 
         assert versions == []
+
+
+# ---- Envelope Validation in Discovery ----
+
+
+class TestDiscoverVersionsEnvelopeRed:
+
+    def test_candidate_rejects_missing_totalcount(self) -> None:
+        """Discovery must reject envelope missing TotalCount."""
+        resp = MagicMock(
+            json=MagicMock(
+                return_value={"TotalPages": 1, "Result": []},
+            ),
+            raise_for_status=MagicMock(),
+        )
+
+        config = UcdpCandidateConfig(start_year=2025)
+        with (
+            patch(
+                "datafactory_http.retry.requests.get",
+                return_value=resp,
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+            pytest.raises(ValueError, match="TotalCount"),
+        ):
+            discover_versions(config)
 
 
 # ---- Digest Caching ----
@@ -255,11 +289,15 @@ class TestFetchUcdpCandidateGreen:
         # Discovery: 1 version available, 2nd returns 0
         discover_responses = [
             MagicMock(
-                json=MagicMock(return_value={"TotalCount": 3}),
+                json=MagicMock(return_value={
+                    "TotalCount": 3, "TotalPages": 1, "Result": [],
+                }),
                 raise_for_status=MagicMock(),
             ),
             MagicMock(
-                json=MagicMock(return_value={"TotalCount": 0}),
+                json=MagicMock(return_value={
+                    "TotalCount": 0, "TotalPages": 0, "Result": [],
+                }),
                 raise_for_status=MagicMock(),
             ),
         ]

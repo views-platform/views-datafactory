@@ -91,23 +91,24 @@ def main() -> int:
     time_steps = np.load(time_path)
     feature_names = json.loads(features_path.read_text())
 
+    from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
+
+    DEFAULT_GRID_CONFIG.assert_grid_shape(grid)
     n_t, n_h, n_w, n_f = grid.shape
     print(f"Grid: [T={n_t}, H={n_h}, W={n_w}, F={n_f}]")
     print(f"Features ({n_f}): {feature_names}")
     print()
 
     # Compute lat/lon cell centers from PRIO-GRID convention
-    # Row 0 = south (-89.75°), Row 359 = north (89.75°)
-    # Col 0 = west (-179.75°), Col 719 = east (179.75°)
-    resolution = 0.5
+    res = DEFAULT_GRID_CONFIG.resolution
     lat_centers = np.linspace(
-        -90 + resolution / 2,
-        90 - resolution / 2,
+        DEFAULT_GRID_CONFIG.south + res / 2,
+        DEFAULT_GRID_CONFIG.north - res / 2,
         n_h,
     )
     lon_centers = np.linspace(
-        -180 + resolution / 2,
-        180 - resolution / 2,
+        DEFAULT_GRID_CONFIG.west + res / 2,
+        DEFAULT_GRID_CONFIG.east - res / 2,
         n_w,
     )
 
@@ -137,7 +138,7 @@ def main() -> int:
             "— Assembled Grid"
         ),
         "crs": "EPSG:4326",
-        "resolution_degrees": resolution,
+        "resolution_degrees": res,
         "source": "views-datafactory",
         "n_features": n_f,
         "feature_order": feature_names,

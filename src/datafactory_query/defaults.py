@@ -7,10 +7,16 @@ from datafactory_priogrid.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
+import urllib.request
 from dataclasses import dataclass
+from netrc import NetrcParseError, netrc
+from pathlib import Path
 from types import MappingProxyType
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +56,6 @@ def get_last_valid_month_id(
     url = zarr_url or DEFAULT_REMOTE.zarr_url
     attrs_url = f"{url}/.zattrs"
 
-    import base64
-    import urllib.request
-    from netrc import NetrcParseError, netrc
-    from pathlib import Path
-    from urllib.parse import urlparse
-
     parsed = urlparse(attrs_url)
     req = urllib.request.Request(attrs_url)
 
@@ -73,15 +73,17 @@ def get_last_valid_month_id(
 
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            attrs = json.loads(resp.read())
-        val = attrs.get("last_valid_month_id")
-        return int(val) if val is not None else None
-    except Exception as exc:
-        logger.warning(
-            "Could not read last_valid_month_id from %s: %s",
+            raw = resp.read()
+    except (URLError, HTTPError, TimeoutError) as exc:
+        logger.error(
+            "Failed to read .zattrs from %s: %s",
             attrs_url, exc,
         )
-        return None
+        raise
+
+    attrs = json.loads(raw)
+    val = attrs.get("last_valid_month_id")
+    return int(val) if val is not None else None
 
 
 # VIEWS operational calendar — single source of truth for partition

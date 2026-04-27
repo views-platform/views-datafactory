@@ -100,8 +100,8 @@ def main() -> int:
     time_steps = np.load(time_path)
     feature_names = json.loads(features_path.read_text())
 
-    n_t, n_h, n_w, n_c = grid.shape
     DEFAULT_GRID_CONFIG.assert_grid_shape(grid)
+    n_t, n_h, n_w, n_c = grid.shape
     print(f"Grid: [T={n_t}, H={n_h}, W={n_w}, C={n_c}]")
     print(f"Features: {feature_names}")
 
