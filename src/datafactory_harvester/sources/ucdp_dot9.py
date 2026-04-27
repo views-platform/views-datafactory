@@ -32,10 +32,13 @@ from datafactory_harvester.snapshot_storage import (
     save_event_snapshot,
 )
 from datafactory_harvester.sources import register_source
+from datafactory_harvester.sources._ucdp_common import (
+    UCDP_GED_API_BASE,
+    validate_envelope,
+)
 from datafactory_harvester.sources.ucdp_annual import (
     FIELD_TYPES,
     REQUIRED_FIELDS,
-    UCDP_GED_API_BASE,
     UcdpAnnualConfig,
     fetch_paginated,
     get_ucdp_token,
@@ -195,26 +198,28 @@ def discover_dot9_versions(
                 max_retries=config.max_retries,
                 timeout=config.timeout,
             )
-            data = resp.json()
-            total = data.get("TotalCount", 0)
-            if total == 0:
-                logger.info(
-                    "Version %s has 0 events — stopping",
-                    version,
-                )
-                break
-            versions.append(version)
-            logger.info(
-                "Discovered .9 version %s (%d events)",
-                version, total,
-            )
-            time.sleep(config.discovery_rate_limit)
-        except (requests.RequestException, ValueError):
+        except requests.RequestException:
             logger.debug(
                 "Version %s not available — stopping",
                 version,
             )
             break
+
+        data = resp.json()
+        validate_envelope(data)
+        total = data["TotalCount"]
+        if total == 0:
+            logger.info(
+                "Version %s has 0 events — stopping",
+                version,
+            )
+            break
+        versions.append(version)
+        logger.info(
+            "Discovered .9 version %s (%d events)",
+            version, total,
+        )
+        time.sleep(config.discovery_rate_limit)
 
         month += 1
         if month > 12:

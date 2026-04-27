@@ -27,6 +27,10 @@ from datafactory_harvester.event_validation import (
 )
 from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
 from datafactory_harvester.sources import register_source
+from datafactory_harvester.sources._ucdp_common import (
+    UCDP_GED_API_BASE,
+    validate_envelope,
+)
 from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
@@ -78,10 +82,8 @@ FIELD_TYPES: dict[str, tuple[type, ...]] = {
     "number_of_sources": (int,),
 }
 
-ENVELOPE_KEYS: set[str] = {"TotalCount", "TotalPages", "Result"}
 
-# Single source of truth for the UCDP GED API endpoint (ADR-003).
-UCDP_GED_API_BASE: str = "https://ucdpapi.pcr.uu.se/api/gedevents"
+
 
 
 # ---- Config ----
@@ -156,24 +158,6 @@ def get_ucdp_token(token: str | None = None) -> str:
         raise ValueError(err_msg)
     return resolved
 
-
-
-def validate_envelope(data: dict) -> None:
-    """Validate the API response envelope structure."""
-    missing = ENVELOPE_KEYS - set(data.keys())
-    if missing:
-        err_msg = (
-            f"UCDP API response envelope missing keys: {missing}. "
-            f"Available keys: {sorted(data.keys())}."
-        )
-        logger.error(err_msg)
-        raise ValueError(err_msg)
-    if not isinstance(data["Result"], list):
-        err_msg = (
-            f"UCDP API 'Result' is {type(data['Result']).__name__}, expected list."
-        )
-        logger.error(err_msg)
-        raise ValueError(err_msg)
 
 
 def fetch_paginated(
