@@ -163,6 +163,14 @@ def _load_grid_from_zarr(
     if "feature_order" in attrs:
         feature_names = list(attrs["feature_order"])
     else:
+        warnings.warn(
+            f"Zarr store at {zarr_path} lacks 'feature_order' "
+            f"attribute. Falling back to sorted(data_vars). "
+            f"Feature column order may differ from the npy "
+            f"backend. Re-export with export_zarr.py to fix.",
+            UserWarning,
+            stacklevel=2,
+        )
         feature_names = sorted(ds.data_vars)
 
     # Apply feature subsetting (lazy — no data fetched yet)

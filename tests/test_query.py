@@ -645,6 +645,66 @@ class TestFeatureOrderParity:
         assert npy_features == zarr_features
 
 
+class TestZarrFeatureOrderFallback:
+    """C-127: warn when zarr store lacks feature_order attr."""
+
+    def _make_zarr_no_feature_order(
+        self, tmp_path: Path
+    ) -> Path:
+        import xarray as xr
+
+        names = ["zz_last", "bb_mid", "aa_first"]
+        n_t, n_h, n_w = 3, 3, 4
+        data_vars = {
+            n: (
+                ["time", "lat", "lon"],
+                np.full((n_t, n_h, n_w), i, dtype=np.float32),
+            )
+            for i, n in enumerate(names)
+        }
+        ds = xr.Dataset(
+            data_vars,
+            coords={
+                "time": np.arange(
+                    "2020-01", "2020-04", dtype="datetime64[M]"
+                ),
+                "lat": np.linspace(-45, 45, n_h),
+                "lon": np.linspace(-90, 90, n_w),
+                "pgid": (
+                    ["lat", "lon"],
+                    np.arange(1, n_h * n_w + 1).reshape(n_h, n_w),
+                ),
+            },
+        )
+        zarr_path = tmp_path / "no_order.zarr"
+        ds.to_zarr(zarr_path, mode="w")
+        return zarr_path
+
+    def test_zarr_missing_feature_order_warns(
+        self, tmp_path: Path
+    ) -> None:
+        from datafactory_query.dataset import _load_grid_from_zarr
+
+        zarr_path = self._make_zarr_no_feature_order(tmp_path)
+        with pytest.warns(UserWarning, match="feature_order"):
+            _load_grid_from_zarr(str(zarr_path))
+
+    def test_zarr_missing_feature_order_returns_sorted(
+        self, tmp_path: Path
+    ) -> None:
+        import warnings
+
+        from datafactory_query.dataset import _load_grid_from_zarr
+
+        zarr_path = self._make_zarr_no_feature_order(tmp_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            _, _, _, features, _ = _load_grid_from_zarr(
+                str(zarr_path)
+            )
+        assert features == ["aa_first", "bb_mid", "zz_last"]
+
+
 # ── Edge Cases (G8) ────────────────────────────────────
 
 
@@ -844,34 +904,78 @@ class TestLoadDatasetRed:
 
 class TestGetLastValidMonthId:
 
-    def test_returns_none_on_network_error(self) -> None:
+    def test_raises_on_network_error(self) -> None:
         from unittest.mock import patch
         from urllib.error import URLError
 
         from datafactory_query.defaults import get_last_valid_month_id
 
-        with patch(
-            "urllib.request.urlopen",
-            side_effect=URLError("network down"),
+        with (
+            patch(
+                "urllib.request.urlopen",
+                side_effect=URLError("network down"),
+            ),
+            pytest.raises(URLError),
         ):
-            result = get_last_valid_month_id("http://fake/grid.zarr")
-        assert result is None
+            get_last_valid_month_id("http://fake/grid.zarr")
 
-    def test_returns_none_on_auth_failure(self) -> None:
+    def test_raises_on_auth_failure(self) -> None:
         from unittest.mock import patch
         from urllib.error import HTTPError
 
         from datafactory_query.defaults import get_last_valid_month_id
 
-        with patch(
-            "urllib.request.urlopen",
-            side_effect=HTTPError(
-                "http://fake/.zattrs", 401, "Unauthorized",
-                {}, None,  # type: ignore[arg-type]
+        with (
+            patch(
+                "urllib.request.urlopen",
+                side_effect=HTTPError(
+                    "http://fake/.zattrs", 401, "Unauthorized",
+                    {}, None,  # type: ignore[arg-type]
+                ),
             ),
+            pytest.raises(HTTPError),
         ):
-            result = get_last_valid_month_id("http://fake/grid.zarr")
-        assert result is None
+            get_last_valid_month_id("http://fake/grid.zarr")
+
+    def test_raises_on_json_parse_error(self) -> None:
+        from unittest.mock import MagicMock, patch
+
+        from datafactory_query.defaults import get_last_valid_month_id
+
+        fake_resp = MagicMock()
+        fake_resp.read.return_value = b"NOT JSON"
+        fake_resp.__enter__ = lambda s: s
+        fake_resp.__exit__ = MagicMock(return_value=False)
+
+        with (
+            patch(
+                "urllib.request.urlopen",
+                return_value=fake_resp,
+            ),
+            pytest.raises(json.JSONDecodeError),
+        ):
+            get_last_valid_month_id("http://fake/grid.zarr")
+
+    def test_logs_error_on_network_failure(self, caplog) -> None:
+        import logging
+        from unittest.mock import patch
+        from urllib.error import URLError
+
+        from datafactory_query.defaults import get_last_valid_month_id
+
+        with (
+            caplog.at_level(logging.ERROR),
+            patch(
+                "urllib.request.urlopen",
+                side_effect=URLError("network down"),
+            ),
+            pytest.raises(URLError),
+        ):
+            get_last_valid_month_id("http://fake/grid.zarr")
+
+        assert any(
+            r.levelno >= logging.ERROR for r in caplog.records
+        )
 
     def test_returns_int_on_success(self) -> None:
         from unittest.mock import MagicMock, patch
