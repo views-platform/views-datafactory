@@ -84,8 +84,6 @@ FIELD_TYPES: dict[str, tuple[type, ...]] = {
 
 
 
-
-
 # ---- Config ----
 
 
@@ -157,7 +155,6 @@ def get_ucdp_token(token: str | None = None) -> str:
         logger.error(err_msg)
         raise ValueError(err_msg)
     return resolved
-
 
 
 def fetch_paginated(

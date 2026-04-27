@@ -160,7 +160,7 @@ class TestGridValidationOrder:
             lines, "assert_grid_shape"
         )
         unpack = self._first_line_containing(
-            lines, ".shape"
+            lines, "= ucdp_grid.shape"
         )
         assert validate is not None
         assert unpack is not None
@@ -178,7 +178,7 @@ class TestGridValidationOrder:
             lines, "assert_grid_shape"
         )
         unpack = self._first_line_containing(
-            lines, ".shape"
+            lines, "= grid.shape"
         )
         assert validate is not None
         assert unpack is not None
@@ -194,7 +194,7 @@ class TestGridValidationOrder:
             lines, "assert_grid_shape"
         )
         unpack = self._first_line_containing(
-            lines, ".shape"
+            lines, "= grid.shape"
         )
         assert validate is not None
         assert unpack is not None
