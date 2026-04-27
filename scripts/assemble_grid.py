@@ -106,8 +106,8 @@ def main() -> int:
     time_steps = np.load(time_path)
     ucdp_features = json.loads(features_path.read_text())
 
-    n_t, n_h, n_w, n_ucdp = ucdp_grid.shape
     DEFAULT_GRID_CONFIG.assert_grid_shape(ucdp_grid)
+    n_t, n_h, n_w, n_ucdp = ucdp_grid.shape
     print(
         f"UCDP grid: [T={n_t}, H={n_h}, W={n_w}, "
         f"C={n_ucdp}]"
