@@ -427,3 +427,19 @@ GoF: extract to `datafactory_query.consumer_contract` for reuse. Beck: test the 
 ### C-124: No consumer onboarding for remote zarr credentials — RESOLVED
 ~~No documentation in views-models explains the `~/.netrc` requirement.~~ **Resolved 2026-04-19:** bright_starship's `README.md` now includes a Prerequisites section with `~/.netrc` setup instructions (machine, login, password format, chmod 600). Cross-ref: C-96 (fsspec netrc), C-97 (auth scalability).
 **Source:** Consumer integration review 2026-04-19. Work package: Consumer integration.
+
+### C-134: `get_last_valid_month_id()` silently returns None on all errors — RESOLVED
+~~Broad `except Exception` swallowed network/auth/timeout/JSON errors into `None`.~~ **Resolved 2026-04-27:** Replaced with specific `except (URLError, HTTPError, TimeoutError)` that logs at ERROR and re-raises. `json.loads` moved outside try-except. `None` only returned when attribute legitimately absent. 4 tests added.
+**Source:** Tech-debt-cleanup audit 2026-04-22. Work package: Data boundary safety chain.
+
+### C-127: Zarr backend returns features in different order than npy backend — RESOLVED
+~~Silent `sorted(data_vars)` fallback caused feature order divergence.~~ **Resolved 2026-04-27:** `_load_grid_from_zarr()` now emits `UserWarning` on fallback. `export_zarr.py` already writes `feature_order`. 2 tests added.
+**Source:** Verification examples suite (M13) 2026-04-21. Work package: Query correctness.
+
+### C-128: Scripts infer grid shape from arrays without config validation — RESOLVED
+~~Shape unpacking preceded `assert_grid_shape()` in assemble_grid.py and export_dataframe.py.~~ **Resolved 2026-04-27:** Swapped order so validation gates unpacking (matching compile_grid.py which was already correct). 3 structural tests added.
+**Source:** Magic-values compliance audit 2026-04-21. Work package: ADR-003 compliance.
+
+### C-31: Candidate source depends on annual source — RESOLVED
+~~candidate and .9 imported shared symbols from ucdp_annual, creating tight coupling.~~ **Resolved 2026-04-27:** Extracted `_ucdp_common.py` with `ENVELOPE_KEYS`, `UCDP_GED_API_BASE`, `validate_envelope()`. Discovery functions now call `validate_envelope()` and use `data["TotalCount"]` instead of `.get("TotalCount", 0)`. 2 envelope rejection tests added.
+**Source:** Martin (expert review 5), magic-values audit 2026-04-21. Work package: Code cleanup.

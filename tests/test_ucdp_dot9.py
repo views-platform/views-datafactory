@@ -239,9 +239,9 @@ class TestDiscoverDot9EnvelopeRed:
             patch.dict(
                 "os.environ", {"UCDP_API_TOKEN": "test"}
             ),
+            pytest.raises(ValueError, match="TotalCount"),
         ):
-            with pytest.raises(ValueError, match="TotalCount"):
-                discover_dot9_versions(config)
+            discover_dot9_versions(config)
 
 
 # ---- Full Flow ----

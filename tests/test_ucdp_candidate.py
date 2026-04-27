@@ -230,9 +230,9 @@ class TestDiscoverVersionsEnvelopeRed:
                 return_value=resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+            pytest.raises(ValueError, match="TotalCount"),
         ):
-            with pytest.raises(ValueError, match="TotalCount"):
-                discover_versions(config)
+            discover_versions(config)
 
 
 # ---- Digest Caching ----
