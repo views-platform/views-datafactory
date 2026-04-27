@@ -14,7 +14,7 @@ The consumer API (`datafactory_query`) is feature-complete for local access: `lo
 
 A verification examples suite (`examples/run_examples.sh`) now demonstrates every user-facing capability: both output formats, all region types, all time parsing formats, feature subsetting, both storage backends (npy + zarr), and the full consumer bridge pattern. 15 scripts, all passing. Remote zarr smoke test against the live Hetzner server also passes.
 
-**System snapshot:** 10 packages, 530 tests + 15 verification examples, 25 ADRs, 16 CICs. 126 concern IDs tracked: 92 resolved, 26 open/deferred, 6 accepted by design.
+**System snapshot:** 10 packages, 636 tests + 15 verification examples, 30 ADRs, 19 CICs. 143 concern IDs tracked: 96 resolved, 39 open/deferred, 6 accepted by design.
 
 ---
 
@@ -82,7 +82,7 @@ Config promotion (same phase):
 **Next steps:**
 1. ~~Smoke test remote zarr path against live server~~ — **Done** (M12/CA-2a, `ex_zarr_remote.py`)
 2. Integrate with first training script (bright_starship) — let friction surface
-3. Merge development → main, tag v1.2
+3. Merge development → main, tag v1.2.9
 4. Write ADR-026 (query layer architecture) once interface is proven with real consumers
 
 ### Direction 2: New Data Sources — PAUSED
@@ -165,7 +165,7 @@ DONE:   Phase CA-2a  (verification examples suite — M13, 15 scripts all pass)
 NOW:    Phase CA-2b  (first training script integration — M11)
         Phase DH-2b  (v1.1 operator work — blocked on domain + IT)
         |
-NEXT:   Merge to main + tag v1.2
+NEXT:   Merge to main + tag v1.2.9
         |
 THEN:   Phase 5      (V-Dem integration — country-level broadcast)
         Phase 6      (ACLED integration — second conflict source)
@@ -182,12 +182,12 @@ LATER:  Phase DH-3   (v2.0 institutional — OAuth2, audit trail)
 
 Active concerns tracked in `reports/technical_risk_register.md` (ADR-020).
 
-**Current:** 126 concern IDs: 92 resolved, 26 open/deferred, 6 accepted by design.
+**Current:** 143 concern IDs: 96 resolved, 39 open/deferred, 6 accepted by design.
 
 | Category | Count | Key items |
 |----------|-------|-----------|
 | Tier 1 | 0 open | All resolved |
-| Tier 2 | 5 open | C-84-C-88 (server hardening, blocked on external) |
-| Tier 3 | 3 open | C-21 (characterization tests — partially addressed by M13), C-125 (cm gap), C-126 (transform gap) |
-| Tier 4 | 15 open | Most untriggered; 2 accepted at v1.0; C-115 new (summary detection threshold) |
+| Tier 2 | 7 open | C-88 (SSH), C-130–C-132 (data boundary/monitoring), C-137–C-139 (data integrity) |
+| Tier 3 | 4 open | C-21 (characterization tests), C-126 (transform gap), C-129 (partition boundaries), C-133 (zero-padding edge case) |
+| Tier 4 | 23 open | Most untriggered; 2 accepted at v1.0 |
 | Accepted | 6 | C-06, C-07, C-10, C-32, C-38, C-41 |

@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-26)
+**Date:** 2026-03-17 (updated 2026-04-27)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24
-**Status:** 143 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 92 resolved, 43 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Status:** 143 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 39 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -19,7 +19,7 @@
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
 | C-45 | 4 | No Parquet schema evolution strategy | UCDP removes/renames a field | UCDP schema |
-| C-31 | 4 | Candidate source depends on annual source (incl. C-28) | 3rd shared function needed | Code cleanup |
+| ~~C-31~~ | ~~4~~ | ~~Candidate source depends on annual source (incl. C-28)~~ | Resolved 2026-04-27 | Code cleanup |
 | C-44 | 4 | Harvest pipeline template is implicit — trigger fired, accepted at v1.0 | 5 sources exist | V-Dem readiness |
 | C-46 | 4 | No ledger write idempotency | External systems consume ledger | — |
 | C-32 | — | Source registry returns `Any` | Accepted by design | — |
@@ -38,14 +38,14 @@
 | C-115 | 4 | Summary detection threshold (>= vs >) is architectural | UCDP changes definition | ADR-023 |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
-| C-128 | 2 | Scripts infer grid shape without config validation (ADR-003 forbidden) | Compilation produces unexpected spatial dims | ADR-003 compliance |
-| C-127 | 2 | Zarr backend returns features in alphabetical order, npy preserves feature_names.json order | Consumer switches from npy to zarr backend | Query correctness |
+| ~~C-128~~ | ~~2~~ | ~~Scripts infer grid shape without config validation (ADR-003 forbidden)~~ | Resolved 2026-04-27 | ADR-003 compliance |
+| ~~C-127~~ | ~~2~~ | ~~Zarr backend returns features in alphabetical order, npy preserves feature_names.json order~~ | Resolved 2026-04-27 | Query correctness |
 | C-129 | 3 | Partition boundaries (month IDs) have no single source of truth | VIEWS shifts partition boundaries | ADR-003 compliance |
 | C-130 | 2 | Zero-filled future months indistinguishable from observed zeros | Model trains on months beyond last UCDP update | Data boundary |
 | C-131 | 2 | No external monitoring for cron job failure on Hetzner | Server reboots without cron re-enable or user deletion | Operational monitoring |
 | C-132 | 2 | Health check validates export timestamp, not data recency | UCDP API returns empty/stale data during pipeline run | Operational monitoring |
 | C-133 | 3 | Zero-padding warning only fires for integer `end` parameter | Consumer calls load_dataset with string date or end=None | Data boundary |
-| C-134 | 3 | `get_last_valid_month_id()` silently returns None on all errors | Consumer netrc misconfigured, loses zero-padding warning | Data boundary |
+| ~~C-134~~ | ~~3~~ | ~~`get_last_valid_month_id()` silently returns None on all errors~~ | Resolved 2026-04-27 | Data boundary |
 | C-135 | 4 | No runtime type validation for zarr `.zattrs` values | Manual edit of `.zattrs` on server | Data boundary |
 | C-136 | 4 | `read_last_entries()` crashes on non-UTF8 ledger files | Disk corruption or binary append to JSONL ledger | Operational monitoring |
 | C-137 | 2 | No round-trip integrity check after zarr export | Pipeline export produces truncated or partial zarr store | Data integrity |
@@ -77,13 +77,13 @@ Items that should be resolved together:
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
 | **Test infrastructure** | C-29, C-78, C-79 | Test suite growth (C-60 resolved) |
-| **Code cleanup** | C-31, C-93 | Next refactor opportunity (C-80, C-112 resolved) |
+| **Code cleanup** | ~~C-31~~, C-93 | Next refactor opportunity (C-80, C-112, C-31 resolved) |
 | **Consumer integration** | C-122, C-123, C-124 | Before bright_starship can be used by anyone other than the developer |
-| **Query correctness** | C-127 | Before consumer switches from npy to zarr backend |
-| **ADR-003 compliance** | C-128, C-129 | Before next assembly/compilation change |
+| ~~**Query correctness**~~ | ~~C-127~~ | Resolved 2026-04-27: warning on fallback, export already writes feature_order |
+| **ADR-003 compliance** | ~~C-128~~, C-129 | Before next assembly/compilation change (C-128 resolved) |
 | **Operational monitoring** | C-131, C-132, C-136 | Before relying on Hetzner pipeline without manual checks |
 | **Data integrity** | C-137, C-138, C-139 | Before relying on served data for model training |
-| **Data boundary** | C-130, C-133, C-134, C-135 | Before consumer models train on data from the factory |
+| **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
@@ -99,12 +99,8 @@ Items that should be resolved together:
 SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
 
-### C-128: Scripts infer grid shape from arrays without config validation
-`assemble_grid.py:107` unpacks `n_t, n_h, n_w, n_ucdp = ucdp_grid.shape` and uses the inferred `n_h`, `n_w` for all subsequent operations (row/col loops, gid lookups) without asserting they match `GridConfig`. Same pattern in `export_dataframe.py:102`. ADR-003 explicitly lists "inferring grid resolution from the shape of a compiled npy array" as a **forbidden** inference pattern. A corrupted or mis-assembled npy (wrong spatial dimensions) would silently produce wrong output — incorrect gid→cell mappings, wrong feature assignments — with no error signal.
-
-**Trigger:** Compilation bug or manual assembly produces a grid with unexpected spatial dimensions (e.g., 180x360 from a half-resolution run).
-**Location:** `scripts/assemble_grid.py:107`, `scripts/export_dataframe.py:102`, `scripts/compile_grid.py:160-163`, `scripts/presentation_plots.py:174,231,293`.
-**Resolution:** Add `assert n_h == DEFAULT_GRID_CONFIG.nrow` and `assert n_w == DEFAULT_GRID_CONFIG.ncol` after shape unpacking in all affected scripts.
+### ~~C-128: Scripts infer grid shape from arrays without config validation~~ — RESOLVED
+**Resolved 2026-04-27.** Swapped validation/unpacking order in `assemble_grid.py` and `export_dataframe.py` so `assert_grid_shape()` runs before `.shape` unpacking, matching `compile_grid.py` which was already correct. Added 3 structural regression tests in `test_scripts.py::TestGridValidationOrder`.
 **Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (forbidden inference patterns).
 
 ### C-130: Zero-filled future months indistinguishable from observed zeros — [RESOLVING]
@@ -134,13 +130,9 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 **Location:** `src/datafactory_provenance/health.py:124-195` (`check_export_freshness`), `scripts/check_health.py:111-128`.
 **Source:** Falsification audit P3 (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
 
-### C-127: Zarr backend returns features in different order than npy backend
-The zarr loader in `dataset.py:154-157` falls back to `sorted(ds.data_vars)` (alphabetical) when the zarr store lacks a `feature_order` attr. The npy loader (`dataset.py:215`) reads `feature_names.json`, which preserves the compilation-time order. A consumer using FeatureFrame and indexing `y_features` by column position (e.g., `ff.y_features[:, 0]`) will silently get different features depending on which backend is used. The current zarr store at `data/assembled/grid.zarr` has no `feature_order` attr. **This is silent data divergence with no error signal.**
-
-**Trigger:** Consumer switches from local npy to zarr backend (local or remote) and uses positional indexing on FeatureFrame.
-**Location:** `src/datafactory_query/dataset.py:154-157` (zarr fallback), `src/datafactory_query/dataset.py:215` (npy path). Zarr store at `data/assembled/grid.zarr` (missing attr).
-**Resolution:** Either (a) write `feature_order` attr during zarr export (`scripts/export_zarr.py`), or (b) reorder zarr output to match `features` parameter order in `_load_grid_from_zarr`, or (c) both.
-**Source:** Verification examples suite (M13), `ex_zarr_local.py` discovered column order mismatch during TDD, 2026-04-21. Cross-ref: C-117 (zarr spatial subsetting).
+### ~~C-127: Zarr backend returns features in different order than npy backend~~ — RESOLVED
+**Resolved 2026-04-27.** `_load_grid_from_zarr()` now emits `UserWarning` when falling back to `sorted(data_vars)` due to missing `feature_order` attr. `export_zarr.py` already writes `feature_order` (since 2026-04-21). Together these close the silent divergence: new exports are correct, old stores warn. Added 2 tests in `test_query.py::TestZarrFeatureOrderFallback`.
+**Source:** Verification examples suite (M13), 2026-04-21. Cross-ref: C-117 (zarr spatial subsetting).
 
 ### C-137: No round-trip integrity check after zarr export — [RESOLVING]
 `export_zarr.py` writes the assembled grid to a zarr store but never reads it back to verify the data survived the write. A truncated write, chunking bug, or partial store would produce a zarr store with wrong values and no error signal. This is the exact failure mode that caused the 46% fatality gap on the Hetzner server: the served zarr store had missing pre-2014 data, but the export step reported success.
@@ -193,12 +185,8 @@ The calibration/validation/forecasting partition boundaries (121/444, 445/492, 4
 **Resolution:** Define a `PARTITIONS` frozen dict or dataclass in a shared location within `src/` and have all consumers import from it.
 **Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (single source of truth).
 
-### C-134: `get_last_valid_month_id()` silently returns None on all errors
-`get_last_valid_month_id()` in `defaults.py:42-84` catches all exceptions (network errors, auth failures, JSON parse errors, timeout) and returns `None`. The caller cannot distinguish "attribute not yet written to zarr store" from "network down" from "netrc credentials wrong." This means a misconfigured consumer silently loses the zero-padding warning (C-130) with no error signal. The broad `except Exception` on line 79 violates ADR-008's requirement that failures be raised explicitly.
-
-**Trigger:** Consumer's `~/.netrc` is misconfigured or expired; `get_last_valid_month_id()` returns None; consumer trains on zero-padded months with no warning.
-**Location:** `src/datafactory_query/defaults.py:71,79` (broad exception handlers).
-**Resolution:** Distinguish expected None (attribute absent) from error None (network/auth failure). Either raise on non-200 HTTP status, or return a result object with error context.
+### ~~C-134: `get_last_valid_month_id()` silently returns None on all errors~~ — RESOLVED
+**Resolved 2026-04-27.** Replaced broad `except Exception` with specific `except (URLError, HTTPError, TimeoutError)` that logs at ERROR and re-raises. `json.loads` moved outside the try-except so `JSONDecodeError` propagates naturally. `None` now only returned when the zarr store legitimately lacks the attribute. Added 4 tests: `test_raises_on_network_error`, `test_raises_on_auth_failure`, `test_raises_on_json_parse_error`, `test_logs_error_on_network_failure`.
 **Source:** Tech-debt-cleanup audit (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
 
 ### ~~C-141: UCDP config class validation partially untested~~ — RESOLVED
@@ -234,10 +222,9 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 `pa.concat_tables(promote_options="default")` in `ucdp.py:439-441` silently adds columns when UCDP adds fields. Removed fields leave nulls in new records. No schema registry. Kleppmann (Ch.4 pp.112-127) treats schema evolution as essential for long-lived data: backward compatibility (new code reads old data) and forward compatibility (old code reads new data) must both be maintained. Our `promote_options="default"` handles column additions (backward compat) but not removals or renames. Ch.4 p.125 recommends a schema versioning database; Ch.4 p.131 notes archival storage should re-encode using the latest schema. **Trigger: UCDP removes a field or renames a column.**
 **Source:** Kleppmann (expert review 6). DDIA Ch.4 pp.112-127, 131.
 
-### C-31: Candidate source depends on annual source — [DEFER]
-`ucdp_candidate.py` imports 4 symbols and `ucdp_dot9.py` imports 5 symbols from `ucdp_annual.py` (including `UcdpAnnualConfig`, `fetch_paginated`, `FIELD_TYPES`, `REQUIRED_FIELDS`, and `get_ucdp_token`). Changing annual's API client could break candidate. Additionally, `ucdp_candidate.py:188-198` constructs `UcdpAnnualConfig(start_year=2000, end_year=2099)` to reuse `fetch_paginated` — sends unnecessary 100-year date range (works correctly but is a workaround). **Trigger: extract `_ucdp_common.py` when a 3rd shared function is needed. Resolution also addresses former C-28.**
-**Source:** Martin (expert review 5), falsification audit DoD005
-**Update 2026-04-21:** Magic-values audit found the UCDP API base URL `"https://ucdpapi.pcr.uu.se/api/gedevents"` hardcoded identically in all 3 config classes (`ucdp_annual.py:94`, `ucdp_candidate.py:86`, `ucdp_dot9.py:90`). This is a specific ADR-003 violation (no single source of truth) and a symptom of the same coupling. Extracting `_ucdp_common.py` would also centralize this URL.
+### ~~C-31: Candidate source depends on annual source~~ — RESOLVED
+**Resolved 2026-04-27.** Extracted `_ucdp_common.py` with `ENVELOPE_KEYS`, `UCDP_GED_API_BASE`, and `validate_envelope()`. Candidate and .9 now import shared symbols from `_ucdp_common` instead of `ucdp_annual`. Discovery functions call `validate_envelope()` and use `data["TotalCount"]` instead of `.get("TotalCount", 0)`. Network try-except narrowed to only `requests.RequestException` so envelope validation errors propagate (ADR-008). Added 2 envelope rejection tests.
+**Source:** Martin (expert review 5), falsification audit DoD005, magic-values audit 2026-04-21.
 
 ### C-44: Harvest pipeline template is implicit — [DEFER]
 All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**

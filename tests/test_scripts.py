@@ -136,3 +136,84 @@ class TestAllScriptsGreen:
             assert '__name__' in content, (
                 f"{script.name} missing __name__ guard"
             )
+
+
+class TestGridValidationOrder:
+    """C-128: assert_grid_shape must precede shape unpacking (ADR-003)."""
+
+    _SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
+
+    @staticmethod
+    def _first_line_containing(
+        lines: list[str], needle: str,
+    ) -> int | None:
+        for i, line in enumerate(lines):
+            if needle in line:
+                return i
+        return None
+
+    def test_assemble_validates_before_unpack(self) -> None:
+        lines = (
+            self._SCRIPTS_DIR / "assemble_grid.py"
+        ).read_text().splitlines()
+        validate = self._first_line_containing(
+            lines, "assert_grid_shape"
+        )
+        unpack = self._first_line_containing(
+            lines, "= ucdp_grid.shape"
+        )
+        assert validate is not None
+        assert unpack is not None
+        assert validate < unpack, (
+            "assert_grid_shape must come before .shape unpacking"
+        )
+
+    def test_export_dataframe_validates_before_unpack(
+        self,
+    ) -> None:
+        lines = (
+            self._SCRIPTS_DIR / "export_dataframe.py"
+        ).read_text().splitlines()
+        validate = self._first_line_containing(
+            lines, "assert_grid_shape"
+        )
+        unpack = self._first_line_containing(
+            lines, "= grid.shape"
+        )
+        assert validate is not None
+        assert unpack is not None
+        assert validate < unpack, (
+            "assert_grid_shape must come before .shape unpacking"
+        )
+
+    def test_export_zarr_validates_before_unpack(self) -> None:
+        lines = (
+            self._SCRIPTS_DIR / "export_zarr.py"
+        ).read_text().splitlines()
+        validate = self._first_line_containing(
+            lines, "assert_grid_shape"
+        )
+        unpack = self._first_line_containing(
+            lines, "= grid.shape"
+        )
+        assert validate is not None
+        assert unpack is not None
+        assert validate < unpack, (
+            "assert_grid_shape must come before .shape unpacking"
+        )
+
+    def test_compile_validates_before_use(self) -> None:
+        lines = (
+            self._SCRIPTS_DIR / "compile_grid.py"
+        ).read_text().splitlines()
+        validate = self._first_line_containing(
+            lines, "assert_grid_shape"
+        )
+        use = self._first_line_containing(
+            lines, "grid[:, :, :,"
+        )
+        assert validate is not None
+        assert use is not None
+        assert validate < use, (
+            "compile_grid: assert_grid_shape already correct"
+        )
