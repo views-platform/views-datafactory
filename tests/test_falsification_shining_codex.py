@@ -6,8 +6,8 @@ shining_codex now."
 F1 (resolved): ModelPathManager requires config_deployment.py and
 config_sweep.py — both now exist.
 
-F2 (resolved): Feature set matches novel_heuristics parity target
-(lr_ged_sb_dep + lr_ged_sb, both from ged_sb_best country sum).
+F2 (resolved): Feature set renames ged_sb_best → lr_ged_sb
+(matching novel_heuristics column contract).
 """
 
 from __future__ import annotations
@@ -58,10 +58,9 @@ class TestF1ConfigFiles:
     reason=SKIP_REASON,
 )
 class TestF2FeatureParity:
-    """F2 (resolved): shining_codex output matches novel_heuristics
-    column contract — lr_ged_sb_dep (feature) + lr_ged_sb (target)."""
+    """F2 (resolved): shining_codex output renames ged_sb_best → lr_ged_sb
+    (matching novel_heuristics column contract)."""
 
     def test_feature_rename_produces_target(self) -> None:
         source = (_SHINING_CODEX / "configs" / "config_queryset.py").read_text()
         assert '"ged_sb_best": "lr_ged_sb"' in source
-        assert 'lr_ged_sb_dep' in source

@@ -14,7 +14,6 @@ from pathlib import Path
 import pyarrow.parquet as pq
 
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
-from datafactory_priogrid.land_mask import fetch_land_pgids
 
 __all__ = ["list_regions", "load_region_pgids"]
 
@@ -128,6 +127,17 @@ def list_regions() -> list[str]:
 
 
 @lru_cache(maxsize=1)
+def _load_land_pgids() -> set[int]:
+    """Load the 64,818 land PRIO-GRID cell IDs.
+
+    Bundled with the package as land_pgids.json.
+    """
+    path = Path(__file__).parent / "land_pgids.json"
+    pgids = json.loads(path.read_text())
+    return set(pgids)
+
+
+@lru_cache(maxsize=1)
 def _load_legacy_pgids() -> set[int]:
     """Load the VIEWSER-era Africa+ME pgid set (13,110 cells).
 
@@ -201,7 +211,7 @@ def load_region_pgids(
         return set(range(1, DEFAULT_GRID_CONFIG.n_cells + 1))
 
     if region == "land":
-        return fetch_land_pgids()
+        return _load_land_pgids()
 
     if region == "africa_me_legacy":
         return _load_legacy_pgids()
