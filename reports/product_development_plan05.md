@@ -38,7 +38,7 @@
 | — | Verification examples (`examples/run_examples.sh`) | Done | 15 scripts (12 pass, 2 xfail, 1 remote) |
 | — | Falsification stubs (viewser replacement claim) | Done | 7 (marker-gated) |
 
-**Total: 636 passed (pytest) + 15 verification examples**
+**Total: 648 passed (pytest) + 15 verification examples**
 
 ### Architecture
 
