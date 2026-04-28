@@ -14,7 +14,7 @@ The consumer API (`datafactory_query`) is feature-complete for local access: `lo
 
 A verification examples suite (`examples/run_examples.sh`) now demonstrates every user-facing capability: both output formats, all region types, all time parsing formats, feature subsetting, both storage backends (npy + zarr), and the full consumer bridge pattern. 15 scripts, all passing. Remote zarr smoke test against the live Hetzner server also passes.
 
-**System snapshot:** 10 packages, 636 tests + 15 verification examples, 30 ADRs, 19 CICs. 143 concern IDs tracked: 96 resolved, 39 open/deferred, 6 accepted by design.
+**System snapshot:** 10 packages, 648 tests + 15 verification examples, 30 ADRs, 19 CICs. 143 concern IDs tracked: 96 resolved, 39 open/deferred, 6 accepted by design.
 
 ---
 

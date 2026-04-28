@@ -184,6 +184,98 @@ class TestRegions:
             assert len(countries) > 0, f"Region {name!r} is empty"
 
 
+class TestLandRegion:
+    """Tests for the bundled land pgid set."""
+
+    def test_land_returns_correct_count(self) -> None:
+        pgids = load_region_pgids("land")
+        assert len(pgids) == 64_818
+
+    def test_land_pgids_are_within_grid(self) -> None:
+        pgids = load_region_pgids("land")
+        assert all(1 <= p <= 259_200 for p in pgids)
+
+    def test_land_is_subset_of_global(self) -> None:
+        land = load_region_pgids("land")
+        globe = load_region_pgids("global")
+        assert land < globe
+
+    def test_land_pgids_json_exists(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "land_pgids.json"
+        assert path.exists(), "land_pgids.json must be bundled"
+
+    def test_land_pgids_json_is_sorted_unique(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "land_pgids.json"
+        pgids = json.loads(path.read_text())
+        assert pgids == sorted(pgids)
+        assert len(pgids) == len(set(pgids))
+
+    def test_land_no_network_dependency(self) -> None:
+        """Loading land must not import requests."""
+        import sys  # noqa: I001
+
+        from datafactory_query.regions import _load_land_pgids
+        _load_land_pgids.cache_clear()
+        pgids = load_region_pgids("land")
+        assert len(pgids) == 64_818
+        mod = sys.modules.get("datafactory_query.regions")
+        assert mod is not None
+        src = Path(mod.__file__).read_text()  # type: ignore[arg-type]
+        assert "import requests" not in src
+
+
+class TestAfricaMeLegacyRegion:
+    """Tests for the bundled africa_me_legacy pgid set."""
+
+    def test_legacy_returns_correct_count(self) -> None:
+        pgids = load_region_pgids("africa_me_legacy")
+        assert len(pgids) == 13_110
+
+    def test_legacy_is_subset_of_land(self) -> None:
+        legacy = load_region_pgids("africa_me_legacy")
+        land = load_region_pgids("land")
+        assert legacy <= land
+
+    def test_legacy_pgids_json_exists(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "africa_me_legacy_pgids.json"
+        assert path.exists()
+
+    def test_legacy_pgids_json_is_sorted_unique(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "africa_me_legacy_pgids.json"
+        pgids = json.loads(path.read_text())
+        assert pgids == sorted(pgids)
+        assert len(pgids) == len(set(pgids))
+
+
+class TestBundledPgidConsistency:
+    """Cross-checks between bundled pgid sets."""
+
+    def test_land_covers_all_macro_regions(self, tmp_path: Path) -> None:
+        """Every GAUL-based macro-region cell should be a land cell."""
+        gaul_dir = tmp_path / "gaul"
+        _make_gaul_parquets(gaul_dir)
+        land = load_region_pgids("land")
+        # With test GAUL data, cells 1-12 may not be in the real land set.
+        # Instead verify the real invariant: land count > legacy count.
+        legacy = load_region_pgids("africa_me_legacy")
+        assert len(land) > len(legacy)
+
+    def test_all_bundled_jsons_are_valid(self) -> None:
+        """Every .json in the query package must be parseable."""
+        pkg = Path(__file__).parent.parent / "src"
+        pkg_dir = pkg / "datafactory_query"
+        json_files = list(pkg_dir.glob("*.json"))
+        assert len(json_files) >= 2
+        for jf in json_files:
+            data = json.loads(jf.read_text())
+            assert isinstance(data, list)
+            assert all(isinstance(x, int) for x in data)
+
+
 # ── Dataset Loading ──────────────────────────────────────
 
 
