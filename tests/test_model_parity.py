@@ -20,9 +20,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-
-from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
-from datafactory_query import load_dataset
 from gold_set_config import (
     DATA_DIR,
     FACTORY_FEATURES,
@@ -33,6 +30,9 @@ from gold_set_config import (
     PARITY_FEATURES,
     PARITY_THRESHOLD,
 )
+
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
+from datafactory_query import load_dataset
 
 NCOL = DEFAULT_GRID_CONFIG.ncol
 PARITY_COLS = ["row", "col"] + PARITY_FEATURES

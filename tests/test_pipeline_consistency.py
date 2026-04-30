@@ -16,9 +16,6 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import pytest
-
-from datafactory_priogrid import from_views_month_id, to_views_month_id
-from datafactory_query import load_dataset
 from gold_set_config import (
     COMPILED_DIR,
     CONSOLIDATED_DIR,
@@ -29,6 +26,8 @@ from gold_set_config import (
     VIEWPOINT_DIR,
 )
 
+from datafactory_priogrid import to_views_month_id
+from datafactory_query import load_dataset
 
 # ── Viewpoint → Grid conservation ────────────────────────
 
