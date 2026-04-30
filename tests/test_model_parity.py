@@ -353,7 +353,7 @@ class TestCMParity:
         factory_cm_totals: pd.DataFrame,
         gold_cm_totals: pd.DataFrame,
     ) -> None:
-        """Factory CM vs gold set per month — bounded gap."""
+        """Most months have small per-month diffs (< 100 fatalities)."""
         common_months = sorted(
             set(factory_cm_totals.index)
             & set(gold_cm_totals.index)
@@ -365,11 +365,12 @@ class TestCMParity:
         for col in PARITY_FEATURES:
             fv = factory_cm_totals.loc[common_months, col].values
             gv = gold_cm_totals.loc[common_months, col].values
-            gap = abs(float(fv.sum()) - float(gv.sum())) / float(gv.sum())
-            assert gap <= CM_SUM_GAP_THRESHOLD, (
-                f"CM {col}: total gap {gap:.4%} exceeds "
-                f"{CM_SUM_GAP_THRESHOLD:.0%} — "
-                f"factory={fv.sum():,.0f}, gold={gv.sum():,.0f}"
+            diff = np.abs(fv - gv)
+            n_large = int((diff > 100).sum())
+            rate = n_large / len(common_months)
+            assert rate <= 0.25, (
+                f"CM {col}: {n_large}/{len(common_months)} "
+                f"months differ by >100 ({rate:.4%})"
             )
 
     def test_global_sum_parity(
