@@ -128,6 +128,7 @@ No such feature exists yet. When it's needed, it will be built as a proper featu
 
 - **If your model doesn't use `c_id` for training** (it shouldn't — it's an identity column): no impact. The column exists, has valid values, and HydraNet carries it through.
 - **If you aggregate by `c_id` for evaluation**: your groupings will use GAUL country codes instead of G&W codes. The groups are slightly different (GAUL has 79 unique codes in Africa+ME, G&W had 90) because they use different boundary definitions.
+- **If you use `output_format="country_month"`**: 603 coastal/island cells in africa_me_legacy have `gaul0_code = -1` (centroid falls outside any GAUL polygon) and are excluded from CM aggregation. This drops ~4% of fatalities relative to PGM totals. See the [Consumer Data Guide](consumer_data_guide.md#country-month-aggregation-caveat) for details.
 - **If you join predictions from a factory model with predictions from a viewser model on `c_id`**: they won't match. You'd need a GAUL-to-G&W mapping table.
 
 See [ADR-025](../ADRs/025_country_identity_gaul.md) for the full design rationale.

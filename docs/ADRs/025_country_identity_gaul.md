@@ -93,6 +93,14 @@ The audit script (`bright_starship/scripts/audit_data_parity.py`) confirmed that
 - If a future model requires time-varying boundary information, the trigger is clear: build an explicit feature, not a modified `c_id`.
 - Watch for: downstream aggregation or visualization code that hardcodes G&W country code values.
 
+### Unmapped cells (gaul0_code = -1)
+
+The spatial join assigns `gaul0_code = -1` to PRIO-GRID cells whose centroids fall outside all GAUL polygons. These are coastal cells, small islands, and boundary edge cases where the 0.5-degree grid centroid is in the ocean. In `africa_me_legacy`, 603 of 13,110 cells are unmapped; in the full `land` region, ~1,800 of 64,818.
+
+These cells appear in PGM output (grid-level queries) but are **excluded from CM aggregation** by `grid_to_country_month()`, which filters on `country_ids > 0`. This creates a systematic gap: CM fatality totals are ~4% lower than PGM totals for the same region and time range. The gap is not uniform — months with high coastal conflict (e.g., piracy, port city violence) show larger differences.
+
+Pipeline verification tests (`test_model_parity.py::TestCMParity`) account for this gap explicitly. See C-149 in the risk register.
+
 ---
 
 ## References

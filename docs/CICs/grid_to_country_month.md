@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-04-22
+**Last reviewed:** 2026-04-30
 **Related ADRs:** ADR-012, ADR-025
 
 ---
@@ -29,7 +29,7 @@ This is the bridge between grid-native data (one row per cell per month) and cou
 
 - Guarantees that the output DataFrame has a `(month_id, country_id)` MultiIndex
 - Guarantees that the country feature column is excluded from the output (it becomes the index)
-- Guarantees that ocean cells (country_id <= 0) are excluded from aggregation
+- Guarantees that cells with country_id <= 0 are excluded from aggregation. This includes ocean cells AND land cells whose PRIO-GRID centroids fall outside any FAO GAUL polygon (coastal cells, small islands). In `africa_me_legacy`, 603 of 13,110 cells have `gaul0_code = -1` and are excluded, carrying ~4% of total fatalities. See C-149 in the risk register.
 - Guarantees that aggregation is summation (groupby sum) — no averaging, no counting
 - Guarantees `ValueError` if the specified country feature is not in `feature_names`
 - Reuses `_flatten_grid()` from `grid_to_dataframe` for the initial flattening step
