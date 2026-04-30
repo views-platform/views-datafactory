@@ -1,8 +1,8 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-04-30)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24
-**Status:** 148 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 44 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30
+**Status:** 149 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 45 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -51,6 +51,7 @@
 | C-137 | 2 | No round-trip integrity check after zarr export | Pipeline export produces truncated or partial zarr store | Data integrity |
 | C-138 | 2 | No post-deploy data correctness verification | Pipeline completes but served data doesn't match assembled grid | Data integrity |
 | C-139 | 2 | Consumer parity tests check per-cell rates but not aggregate totals | Systematic undercounting passes per-cell threshold | Data integrity |
+| C-149 | 2 | 603 unmapped GAUL cells silently excluded from CM aggregation | Consumer trains CM model without awareness of 4% fatality gap | Data integrity |
 | ~~C-140~~ | ~~2~~ | ~~v1.2.6/v1.2.7 incident fixes have zero test coverage~~ | Resolved 2026-04-26 | Data integrity |
 | ~~C-141~~ | ~~3~~ | ~~UCDP config class validation partially untested~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-142~~ | ~~3~~ | ~~datafactory_query consumer entry point has zero Red/Beige tests~~ | Resolved 2026-04-26 | Test coverage |
@@ -88,7 +89,7 @@ Items that should be resolved together:
 | **ADR-003 compliance** | ~~C-128~~, C-129 | Before next assembly/compilation change (C-128 resolved) |
 | **Operational monitoring** | C-131, C-132, C-136, C-147 | Before relying on Hetzner pipeline without manual checks |
 | **Scaling headroom** | C-144, C-145 | Before consolidated store exceeds ~5M rows |
-| **Data integrity** | C-137, C-138, C-139 | Before relying on served data for model training |
+| **Data integrity** | C-137, C-138, C-139, C-149 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
@@ -135,6 +136,15 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 **Trigger:** UCDP API returns empty pages or cached data during the monthly pipeline run.
 **Location:** `src/datafactory_provenance/health.py:124-195` (`check_export_freshness`), `scripts/check_health.py:111-128`.
 **Source:** Falsification audit P3 (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
+
+### C-149: 603 unmapped GAUL cells silently excluded from CM aggregation — [RESOLVING]
+603 PRIO-GRID cells in `africa_me_legacy` (and ~1,800 in `land`) have centroids that fall outside any FAO GAUL polygon — coastal cells, small islands, boundary edge cases. These cells are assigned `gaul0_code = -1` during assembly. `grid_to_country_month()` filters on `country_ids > 0`, silently dropping these cells from CM output. The dropped cells carry significant fatalities: 45,593 sb_best, 6,012 ns_best, 7,986 os_best across 435 months, with single-month peaks up to 2,688. This creates a ~4% systematic gap between PGM and CM fatality totals. A model training on CM data (e.g., shining_codex) sees fewer total fatalities than a model training on PGM data (e.g., heavy_freighter) for the same region and time range, with no warning.
+
+**Fix applied (2026-04-30):** Added verification tests (`test_model_parity.py::TestCMParity`, `test_pipeline_consistency.py::TestPGMCMAggregation`) that explicitly account for the gap by filtering PGM to `gaul0_code > 0` in internal consistency checks and using bounded tolerances for gold set comparison. **Remaining:** No runtime warning when CM aggregation drops cells with events. Consumer has no way to discover which cells are excluded or quantify the gap. Resolution options: (a) emit warning/metadata listing excluded pgids and their event totals, (b) improve GAUL spatial join to capture more coastal cells via buffered centroids or polygon-edge matching.
+
+**Trigger:** Consumer trains a CM model and observes unexplained discrepancy vs PGM totals, or adds a new region with more coastal cells where the gap is larger.
+**Location:** `src/datafactory_adapters/grid_to_country_month.py:72-76` (land_mask filter), `scripts/assemble_grid.py:177-179` (gaul0_code = -1 fill), `src/datafactory_harvester/sources/gaul_admin.py:358-359` (unmatched centroids skipped).
+**Source:** Pipeline verification audit 2026-04-30. Cross-ref: C-125 (CM aggregation implementation), C-139 (aggregate total checks).
 
 ### ~~C-127: Zarr backend returns features in different order than npy backend~~ — RESOLVED
 **Resolved 2026-04-27.** `_load_grid_from_zarr()` now emits `UserWarning` when falling back to `sorted(data_vars)` due to missing `feature_order` attr. `export_zarr.py` already writes `feature_order` (since 2026-04-21). Together these close the silent divergence: new exports are correct, old stores warn. Added 2 tests in `test_query.py::TestZarrFeatureOrderFallback`.
