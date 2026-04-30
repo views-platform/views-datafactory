@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-27)
+**Date:** 2026-03-17 (updated 2026-04-30)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24
-**Status:** 143 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 39 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Status:** 148 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 44 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -57,6 +57,11 @@
 | ~~C-143~~ | ~~4~~ | ~~request_with_retry has no Red tests~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-125~~ | ~~3~~ | ~~No cm aggregation — 48/70 models cannot migrate~~ | Resolved 2026-04-21 | Migration scope |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
+| C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
+| C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
+| C-146 | 3 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
+| C-147 | 4 | No pipeline orchestrator in repository | Operator runs scripts out of order or skips a step | Operations |
+| C-148 | 4 | Hardcoded Hetzner server IP in `defaults.py` | Server migrates to new IP or hostname | Configuration |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
@@ -76,12 +81,13 @@ Items that should be resolved together:
 | **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
-| **Test infrastructure** | C-29, C-78, C-79 | Test suite growth (C-60 resolved) |
+| **Test infrastructure** | C-29, C-78, C-79, C-146 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | ~~C-31~~, C-93 | Next refactor opportunity (C-80, C-112, C-31 resolved) |
-| **Consumer integration** | C-122, C-123, C-124 | Before bright_starship can be used by anyone other than the developer |
+| ~~**Consumer integration**~~ | ~~C-122, C-123, C-124~~ | ~~Resolved~~ |
 | ~~**Query correctness**~~ | ~~C-127~~ | Resolved 2026-04-27: warning on fallback, export already writes feature_order |
 | **ADR-003 compliance** | ~~C-128~~, C-129 | Before next assembly/compilation change (C-128 resolved) |
-| **Operational monitoring** | C-131, C-132, C-136 | Before relying on Hetzner pipeline without manual checks |
+| **Operational monitoring** | C-131, C-132, C-136, C-147 | Before relying on Hetzner pipeline without manual checks |
+| **Scaling headroom** | C-144, C-145 | Before consolidated store exceeds ~5M rows |
 | **Data integrity** | C-137, C-138, C-139 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
@@ -202,6 +208,52 @@ The metric lab code being migrated has its own tests, but this repo has no "gold
 **Source:** Feathers
 **Update 2026-04-21:** Partially addressed by M13 (verification examples suite). 15 `examples/ex_*.py` scripts verify consumer-facing API contracts end-to-end. Not full characterization tests, but covers the consumer surface model developers depend on.
 
+### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
+14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
+**Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
+
+### C-144: Compilation `to_pydict()` materializes millions of Python objects — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-144 |
+| Tier | 3 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When the consolidated store exceeds ~5M events (currently ~2.3M), compilation memory usage on the CPX32 server (32GB) may exceed available RAM |
+| Location | `src/datafactory_compilation/grid_compilation.py:119-155` (`_place_events_columnar`, Phase 2: `table.to_pydict()`) |
+
+`_place_events_columnar` uses a two-phase approach: Phase 1 extracts only lat/lon/date as Python lists for bin assignment (efficient). Phase 2 calls `table.to_pydict()` on the full table (~40 columns), creating a dict of 40 lists with ~2.3M elements each, then constructs individual event dicts for every placed event. This is the dominant memory allocation. Production reports ~30s completion, so it works today, but scales linearly with event count. The performance test (`test_performance.py`) uses only 50 events, so this path is untested at production scale. Currently mitigated by sufficient server RAM (32GB).
+
+See also C-78 (`_place_events_columnar` testability).
+
+### C-145: Viewpoint builder loads full consolidated store into memory — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-145 |
+| Tier | 3 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When the consolidated store exceeds ~5M rows on a memory-constrained machine, or when building viewpoints on developer laptops with <16GB RAM |
+| Location | `src/datafactory_viewpoint/builders/ucdp_v1.py:129` (`pq.read_table(config.consolidated_path)`) |
+
+`build_ucdp_v1` calls `pq.read_table()` which materializes the entire consolidated Parquet store as a PyArrow Table. The table is then sorted by `id` (creating a second copy), and iterated as groups of Python dicts. The docstring notes peak memory was reduced from ~4GB to ~1GB via streaming output columns, but the initial `pq.read_table` plus the sorted copy still dominate. At ~2.3M events with ~45 columns this is manageable on the 32GB server. A future migration to row-group streaming or predicate pushdown would decouple viewpoint memory from store size.
+
+See also C-79 (Parquet I/O in tests).
+
+### C-146: Assembly logic lives in script, not importable package — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-146 |
+| Tier | 3 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When assembly orchestration needs refactoring, or a second assembly path is needed (e.g., different feature sets for different consumers) |
+| Location | `scripts/assemble_grid.py` (~350 LOC procedural, not in any `src/datafactory_*` package) |
+
+Every other layer exposes its core logic as an importable function: `consolidate_ucdp()`, `build_ucdp_v1()`, `compile_grid()`, `load_dataset()`. Assembly is the exception — its spatial join, static feature broadcast, and admin boundary merge logic lives entirely in `assemble_grid.py`'s `main()`. `test_assemble.py` tests sub-components (spatial join helper, GID lookup) but cannot import and test the orchestration function directly. Extracting an `assemble_grid()` function into `datafactory_compilation` or a new `datafactory_assembly` package would make the logic importable and directly testable.
+
+See also C-29 (no end-to-end integration test).
+
 ---
 
 ## Tier 4 — Accept or Defer
@@ -304,10 +356,6 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 Resolved 2026-04-21. `load_dataset(output_format="country_month")` now aggregates grid cells by country per month using `gaul0_code` as the grouping key. Adapter: `grid_to_country_month()` in `datafactory_adapters`. Active conflict features (ged_sb/ns/os_best) summed per (month_id, country_id). WDI/V-DEM/topic features remain out of scope (C-126 covers the transform gap).
 **Source:** Falsification audit 2026-04-20 (F3). Cross-ref: S1 in `test_falsification_viewser_replacement.py`.
 
-### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
-14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
-**Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
-
 ### C-135: No runtime type validation for zarr `.zattrs` values — [DEFER]
 `ds.attrs.get("last_valid_month_id")` in `dataset.py` is type-annotated as `int | None` but no runtime check validates the type. `health.py` applies `int(last_valid)` which would raise `ValueError` on a non-numeric string but silently truncate a float. The attrs are written by our own `export_zarr.py` (which produces correct types), so the only risk vector is manual server-side editing of `.zattrs`. **Trigger: manual edit of `.zattrs` on Hetzner server sets a zarr attribute to an unexpected type.**
 
@@ -320,6 +368,32 @@ Resolved 2026-04-21. `load_dataset(output_format="country_month")` now aggregate
 **Location:** `src/datafactory_provenance/health.py:39` (`read_text()` call).
 **Resolution:** Wrap `read_text()` in try/except `UnicodeDecodeError`, or use `read_bytes().decode(errors="replace")`.
 **Source:** Test review gap implementation (2026-04-22). Cross-ref: C-131, C-132 (operational monitoring).
+
+### C-147: No pipeline orchestrator in repository — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-147 |
+| Tier | 4 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When a new operator runs the pipeline for the first time without reading documentation, or when a 2nd deployment target is set up |
+| Location | `scripts/` directory (19 scripts, no ordering definition) |
+
+The pipeline is executed via individual scripts called in sequence: `harvest_ucdp.py` → `consolidate_ucdp.py` → `build_viewpoint.py` → `compile_grid.py` → `assemble_grid.py` → `export_zarr.py`. No Makefile, DAG definition, or workflow file in the repository defines or enforces this order. Correct sequencing depends on operator knowledge or reading CLAUDE.md. Each script validates its inputs exist (raises `FileNotFoundError`), so running out of order produces a clear error rather than silent corruption. `check_health.py` detects staleness after the fact. The server deployment uses cron under `views-deploy` (single `refresh_pipeline.sh` script). Currently mitigated by fail-loud input validation and single-operator deployment.
+
+See also C-131 (no cron monitoring), C-29 (no e2e integration test).
+
+### C-148: Hardcoded Hetzner server IP in `defaults.py` — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-148 |
+| Tier | 4 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When the Hetzner server migrates to a new IP or hostname |
+| Location | `src/datafactory_query/defaults.py:38` (`RemoteConfig.server = "204.168.219.108"`) |
+
+The remote server IP `204.168.219.108` is hardcoded as the default in `RemoteConfig`. Consumer code and verification scripts (`verify_remote.py`) reference this constant. The frozen dataclass allows overrides (`RemoteConfig(server="new-ip")`), but the package-level default is embedded. A server migration requires a version bump and re-install for all consumers using the default. Single constant, trivial to update.
 
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
