@@ -477,7 +477,7 @@ def test_fetch_shapefile_full_flow(tmp_path: Path) -> None:
         ledger_path=ledger,
     )
 
-    _target = "datafactory_http.retry.requests.get"
+    _target = "datafactory_http.retry.requests.request"
     with patch(_target, return_value=mock_resp):
         result = fetch_shapefile(cfg)
 
@@ -516,7 +516,7 @@ def test_fetch_shapefile_unchanged_content(tmp_path: Path) -> None:
         data_dir=tmp_path / "data",
         ledger_path=ledger,
     )
-    _target = "datafactory_http.retry.requests.get"
+    _target = "datafactory_http.retry.requests.request"
     with patch(_target, return_value=mock_resp):
         fetch_shapefile(cfg)
 
@@ -544,7 +544,7 @@ def test_fetch_shapefile_existing_files(tmp_path: Path) -> None:
         data_dir=tmp_path / "data",
         ledger_path=tmp_path / "ledger.jsonl",
     )
-    with patch("datafactory_http.retry.requests.get") as mock_get:
+    with patch("datafactory_http.retry.requests.request") as mock_get:
         result = fetch_shapefile(cfg)
 
     mock_get.assert_not_called()
