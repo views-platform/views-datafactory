@@ -19,17 +19,23 @@ logger = logging.getLogger(__name__)
 def request_with_retry(
     url: str,
     *,
+    method: str = "GET",
     headers: dict[str, str] | None = None,
     params: dict[str, Any] | None = None,
+    data: dict[str, Any] | None = None,
+    json_payload: dict[str, Any] | None = None,
     max_retries: int = 3,
     timeout: int = 30,
 ) -> requests.Response:
-    """HTTP GET with exponential backoff retry.
+    """HTTP request with exponential backoff retry.
 
     Args:
         url: URL to request.
+        method: HTTP method (GET, POST, etc.).
         headers: Optional HTTP headers.
         params: Optional query parameters.
+        data: Optional form-encoded body (POST/PUT).
+        json_payload: Optional JSON body (POST/PUT).
         max_retries: Maximum number of attempts.
         timeout: Request timeout in seconds.
 
@@ -41,10 +47,13 @@ def request_with_retry(
     """
     for attempt in range(max_retries):
         try:
-            resp = requests.get(
+            resp = requests.request(
+                method,
                 url,
                 headers=headers,
                 params=params,
+                data=data,
+                json=json_payload,
                 timeout=timeout,
             )
             resp.raise_for_status()

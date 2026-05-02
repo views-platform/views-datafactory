@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
+MOCK_TARGET = "datafactory_http.retry.requests.request"
+
 
 class TestRequestWithRetryGreen:
 
@@ -18,9 +20,7 @@ class TestRequestWithRetryGreen:
         mock_resp.raise_for_status = MagicMock()
 
         with (
-            patch(
-                "datafactory_http.retry.requests.get"
-            ) as mock_get,
+            patch(MOCK_TARGET) as mock_request,
             patch(
                 "datafactory_http.retry.time.sleep"
             ) as mock_sleep,
@@ -31,7 +31,7 @@ class TestRequestWithRetryGreen:
         ):
             import requests as _req
 
-            mock_get.side_effect = [
+            mock_request.side_effect = [
                 _req.ConnectionError("fail 1"),
                 _req.ConnectionError("fail 2"),
                 mock_resp,
@@ -40,7 +40,7 @@ class TestRequestWithRetryGreen:
                 "http://test", max_retries=3, timeout=5
             )
 
-        assert mock_get.call_count == 3
+        assert mock_request.call_count == 3
         assert mock_sleep.call_count == 2
         mock_sleep.assert_any_call(1.5)  # 2^0 + 0.5 jitter
         mock_sleep.assert_any_call(2.5)  # 2^1 + 0.5 jitter
@@ -49,32 +49,32 @@ class TestRequestWithRetryGreen:
         from datafactory_http import request_with_retry
 
         with (
-            patch(
-                "datafactory_http.retry.requests.get"
-            ) as mock_get,
+            patch(MOCK_TARGET) as mock_request,
             patch("datafactory_http.retry.time.sleep"),
         ):
             import requests as _req
 
-            mock_get.side_effect = _req.ConnectionError("always fails")
+            mock_request.side_effect = _req.ConnectionError(
+                "always fails"
+            )
             with pytest.raises(_req.ConnectionError):
                 request_with_retry(
                     "http://test", max_retries=3, timeout=5
                 )
 
-        assert mock_get.call_count == 3
+        assert mock_request.call_count == 3
 
     def test_headers_and_params_passed_through(self) -> None:
-        """Optional headers and params are forwarded to requests.get."""
+        """Optional headers and params are forwarded."""
         from datafactory_http import request_with_retry
 
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
 
         with patch(
-            "datafactory_http.retry.requests.get",
+            MOCK_TARGET,
             return_value=mock_resp,
-        ) as mock_get:
+        ) as mock_request:
             request_with_retry(
                 "http://test",
                 headers={"Authorization": "token abc"},
@@ -82,30 +82,36 @@ class TestRequestWithRetryGreen:
                 timeout=10,
             )
 
-        mock_get.assert_called_once_with(
+        mock_request.assert_called_once_with(
+            "GET",
             "http://test",
             headers={"Authorization": "token abc"},
             params={"page": 1},
+            data=None,
+            json=None,
             timeout=10,
         )
 
     def test_defaults_no_headers_no_params(self) -> None:
-        """Without headers/params, requests.get gets None for both."""
+        """Without headers/params, requests.request gets None."""
         from datafactory_http import request_with_retry
 
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
 
         with patch(
-            "datafactory_http.retry.requests.get",
+            MOCK_TARGET,
             return_value=mock_resp,
-        ) as mock_get:
+        ) as mock_request:
             request_with_retry("http://test", timeout=5)
 
-        mock_get.assert_called_once_with(
+        mock_request.assert_called_once_with(
+            "GET",
             "http://test",
             headers=None,
             params=None,
+            data=None,
+            json=None,
             timeout=5,
         )
 
@@ -121,9 +127,9 @@ class TestRequestWithRetryGreen:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                MOCK_TARGET,
                 return_value=mock_resp,
-            ) as mock_get,
+            ) as mock_request,
             patch("datafactory_http.retry.time.sleep") as mock_sleep,
             pytest.raises(requests.HTTPError),
         ):
@@ -131,7 +137,7 @@ class TestRequestWithRetryGreen:
                 "http://test", max_retries=3, timeout=5
             )
 
-        assert mock_get.call_count == 1  # No retry
+        assert mock_request.call_count == 1  # No retry
         mock_sleep.assert_not_called()
 
     def test_5xx_still_retried(self) -> None:
@@ -149,9 +155,9 @@ class TestRequestWithRetryGreen:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                MOCK_TARGET,
                 side_effect=[fail_resp, ok_resp],
-            ) as mock_get,
+            ) as mock_request,
             patch("datafactory_http.retry.time.sleep"),
             patch(
                 "datafactory_http.retry.random.uniform",
@@ -162,7 +168,140 @@ class TestRequestWithRetryGreen:
                 "http://test", max_retries=3, timeout=5
             )
 
-        assert mock_get.call_count == 2  # Retried once
+        assert mock_request.call_count == 2  # Retried once
+
+    def test_default_method_is_get(self) -> None:
+        """Without method kwarg, defaults to GET."""
+        from datafactory_http import request_with_retry
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch(
+            MOCK_TARGET, return_value=mock_resp,
+        ) as mock_request:
+            request_with_retry("http://test", timeout=5)
+
+        assert mock_request.call_args[0][0] == "GET"
+
+
+class TestRequestWithRetryPost:
+
+    def test_post_method_passed(self) -> None:
+        """POST method is forwarded to requests.request."""
+        from datafactory_http import request_with_retry
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch(
+            MOCK_TARGET, return_value=mock_resp,
+        ) as mock_request:
+            request_with_retry(
+                "http://test/token",
+                method="POST",
+                data={"username": "u", "password": "p"},
+                timeout=10,
+            )
+
+        mock_request.assert_called_once_with(
+            "POST",
+            "http://test/token",
+            headers=None,
+            params=None,
+            data={"username": "u", "password": "p"},
+            json=None,
+            timeout=10,
+        )
+
+    def test_post_json_payload(self) -> None:
+        """JSON payload is forwarded via the json= kwarg."""
+        from datafactory_http import request_with_retry
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch(
+            MOCK_TARGET, return_value=mock_resp,
+        ) as mock_request:
+            request_with_retry(
+                "http://test/api",
+                method="POST",
+                json_payload={"key": "value"},
+                timeout=5,
+            )
+
+        mock_request.assert_called_once_with(
+            "POST",
+            "http://test/api",
+            headers=None,
+            params=None,
+            data=None,
+            json={"key": "value"},
+            timeout=5,
+        )
+
+    def test_post_4xx_not_retried(self) -> None:
+        """POST 4xx errors fail immediately, same as GET."""
+        from datafactory_http import request_with_retry
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 400
+        mock_resp.raise_for_status.side_effect = (
+            requests.HTTPError(response=mock_resp)
+        )
+
+        with (
+            patch(
+                MOCK_TARGET, return_value=mock_resp,
+            ) as mock_request,
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            pytest.raises(requests.HTTPError),
+        ):
+            request_with_retry(
+                "http://test/token",
+                method="POST",
+                data={"user": "x"},
+                max_retries=3,
+                timeout=5,
+            )
+
+        assert mock_request.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_post_5xx_retried(self) -> None:
+        """POST 5xx errors are retried."""
+        from datafactory_http import request_with_retry
+
+        fail_resp = MagicMock()
+        fail_resp.status_code = 502
+        fail_resp.raise_for_status.side_effect = (
+            requests.HTTPError(response=fail_resp)
+        )
+
+        ok_resp = MagicMock()
+        ok_resp.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                MOCK_TARGET,
+                side_effect=[fail_resp, ok_resp],
+            ) as mock_request,
+            patch("datafactory_http.retry.time.sleep"),
+            patch(
+                "datafactory_http.retry.random.uniform",
+                return_value=0.0,
+            ),
+        ):
+            request_with_retry(
+                "http://test/token",
+                method="POST",
+                data={"user": "x"},
+                max_retries=3,
+                timeout=5,
+            )
+
+        assert mock_request.call_count == 2
 
 
 class TestRequestWithRetryRed:
@@ -176,13 +315,15 @@ class TestRequestWithRetryRed:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                MOCK_TARGET,
                 side_effect=[
                     requests.Timeout("timed out"),
                     ok_resp,
                 ],
-            ) as mock_get,
-            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            ) as mock_request,
+            patch(
+                "datafactory_http.retry.time.sleep"
+            ) as mock_sleep,
             patch(
                 "datafactory_http.retry.random.uniform",
                 return_value=0.5,
@@ -192,11 +333,11 @@ class TestRequestWithRetryRed:
                 "http://test", max_retries=3, timeout=5,
             )
 
-        assert mock_get.call_count == 2
+        assert mock_request.call_count == 2
         assert mock_sleep.call_count == 1
 
     def test_http_error_with_no_response_retried(self) -> None:
-        """HTTPError with response=None is retried (not treated as 4xx)."""
+        """HTTPError with response=None is retried (not 4xx)."""
         from datafactory_http import request_with_retry
 
         ok_resp = MagicMock()
@@ -204,12 +345,12 @@ class TestRequestWithRetryRed:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                MOCK_TARGET,
                 side_effect=[
                     requests.HTTPError(response=None),
                     ok_resp,
                 ],
-            ) as mock_get,
+            ) as mock_request,
             patch("datafactory_http.retry.time.sleep"),
             patch(
                 "datafactory_http.retry.random.uniform",
@@ -220,4 +361,4 @@ class TestRequestWithRetryRed:
                 "http://test", max_retries=3, timeout=5,
             )
 
-        assert mock_get.call_count == 2
+        assert mock_request.call_count == 2

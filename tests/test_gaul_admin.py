@@ -37,10 +37,10 @@ class TestDownloadShapefileZip:
         import requests as _req
 
         with (
-            patch("datafactory_http.retry.requests.get") as mock_get,
+            patch("datafactory_http.retry.requests.request") as mock_request,
             patch("datafactory_http.retry.time.sleep"),
         ):
-            mock_get.side_effect = [
+            mock_request.side_effect = [
                 _req.ConnectionError("transient"),
                 mock_resp,
             ]
@@ -50,7 +50,7 @@ class TestDownloadShapefileZip:
                 timeout=10,
             )
 
-        assert mock_get.call_count == 2
+        assert mock_request.call_count == 2
         assert result.suffix == ".shp"
         assert result.exists()
 
@@ -64,13 +64,13 @@ class TestDownloadShapefileZip:
         cache_dir.mkdir()
         (cache_dir / "test.shp").write_text("cached")
 
-        with patch("datafactory_http.retry.requests.get") as mock_get:
+        with patch("datafactory_http.retry.requests.request") as mock_request:
             result = _download_shapefile_zip(
                 "http://example.com/test.zip",
                 cache_dir,
             )
 
-        mock_get.assert_not_called()
+        mock_request.assert_not_called()
         assert result.name == "test.shp"
 
 

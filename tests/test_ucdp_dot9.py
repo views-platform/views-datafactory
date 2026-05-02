@@ -180,7 +180,7 @@ class TestDiscoverDot9VersionsGreen:
         config = UcdpDot9Config(start_year=2025)
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 side_effect=responses,
             ),
             patch.dict(
@@ -204,7 +204,7 @@ class TestDiscoverDot9VersionsGreen:
         config = UcdpDot9Config(start_year=2025)
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 return_value=resp,
             ),
             patch.dict(
@@ -233,7 +233,7 @@ class TestDiscoverDot9EnvelopeRed:
         config = UcdpDot9Config(start_year=2025)
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 return_value=resp,
             ),
             patch.dict(
@@ -289,7 +289,7 @@ class TestFetchUcdpDot9Green:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 side_effect=discover_responses + [fetch_resp],
             ),
             patch.dict(
