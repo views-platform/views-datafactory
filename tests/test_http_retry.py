@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-
 MOCK_TARGET = "datafactory_http.retry.requests.request"
 
 

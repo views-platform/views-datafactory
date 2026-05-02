@@ -15,14 +15,13 @@ import pytest
 from datafactory_harvester.sources.acled import (
     ALL_EVENT_TYPES,
     AcledConfig,
-    _TokenState,
     _acquire_token,
     _ensure_token,
+    _TokenState,
     fetch_acled,
     fetch_paginated,
     get_acled_credentials,
 )
-
 
 # ---- Config Validation ----
 

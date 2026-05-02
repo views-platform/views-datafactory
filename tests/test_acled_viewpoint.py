@@ -15,7 +15,6 @@ from datafactory_viewpoint.builders.acled_v1 import (
 )
 from datafactory_viewpoint.viewpoint_result import ViewpointResult
 
-
 # ---- Helpers ----
 
 
@@ -130,7 +129,7 @@ class TestBuildAcledV1Green:
         output = pq.read_table(config.output_path)
         months = output.column("date_month").to_pylist()
         dates = output.column("event_date").to_pylist()
-        for m, d in zip(months, dates):
+        for m, d in zip(months, dates, strict=True):
             assert m == d[:7]
 
     def test_event_type_filter(self, tmp_path: Path) -> None:

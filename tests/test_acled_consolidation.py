@@ -22,7 +22,6 @@ from datafactory_consolidation.consolidators.acled import (
 )
 from datafactory_consolidation.event_store import read_store
 
-
 # ---- Helpers ----
 
 
