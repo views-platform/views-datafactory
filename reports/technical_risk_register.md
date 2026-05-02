@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-30)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30
-**Status:** 149 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 45 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-05-02)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02
+**Status:** 152 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 48 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -63,6 +63,9 @@
 | C-146 | 3 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
 | C-147 | 4 | No pipeline orchestrator in repository | Operator runs scripts out of order or skips a step | Operations |
 | C-148 | 4 | Hardcoded Hetzner server IP in `defaults.py` | Server migrates to new IP or hostname | Configuration |
+| C-150 | 2 | Zero Red team tests for ACLED pipeline | ACLED Phase 2 API investigation begins | ACLED test coverage |
+| C-151 | 3 | No CICs for ACLED config classes | Developer modifies ACLED config validation | ACLED test coverage |
+| C-152 | 3 | ACLED profiles and `list_acled_profiles()` untested | Script calls `load_acled_profile` with wrong name or override | ACLED test coverage |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
@@ -92,6 +95,7 @@ Items that should be resolved together:
 | **Data integrity** | C-137, C-138, C-139, C-149 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
+| **ACLED test coverage** | C-150, C-151, C-152 | Before ACLED Phase 2 API investigation |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -145,6 +149,13 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 **Trigger:** Consumer trains a CM model and observes unexplained discrepancy vs PGM totals, or adds a new region with more coastal cells where the gap is larger.
 **Location:** `src/datafactory_adapters/grid_to_country_month.py:72-76` (land_mask filter), `scripts/assemble_grid.py:177-179` (gaul0_code = -1 fill), `src/datafactory_harvester/sources/gaul_admin.py:358-359` (unmatched centroids skipped).
 **Source:** Pipeline verification audit 2026-04-30. Cross-ref: C-125 (CM aggregation implementation), C-139 (aggregate total checks).
+
+### C-150: Zero Red team tests for ACLED pipeline
+All three ACLED test files (harvester, consolidation, viewpoint) have Green and Beige coverage but zero Red team test classes. ADR-005 mandates all three categories ("none may substitute for another"). Every UCDP counterpart has Red tests: `TestRateLimitBackoffRed` (annual), `TestValidateEnvelopeRed` (annual), `TestConsolidateUcdpRed` (consolidation), `TestBuildUcdpV1Red` (viewpoint). Specific untested attack surfaces: malformed JSON from ACLED API, HTTP 429 rate limiting, token endpoint returning garbage, corrupted Parquet in source dir, schema drift between snapshots, malformed event_date (non-ISO format), event_type_filter eliminating all events (empty output), consolidated store with wrong columns. The `_assign_date_month(d)` function does `d[:7]` — if `d` is `None` or non-ISO, this silently produces garbage date_month values with no error signal. This is a Tier 2 concern because malformed dates would cause silent data corruption in the viewpoint output: events assigned to wrong months, consumed by models without warning.
+
+**Trigger:** ACLED Phase 2 API investigation begins — at that point the harvester will process real API responses whose format is currently assumed from documentation.
+**Location:** `tests/test_acled_harvester.py` (0 Red classes, vs 2 in test_ucdp_annual.py), `tests/test_acled_consolidation.py` (0 Red classes, vs 2 in test_consolidation.py), `tests/test_acled_viewpoint.py` (0 Red classes, vs 3+1 in test_viewpoint.py). Source: `src/datafactory_viewpoint/builders/acled_v1.py:84` (`_assign_date_month`).
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 
 ### ~~C-127: Zarr backend returns features in different order than npy backend~~ — RESOLVED
 **Resolved 2026-04-27.** `_load_grid_from_zarr()` now emits `UserWarning` when falling back to `sorted(data_vars)` due to missing `feature_order` attr. `export_zarr.py` already writes `feature_order` (since 2026-04-21). Together these close the silent divergence: new exports are correct, old stores warn. Added 2 tests in `test_query.py::TestZarrFeatureOrderFallback`.
@@ -264,6 +275,22 @@ Every other layer exposes its core logic as an importable function: `consolidate
 
 See also C-29 (no end-to-end integration test).
 
+### C-151: No CICs for ACLED config classes
+`AcledConfig`, `AcledConsolidationConfig`, and `AcledViewpointConfig` have no Class Interface Contracts. Every UCDP config class has a CIC (`docs/CICs/UcdpAnnualConfig.md`, etc.) that declares responsibilities, guarantees, failure modes, and expected test alignment. Without CICs, tests verify implementation rather than declared behavior — a developer modifying `AcledConfig.__post_init__` validation has no contract reference to ensure the test suite stays aligned. Additionally, frozen-enforcement tests (verifying `AttributeError` on mutation) are absent for all three ACLED configs — every UCDP CIC mandates this test. The lack of CICs also means `_assign_date_month`'s silent string-slicing behavior has no documented contract specifying what input formats it accepts.
+
+**Trigger:** Developer modifies ACLED config `__post_init__` validation or adds/removes a field — no CIC to check whether tests need updating.
+**Location:** `docs/CICs/` (missing: `AcledConfig.md`, `AcledConsolidationConfig.md`, `AcledViewpointConfig.md`). Source classes: `src/datafactory_harvester/sources/acled.py:97` (`AcledConfig`), `src/datafactory_consolidation/consolidators/acled.py:162` (`AcledConsolidationConfig`), `src/datafactory_viewpoint/builders/acled_v1.py:56` (`AcledViewpointConfig`).
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-07 (frozen dataclass pattern repeated), C-150 (zero Red tests).
+
+### C-152: ACLED profiles and `list_acled_profiles()` untested
+`load_acled_profile()`, `list_acled_profiles()`, ACLED profile override merging, and unknown ACLED profile error handling have zero test coverage. The UCDP side has 5 profile tests (`TestProfilesGreen`: 4 tests, `TestProfilesRed`: 1 test). Two registered profiles (`acled_violence_only`, `acled_all_events`) are never loaded in tests to verify they produce valid `AcledViewpointConfig` instances. A typo in the profile registration (e.g., wrong event type string) would go undetected until runtime.
+
+**Trigger:** Script or notebook calls `load_acled_profile("acled_violence_only", path)` and gets an unexpected config, or calls with a typo and gets an unhelpful error.
+**Location:** `src/datafactory_viewpoint/profiles.py:112-153` (ACLED profile section). Tests: `tests/test_viewpoint.py` (UCDP profiles tested at lines 1185-1241; no ACLED equivalent).
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-150 (ACLED test gaps).
+
+See also C-29 (no end-to-end integration test).
+
 ---
 
 ## Tier 4 — Accept or Defer
@@ -291,6 +318,7 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 ### C-44: Harvest pipeline template is implicit — [DEFER]
 All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
 **Note (2026-04-04):** Trigger condition met — 5 sources exist (ucdp_annual, ucdp_candidate, ucdp_dot9, priogrid_static, gaul_admin). Accepted at v1.0 scope: all 5 harvesters work correctly, implicit template hasn't caused bugs. Reassess before V-Dem (6th source).
+**Note (2026-05-02):** 6th source added (ACLED). Pattern was replicated from existing harvesters without issues. Template extraction deferred to V-Dem (7th source) or next refactor.
 **Source:** GoF (expert review 6)
 
 ### C-46: No ledger write idempotency — [DEFER]

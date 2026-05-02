@@ -225,6 +225,175 @@ class TestBuildAcledV1Beige:
             build_acled_v1()
 
 
+# ---- Red Team (Adversarial) ----
+
+
+class TestBuildAcledV1Red:
+
+    def test_malformed_event_date(self, tmp_path: Path) -> None:
+        """Non-ISO event_date produces truncated date_month."""
+        store_path = tmp_path / "store" / "store.parquet"
+        _make_consolidated_store(store_path, n=3)
+
+        output = pq.read_table(store_path)
+        bad_dates = pa.array(
+            ["2020/01/15", "bad", ""],
+            type=pa.string(),
+        )
+        output = output.set_column(
+            output.column_names.index("event_date"),
+            "event_date",
+            bad_dates,
+        )
+        pq.write_table(output, store_path)
+
+        config = AcledViewpointConfig(
+            consolidated_path=store_path,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        build_acled_v1(config)
+        vp = pq.read_table(config.output_path)
+        months = vp.column("date_month").to_pylist()
+        assert months[0] == "2020/01"
+        assert months[1] == "bad"[:7]
+
+    def test_filter_eliminates_all_events(
+        self, tmp_path: Path,
+    ) -> None:
+        """Filter matching zero events writes empty output."""
+        store_path = tmp_path / "store" / "store.parquet"
+        _make_consolidated_store(
+            store_path, n=5, event_types=["Battles"],
+        )
+
+        config = AcledViewpointConfig(
+            consolidated_path=store_path,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+            event_type_filter=("Nonexistent",),
+        )
+
+        result = build_acled_v1(config)
+        assert result.n_events_output == 0
+        assert result.n_filtered == 5
+        assert result.output_path.exists()
+
+    def test_missing_required_field_in_store(
+        self, tmp_path: Path,
+    ) -> None:
+        """Consolidated store missing event_type raises."""
+        store_path = tmp_path / "store" / "store.parquet"
+        table = pa.table({
+            "event_id_cnty": ["SOM0001"],
+            "event_date": ["2020-01-15"],
+            "latitude": [2.0],
+            "longitude": [45.0],
+            "fatalities": [0],
+        })
+        store_path.parent.mkdir(parents=True)
+        pq.write_table(table, store_path)
+
+        config = AcledViewpointConfig(
+            consolidated_path=store_path,
+            output_path=tmp_path / "vp" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        with pytest.raises(
+            ValueError, match="missing required fields"
+        ):
+            build_acled_v1(config)
+
+    def test_frozen_config_mutation(
+        self, tmp_path: Path,
+    ) -> None:
+        """AcledViewpointConfig rejects mutation."""
+        cfg = AcledViewpointConfig(
+            consolidated_path=tmp_path / "store.parquet",
+        )
+        with pytest.raises(AttributeError):
+            cfg.version = "new"  # type: ignore[misc]
+
+
+# ---- ACLED Profiles ----
+
+
+class TestAcledProfilesGreen:
+
+    def test_load_acled_violence_only(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.profiles import (
+            load_acled_profile,
+        )
+
+        cfg = load_acled_profile(
+            "acled_violence_only",
+            tmp_path / "store.parquet",
+        )
+        assert isinstance(cfg, AcledViewpointConfig)
+        assert cfg.event_type_filter == (
+            "Battles",
+            "Explosions/Remote violence",
+            "Violence against civilians",
+        )
+        assert cfg.version == "acled_violence_only"
+
+    def test_load_acled_all_events(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.profiles import (
+            load_acled_profile,
+        )
+
+        cfg = load_acled_profile(
+            "acled_all_events",
+            tmp_path / "store.parquet",
+        )
+        assert isinstance(cfg, AcledViewpointConfig)
+        assert cfg.event_type_filter is None
+        assert cfg.version == "acled_all_events"
+
+    def test_load_with_override(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.profiles import (
+            load_acled_profile,
+        )
+
+        cfg = load_acled_profile(
+            "acled_violence_only",
+            tmp_path / "store.parquet",
+            event_type_filter=("Battles",),
+        )
+        assert cfg.event_type_filter == ("Battles",)
+
+    def test_list_acled_profiles(self) -> None:
+        from datafactory_viewpoint.profiles import (
+            list_acled_profiles,
+        )
+
+        profiles = list_acled_profiles()
+        assert "acled_violence_only" in profiles
+        assert "acled_all_events" in profiles
+
+
+class TestAcledProfilesRed:
+
+    def test_unknown_acled_profile_raises(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.profiles import (
+            load_acled_profile,
+        )
+
+        with pytest.raises(KeyError, match="Unknown ACLED"):
+            load_acled_profile(
+                "nonexistent", tmp_path / "store.parquet"
+            )
+
+
 # ---- Registration ----
 
 
