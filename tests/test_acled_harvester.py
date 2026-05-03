@@ -613,11 +613,8 @@ class TestAcledCharacterization:
 
     @pytest.fixture(autouse=True)
     def _ensure_fixture(self, tmp_path: Path) -> None:
-        """Use the real sample if available, else skip."""
-        desktop_sample = Path.home() / "Desktop" / "ACLED_sample.json"
-        if desktop_sample.exists():
-            self._sample = desktop_sample
-        elif self.SAMPLE_PATH.exists():
+        """Load committed fixture, skip if unavailable."""
+        if self.SAMPLE_PATH.exists():
             self._sample = self.SAMPLE_PATH
         else:
             pytest.skip("No ACLED sample fixture available")
