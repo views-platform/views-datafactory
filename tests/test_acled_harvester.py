@@ -385,7 +385,7 @@ class TestFetchAcledBeige:
 class TestPaginationGreen:
 
     def test_multiple_pages(self, tmp_path: Path) -> None:
-        """Pagination with limit/offset fetches all events."""
+        """Page-based pagination fetches all events."""
         page1_events = _make_acled_events(3)
         page2_events = [
             {
@@ -433,6 +433,254 @@ class TestPaginationGreen:
             )
 
         assert len(events) == 5
+
+
+    def test_empty_page_terminates(self, tmp_path: Path) -> None:
+        """Pagination stops when API returns empty data array."""
+        page1_events = _make_acled_events(3)
+
+        token_resp = _mock_token_response()
+
+        resp1 = MagicMock()
+        resp1.json.return_value = _make_acled_response(
+            page1_events
+        )
+        resp1.raise_for_status = MagicMock()
+
+        resp_empty = MagicMock()
+        resp_empty.json.return_value = _make_acled_response([])
+        resp_empty.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=3,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp1, resp_empty],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(
+                config, "user", "pass"
+            )
+
+        assert len(events) == 3
+
+    def test_token_request_includes_client_id(self) -> None:
+        """Token POST body must include client_id=acled."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "access_token": "tok123",
+            "expires_in": 86400,
+        }
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch(
+            "datafactory_http.retry.requests.request",
+            return_value=mock_resp,
+        ) as mock_req:
+            _acquire_token("user", "pass")
+
+        call_kwargs = mock_req.call_args[1]
+        assert call_kwargs["data"]["client_id"] == "acled"
+
+    def test_page_params_structure(self, tmp_path: Path) -> None:
+        """API request sends page, _format, limit, event_date."""
+        events = _make_acled_events(2)
+        token_resp = _mock_token_response()
+
+        data_resp = MagicMock()
+        data_resp.json.return_value = _make_acled_response(
+            events
+        )
+        data_resp.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2023,
+            end_year=2024,
+            page_size=5000,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, data_resp],
+            ) as mock_req,
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            fetch_paginated(config, "user", "pass")
+
+        # Second call is the data request (first is token)
+        data_call = mock_req.call_args_list[1]
+        params = data_call[1]["params"]
+        assert params["page"] == 1
+        assert params["_format"] == "json"
+        assert params["limit"] == 5000
+        assert params["event_date"] == "2023-01-01|2024-12-31"
+        assert params["event_date_where"] == "BETWEEN"
+        assert "offset" not in params
+
+    def test_mid_pagination_token_refresh(
+        self, tmp_path: Path,
+    ) -> None:
+        """Token that expires mid-pagination is refreshed."""
+        page1_events = _make_acled_events(3)
+        page2_events = _make_acled_events(2)
+
+        token_resp1 = MagicMock()
+        token_resp1.json.return_value = {
+            "access_token": "tok_first",
+            "expires_in": 310,
+        }
+        token_resp1.raise_for_status = MagicMock()
+
+        token_resp2 = MagicMock()
+        token_resp2.json.return_value = {
+            "access_token": "tok_refreshed",
+            "expires_in": 86400,
+        }
+        token_resp2.raise_for_status = MagicMock()
+
+        resp1 = MagicMock()
+        resp1.json.return_value = _make_acled_response(
+            page1_events
+        )
+        resp1.raise_for_status = MagicMock()
+
+        resp2 = MagicMock()
+        resp2.json.return_value = _make_acled_response(
+            page2_events
+        )
+        resp2.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=3,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        # Monotonic sequence:
+        # _acquire_token: expires_at = 0 + 310 = 310
+        # _ensure_token (page 1): 5 < 310-300=10 → valid
+        # _ensure_token (page 2): 15 < 10 → INVALID → refresh
+        # _acquire_token (refresh): expires_at = 15 + 86400
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[
+                    token_resp1, resp1, token_resp2, resp2,
+                ],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.monotonic",
+                side_effect=[0.0, 5.0, 15.0, 15.0],
+            ),
+        ):
+            events = fetch_paginated(
+                config, "user", "pass"
+            )
+
+        assert len(events) == 5
+
+
+# ---- Characterization (Real Data) ----
+
+
+class TestAcledCharacterization:
+    """Verify validator works against real API response structure."""
+
+    SAMPLE_PATH = (
+        Path(__file__).parent.parent / "tests" / "fixtures"
+        / "acled_sample.json"
+    )
+
+    @pytest.fixture(autouse=True)
+    def _ensure_fixture(self, tmp_path: Path) -> None:
+        """Load committed fixture, skip if unavailable."""
+        if self.SAMPLE_PATH.exists():
+            self._sample = self.SAMPLE_PATH
+        else:
+            pytest.skip("No ACLED sample fixture available")
+
+    def test_sample_has_required_fields(self) -> None:
+        """Every event in real sample has all REQUIRED_FIELDS."""
+        from datafactory_harvester.sources.acled import (
+            REQUIRED_FIELDS,
+        )
+
+        data = json.loads(self._sample.read_text())
+        events = data["data"]
+
+        for i, ev in enumerate(events):
+            missing = REQUIRED_FIELDS - set(ev.keys())
+            assert not missing, (
+                f"Event {i} missing fields: {missing}"
+            )
+
+    def test_sample_field_types_match(self) -> None:
+        """Field types in real sample match FIELD_TYPES spec."""
+        from datafactory_harvester.sources.acled import (
+            FIELD_TYPES,
+        )
+
+        data = json.loads(self._sample.read_text())
+        events = data["data"]
+
+        for i, ev in enumerate(events):
+            for field, expected in FIELD_TYPES.items():
+                if field not in ev or ev[field] is None:
+                    continue
+                assert isinstance(ev[field], expected), (
+                    f"Event {i} field {field}: "
+                    f"expected {expected}, got "
+                    f"{type(ev[field])}"
+                )
+
+    def test_sample_response_envelope(self) -> None:
+        """Real response has expected envelope structure."""
+        data = json.loads(self._sample.read_text())
+
+        assert "data" in data
+        assert isinstance(data["data"], list)
+        assert "status" in data
+        assert "success" in data
+
+    def test_validate_events_passes_on_sample(self) -> None:
+        """validate_events accepts real API response events."""
+        from datafactory_harvester.event_validation import (
+            validate_events,
+        )
+        from datafactory_harvester.sources.acled import (
+            FIELD_TYPES,
+            REQUIRED_FIELDS,
+        )
+
+        data = json.loads(self._sample.read_text())
+        events = data["data"]
+
+        result = validate_events(
+            events, REQUIRED_FIELDS, FIELD_TYPES
+        )
+        assert result.valid, (
+            f"Validation failed: {result.errors}"
+        )
 
 
 # ---- Red Team (Adversarial) ----

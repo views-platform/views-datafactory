@@ -8,7 +8,7 @@ authenticate with their own credentials — credential sharing is
 prohibited by ACLED's EULA.
 
 Source-specific concerns: OAuth token lifecycle, event type taxonomy,
-daily granularity, pagination via limit/offset. Uses the shared
+daily granularity, pagination via page parameter. Uses the shared
 harvester skeleton (validation, storage, provenance).
 """
 
@@ -46,8 +46,8 @@ _LOG_EVERY_N_PAGES: int = 10
 _FETCH_DURATION_PRECISION: int = 1
 _TOKEN_REFRESH_MARGIN_S: float = 300.0  # Refresh 5 min before expiry
 
-ACLED_API_BASE = "https://api.acleddata.com/acled/read"
-ACLED_TOKEN_URL = "https://api.acleddata.com/token"
+ACLED_API_BASE = "https://acleddata.com/api/acled/read"
+ACLED_TOKEN_URL = "https://acleddata.com/oauth/token"
 
 ALL_EVENT_TYPES: tuple[str, ...] = (
     "Battles",
@@ -222,6 +222,7 @@ def _acquire_token(
         token_url,
         method="POST",
         data={
+            "client_id": "acled",
             "username": username,
             "password": password,
             "grant_type": "password",
@@ -278,7 +279,7 @@ def fetch_paginated(
     *,
     max_pages: int | None = None,
 ) -> list[dict]:
-    """Fetch all ACLED events with limit/offset pagination.
+    """Fetch all ACLED events with page-based pagination.
 
     Args:
         config: Harvest configuration.
@@ -298,7 +299,6 @@ def fetch_paginated(
     )
 
     all_events: list[dict] = []
-    offset = 0
     page = 1
 
     while True:
@@ -315,14 +315,18 @@ def fetch_paginated(
             "Authorization": f"Bearer {token_state.access_token}",
         }
         params: dict = {
+            "_format": "json",
             "event_date": (
                 f"{config.start_year}-01-01"
                 f"|{config.end_year}-12-31"
             ),
             "event_date_where": "BETWEEN",
             "limit": config.page_size,
-            "offset": offset,
+            "page": page,
         }
+
+        if config.event_types != ALL_EVENT_TYPES:
+            params["event_type"] = "|".join(config.event_types)
 
         response = request_with_retry(
             config.api_url,
@@ -341,10 +345,9 @@ def fetch_paginated(
 
         if page % _LOG_EVERY_N_PAGES == 0 or page == 1:
             logger.info(
-                "Page %d: %d events so far (offset=%d)",
+                "Page %d: %d events fetched so far",
                 page,
                 len(all_events),
-                offset,
             )
 
         if len(results) < config.page_size:
@@ -356,7 +359,6 @@ def fetch_paginated(
             )
             break
 
-        offset += config.page_size
         page += 1
         time.sleep(config.page_delay)
 
