@@ -34,7 +34,7 @@ Bootstrapped from base_docs templates on 2026-03-17 for views-datafactory.
 ## CICs
 
 - [x] Replace placeholder active contracts list in `CICs/README.md` with priority candidates
-- [ ] Create intent contracts for non-trivial classes as they are implemented (GridConfig, HarvesterConfig, etc.)
+- [x] Create intent contracts for non-trivial classes as they are implemented — 21 CICs active (see `CICs/README.md`)
 
 ---
 
@@ -56,6 +56,6 @@ Bootstrapped from base_docs templates on 2026-03-17 for views-datafactory.
 ## Final Verification
 
 - [x] No files still have Status `--template--` (ADR-004 is intentionally `Deferred`)
-- [ ] No phantom references to non-existent files (run `validate_docs.sh`)
-- [ ] All cross-ADR references resolve correctly (run `validate_docs.sh`)
-- [ ] Run `validate_docs.sh` to check internal consistency
+- [x] No phantom references to non-existent files (run `validate_docs.sh`) — last run 2026-05-03
+- [x] All cross-ADR references resolve correctly (run `validate_docs.sh`) — last run 2026-05-03
+- [x] Run `validate_docs.sh` to check internal consistency — PASSED 2026-05-03

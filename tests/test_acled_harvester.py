@@ -435,6 +435,139 @@ class TestPaginationGreen:
         assert len(events) == 5
 
 
+# ---- Red Team (Adversarial) ----
+
+
+class TestFetchAcledRed:
+
+    def test_token_endpoint_returns_garbage(self) -> None:
+        """Non-JSON response from token endpoint propagates."""
+        mock_resp = MagicMock()
+        mock_resp.json.side_effect = ValueError("No JSON")
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                return_value=mock_resp,
+            ),
+            pytest.raises(ValueError, match="No JSON"),
+        ):
+            _acquire_token("user", "pass")
+
+    def test_token_response_missing_expires_in_defaults(
+        self,
+    ) -> None:
+        """Missing expires_in falls back to 86400s default."""
+        import time
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
+            "access_token": "tok123",
+        }
+
+        before = time.monotonic()
+        with patch(
+            "datafactory_http.retry.requests.request",
+            return_value=mock_resp,
+        ):
+            state = _acquire_token("user", "pass")
+
+        assert state.access_token == "tok123"
+        assert state.expires_at >= before + 86400
+
+    def test_api_returns_non_list_data_silently_corrupts(
+        self, tmp_path: Path,
+    ) -> None:
+        """API data as string silently extends chars — no guard.
+
+        Documents a known weakness: if the API returns a string
+        instead of a list for the "data" field, extend() iterates
+        characters. This should be caught by downstream validation
+        (validate_events), not by fetch_paginated itself.
+        """
+        token_resp = MagicMock()
+        token_resp.json.return_value = {
+            "access_token": "tok",
+            "expires_in": 86400,
+        }
+        data_resp = MagicMock()
+        data_resp.json.return_value = {
+            "data": "abc",
+        }
+
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, data_resp],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(config, "user", "pass")
+
+        assert events == ["a", "b", "c"]
+
+    def test_api_events_missing_required_field(
+        self, tmp_path: Path,
+    ) -> None:
+        """Events without required fields fail validation loudly."""
+        bad_events = [
+            {"country": "Somalia", "fatalities": 5},
+        ]
+
+        token_resp = MagicMock()
+        token_resp.json.return_value = {
+            "access_token": "tok",
+            "expires_in": 86400,
+        }
+        data_resp = MagicMock()
+        data_resp.json.return_value = {"data": bad_events}
+
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, data_resp],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "user",
+                    "ACLED_PASSWORD": "pass",
+                },
+            ),
+            pytest.raises(ValueError, match="Validation failed"),
+        ):
+            fetch_acled(config, force_refresh=True)
+
+        ledger = (
+            config.ledger_path.read_text()
+            .strip()
+            .splitlines()
+        )
+        last = json.loads(ledger[-1])
+        assert last["outcome"] == "failed"
+
+    def test_frozen_config_mutation(self) -> None:
+        """AcledConfig rejects mutation (frozen enforcement)."""
+        cfg = AcledConfig()
+        with pytest.raises(AttributeError):
+            cfg.page_size = 999  # type: ignore[misc]
+
+
 # ---- Source Registration ----
 
 

@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-30)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30
-**Status:** 149 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 45 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-05-02)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02
+**Status:** 152 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 99 resolved, 45 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -63,6 +63,9 @@
 | C-146 | 3 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
 | C-147 | 4 | No pipeline orchestrator in repository | Operator runs scripts out of order or skips a step | Operations |
 | C-148 | 4 | Hardcoded Hetzner server IP in `defaults.py` | Server migrates to new IP or hostname | Configuration |
+| ~~C-150~~ | ~~2~~ | ~~Zero Red team tests for ACLED pipeline~~ | Resolved 2026-05-02 | ACLED test coverage |
+| ~~C-151~~ | ~~3~~ | ~~No CICs for ACLED config classes~~ | Resolved 2026-05-02 | ACLED test coverage |
+| ~~C-152~~ | ~~3~~ | ~~ACLED profiles and `list_acled_profiles()` untested~~ | Resolved 2026-05-02 | ACLED test coverage |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
@@ -92,6 +95,7 @@ Items that should be resolved together:
 | **Data integrity** | C-137, C-138, C-139, C-149 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
+| ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -145,6 +149,10 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 **Trigger:** Consumer trains a CM model and observes unexplained discrepancy vs PGM totals, or adds a new region with more coastal cells where the gap is larger.
 **Location:** `src/datafactory_adapters/grid_to_country_month.py:72-76` (land_mask filter), `scripts/assemble_grid.py:177-179` (gaul0_code = -1 fill), `src/datafactory_harvester/sources/gaul_admin.py:358-359` (unmatched centroids skipped).
 **Source:** Pipeline verification audit 2026-04-30. Cross-ref: C-125 (CM aggregation implementation), C-139 (aggregate total checks).
+
+### ~~C-150: Zero Red team tests for ACLED pipeline~~ — RESOLVED
+**Resolved 2026-05-02.** Added `TestFetchAcledRed` (5 tests), `TestConsolidateAcledRed` (4 tests), `TestBuildAcledV1Red` (4 tests) covering: token endpoint garbage, missing `expires_in` fallback, non-list API data, missing required fields, frozen mutation, malformed filenames, corrupted Parquet, schema drift, malformed event dates, total filter elimination, missing store columns.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 
 ### ~~C-127: Zarr backend returns features in different order than npy backend~~ — RESOLVED
 **Resolved 2026-04-27.** `_load_grid_from_zarr()` now emits `UserWarning` when falling back to `sorted(data_vars)` due to missing `feature_order` attr. `export_zarr.py` already writes `feature_order` (since 2026-04-21). Together these close the silent divergence: new exports are correct, old stores warn. Added 2 tests in `test_query.py::TestZarrFeatureOrderFallback`.
@@ -264,6 +272,14 @@ Every other layer exposes its core logic as an importable function: `consolidate
 
 See also C-29 (no end-to-end integration test).
 
+### ~~C-151: No CICs for ACLED config classes~~ — RESOLVED
+**Resolved 2026-05-02.** Created `docs/CICs/AcledConfig.md`, `docs/CICs/AcledConsolidationConfig.md`, `docs/CICs/AcledViewpointConfig.md` following the 11-section template. Frozen-enforcement tests added for all three configs.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-07 (frozen dataclass pattern repeated), C-150 (zero Red tests).
+
+### ~~C-152: ACLED profiles and `list_acled_profiles()` untested~~ — RESOLVED
+**Resolved 2026-05-02.** Added `TestAcledProfilesGreen` (4 tests: `load_acled_violence_only`, `load_acled_all_events`, `load_with_override`, `list_acled_profiles`) and `TestAcledProfilesRed` (1 test: `unknown_acled_profile_raises`) in `tests/test_acled_viewpoint.py`.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-150 (ACLED test gaps).
+
 ---
 
 ## Tier 4 — Accept or Defer
@@ -291,6 +307,7 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 ### C-44: Harvest pipeline template is implicit — [DEFER]
 All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
 **Note (2026-04-04):** Trigger condition met — 5 sources exist (ucdp_annual, ucdp_candidate, ucdp_dot9, priogrid_static, gaul_admin). Accepted at v1.0 scope: all 5 harvesters work correctly, implicit template hasn't caused bugs. Reassess before V-Dem (6th source).
+**Note (2026-05-02):** 6th source added (ACLED). Pattern was replicated from existing harvesters without issues. Template extraction deferred to V-Dem (7th source) or next refactor.
 **Source:** GoF (expert review 6)
 
 ### C-46: No ledger write idempotency — [DEFER]

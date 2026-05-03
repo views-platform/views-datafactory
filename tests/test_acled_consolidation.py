@@ -230,6 +230,88 @@ class TestConsolidateAcledBeige:
             consolidate_acled(config)
 
 
+# ---- Red Team (Adversarial) ----
+
+
+class TestConsolidateAcledRed:
+
+    def test_malformed_filename_raises(
+        self, tmp_path: Path,
+    ) -> None:
+        """Non-ACLED filename in source dir raises ValueError."""
+        source_dir = tmp_path / "raw"
+        _write_parquet(
+            source_dir / "bad_name.parquet",
+            _make_acled_events(1),
+        )
+
+        config = AcledConsolidationConfig(
+            source_dir=source_dir,
+            output_path=tmp_path / "store" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        with pytest.raises(
+            ValueError, match="Cannot extract version"
+        ):
+            consolidate_acled(config)
+
+    def test_corrupted_parquet_raises(
+        self, tmp_path: Path,
+    ) -> None:
+        """Binary garbage with valid name raises ArrowInvalid."""
+        source_dir = tmp_path / "raw"
+        source_dir.mkdir(parents=True)
+        (source_dir / "acled_2020_2020.parquet").write_bytes(
+            b"not a parquet file"
+        )
+
+        config = AcledConsolidationConfig(
+            source_dir=source_dir,
+            output_path=tmp_path / "store" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        with pytest.raises(
+            (pa.lib.ArrowInvalid, OSError),
+        ):
+            consolidate_acled(config)
+
+    def test_schema_drift_columns_promoted(
+        self, tmp_path: Path,
+    ) -> None:
+        """Snapshots with different columns are promoted."""
+        source_dir = tmp_path / "raw"
+
+        events_v1 = _make_acled_events(3)
+        _write_parquet(
+            source_dir / "acled_2020_2020.parquet", events_v1,
+        )
+
+        events_v2 = _make_acled_events(3, id_start=100)
+        for ev in events_v2:
+            ev["new_column"] = "extra_data"
+        _write_parquet(
+            source_dir / "acled_2021_2021.parquet", events_v2,
+        )
+
+        config = AcledConsolidationConfig(
+            source_dir=source_dir,
+            output_path=tmp_path / "store" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        result = consolidate_acled(config)
+        assert result.n_records_total == 6
+
+        store = read_store(result.output_path)
+        assert "new_column" in store.column_names
+
+    def test_frozen_config_mutation(self) -> None:
+        """AcledConsolidationConfig rejects mutation."""
+        cfg = AcledConsolidationConfig()
+        with pytest.raises(AttributeError):
+            cfg.source_dir = Path("other")  # type: ignore[misc]
+
+
 # ---- Registration ----
 
 

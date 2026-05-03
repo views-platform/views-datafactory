@@ -47,8 +47,8 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 
 ## Strategic Documents
 
-- `reports/rd_roadmap07.md` — R&D roadmap (consumer parity achieved, next: training integration)
-- `reports/product_development_plan06.md` — Product plan with v1.0/v1.1/v1.2/v2.0 gate criteria
+- `reports/rd_roadmap08.md` — R&D roadmap (ACLED Phase 0 complete, next: training integration + ACLED Phase 2)
+- `reports/product_development_plan08.md` — Product plan with v1.0/v1.1/v1.2/v2.0 gate criteria
 
 ## Vocabulary (aligned with Kleppmann & Riccomini, DDIA 2nd ed., 2026)
 
