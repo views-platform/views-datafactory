@@ -325,6 +325,9 @@ def fetch_paginated(
             "page": page,
         }
 
+        if config.event_types != ALL_EVENT_TYPES:
+            params["event_type"] = "|".join(config.event_types)
+
         response = request_with_retry(
             config.api_url,
             headers=headers,
