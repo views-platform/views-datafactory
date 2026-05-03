@@ -57,6 +57,7 @@ Contracts must be clear enough that:
 - `UcdpAnnualConfig.md` -- immutable UCDP annual harvest configuration
 - `UcdpCandidateConfig.md` -- immutable UCDP candidate monthly harvest configuration
 - `UcdpDot9Config.md` -- immutable UCDP .9 consolidated monthly harvest configuration
+- `UcdpConsolidationConfig.md` -- immutable UCDP consolidation configuration (source dirs, ledger paths)
 - `ViewpointConfig.md` -- immutable viewpoint configuration (strategies, filters, version)
 - `ValidationResult.md` -- structured validation outcome (valid, errors, digest)
 - `ComparisonResult.md` -- structured revision detection outcome (added, removed, revised)
@@ -65,6 +66,9 @@ Contracts must be clear enough that:
 - `PriogridStaticConfig.md` -- immutable PRIO-GRID static feature harvest configuration
 - `ShapefileHarvesterConfig.md` -- immutable PRIO-GRID shapefile download configuration
 - `GaulAdminConfig.md` -- immutable GAUL 2024 admin boundary harvest configuration
+- `AcledConfig.md` -- immutable ACLED harvest configuration (year range, event types, OAuth2 transport)
+- `AcledConsolidationConfig.md` -- immutable ACLED consolidation configuration (source dir, ledger paths)
+- `AcledViewpointConfig.md` -- immutable ACLED viewpoint configuration (event type filter, version)
 - `RemoteConfig.md` -- immutable remote server configuration (address, URL paths, scheme)
 - `grid_to_country_month.md` -- grid-to-country-month aggregation function contract
 

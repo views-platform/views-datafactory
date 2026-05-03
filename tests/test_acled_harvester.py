@@ -458,11 +458,14 @@ class TestFetchAcledRed:
         self,
     ) -> None:
         """Missing expires_in falls back to 86400s default."""
+        import time
+
         mock_resp = MagicMock()
         mock_resp.json.return_value = {
             "access_token": "tok123",
         }
 
+        before = time.monotonic()
         with patch(
             "datafactory_http.retry.requests.request",
             return_value=mock_resp,
@@ -470,7 +473,7 @@ class TestFetchAcledRed:
             state = _acquire_token("user", "pass")
 
         assert state.access_token == "tok123"
-        assert state.expires_at > 0
+        assert state.expires_at >= before + 86400
 
     def test_api_returns_non_list_data_silently_corrupts(
         self, tmp_path: Path,

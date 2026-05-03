@@ -93,7 +93,7 @@ cfg.source_dir = Path("other")  # AttributeError
 ## 10. Test Alignment
 
 - **Green:** Default construction, custom paths
-- **Beige:** Not applicable (no validation to violate)
+- **Beige:** Not applicable (config has no validation constraints; consolidator edge cases are in `TestConsolidateAcledBeige`)
 - **Red:** Mutation attempt (frozen enforcement)
 
 Tests in `tests/test_acled_consolidation.py`.

@@ -16,6 +16,7 @@ source code or config files distributed with the package.
 | Credential | Purpose | Mechanism | Who needs it |
 |------------|---------|-----------|-------------|
 | `UCDP_API_TOKEN` | Fetch UCDP event data | Environment variable | Pipeline operators |
+| `ACLED_USERNAME` / `ACLED_PASSWORD` | Fetch ACLED event data | Environment variables | Pipeline operators |
 | `~/.netrc` entry | HTTP auth for zarr data server | Standard Unix netrc | Data consumers |
 
 ---
@@ -54,6 +55,45 @@ If this prints your token, the harvester will find it.
 `get_ucdp_token()` raises `ValueError` with a message telling you
 exactly which environment variable to set. No silent fallback, no
 anonymous access.
+
+---
+
+## ACLED API Credentials
+
+### Get credentials
+
+Register at [ACLED](https://acleddata.com/) and request API access.
+You will receive a username (email) and password.
+
+### Set them up
+
+Add to your shell profile:
+
+```bash
+echo 'export ACLED_USERNAME="your-email@example.com"' >> ~/.profile
+echo 'export ACLED_PASSWORD="your-password-here"' >> ~/.profile
+source ~/.profile
+```
+
+**Why two variables?** ACLED uses OAuth2 password grant — the
+username and password are exchanged for a short-lived access token
+at harvest time. The token lifecycle is managed automatically by
+the harvester (ADR-026).
+
+### Verify
+
+```bash
+echo $ACLED_USERNAME
+echo $ACLED_PASSWORD
+```
+
+If both print values, the harvester will find them.
+
+### What happens if they're missing
+
+`get_acled_credentials()` raises `ValueError` with a message naming
+exactly which variable(s) to set. No silent fallback, no anonymous
+access.
 
 ---
 
@@ -101,6 +141,7 @@ message pointing you to `~/.netrc`. No silent degradation.
 | Source | Function | File |
 |--------|----------|------|
 | UCDP | `get_ucdp_token()` | `src/datafactory_harvester/sources/ucdp_annual.py` |
+| ACLED | `get_acled_credentials()` | `src/datafactory_harvester/sources/acled.py` |
 | Hetzner HTTP | `_resolve_storage_options()` | `src/datafactory_query/dataset.py` |
 
 ### Resolution order
@@ -136,4 +177,5 @@ two or more sources share identical auth flows.
 | Token set but harvester can't find it | Set in `.bashrc` only, running via cron | Move to `~/.profile` |
 | `PermissionError: Authentication failed` | Wrong password or missing netrc entry | Check `~/.netrc` credentials |
 | `netrc: bad permissions` | File permissions too open | `chmod 600 ~/.netrc` |
+| `ValueError: ACLED credentials required` | `ACLED_USERNAME` or `ACLED_PASSWORD` not set | Add to `~/.profile`, then `source ~/.profile` |
 | `FileNotFoundError: Cannot open zarr store` | Server unreachable | Check network connectivity |

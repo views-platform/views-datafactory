@@ -104,6 +104,11 @@ bash scripts/refresh_pipeline.sh
 This takes 15-30 minutes (harvesting calls the UCDP API with
 rate limiting). Watch the output — each step prints PASS or FAIL.
 
+**Note:** ACLED harvesting and consolidation are implemented and
+tested but not yet integrated into `refresh_pipeline.sh`. Standalone
+scripts do not exist yet — ACLED will be added to the pipeline when
+Phase 2 (live API integration) is complete.
+
 ### 2.2 Verify the output
 
 ```bash

@@ -41,7 +41,12 @@ In views-datafactory, the JSONL provenance ledgers (`provenance/`) are the prima
 - `provenance/priogrid/ingestion_ledger.jsonl` -- grid shapefile provenance (implemented)
 - `provenance/ucdp_annual/ingestion_ledger.jsonl` -- UCDP annual harvest provenance (implemented)
 - `provenance/ucdp_candidate/ingestion_ledger.jsonl` -- candidate monthly provenance (implemented)
+- `provenance/consolidation/ucdp_ledger.jsonl` -- UCDP consolidation provenance (implemented)
+- `provenance/viewpoint/ucdp_v1_ledger.jsonl` -- UCDP viewpoint provenance (implemented)
 - `provenance/compiler/compilation_ledger.jsonl` -- one entry per compilation (implemented)
+- `provenance/acled/ingestion_ledger.jsonl` -- ACLED harvest provenance (implemented)
+- `provenance/consolidation/acled_ledger.jsonl` -- ACLED consolidation provenance (implemented)
+- `provenance/viewpoint/acled_v1_ledger.jsonl` -- ACLED viewpoint provenance (implemented)
 - `provenance/synthetic_ledger.jsonl` -- one entry per generation (planned)
 
 Each entry records: timestamp, operation type, input references + digests, config snapshot, output path + digest, validation results (including errors and warnings).
