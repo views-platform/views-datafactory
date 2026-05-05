@@ -607,7 +607,7 @@ class TestAcledCharacterization:
     """Verify validator works against real API response structure."""
 
     SAMPLE_PATH = (
-        Path(__file__).parent.parent / "tests" / "fixtures"
+        Path(__file__).parent / "fixtures"
         / "acled_sample.json"
     )
 
