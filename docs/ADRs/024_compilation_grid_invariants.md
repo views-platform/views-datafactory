@@ -39,7 +39,7 @@ Points exactly on a cell boundary are assigned to the cell to the south-west. Po
 
 ### 3. Temporal Binning: Month Precision
 
-Dates are parsed as `YYYY-MM-DD` strings. Only the year and month are used for bin assignment. The day component is ignored. Events are assigned to a 0-based month index relative to `config.temporal_config.start_year/start_month`.
+Dates are parsed as ISO-8601 date strings (year-month-day). Only the year and month are used for bin assignment. The day component is ignored. Events are assigned to a 0-based month index relative to `config.temporal_config.start_year/start_month`.
 
 Events outside the configured temporal range are silently skipped (logged as warnings).
 

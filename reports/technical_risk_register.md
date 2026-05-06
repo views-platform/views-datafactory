@@ -287,7 +287,7 @@ See also C-29 (no end-to-end integration test).
 **Resolved 2026-05-02.** Added `TestAcledProfilesGreen` (4 tests: `load_acled_violence_only`, `load_acled_all_events`, `load_with_override`, `list_acled_profiles`) and `TestAcledProfilesRed` (1 test: `unknown_acled_profile_raises`) in `tests/test_acled_viewpoint.py`.
 **Source:** ACLED integration test review (2026-05-02). Cross-ref: C-150 (ACLED test gaps).
 
-### C-157: Systematic ACLED documentation drift across ADRs, CICs, and guides — [RESOLVED 2026-05-07]
+### ~~C-157: Systematic ACLED documentation drift across ADRs, CICs, and guides — [RESOLVED 2026-05-07]~~
 
 | Field | Value |
 |-------|-------|
@@ -487,7 +487,7 @@ The `ACLED_FEATURES` tuple in `tests/test_acled_compilation.py` is a copy-paste 
 
 See also C-29 (no integration test), C-74 (strategy vocabulary).
 
-### C-158: No CICs for SourceEntry or AssemblyConfig — [RESOLVED 2026-05-07]
+### ~~C-158: No CICs for SourceEntry or AssemblyConfig — [RESOLVED 2026-05-07]~~
 
 | Field | Value |
 |-------|-------|

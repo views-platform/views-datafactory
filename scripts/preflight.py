@@ -62,13 +62,13 @@ def main() -> int:
     free_gb = free / (1024**3)
     if free_gb < MIN_DISK_GB:
         print(
-            f"  {'Disk space':25s} FAIL  "
+            f"  {'Disk space':35s} FAIL  "
             f"{free_gb:.0f} GB free (need {MIN_DISK_GB} GB)"
         )
         any_fail = True
     else:
         print(
-            f"  {'Disk space':25s} OK    "
+            f"  {'Disk space':35s} OK    "
             f"{free_gb:.0f} GB free"
         )
 
