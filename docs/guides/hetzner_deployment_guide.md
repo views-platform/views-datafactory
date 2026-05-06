@@ -259,7 +259,7 @@ crontab -e
 Add this line (runs on the 21st of every month at midnight UTC):
 
 ```
-0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 # Note: refresh_pipeline.sh sources ~/.profile (not .bashrc) and adds
 # ~/.cargo/bin to PATH. Environment variables like UCDP_API_TOKEN must
 # be in ~/.profile, not .bashrc — .bashrc exits early in non-interactive
@@ -276,8 +276,7 @@ crontab -l
 
 ```bash
 cd ~/views-datafactory
-bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
-cat logs/refresh.log
+bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 ```
 
 ---
@@ -576,7 +575,7 @@ use `v1.2.0`. If you want to apply it right now instead of waiting:
 ```bash
 # Run the pipeline manually (same command cron uses)
 cd ~/views-datafactory
-bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 ```
 
 ### How to roll back
@@ -793,7 +792,7 @@ chmod o+x /home/views-deploy
 # Add to views-deploy's crontab:
 crontab -u views-deploy -l 2>/dev/null | {
     cat
-    echo "0 0 21 * * cd /home/views-deploy/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1"
+    echo "0 0 21 * * cd /home/views-deploy/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log"
 } | crontab -u views-deploy -
 
 # Remove from root's crontab:
