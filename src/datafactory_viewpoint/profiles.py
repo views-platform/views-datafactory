@@ -23,13 +23,23 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from datafactory_viewpoint.viewpoint_config import ViewpointConfig
 
+if TYPE_CHECKING:
+    from datafactory_viewpoint.builders.acled_v1 import (
+        AcledViewpointConfig,
+    )
+
 logger = logging.getLogger(__name__)
 
-__all__ = ["load_profile", "list_profiles"]
+__all__ = [
+    "load_profile",
+    "load_acled_profile",
+    "list_profiles",
+    "list_acled_profiles",
+]
 
 PROFILES: dict[str, dict[str, Any]] = {}
 
@@ -94,4 +104,65 @@ _register(
     min_priogrid_gid=1,
     max_type_of_violence=3,
     exclude_where_prec=(4, 6),
+)
+
+
+# ---- ACLED profiles ----
+
+ACLED_PROFILES: dict[str, dict[str, Any]] = {}
+
+
+def _register_acled(name: str, **kwargs: Any) -> None:
+    """Register a named ACLED viewpoint profile."""
+    kwargs["version"] = name
+    ACLED_PROFILES[name] = kwargs
+    logger.info("Registered ACLED viewpoint profile: %s", name)
+
+
+def list_acled_profiles() -> list[str]:
+    """Return sorted list of registered ACLED profile names."""
+    return sorted(ACLED_PROFILES.keys())
+
+
+def load_acled_profile(
+    name: str,
+    consolidated_path: Path,
+    **overrides: Any,
+) -> AcledViewpointConfig:
+    """Load a named ACLED viewpoint profile.
+
+    Returns an AcledViewpointConfig (imported lazily to avoid
+    circular imports).
+    """
+    if name not in ACLED_PROFILES:
+        available = sorted(ACLED_PROFILES.keys())
+        err_msg = (
+            f"Unknown ACLED profile '{name}'. "
+            f"Available: {available}"
+        )
+        logger.error(err_msg)
+        raise KeyError(err_msg)
+
+    from datafactory_viewpoint.builders.acled_v1 import (
+        AcledViewpointConfig,
+    )
+
+    merged = {**ACLED_PROFILES[name], **overrides}
+    return AcledViewpointConfig(
+        consolidated_path=consolidated_path,
+        **merged,
+    )
+
+
+_register_acled(
+    "acled_violence_only",
+    event_type_filter=(
+        "Battles",
+        "Explosions/Remote violence",
+        "Violence against civilians",
+    ),
+)
+
+_register_acled(
+    "acled_all_events",
 )

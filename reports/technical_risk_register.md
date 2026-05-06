@@ -1,9 +1,9 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-04-27)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24
-**Status:** 143 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 96 resolved, 39 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
-**Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
+**Date:** 2026-03-17 (updated 2026-05-03)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05
+**Status:** 156 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 104 resolved, 44 open/deferred (12 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
 
@@ -51,12 +51,25 @@
 | C-137 | 2 | No round-trip integrity check after zarr export | Pipeline export produces truncated or partial zarr store | Data integrity |
 | C-138 | 2 | No post-deploy data correctness verification | Pipeline completes but served data doesn't match assembled grid | Data integrity |
 | C-139 | 2 | Consumer parity tests check per-cell rates but not aggregate totals | Systematic undercounting passes per-cell threshold | Data integrity |
+| C-149 | 2 | 603 unmapped GAUL cells silently excluded from CM aggregation | Consumer trains CM model without awareness of 4% fatality gap | Data integrity |
 | ~~C-140~~ | ~~2~~ | ~~v1.2.6/v1.2.7 incident fixes have zero test coverage~~ | Resolved 2026-04-26 | Data integrity |
 | ~~C-141~~ | ~~3~~ | ~~UCDP config class validation partially untested~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-142~~ | ~~3~~ | ~~datafactory_query consumer entry point has zero Red/Beige tests~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-143~~ | ~~4~~ | ~~request_with_retry has no Red tests~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-125~~ | ~~3~~ | ~~No cm aggregation — 48/70 models cannot migrate~~ | Resolved 2026-04-21 | Migration scope |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
+| C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
+| C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
+| C-146 | 3 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
+| C-147 | 4 | No pipeline orchestrator in repository | Operator runs scripts out of order or skips a step | Operations |
+| C-148 | 4 | Hardcoded Hetzner server IP in `defaults.py` | Server migrates to new IP or hostname | Configuration |
+| ~~C-150~~ | ~~2~~ | ~~Zero Red team tests for ACLED pipeline~~ | Resolved 2026-05-02 | ACLED test coverage |
+| ~~C-151~~ | ~~3~~ | ~~No CICs for ACLED config classes~~ | Resolved 2026-05-02 | ACLED test coverage |
+| ~~C-152~~ | ~~3~~ | ~~ACLED profiles and `list_acled_profiles()` untested~~ | Resolved 2026-05-02 | ACLED test coverage |
+| C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
+| C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
+| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Third data source needs visual verification | Visual audit |
+| C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
@@ -76,15 +89,17 @@ Items that should be resolved together:
 | **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
-| **Test infrastructure** | C-29, C-78, C-79 | Test suite growth (C-60 resolved) |
+| **Test infrastructure** | C-29, C-78, C-79, C-146 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | ~~C-31~~, C-93 | Next refactor opportunity (C-80, C-112, C-31 resolved) |
-| **Consumer integration** | C-122, C-123, C-124 | Before bright_starship can be used by anyone other than the developer |
+| ~~**Consumer integration**~~ | ~~C-122, C-123, C-124~~ | ~~Resolved~~ |
 | ~~**Query correctness**~~ | ~~C-127~~ | Resolved 2026-04-27: warning on fallback, export already writes feature_order |
 | **ADR-003 compliance** | ~~C-128~~, C-129 | Before next assembly/compilation change (C-128 resolved) |
-| **Operational monitoring** | C-131, C-132, C-136 | Before relying on Hetzner pipeline without manual checks |
-| **Data integrity** | C-137, C-138, C-139 | Before relying on served data for model training |
+| **Operational monitoring** | C-131, C-132, C-136, C-147 | Before relying on Hetzner pipeline without manual checks |
+| **Scaling headroom** | C-144, C-145 | Before consolidated store exceeds ~5M rows |
+| **Data integrity** | C-137, C-138, C-139, C-149 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
+| ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -129,6 +144,19 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 **Trigger:** UCDP API returns empty pages or cached data during the monthly pipeline run.
 **Location:** `src/datafactory_provenance/health.py:124-195` (`check_export_freshness`), `scripts/check_health.py:111-128`.
 **Source:** Falsification audit P3 (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
+
+### C-149: 603 unmapped GAUL cells silently excluded from CM aggregation — [RESOLVING]
+603 PRIO-GRID cells in `africa_me_legacy` (and ~1,800 in `land`) have centroids that fall outside any FAO GAUL polygon — coastal cells, small islands, boundary edge cases. These cells are assigned `gaul0_code = -1` during assembly. `grid_to_country_month()` filters on `country_ids > 0`, silently dropping these cells from CM output. The dropped cells carry significant fatalities: 45,593 sb_best, 6,012 ns_best, 7,986 os_best across 435 months, with single-month peaks up to 2,688. This creates a ~4% systematic gap between PGM and CM fatality totals. A model training on CM data (e.g., shining_codex) sees fewer total fatalities than a model training on PGM data (e.g., heavy_freighter) for the same region and time range, with no warning.
+
+**Fix applied (2026-04-30):** Added verification tests (`test_model_parity.py::TestCMParity`, `test_pipeline_consistency.py::TestPGMCMAggregation`) that explicitly account for the gap by filtering PGM to `gaul0_code > 0` in internal consistency checks and using bounded tolerances for gold set comparison. **Remaining:** No runtime warning when CM aggregation drops cells with events. Consumer has no way to discover which cells are excluded or quantify the gap. Resolution options: (a) emit warning/metadata listing excluded pgids and their event totals, (b) improve GAUL spatial join to capture more coastal cells via buffered centroids or polygon-edge matching.
+
+**Trigger:** Consumer trains a CM model and observes unexplained discrepancy vs PGM totals, or adds a new region with more coastal cells where the gap is larger.
+**Location:** `src/datafactory_adapters/grid_to_country_month.py:72-76` (land_mask filter), `scripts/assemble_grid.py:177-179` (gaul0_code = -1 fill), `src/datafactory_harvester/sources/gaul_admin.py:358-359` (unmatched centroids skipped).
+**Source:** Pipeline verification audit 2026-04-30. Cross-ref: C-125 (CM aggregation implementation), C-139 (aggregate total checks).
+
+### ~~C-150: Zero Red team tests for ACLED pipeline~~ — RESOLVED
+**Resolved 2026-05-02.** Added `TestFetchAcledRed` (5 tests), `TestConsolidateAcledRed` (4 tests), `TestBuildAcledV1Red` (4 tests) covering: token endpoint garbage, missing `expires_in` fallback, non-list API data, missing required fields, frozen mutation, malformed filenames, corrupted Parquet, schema drift, malformed event dates, total filter elimination, missing store columns.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 
 ### ~~C-127: Zarr backend returns features in different order than npy backend~~ — RESOLVED
 **Resolved 2026-04-27.** `_load_grid_from_zarr()` now emits `UserWarning` when falling back to `sorted(data_vars)` due to missing `feature_order` attr. `export_zarr.py` already writes `feature_order` (since 2026-04-21). Together these close the silent divergence: new exports are correct, old stores warn. Added 2 tests in `test_query.py::TestZarrFeatureOrderFallback`.
@@ -202,6 +230,74 @@ The metric lab code being migrated has its own tests, but this repo has no "gold
 **Source:** Feathers
 **Update 2026-04-21:** Partially addressed by M13 (verification examples suite). 15 `examples/ex_*.py` scripts verify consumer-facing API contracts end-to-end. Not full characterization tests, but covers the consumer surface model developers depend on.
 
+### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
+14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
+**Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
+
+### C-144: Compilation `to_pydict()` materializes millions of Python objects — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-144 |
+| Tier | 3 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When the consolidated store exceeds ~5M events (currently ~2.3M), compilation memory usage on the CPX32 server (32GB) may exceed available RAM |
+| Location | `src/datafactory_compilation/grid_compilation.py:119-155` (`_place_events_columnar`, Phase 2: `table.to_pydict()`) |
+
+`_place_events_columnar` uses a two-phase approach: Phase 1 extracts only lat/lon/date as Python lists for bin assignment (efficient). Phase 2 calls `table.to_pydict()` on the full table (~40 columns), creating a dict of 40 lists with ~2.3M elements each, then constructs individual event dicts for every placed event. This is the dominant memory allocation. Production reports ~30s completion, so it works today, but scales linearly with event count. The performance test (`test_performance.py`) uses only 50 events, so this path is untested at production scale. Currently mitigated by sufficient server RAM (32GB).
+
+See also C-78 (`_place_events_columnar` testability).
+
+### C-145: Viewpoint builder loads full consolidated store into memory — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-145 |
+| Tier | 3 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When the consolidated store exceeds ~5M rows on a memory-constrained machine, or when building viewpoints on developer laptops with <16GB RAM |
+| Location | `src/datafactory_viewpoint/builders/ucdp_v1.py:129` (`pq.read_table(config.consolidated_path)`) |
+
+`build_ucdp_v1` calls `pq.read_table()` which materializes the entire consolidated Parquet store as a PyArrow Table. The table is then sorted by `id` (creating a second copy), and iterated as groups of Python dicts. The docstring notes peak memory was reduced from ~4GB to ~1GB via streaming output columns, but the initial `pq.read_table` plus the sorted copy still dominate. At ~2.3M events with ~45 columns this is manageable on the 32GB server. A future migration to row-group streaming or predicate pushdown would decouple viewpoint memory from store size.
+
+See also C-79 (Parquet I/O in tests).
+
+### C-146: Assembly logic lives in script, not importable package — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-146 |
+| Tier | 3 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When assembly orchestration needs refactoring, or a second assembly path is needed (e.g., different feature sets for different consumers) |
+| Location | `scripts/assemble_grid.py` (~350 LOC procedural, not in any `src/datafactory_*` package) |
+
+Every other layer exposes its core logic as an importable function: `consolidate_ucdp()`, `build_ucdp_v1()`, `compile_grid()`, `load_dataset()`. Assembly is the exception — its spatial join, static feature broadcast, and admin boundary merge logic lives entirely in `assemble_grid.py`'s `main()`. `test_assemble.py` tests sub-components (spatial join helper, GID lookup) but cannot import and test the orchestration function directly. Extracting an `assemble_grid()` function into `datafactory_compilation` or a new `datafactory_assembly` package would make the logic importable and directly testable.
+
+See also C-29 (no end-to-end integration test).
+
+### ~~C-151: No CICs for ACLED config classes~~ — RESOLVED
+**Resolved 2026-05-02.** Created `docs/CICs/AcledConfig.md`, `docs/CICs/AcledConsolidationConfig.md`, `docs/CICs/AcledViewpointConfig.md` following the 11-section template. Frozen-enforcement tests added for all three configs.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-07 (frozen dataclass pattern repeated), C-150 (zero Red tests).
+
+### ~~C-152: ACLED profiles and `list_acled_profiles()` untested~~ — RESOLVED
+**Resolved 2026-05-02.** Added `TestAcledProfilesGreen` (4 tests: `load_acled_violence_only`, `load_acled_all_events`, `load_with_override`, `list_acled_profiles`) and `TestAcledProfilesRed` (1 test: `unknown_acled_profile_raises`) in `tests/test_acled_viewpoint.py`.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-150 (ACLED test gaps).
+
+### C-156: ACLED temporal range mismatch — zero-fill before 2020 in assembled grid — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-156 |
+| Tier | 3 |
+| Source | ACLED grid verification (2026-05-06) |
+| Trigger | Model uses ACLED features for pre-2020 months without awareness that values are zero-fill, not observed zeros |
+| Location | `scripts/assemble_grid.py` (ACLED integration pending), `data/compiled/acled/grid.npy` |
+
+UCDP data covers 1989–present; ACLED compiled data covers 2020–present. When ACLED features are integrated into the assembled grid alongside UCDP, months before 2020 will be zero-filled. These zeros are indistinguishable from observed months with zero events. A model training on both UCDP and ACLED features across the full 1989–present range would learn that ACLED conflict is zero before 2020 — potentially suppressing ACLED feature weights or creating a spurious structural break. This is the same class of problem as C-130 (UCDP zero-fill beyond data boundary) but on the leading edge rather than the trailing edge. Zero-fill is accepted as the initial approach; the risk is that consumers don't know about the boundary. Resolution options: (a) metadata field `acled_first_valid_month_id` in provenance/zattrs, (b) `load_dataset()` warning when ACLED features requested for pre-2020 months, (c) NaN-fill instead of zero-fill (breaks models expecting float32 without NaN handling).
+
+See also C-130 (zero-filled future months), C-133 (zero-padding warning bypass).
+
 ---
 
 ## Tier 4 — Accept or Defer
@@ -229,6 +325,7 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 ### C-44: Harvest pipeline template is implicit — [DEFER]
 All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
 **Note (2026-04-04):** Trigger condition met — 5 sources exist (ucdp_annual, ucdp_candidate, ucdp_dot9, priogrid_static, gaul_admin). Accepted at v1.0 scope: all 5 harvesters work correctly, implicit template hasn't caused bugs. Reassess before V-Dem (6th source).
+**Note (2026-05-02):** 6th source added (ACLED). Pattern was replicated from existing harvesters without issues. Template extraction deferred to V-Dem (7th source) or next refactor.
 **Source:** GoF (expert review 6)
 
 ### C-46: No ledger write idempotency — [DEFER]
@@ -239,15 +336,17 @@ All five harvesters follow config->fetch->validate->compare->archive->store->pro
 Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
 **Note (2026-04-04):** Trigger condition met — server in production at 204.168.219.108. Accepted at v1.0 scope: integration test covers the critical harvest→compile path, `verify_remote.py` validates the deployed output (10/10 checks). Reassess before V-Dem.
 **Update (2026-04-26):** Test review identified specific gap: no harvest→consolidation integration test. `test_integration.py` tests the full pipeline but with synthetic events. No test verifies that actual UCDP Parquet output (column names, types, date format) is consumed correctly by `consolidate_ucdp()`. The stale-zarr incident showed that harvester changes (page_size, assertion thresholds) can produce subtly different output that breaks downstream.
-**Source:** Repo assimilation, Feathers, Test review 2026-04-26
+**Update (2026-05-05):** ACLED compilation test review identified same gap for ACLED pipeline: no integration test connecting harvest→consolidate→viewpoint→compile. No test verifies viewpoint→compilation Parquet schema compatibility (that viewpoint output columns match what `compile_grid` expects via `date_field`, `lat_field`, `lon_field`, and filter fields). ACLED pipeline has the same structural risk as UCDP.
+**Source:** Repo assimilation, Feathers, Test review 2026-04-26, ACLED compilation test review 2026-05-05
 
 ### C-70: No circuit breaker for UCDP API — [DEFER]
 After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. Kleppmann (Ch.7 p.231) warns that retrying overload "will make the problem worse, not better" and recommends exponential backoff with distinct handling for overload vs transient errors. Ch.8 pp.281-283 discusses timeout-based fault detection and network congestion amplification. **Trigger: implement before multi-operator or automated deployment.**
 **Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 pp.281-283.
 
 ### C-72: HTTP 429 not distinguished from 500 — [DEFER]
-Rate-limit responses get the same retry treatment as server errors. No `Retry-After` header parsing. Kleppmann (Ch.7 p.231) explicitly argues "it is only worth retrying after transient errors (e.g., deadlock, network interruption); after a permanent error, a retry would be pointless" and that overload errors need distinct handling. Ch.8 p.281 notes short timeouts risk declaring healthy services dead during load spikes. **Trigger: if UCDP starts returning 429s (not observed to date).**
-**Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 p.281.
+Rate-limit responses get the same retry treatment as server errors. No `Retry-After` header parsing. `request_with_retry` fails fast on all 4xx (no retry), meaning a 429 rate-limit terminates the harvest immediately. Kleppmann (Ch.7 p.231) explicitly argues "it is only worth retrying after transient errors (e.g., deadlock, network interruption); after a permanent error, a retry would be pointless" and that overload errors need distinct handling. Ch.8 p.281 notes short timeouts risk declaring healthy services dead during load spikes. **Trigger: if UCDP or ACLED starts returning 429s during multi-page harvest (not observed to date). Impact is higher for ACLED because multi-page pagination can be long-running and all in-memory events are lost on failure.**
+**Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 p.281. Updated: ACLED test review 2026-05-03.
+**Location:** `src/datafactory_http/retry.py` (4xx fail-fast logic), `src/datafactory_harvester/sources/acled.py:fetch_paginated()`.
 
 ### C-74: CompilationConfig leaks strategy vocabulary — [DEFER]
 Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and filter dict syntax. No IDE discoverability. **Trigger: consider enum-based strategy names if user confusion is observed.**
@@ -304,10 +403,6 @@ Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No a
 Resolved 2026-04-21. `load_dataset(output_format="country_month")` now aggregates grid cells by country per month using `gaul0_code` as the grouping key. Adapter: `grid_to_country_month()` in `datafactory_adapters`. Active conflict features (ged_sb/ns/os_best) summed per (month_id, country_id). WDI/V-DEM/topic features remain out of scope (C-126 covers the transform gap).
 **Source:** Falsification audit 2026-04-20 (F3). Cross-ref: S1 in `test_falsification_viewser_replacement.py`.
 
-### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
-14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
-**Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
-
 ### C-135: No runtime type validation for zarr `.zattrs` values — [DEFER]
 `ds.attrs.get("last_valid_month_id")` in `dataset.py` is type-annotated as `int | None` but no runtime check validates the type. `health.py` applies `int(last_valid)` which would raise `ValueError` on a non-numeric string but silently truncate a float. The attrs are written by our own `export_zarr.py` (which produces correct types), so the only risk vector is manual server-side editing of `.zattrs`. **Trigger: manual edit of `.zattrs` on Hetzner server sets a zarr attribute to an unexpected type.**
 
@@ -321,6 +416,73 @@ Resolved 2026-04-21. `load_dataset(output_format="country_month")` now aggregate
 **Resolution:** Wrap `read_text()` in try/except `UnicodeDecodeError`, or use `read_bytes().decode(errors="replace")`.
 **Source:** Test review gap implementation (2026-04-22). Cross-ref: C-131, C-132 (operational monitoring).
 
+### C-147: No pipeline orchestrator in repository — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-147 |
+| Tier | 4 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When a new operator runs the pipeline for the first time without reading documentation, or when a 2nd deployment target is set up |
+| Location | `scripts/` directory (19 scripts, no ordering definition) |
+
+The pipeline is executed via individual scripts called in sequence: `harvest_ucdp.py` → `consolidate_ucdp.py` → `build_viewpoint.py` → `compile_grid.py` → `assemble_grid.py` → `export_zarr.py`. No Makefile, DAG definition, or workflow file in the repository defines or enforces this order. Correct sequencing depends on operator knowledge or reading CLAUDE.md. Each script validates its inputs exist (raises `FileNotFoundError`), so running out of order produces a clear error rather than silent corruption. `check_health.py` detects staleness after the fact. The server deployment uses cron under `views-deploy` (single `refresh_pipeline.sh` script). Currently mitigated by fail-loud input validation and single-operator deployment.
+
+See also C-131 (no cron monitoring), C-29 (no e2e integration test).
+
+### C-148: Hardcoded Hetzner server IP in `defaults.py` — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-148 |
+| Tier | 4 |
+| Source | repo-assimilation (2026-04-30) |
+| Trigger | When the Hetzner server migrates to a new IP or hostname |
+| Location | `src/datafactory_query/defaults.py:38` (`RemoteConfig.server = "204.168.219.108"`) |
+
+The remote server IP `204.168.219.108` is hardcoded as the default in `RemoteConfig`. Consumer code and verification scripts (`verify_remote.py`) reference this constant. The frozen dataclass allows overrides (`RemoteConfig(server="new-ip")`), but the package-level default is embedded. A server migration requires a version bump and re-install for all consumers using the default. Single constant, trivial to update.
+
+### C-153: ACLED API has no TotalCount — silent truncation undetectable — [OPEN]
+
+| Field | Value |
+|-------|-------|
+| ID | C-153 |
+| Tier | 3 |
+| Source | ACLED test review (2026-05-03) |
+| Trigger | ACLED API starts enforcing server-side result caps or query complexity limits that return partial data within a single page |
+| Location | `src/datafactory_harvester/sources/acled.py:fetch_paginated()`, `docs/ADRs/027_harvest_count_verification.md` |
+
+The ACLED API response envelope has `"count": null, "total_count": null` — there is no server-reported total to verify pagination completeness. The harvester terminates on empty/short pages (correct behavior for complete pagination) but cannot detect if the API silently caps results within a page. Unlike UCDP (which provides `TotalCount`), there is no way to verify "did I get everything?" without an independent count source. ADR-027 documents this as an accepted limitation with the short-page heuristic as the only available detection signal. Not Tier 1/2 because: (a) short-page heuristic catches most truncation, (b) documented in ADR-027, (c) no evidence truncation occurs in practice. Medium because: if it does occur, downstream models train on incomplete data with no error signal.
+
+See also C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
+
+### C-154: ACLED_FEATURES config duplicated between script and tests — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-154 |
+| Tier | 4 |
+| Source | ACLED compilation test review (2026-05-05) |
+| Trigger | Developer changes an event_type filter value in `scripts/compile_acled.py` but not in the test fixture `ACLED_FEATURES` |
+| Location | `scripts/compile_acled.py` (lines 97-125), `tests/test_acled_compilation.py` (lines 29-59) |
+
+The `ACLED_FEATURES` tuple in `tests/test_acled_compilation.py` is a copy-paste of the feature configuration in `scripts/compile_acled.py`. They are not shared — the script is not importable as a module (it uses `if __name__ == "__main__"` with `sys.exit(main())`). If a developer updates a filter value (e.g., renames `"Battles"` to `"Armed clashes"` to track an ACLED codebook change) in the script but not the test, the per-type column would silently produce zeros in production while the test still passes against its own stale fixture. Tier 4 because: (a) single-developer project, (b) filter values come from ACLED's codebook which rarely changes, (c) the `test_feature_names_match_adr028` test would catch name changes but not filter value changes.
+
+See also C-29 (no integration test), C-74 (strategy vocabulary).
+
+### C-155: No shared visual audit framework — per-source scripts are idiosyncratic — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-155 |
+| Tier | 4 |
+| Source | ACLED grid verification (2026-05-06) |
+| Trigger | Third data source (e.g. V-Dem) needs visual verification and a third bespoke script would be written |
+| Location | `scripts/visualize_audit.py` (UCDP), `scripts/verify_acled_grid.py` (ACLED), `scripts/viz_style.py` (shared aesthetics only) |
+
+Each data source has its own plotting/audit script with duplicated structural patterns: `PrecomputedData` dataclass, single-pass `precompute()`, `cell_to_label()`, `REGION_BOUNDS`, per-plot functions, and statistical pass/fail checks. The scripts share `viz_style.py` for aesthetic constants and helpers (`spatial_imshow`, `style_ax`, `save_plot`) but nothing for plot structure, check logic, or report generation. Currently accepted as WET-before-DRY: two concrete instances is too few to extract the right abstraction. The right time is when the third source arrives and common patterns crystallize. Future options include: (a) shared audit framework with pluggable feature specs and check definitions, (b) interactive dashboard (Streamlit, Panel, or Plotly Dash) for exploratory visual audit, (c) automated visual regression testing against baseline plots.
+
+See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication).
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10). DDIA Ch.7 pp.234-236, Ch.8 pp.301-303.

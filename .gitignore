@@ -38,6 +38,7 @@ Thumbs.db
 # Operational artifacts (regenerable)
 provenance/
 reports/audit/
+reports/audit_acled/
 reports/presentation/
 
 # Graphify output (generated knowledge graph artifacts)

@@ -3,14 +3,16 @@
 
 Usage:
     uv run python scripts/assemble_grid.py
-    uv run python scripts/assemble_grid.py --ucdp-grid data/compiled
+    uv run python scripts/assemble_grid.py --acled-grid data/compiled/acled
     uv run python scripts/assemble_grid.py --admin-dir data/gaul_admin
 
-Combines the compiled UCDP conflict grid with PRIO-GRID static
-features and GAUL admin boundary codes into a single array. Static
-and admin features are broadcast across all time steps.
+Combines the compiled UCDP conflict grid, ACLED conflict grid,
+PRIO-GRID static features, and GAUL admin boundary codes into a
+single array. ACLED is temporally aligned to the UCDP timeline and
+zero-filled outside its coverage range (C-156). Static and admin
+features are broadcast across all time steps.
 
-Output: grid.npy [T, H, W, F] with F = UCDP + static + admin channels.
+Output: grid.npy [T, H, W, F] with F = UCDP + ACLED + static + admin.
 
 Admin channels (gaul0_code, gaul1_code, gaul2_code) are categorical
 integers stored as float32. Downstream models should treat them as
@@ -25,12 +27,66 @@ import os
 import shutil
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
+
+
+@dataclass(frozen=True)
+class AssemblyConfig:
+    """Configuration for grid assembly (ADR-009).
+
+    Declares all input sources, output destination, and the set of
+    admin boundary fields that become grid channels. Argparse
+    provides CLI overrides; this dataclass validates at entry.
+    """
+
+    ucdp_grid_dir: Path = Path("data/compiled")
+    acled_grid_dir: Path = Path("data/compiled/acled")
+    static_dir: Path = Path("data/raw/priogrid_static")
+    admin_dir: Path = Path("data/raw/gaul_admin")
+    output_dir: Path = Path("data/assembled")
+
+    admin_numeric_fields: tuple[str, ...] = (
+        "gaul0_code", "gaul1_code", "gaul2_code",
+    )
+    admin_fill_value: float = -1.0
+    output_dtype: str = "float32"
+    disk_space_margin: float = 1.2
+
+    _ALLOWED_DTYPES: ClassVar[frozenset[str]] = frozenset({
+        "float16", "float32", "float64",
+    })
+
+    def __post_init__(self) -> None:
+        if not self.admin_numeric_fields:
+            msg = "admin_numeric_fields must be non-empty"
+            raise ValueError(msg)
+        if len(self.admin_numeric_fields) != len(
+            set(self.admin_numeric_fields)
+        ):
+            msg = "duplicate admin_numeric_fields"
+            raise ValueError(msg)
+        if self.output_dtype not in self._ALLOWED_DTYPES:
+            msg = (
+                f"output_dtype must be one of "
+                f"{sorted(self._ALLOWED_DTYPES)}, "
+                f"got {self.output_dtype!r}"
+            )
+            raise ValueError(msg)
+        if self.disk_space_margin < 1.0:
+            msg = (
+                f"disk_space_margin must be >= 1.0, "
+                f"got {self.disk_space_margin}"
+            )
+            raise ValueError(msg)
 
 
 def main() -> int:
     """Assemble the canonical grid."""
     sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+
+    defaults = AssemblyConfig()
 
     parser = argparse.ArgumentParser(
         description="Assemble canonical grid from all sources"
@@ -38,58 +94,81 @@ def main() -> int:
     parser.add_argument(
         "--ucdp-grid",
         type=Path,
-        default=Path("data/compiled"),
+        default=defaults.ucdp_grid_dir,
         help="Compiled UCDP grid directory",
     )
     parser.add_argument(
         "--static-dir",
         type=Path,
-        default=Path("data/raw/priogrid_static"),
+        default=defaults.static_dir,
         help="PRIO-GRID static Parquet directory",
     )
     parser.add_argument(
         "--admin-dir",
         type=Path,
-        default=Path("data/raw/gaul_admin"),
+        default=defaults.admin_dir,
         help="GAUL admin boundary Parquet directory",
+    )
+    parser.add_argument(
+        "--acled-grid",
+        type=Path,
+        default=defaults.acled_grid_dir,
+        help="Compiled ACLED grid directory (optional)",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("data/assembled"),
+        default=defaults.output_dir,
         help="Output directory",
     )
     args = parser.parse_args()
 
+    config = AssemblyConfig(
+        ucdp_grid_dir=args.ucdp_grid,
+        acled_grid_dir=args.acled_grid,
+        static_dir=args.static_dir,
+        admin_dir=args.admin_dir,
+        output_dir=args.output_dir,
+    )
+
     # Validate inputs
-    grid_path = args.ucdp_grid / "grid.npy"
-    pgids_path = args.ucdp_grid / "pgids.npy"
-    time_path = args.ucdp_grid / "time_steps.npy"
-    features_path = args.ucdp_grid / "feature_names.json"
+    grid_path = config.ucdp_grid_dir / "grid.npy"
+    pgids_path = config.ucdp_grid_dir / "pgids.npy"
+    time_path = config.ucdp_grid_dir / "time_steps.npy"
+    features_path = config.ucdp_grid_dir / "feature_names.json"
 
     for p in [grid_path, pgids_path, time_path, features_path]:
         if not p.exists():
             print(f"FAIL: {p} not found")
             return 1
 
-    if not args.static_dir.exists():
-        print(f"FAIL: {args.static_dir} not found")
+    if not config.static_dir.exists():
+        print(f"FAIL: {config.static_dir} not found")
         return 1
 
-    has_admin = args.admin_dir.exists()
+    has_admin = config.admin_dir.exists()
     if not has_admin:
         print(
-            f"NOTE: {args.admin_dir} not found, "
+            f"NOTE: {config.admin_dir} not found, "
             "skipping admin channels"
+        )
+
+    has_acled = config.acled_grid_dir.exists()
+    if not has_acled:
+        print(
+            f"NOTE: {config.acled_grid_dir} not found, "
+            "skipping ACLED channels"
         )
 
     print("=" * 60)
     print("GRID ASSEMBLY — All Data Sources")
-    print(f"UCDP grid:  {args.ucdp_grid}")
-    print(f"Static dir: {args.static_dir}")
-    print(f"Admin dir:  {args.admin_dir}"
+    print(f"UCDP grid:  {config.ucdp_grid_dir}")
+    print(f"ACLED grid: {config.acled_grid_dir}"
+          f"{'' if has_acled else ' (skipped)'}")
+    print(f"Static dir: {config.static_dir}")
+    print(f"Admin dir:  {config.admin_dir}"
           f"{'' if has_admin else ' (skipped)'}")
-    print(f"Output:     {args.output_dir}")
+    print(f"Output:     {config.output_dir}")
     print("=" * 60)
     print()
 
@@ -114,6 +193,64 @@ def main() -> int:
     )
     print(f"UCDP features: {ucdp_features}")
 
+    # ── ACLED channels (temporal, zero-fill outside range) ──
+    acled_features: list[str] = []
+    acled_grid = None
+    acled_offset: int = 0
+    n_acled: int = 0
+
+    if has_acled:
+        acled_grid_path = config.acled_grid_dir / "grid.npy"
+        acled_feat_path = config.acled_grid_dir / "feature_names.json"
+        acled_time_path = config.acled_grid_dir / "time_steps.npy"
+
+        for p in (acled_grid_path, acled_feat_path, acled_time_path):
+            if not p.exists():
+                print(f"FAIL: {p} not found")
+                return 1
+
+        acled_grid = np.load(acled_grid_path, mmap_mode="r")
+        acled_features = json.loads(acled_feat_path.read_text())
+        acled_time_steps = np.load(acled_time_path)
+
+        DEFAULT_GRID_CONFIG.assert_grid_shape(acled_grid)
+
+        acled_start_dt = acled_time_steps[0]
+        matches = np.where(time_steps == acled_start_dt)[0]
+        if len(matches) != 1:
+            print(
+                f"FAIL: ACLED start {acled_start_dt} not found "
+                f"in UCDP timeline (or ambiguous)"
+            )
+            return 1
+        acled_offset = int(matches[0])
+        n_acled_t = acled_grid.shape[0]
+        acled_end_idx = acled_offset + n_acled_t
+
+        if acled_end_idx > n_t:
+            print(
+                f"FAIL: ACLED extends beyond UCDP timeline "
+                f"(offset {acled_offset} + {n_acled_t} > {n_t})"
+            )
+            return 1
+
+        n_acled = len(acled_features)
+        print(
+            f"ACLED grid: [T={n_acled_t}, "
+            f"H={acled_grid.shape[1]}, "
+            f"W={acled_grid.shape[2]}, C={n_acled}]"
+        )
+        print(f"ACLED features: {acled_features}")
+        print(
+            f"ACLED temporal alignment: indices "
+            f"{acled_offset}–{acled_end_idx - 1} "
+            f"in assembled grid"
+        )
+        print(
+            f"  Zero-fill: 0–{acled_offset - 1}, "
+            f"{acled_end_idx}–{n_t - 1}"
+        )
+
     # Build gid → (row, col) lookup from pgids array
     gid_to_rowcol: dict[int, tuple[int, int]] = {}
     for r in range(n_h):
@@ -121,7 +258,7 @@ def main() -> int:
             gid_to_rowcol[int(pgids[r, c])] = (r, c)
 
     # Discover and sort static variable files
-    static_files = sorted(args.static_dir.glob("*.parquet"))
+    static_files = sorted(config.static_dir.glob("*.parquet"))
     print(f"Static variables: {len(static_files)}")
     print()
 
@@ -136,7 +273,7 @@ def main() -> int:
         values = table.column("value").to_pylist()
 
         spatial = np.zeros(
-            (n_h, n_w), dtype=np.float32
+            (n_h, n_w), dtype=np.dtype(config.output_dtype),
         )
         n_placed = 0
         for gid, val in zip(gids, values, strict=True):
@@ -152,22 +289,16 @@ def main() -> int:
         )
 
     # ── Admin boundary channels (GAUL codes) ──
-    # Only numeric variables become grid channels.
-    # String variables (names) are stored separately.
-    admin_numeric = (
-        "gaul0_code", "gaul1_code", "gaul2_code",
-    )
-
     admin_names: list[str] = []
     admin_spatial: list[np.ndarray] = []
 
     if has_admin:
-        admin_files = sorted(args.admin_dir.glob("*.parquet"))
+        admin_files = sorted(config.admin_dir.glob("*.parquet"))
         print(f"Admin variables: {len(admin_files)}")
 
         for af in admin_files:
             var_name = af.stem
-            if var_name not in admin_numeric:
+            if var_name not in config.admin_numeric_fields:
                 continue
 
             table = pq.read_table(af)
@@ -175,7 +306,9 @@ def main() -> int:
             values = table.column("value").to_pylist()
 
             spatial = np.full(
-                (n_h, n_w), -1.0, dtype=np.float32
+                (n_h, n_w),
+                config.admin_fill_value,
+                dtype=np.dtype(config.output_dtype),
             )
             n_placed = 0
             for gid, val in zip(gids, values, strict=True):
@@ -196,33 +329,41 @@ def main() -> int:
 
     n_static = len(static_names)
     n_admin = len(admin_names)
-    n_total = n_ucdp + n_static + n_admin
-    all_features = ucdp_features + static_names + admin_names
+    n_total = n_ucdp + n_acled + n_static + n_admin
+    all_features = (
+        ucdp_features + acled_features
+        + static_names + admin_names
+    )
 
     print(
         f"Assembling [T={n_t}, H={n_h}, "
         f"W={n_w}, F={n_total}]..."
     )
+    dtype = np.dtype(config.output_dtype)
+    bytes_per_element = dtype.itemsize
     print(
         f"  Size: "
-        f"{n_t * n_h * n_w * n_total * 4 / 1e9:.1f} GB"
+        f"{n_t * n_h * n_w * n_total * bytes_per_element / 1e9:.1f} GB"
     )
 
     # Allocate output as memory-mapped file to avoid OOM on
     # servers with limited RAM. Writes go directly to disk;
     # peak memory is ~150 MB instead of 4.6 GB.
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = args.output_dir / "grid.npy"
-    tmp_path = args.output_dir / "grid.npy.tmp"
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = config.output_dir / "grid.npy"
+    tmp_path = config.output_dir / "grid.npy.tmp"
 
     # Pre-flight disk space check (C-105)
-    expected_bytes = n_t * n_h * n_w * n_total * 4
-    free_bytes = shutil.disk_usage(args.output_dir).free
-    if free_bytes < expected_bytes * 1.2:
+    expected_bytes = (
+        n_t * n_h * n_w * n_total * bytes_per_element
+    )
+    free_bytes = shutil.disk_usage(config.output_dir).free
+    if free_bytes < expected_bytes * config.disk_space_margin:
+        margin = config.disk_space_margin
         print(
             f"FAIL: insufficient disk space "
             f"({free_bytes / 1e9:.1f} GB free, "
-            f"need {expected_bytes * 1.2 / 1e9:.1f} GB)"
+            f"need {expected_bytes * margin / 1e9:.1f} GB)"
         )
         return 1
 
@@ -230,7 +371,7 @@ def main() -> int:
         assembled = np.lib.format.open_memmap(
             str(tmp_path),
             mode="w+",
-            dtype=np.float32,
+            dtype=dtype,
             shape=(n_t, n_h, n_w, n_total),
         )
 
@@ -238,16 +379,29 @@ def main() -> int:
         assembled[:, :, :, :n_ucdp] = ucdp_grid
         del ucdp_grid  # free memory
 
+        # Copy ACLED channels (temporal slice, rest stays zero)
+        if acled_grid is not None:
+            acled_end = acled_offset + acled_grid.shape[0]
+            assembled[
+                acled_offset:acled_end,
+                :, :,
+                n_ucdp:n_ucdp + n_acled,
+            ] = acled_grid
+            del acled_grid
+
         # Fill static channels (broadcast in-place)
         for i, spatial in enumerate(static_spatial):
-            # spatial is [H, W] — assign to every time step
-            assembled[:, :, :, n_ucdp + i] = spatial
+            assembled[
+                :, :, :, n_ucdp + n_acled + i
+            ] = spatial
 
         del static_spatial  # free memory
 
         # Fill admin channels (broadcast in-place)
         for i, spatial in enumerate(admin_spatial):
-            assembled[:, :, :, n_ucdp + n_static + i] = spatial
+            assembled[
+                :, :, :, n_ucdp + n_acled + n_static + i
+            ] = spatial
 
         del admin_spatial  # free memory
 
@@ -269,9 +423,9 @@ def main() -> int:
         if tmp_path.exists():
             tmp_path.unlink()
         raise
-    np.save(args.output_dir / "pgids.npy", pgids)
-    np.save(args.output_dir / "time_steps.npy", time_steps)
-    (args.output_dir / "feature_names.json").write_text(
+    np.save(config.output_dir / "pgids.npy", pgids)
+    np.save(config.output_dir / "time_steps.npy", time_steps)
+    (config.output_dir / "feature_names.json").write_text(
         json.dumps(all_features)
     )
 
@@ -279,9 +433,15 @@ def main() -> int:
     from datafactory_provenance import compute_file_digest
 
     output_digest = compute_file_digest(
-        args.output_dir / "grid.npy"
+        config.output_dir / "grid.npy"
     )
     ucdp_digest = compute_file_digest(grid_path)
+
+    acled_digest: str | None = None
+    if has_acled:
+        acled_digest = compute_file_digest(
+            config.acled_grid_dir / "grid.npy"
+        )
 
     # Data boundary: last month with observed UCDP data
     ucdp_grid_ro = np.load(grid_path, mmap_mode="r")
@@ -300,13 +460,43 @@ def main() -> int:
         )
     del ucdp_grid_ro
 
+    # ACLED data boundary
+    last_valid_acled_month_id: int | None = None
+    if has_acled:
+        acled_grid_ro = np.load(
+            config.acled_grid_dir / "grid.npy", mmap_mode="r",
+        )
+        acled_ts = np.load(config.acled_grid_dir / "time_steps.npy")
+        acled_has_data = acled_grid_ro.sum(axis=(1, 2, 3)) > 0
+        acled_valid = np.where(acled_has_data)[0]
+        if len(acled_valid) > 0:
+            acled_last = int(acled_valid[-1])
+            acled_last_dt = acled_ts[acled_last]
+            last_valid_acled_month_id = int(
+                to_views_month_id(acled_last_dt)
+            )
+            print(
+                f"Last valid ACLED month: "
+                f"{last_valid_acled_month_id} ({acled_last_dt})"
+            )
+        del acled_grid_ro
+
     provenance = {
         "sources": {
             "ucdp_grid": str(grid_path),
             "ucdp_digest": ucdp_digest,
-            "static_dir": str(args.static_dir),
+            "acled_grid": (
+                str(config.acled_grid_dir / "grid.npy")
+                if has_acled else None
+            ),
+            "acled_digest": acled_digest,
+            "acled_features": acled_features or None,
+            "acled_temporal_offset": (
+                acled_offset if has_acled else None
+            ),
+            "static_dir": str(config.static_dir),
             "static_variables": static_names,
-            "admin_dir": str(args.admin_dir),
+            "admin_dir": str(config.admin_dir),
             "admin_variables": admin_names,
         },
         "output_shape": [n_t, n_h, n_w, n_total],
@@ -316,14 +506,18 @@ def main() -> int:
     }
     if last_valid_month_id is not None:
         provenance["last_valid_month_id"] = last_valid_month_id
-    (args.output_dir / "provenance.json").write_text(
+    if last_valid_acled_month_id is not None:
+        provenance["last_valid_acled_month_id"] = (
+            last_valid_acled_month_id
+        )
+    (config.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)
     )
 
     elapsed = time.monotonic() - t0
-    size_gb = (args.output_dir / "grid.npy").stat().st_size / 1e9
+    size_gb = (config.output_dir / "grid.npy").stat().st_size / 1e9
     print()
-    print(f"Output: {args.output_dir / 'grid.npy'}")
+    print(f"Output: {config.output_dir / 'grid.npy'}")
     print(f"Size: {size_gb:.1f} GB")
     print(f"Digest: {output_digest}")
     print(f"Time: {elapsed:.1f}s")

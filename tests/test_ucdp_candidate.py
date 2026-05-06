@@ -179,7 +179,7 @@ class TestDiscoverVersionsGreen:
         config = UcdpCandidateConfig(start_year=2025)
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 side_effect=responses,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
@@ -199,7 +199,7 @@ class TestDiscoverVersionsGreen:
         config = UcdpCandidateConfig(start_year=2025)
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 return_value=resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
@@ -226,7 +226,7 @@ class TestDiscoverVersionsEnvelopeRed:
         config = UcdpCandidateConfig(start_year=2025)
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 return_value=resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
@@ -257,7 +257,7 @@ class TestDigestCachingGreen:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 return_value=mock_resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
@@ -315,7 +315,7 @@ class TestFetchUcdpCandidateGreen:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 side_effect=discover_responses + [fetch_resp],
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),

@@ -77,6 +77,7 @@ The UCDP API has a fixed ~1000-event inconsistency between TotalCount and actual
 - Dual threshold added in v1.2.7.
 - `harvest_ucdp.py` reverted from `page_size=50000` to default `page_size=1000` in v1.2.6.
 - All three UCDP harvesters (annual, candidate, dot9) share `fetch_paginated()` and inherit these protections.
+- ACLED `fetch_paginated()` in `datafactory_harvester/sources/acled.py` does not implement TotalCount verification — the ACLED API does not expose a total count in its response envelope. Pagination terminates when a page returns fewer results than `page_size`. This "short page" heuristic detects complete pagination but cannot detect server-side truncation within a page. Downstream `validate_events()` catches schema violations but not silent count shortfalls.
 
 ---
 

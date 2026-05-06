@@ -469,6 +469,12 @@ class TestConsolidateUcdpRed:
         with pytest.raises(ValueError, match="Cannot extract version"):
             consolidate_ucdp(cfg)
 
+    def test_frozen_config_mutation(self) -> None:
+        """UcdpConsolidationConfig rejects mutation."""
+        cfg = UcdpConsolidationConfig()
+        with pytest.raises(AttributeError):
+            cfg.annual_dir = Path("other")  # type: ignore[misc]
+
 
 # ---- Registry ----
 

@@ -116,7 +116,7 @@ class TestFetchUcdpAnnualGreen:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 return_value=mock_resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test-token"}),
@@ -155,11 +155,11 @@ class TestFetchUcdpAnnualGreen:
         append_ledger_entry(config.ledger_path, {"content_digest": "abc123"})
 
         with patch(
-            "datafactory_http.retry.requests.get"
-        ) as mock_get:
+            "datafactory_http.retry.requests.request"
+        ) as mock_request:
             result = fetch_ucdp_annual(config)
 
-        mock_get.assert_not_called()
+        mock_request.assert_not_called()
         assert result == snap_path
 
 
@@ -180,7 +180,7 @@ class TestFetchUcdpAnnualBeige:
 
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 return_value=mock_resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test-token"}),
@@ -224,7 +224,7 @@ class TestTotalCountAssertionBeige:
         )
         with (
             patch(
-                "datafactory_http.retry.requests.get",
+                "datafactory_http.retry.requests.request",
                 return_value=mock_resp,
             ),
             patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),

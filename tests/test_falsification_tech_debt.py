@@ -54,7 +54,7 @@ class TestTechDebtResolved:
 
         reports = Path(__file__).parent.parent / "reports"
         active = reports / "technical_risk_register.md"
-        archive = reports / "technical_risk_register_resolved.md"
+        archive = reports / "archive" / "technical_risk_register_resolved.md"
 
         assert active.exists(), (
             "technical_risk_register.md not found"
@@ -66,33 +66,31 @@ class TestTechDebtResolved:
         active_text = active.read_text()
         archive_text = archive.read_text()
 
-        # Count full entries (### C-xx or ### D-xx lines)
+        # Count full entries in active register
         entry_re = re.compile(r"^### [CD]-\d+", re.MULTILINE)
         n_active = len(entry_re.findall(active_text))
-        n_archive = len(entry_re.findall(archive_text))
 
-        # Count early reference table rows (| C-xx |)
-        early_re = re.compile(
-            r"^\| C-\d+", re.MULTILINE
+        # Collect unique resolved C-IDs from all sources:
+        # 1. Archive full entries (### C-xx)
+        # 2. Archive early reference rows (| C-xx)
+        # 3. Active struck-through entries (### ~~C-xx~~)
+        resolved_ids: set[str] = set()
+        resolved_ids.update(
+            re.findall(r"^### (C-\d+)", archive_text, re.MULTILINE)
         )
-        n_early = len(early_re.findall(archive_text))
-
-        n_resolved = n_archive + n_early
-        # Subtract disagreements (D-xx) from archive count
-        # — they are tracked separately in the header
-        n_archive_disagreements = len(
-            re.findall(
-                r"^### D-\d+", archive_text, re.MULTILINE
-            )
+        resolved_ids.update(
+            re.findall(r"^\| (C-\d+)", archive_text, re.MULTILINE)
         )
-        n_resolved_concerns = n_resolved - n_archive_disagreements
+        resolved_ids.update(
+            re.findall(r"^### ~~(C-\d+)", active_text, re.MULTILINE)
+        )
+        n_resolved_concerns = len(resolved_ids)
 
         # Verify header claims match structural counts
         assert f"{n_resolved_concerns} resolved" in active_text, (
             f"Header should say '{n_resolved_concerns} resolved' "
-            f"but doesn't. Archive has {n_archive} full entries "
-            f"({n_archive_disagreements} disagreements) + "
-            f"{n_early} early reference rows."
+            f"but doesn't. Found {n_resolved_concerns} unique "
+            f"resolved C-IDs across archive + active."
         )
 
         # Summary table should match full entry count

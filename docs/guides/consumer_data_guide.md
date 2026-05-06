@@ -223,6 +223,11 @@ Accepts multiple formats:
 - Columns: requested features
 - Sorted by index
 
+**`"country_month"`** — for country-level models (e.g., shining_codex):
+- MultiIndex: `(month_id, country_id)` where `country_id` is `gaul0_code`
+- Columns: requested features (summed per country per month)
+- **Caveat:** Cells with `gaul0_code = -1` (coastal/island cells whose PRIO-GRID centroids fall outside GAUL polygons) are excluded. This drops ~4% of fatalities relative to PGM totals. See [Country-month aggregation caveat](#country-month-aggregation-caveat) below.
+
 ### `data_dir` parameter
 
 | Value | Source |
@@ -306,6 +311,23 @@ The server at `http://204.168.219.108` serves two endpoints with **different fea
 | `/dataframe.parquet` | **6 features** (UCDP conflict only) | `data/compiled/` | Lightweight conflict-only download |
 
 This is intentional. The zarr store contains the full assembled grid (all data sources). The parquet export contains only the compiled UCDP conflict features (counts + best estimates for state-based, non-state, and one-sided violence). Use zarr for training and analysis; use parquet for quick conflict-data checks.
+
+---
+
+## Country-month aggregation caveat
+
+When using `output_format="country_month"`, the factory sums grid-cell values by `(month_id, gaul0_code)`. Cells with `gaul0_code = -1` — land cells whose PRIO-GRID centroids fall outside any FAO GAUL polygon — are excluded because they cannot be attributed to a country.
+
+In `africa_me_legacy`, 603 of 13,110 cells are unmapped (coastal cells, small islands). These cells carry real conflict events: ~45,600 state-based fatalities across 435 months, with single-month peaks up to 2,688. This means CM totals are systematically ~4% lower than PGM totals for the same region and time range.
+
+If your model uses `output_format="country_month"`, be aware that:
+- The aggregation is correct for cells that *have* a country assignment
+- Some events in coastal areas are not counted in any country's total
+- The gap varies by month (higher in months with coastal conflict)
+
+To check the gap for your specific query, compare `load_dataset(output_format="dataframe")` totals against `load_dataset(output_format="country_month")` totals.
+
+See [ADR-025](../ADRs/025_country_identity_gaul.md) and C-149 in the risk register.
 
 ---
 
