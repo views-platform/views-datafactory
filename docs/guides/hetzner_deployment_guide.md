@@ -18,8 +18,8 @@ git checkout main && git pull
 git tag v1.2.11
 git push --tags
 
-# 2. SSH into the server
-ssh simmaa_prio@204.168.219.108
+# 2. SSH into the server (replace <your-user> with your username)
+ssh <your-user>@204.168.219.108
 
 # 3. Update the deploy tag and run
 sudo -u views-deploy bash -c '
@@ -52,7 +52,7 @@ Everything below is the full setup guide (one-time, ~1,200 lines).
 | **Project** | views-datafactory (Hetzner console) |
 | **Backups** | Enabled (daily) |
 | **Cost** | ~€12.60/month (server + IPv4 + backups) |
-| **SSH** | `ssh root@204.168.219.108` |
+| **SSH** | `ssh <your-user>@204.168.219.108` (root login disabled) |
 
 ---
 
