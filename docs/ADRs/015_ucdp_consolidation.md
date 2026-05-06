@@ -50,7 +50,9 @@ The UCDP consolidator combines all annual releases, all candidate versions, and 
 
 ### UCDP Viewpoint v1 (Layer 3)
 
-The first viewpoint version targets parity with the production `.9` consolidation. This proves the consolidation is correct before evolving the rules.
+**Why this viewpoint exists:** Viewpoint v1 deliberately replicates the behavior of the legacy UCDP ingestor that fed the old VIEWS database. Every decision below — survivorship order, `date_end` for month assignment, even-split fatality distribution for summary events — was chosen to match production output, not because it is analytically optimal. The goal is to prove that the new data factory can reproduce the exact same data the models were trained on, establishing a trusted baseline before evolving the rules.
+
+This is a parity target, not a design ideal. Future UCDP viewpoints should revisit these choices on their own merits (see Open Questions).
 
 **Survivorship rules:** Two strategies are implemented:
 
