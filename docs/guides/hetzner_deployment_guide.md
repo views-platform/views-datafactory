@@ -8,6 +8,38 @@ what all of this means.
 
 ---
 
+## Quick Deploy (updating an existing server)
+
+If the server is already set up and you're just deploying a new tag:
+
+```bash
+# 1. On your laptop — tag and push
+git checkout main && git pull
+git tag v1.2.11
+git push --tags
+
+# 2. SSH into the server
+ssh simmaa_prio@204.168.219.108
+
+# 3. Update the deploy tag and run
+sudo -u views-deploy bash -c '
+  source ~/.profile
+  echo "v1.2.11" > ~/.views-deploy-tag
+  cd ~/views-datafactory
+  bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
+'
+```
+
+Pre-flight checks will validate credentials and disk space before
+any work starts. Output streams to your terminal and logs to file.
+See [How to deploy a new version](#how-to-deploy-a-new-version)
+for details, or [How to roll back](#how-to-roll-back) if something
+breaks.
+
+Everything below is the full setup guide (one-time, ~1,200 lines).
+
+---
+
 ## Server Details
 
 | Property | Value |
