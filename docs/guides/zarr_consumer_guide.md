@@ -222,17 +222,27 @@ pgid = int(ds["pgid"].sel(lat=9.0, lon=38.7, method="nearest"))
 
 ## Data variables (features)
 
-The dataset contains ~43 features from three sources:
+The dataset contains 51 features from four sources:
 
 **UCDP conflict (6 features):**
 - `ged_sb_count` / `ged_sb_best` — state-based violence (type 1)
 - `ged_ns_count` / `ged_ns_best` — non-state violence (type 2)
 - `ged_os_count` / `ged_os_best` — one-sided violence (type 3)
 
-**PRIO-GRID static (~30 features):**
+**ACLED conflict (8 features):**
+- `acled_count` — total ACLED events
+- `acled_battles` — battle events
+- `acled_explosions` — explosions/remote violence
+- `acled_vac` — violence against civilians
+- `acled_protests` — protest events
+- `acled_riots` — riot events
+- `acled_strategic` — strategic developments
+- `acled_fatalities` — total fatalities across all ACLED event types
+
+**PRIO-GRID static (34 features):**
 Terrain, resources, land cover variables. Static across time
 (same value for all months). Examples: `landarea`, `mountains_mean`,
-`ttime_mean`, `petroleum_y`.
+`ttime_mean`, `petroleum_s`.
 
 **GAUL admin boundaries (3 features):**
 - `gaul0_code` — country code

@@ -12,7 +12,7 @@ All meaningful semantics (grid configurations, harvester parameters, compilation
 - **Prohibited:** File-path-based logic, array-shape inference, timestamp-based staleness detection.
 - **Requirement:** If a parameter affects compiled output identity, it must be a mandatory field in the relevant config dataclass.
 
-### B. The Fail-Loud Mandate (ADR-008)
+### B. The Fail-Loud Mandate (ADR-008, ADR-011)
 **"A crash is a successful defense of data integrity."**
 Silent failures, implicit fallbacks, and "best-effort" corrections are forbidden.
 - **Requirement:** Violations of schema, digest, configuration, or shape invariants must raise an explicit exception immediately.
@@ -22,7 +22,7 @@ Silent failures, implicit fallbacks, and "best-effort" corrections are forbidden
 All data entering the system must pass through validation boundaries.
 - **Requirement:** Grid data arrays use `float32`. Coordinate arrays use `int32` (pgids) and `datetime64[M]` (time steps).
 - **Requirement:** Detect and raise errors on NaN or Inf values at every boundary (harvest validation, compilation input, compilation output).
-- **Requirement:** Shape validation at every boundary: compiled output is always `(n_cells, n_steps, n_features)`.
+- **Requirement:** Shape validation at every boundary: compiled output is always `[T, H, W, C]` (time, height=360, width=720, channels/features).
 
 ### D. Deterministic Compilation
 **"Same inputs + same config = bit-identical output."**

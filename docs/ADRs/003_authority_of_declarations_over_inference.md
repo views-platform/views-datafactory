@@ -111,6 +111,12 @@ These costs are accepted intentionally.
 
 ---
 
+## Implementation Notes
+
+The canonical implementation of declaration-over-inference is `src/datafactory_provenance/source_registry.py`. It provides `SourceEntry` (a frozen dataclass declaring each source's name, env vars, features, and SLO), `PIPELINE_SOURCES` (an immutable tuple of all declared sources), and `validate_preflight()` (which fails loud if any declared source is misconfigured or missing required environment variables).
+
+---
+
 ## Notes
 
 This ADR does not define:

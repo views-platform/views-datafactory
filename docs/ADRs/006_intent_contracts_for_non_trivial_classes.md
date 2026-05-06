@@ -73,6 +73,9 @@ The following classes should receive intent contracts as they are implemented:
 4. **HarvesterConfig** -- governs API interaction parameters
 5. **ValidationResult** -- determines data acceptance/rejection
 6. **CompilationConfig** -- governs compilation behavior (new, no metric lab source)
+7. **SourceEntry** (`datafactory_provenance.source_registry`) -- source registry backbone
+8. **AssemblyConfig** (`scripts/assemble_grid.py`) -- grid assembly configuration
+9. **ViewpointConfig** (`datafactory_viewpoint.viewpoint_config`) -- viewpoint builder configuration
 
 ---
 
