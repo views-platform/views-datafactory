@@ -5,13 +5,14 @@
 #   bash scripts/refresh_pipeline.sh
 #
 # This script runs the entire data pipeline end-to-end:
-#   1. Harvest raw data from UCDP, PRIO-GRID, and GAUL APIs
+#   1. Harvest raw data from UCDP, PRIO-GRID, GAUL, and ACLED APIs
 #   2. Consolidate UCDP sources into event store
 #   3. Build viewpoint (survivorship + distribution + filtering)
-#   4. Compile events onto PRIO-GRID
-#   5. Assemble all features (UCDP + static + admin)
-#   6. Export to consumer formats (zarr, parquet)
-#   7. Run health check
+#   4. Compile UCDP grid
+#   5. Compile ACLED grid (consolidate + viewpoint + compile)
+#   6. Assemble all features (UCDP + ACLED + static + admin)
+#   7. Export to consumer formats (zarr, parquet)
+#   8. Run health check
 #
 # Deployment gate:
 #   Before running any steps, the script reads ~/.views-deploy-tag
@@ -108,47 +109,54 @@ echo "========================================"
 echo
 
 # Step 1: Harvest
-CURRENT_STEP="1/7: Harvest raw data"
+CURRENT_STEP="1/8: Harvest raw data"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/harvest_ucdp.py
 uv run python scripts/harvest_priogrid.py
 uv run python scripts/harvest_shapefile.py
 uv run python scripts/harvest_gaul.py
+uv run python scripts/harvest_acled.py
 echo
 
 # Step 2: Consolidate
-CURRENT_STEP="2/7: Consolidate UCDP sources"
+CURRENT_STEP="2/8: Consolidate UCDP sources"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/consolidate_ucdp.py
 echo
 
 # Step 3: Build viewpoint
-CURRENT_STEP="3/7: Build viewpoint"
+CURRENT_STEP="3/8: Build viewpoint"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/build_viewpoint.py
 echo
 
-# Step 4: Compile grid
-CURRENT_STEP="4/7: Compile to PRIO-GRID"
+# Step 4: Compile UCDP grid
+CURRENT_STEP="4/8: Compile UCDP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/compile_grid.py
 echo
 
-# Step 5: Assemble
-CURRENT_STEP="5/7: Assemble all features"
+# Step 5: Compile ACLED grid
+CURRENT_STEP="5/8: Compile ACLED to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
-uv run python scripts/assemble_grid.py
+uv run python scripts/run_acled_pipeline.py --skip-to consolidate
 echo
 
-# Step 6: Export
-CURRENT_STEP="6/7: Export consumer formats"
+# Step 6: Assemble
+CURRENT_STEP="6/8: Assemble all features"
+echo "── $CURRENT_STEP ──"
+uv run python scripts/assemble_grid.py --acled-grid data/compiled/acled
+echo
+
+# Step 7: Export
+CURRENT_STEP="7/8: Export consumer formats"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/export_zarr.py
 uv run python scripts/export_dataframe.py
 echo
 
-# Step 7: Health check
-CURRENT_STEP="7/7: Health check"
+# Step 8: Health check
+CURRENT_STEP="8/8: Health check"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/check_health.py
 echo
