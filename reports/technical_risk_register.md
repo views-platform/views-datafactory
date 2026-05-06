@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-03)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05
-**Status:** 156 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 104 resolved, 44 open/deferred (12 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-05-07)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07
+**Status:** 158 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 104 resolved, 46 open/deferred (12 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -70,6 +70,8 @@
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Third data source needs visual verification | Visual audit |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
+| C-157 | 3 | Systematic ACLED documentation drift across ADRs, CICs, and guides | New developer reads stale docs and builds on wrong assumptions | Documentation |
+| C-158 | 4 | No CICs for SourceEntry or AssemblyConfig | Developer modifies registry or assembly config without contract awareness | Documentation |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
@@ -101,6 +103,7 @@ Items that should be resolved together:
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
+| **Documentation drift** | C-157, C-158 | Before onboarding Dylan/Sonaj or next doc audit |
 
 ---
 
@@ -283,6 +286,20 @@ See also C-29 (no end-to-end integration test).
 ### ~~C-152: ACLED profiles and `list_acled_profiles()` untested~~ — RESOLVED
 **Resolved 2026-05-02.** Added `TestAcledProfilesGreen` (4 tests: `load_acled_violence_only`, `load_acled_all_events`, `load_with_override`, `list_acled_profiles`) and `TestAcledProfilesRed` (1 test: `unknown_acled_profile_raises`) in `tests/test_acled_viewpoint.py`.
 **Source:** ACLED integration test review (2026-05-02). Cross-ref: C-150 (ACLED test gaps).
+
+### C-157: Systematic ACLED documentation drift across ADRs, CICs, and guides — [OPEN]
+
+| Field | Value |
+|-------|-------|
+| ID | C-157 |
+| Tier | 3 |
+| Source | base documentation review (2026-05-07) |
+| Trigger | New team member (Dylan, Sonaj) reads stale documentation and builds on wrong assumptions about feature counts, pipeline steps, or ACLED integration status |
+| Location | ADR-028 (critical: says compiler doesn't exist), ADR-009, ADR-021 (high: wrong counts), ADR-003/011/012/018/022 (medium), consumer_data_guide.md, zarr_consumer_guide.md (consumer-facing), plus 7 low-severity items |
+
+ACLED integration completed across harvester, consolidation, viewpoint, compilation, and assembly — but ~15 documents still reference ACLED as hypothetical or future work. Three concrete harms: (1) ADR-028 Implementation Notes say "ACLED compiler does not exist yet" while it runs in production as pipeline step 5; a developer could re-implement it. (2) Consumer-facing guides (consumer_data_guide.md, zarr_consumer_guide.md) say "43 features" — consumers write code expecting 43 and get 51. (3) zarr_consumer_guide.md has `petroleum_y` typo (correct name: `petroleum_s`) which would cause `KeyError` for consumers. Additional drift: ADR-009 says "seven packages" (now 10), ADR-022 says "7 pipeline steps" (now 9), ADR-018 omits ACLED from SLO tables.
+
+Cross-ref: C-158 (missing CICs).
 
 ### C-156: ACLED temporal range mismatch — zero-fill before 2020 in assembled grid — [DEFER]
 
@@ -469,6 +486,20 @@ See also C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 The `ACLED_FEATURES` tuple in `tests/test_acled_compilation.py` is a copy-paste of the feature configuration in `scripts/compile_acled.py`. They are not shared — the script is not importable as a module (it uses `if __name__ == "__main__"` with `sys.exit(main())`). If a developer updates a filter value (e.g., renames `"Battles"` to `"Armed clashes"` to track an ACLED codebook change) in the script but not the test, the per-type column would silently produce zeros in production while the test still passes against its own stale fixture. Tier 4 because: (a) single-developer project, (b) filter values come from ACLED's codebook which rarely changes, (c) the `test_feature_names_match_adr028` test would catch name changes but not filter value changes.
 
 See also C-29 (no integration test), C-74 (strategy vocabulary).
+
+### C-158: No CICs for SourceEntry or AssemblyConfig — [OPEN]
+
+| Field | Value |
+|-------|-------|
+| ID | C-158 |
+| Tier | 4 |
+| Source | base documentation review (2026-05-07), CIC audit |
+| Trigger | Developer modifies SourceEntry fields or AssemblyConfig validation without understanding the contract — e.g., removing a `__post_init__` check that 5 consumers depend on |
+| Location | `src/datafactory_provenance/source_registry.py:28` (SourceEntry), `scripts/assemble_grid.py:36` (AssemblyConfig) |
+
+Two frozen dataclasses with `__post_init__` validation lack CICs. `SourceEntry` is the backbone of the source registry — health checks, pre-flight validation, assembly, and remote verification all import from it. `AssemblyConfig` governs grid assembly with validated defaults. Both follow the ADR-009 boundary contract pattern. Analogous to resolved C-151 (ACLED config CICs) but for different classes. Also noted: `SpatioTemporalGrid` CIC has medium drift — documents `pgids`/`lats`/`lons` as 1-D arrays but they are actually 2-D `[H, W]`.
+
+Cross-ref: C-157 (documentation drift), C-151 (resolved, ACLED CICs).
 
 ### C-155: No shared visual audit framework — per-source scripts are idiosyncratic — [DEFER]
 
