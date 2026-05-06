@@ -50,13 +50,15 @@ def main() -> int:
     results = validate_preflight(PIPELINE_SOURCES)
     for r in results:
         mark = "OK" if r["status"] == "OK" else "FAIL"
-        print(f"  {r['name']:25s} {mark:4s}  {r['detail']}")
+        src = r.get("source", "")
+        label = f"{r['name']} ({src})" if src else r["name"]
+        print(f"  {label:35s} {mark:4s}  {r['detail']}")
         if r["status"] != "OK":
             any_fail = True
 
     # Disk space check
-    args.data_dir.mkdir(parents=True, exist_ok=True)
-    free = shutil.disk_usage(args.data_dir).free
+    check_dir = args.data_dir if args.data_dir.exists() else Path(".")
+    free = shutil.disk_usage(check_dir).free
     free_gb = free / (1024**3)
     if free_gb < MIN_DISK_GB:
         print(

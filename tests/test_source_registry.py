@@ -178,6 +178,7 @@ class TestValidatePreflight:
             results = validate_preflight(sources)
         assert len(results) == 1
         assert results[0]["status"] == "OK"
+        assert results[0]["source"] == "test"
 
     def test_fail_when_var_missing(self) -> None:
         sources = (

@@ -237,8 +237,9 @@ def validate_preflight(
     """Validate all source prerequisites.
 
     Checks that required environment variables are set and non-empty.
-    Returns a list of {name, status, detail} dicts. Status is "OK"
-    or "FAIL".
+    Returns a list of {name, source, status, detail} dicts. Status
+    is "OK" or "FAIL". The ``source`` field names the first
+    SourceEntry that requires this variable.
     """
     results: list[dict[str, str]] = []
     seen_vars: set[str] = set()
@@ -252,12 +253,14 @@ def validate_preflight(
             if value:
                 results.append({
                     "name": var,
+                    "source": source.name,
                     "status": "OK",
                     "detail": "set",
                 })
             else:
                 results.append({
                     "name": var,
+                    "source": source.name,
                     "status": "FAIL",
                     "detail": (
                         f"not set — add to ~/.profile: "

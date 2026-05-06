@@ -35,7 +35,10 @@ from pathlib import Path
 import requests
 
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
-from datafactory_provenance.source_registry import get_all_features
+from datafactory_provenance.source_registry import (
+    PIPELINE_SOURCES,
+    get_all_features,
+)
 from datafactory_query.defaults import DEFAULT_REMOTE
 
 DEFAULT_SERVER = DEFAULT_REMOTE.server
@@ -299,10 +302,15 @@ def main() -> int:
                     f"missing: {sorted(missing)}",
                 )
             else:
+                per_source = []
+                for s in PIPELINE_SOURCES:
+                    if s.features:
+                        n = len(set(s.features) & found_vars)
+                        per_source.append(f"{n} {s.name}")
                 ok = _result(
                     step, True,
-                    f"{len(found_vars)} features"
-                    f" (expected {EXPECTED_N_FEATURES})",
+                    f"{' + '.join(per_source)}"
+                    f" = {len(found_vars)}",
                 )
         except Exception as e:
             ok = _result(step, False, str(e))
