@@ -50,6 +50,15 @@ COLOR_SB = "#7A8B3C"   # State-based (green)
 COLOR_NS = "#4878A8"   # Non-state (blue)
 COLOR_OS = "#D4752E"   # One-sided (orange)
 
+# ── Domain colors: ACLED event types ─────────────────────────
+
+COLOR_BATTLES = "#C0392B"      # red
+COLOR_EXPLOSIONS = "#E67E22"   # orange
+COLOR_VAC = "#8E44AD"          # purple
+COLOR_PROTESTS = "#2ECC71"     # green
+COLOR_RIOTS = "#3498DB"        # blue
+COLOR_STRATEGIC = "#95A5A6"    # gray
+
 # ── Accent / neutral ────────────────────────────────────────
 
 COLOR_ACCENT = "#2C5080"
