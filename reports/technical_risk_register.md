@@ -2,8 +2,8 @@
 
 **Date:** 2026-03-17 (updated 2026-05-03)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05
-**Status:** 154 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 99 resolved, 47 open/deferred (4 newly resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
-**Archive:** Resolved concerns and disagreements are in `technical_risk_register_resolved.md`.
+**Status:** 154 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 104 resolved, 42 open/deferred (12 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
 
