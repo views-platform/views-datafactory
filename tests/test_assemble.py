@@ -10,6 +10,61 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
+
+
+def _load_assembly_module():
+    """Import the assemble_grid script as a module."""
+    import importlib.util
+    import sys as _sys
+
+    path = Path(__file__).parent.parent / "scripts" / "assemble_grid.py"
+    spec = importlib.util.spec_from_file_location(
+        "assemble_grid", path,
+    )
+    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    _sys.modules["assemble_grid"] = mod
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return mod
+
+
+_assembly_mod = _load_assembly_module()
+
+
+class TestAssemblyConfig:
+    """AssemblyConfig validation (ADR-009)."""
+
+    def test_default_construction(self) -> None:
+        cfg = _assembly_mod.AssemblyConfig()
+        assert cfg.output_dtype == "float32"
+        assert cfg.admin_fill_value == -1.0
+        assert cfg.disk_space_margin == 1.2
+        assert len(cfg.admin_numeric_fields) == 3
+
+    def test_empty_admin_fields_rejected(self) -> None:
+        with pytest.raises(ValueError, match="non-empty"):
+            _assembly_mod.AssemblyConfig(admin_numeric_fields=())
+
+    def test_duplicate_admin_fields_rejected(self) -> None:
+        with pytest.raises(ValueError, match="duplicate"):
+            _assembly_mod.AssemblyConfig(
+                admin_numeric_fields=(
+                    "gaul0_code", "gaul0_code",
+                ),
+            )
+
+    def test_disk_margin_below_one_rejected(self) -> None:
+        with pytest.raises(ValueError, match="disk_space_margin"):
+            _assembly_mod.AssemblyConfig(disk_space_margin=0.5)
+
+    def test_invalid_dtype_rejected(self) -> None:
+        with pytest.raises(ValueError, match="output_dtype"):
+            _assembly_mod.AssemblyConfig(output_dtype="int32")
+
+    def test_frozen(self) -> None:
+        cfg = _assembly_mod.AssemblyConfig()
+        with pytest.raises(AttributeError):
+            cfg.output_dtype = "float64"  # type: ignore[misc]
 
 
 class TestGidLookup:
