@@ -3,14 +3,16 @@
 
 Usage:
     uv run python scripts/assemble_grid.py
-    uv run python scripts/assemble_grid.py --ucdp-grid data/compiled
+    uv run python scripts/assemble_grid.py --acled-grid data/compiled/acled
     uv run python scripts/assemble_grid.py --admin-dir data/gaul_admin
 
-Combines the compiled UCDP conflict grid with PRIO-GRID static
-features and GAUL admin boundary codes into a single array. Static
-and admin features are broadcast across all time steps.
+Combines the compiled UCDP conflict grid, ACLED conflict grid,
+PRIO-GRID static features, and GAUL admin boundary codes into a
+single array. ACLED is temporally aligned to the UCDP timeline and
+zero-filled outside its coverage range (C-156). Static and admin
+features are broadcast across all time steps.
 
-Output: grid.npy [T, H, W, F] with F = UCDP + static + admin channels.
+Output: grid.npy [T, H, W, F] with F = UCDP + ACLED + static + admin.
 
 Admin channels (gaul0_code, gaul1_code, gaul2_code) are categorical
 integers stored as float32. Downstream models should treat them as
@@ -54,6 +56,12 @@ def main() -> int:
         help="GAUL admin boundary Parquet directory",
     )
     parser.add_argument(
+        "--acled-grid",
+        type=Path,
+        default=Path("data/compiled/acled"),
+        help="Compiled ACLED grid directory (optional)",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("data/assembled"),
@@ -83,9 +91,18 @@ def main() -> int:
             "skipping admin channels"
         )
 
+    has_acled = args.acled_grid.exists()
+    if not has_acled:
+        print(
+            f"NOTE: {args.acled_grid} not found, "
+            "skipping ACLED channels"
+        )
+
     print("=" * 60)
     print("GRID ASSEMBLY — All Data Sources")
     print(f"UCDP grid:  {args.ucdp_grid}")
+    print(f"ACLED grid: {args.acled_grid}"
+          f"{'' if has_acled else ' (skipped)'}")
     print(f"Static dir: {args.static_dir}")
     print(f"Admin dir:  {args.admin_dir}"
           f"{'' if has_admin else ' (skipped)'}")
@@ -113,6 +130,64 @@ def main() -> int:
         f"C={n_ucdp}]"
     )
     print(f"UCDP features: {ucdp_features}")
+
+    # ── ACLED channels (temporal, zero-fill outside range) ──
+    acled_features: list[str] = []
+    acled_grid = None
+    acled_offset: int = 0
+    n_acled: int = 0
+
+    if has_acled:
+        acled_grid_path = args.acled_grid / "grid.npy"
+        acled_feat_path = args.acled_grid / "feature_names.json"
+        acled_time_path = args.acled_grid / "time_steps.npy"
+
+        for p in (acled_grid_path, acled_feat_path, acled_time_path):
+            if not p.exists():
+                print(f"FAIL: {p} not found")
+                return 1
+
+        acled_grid = np.load(acled_grid_path, mmap_mode="r")
+        acled_features = json.loads(acled_feat_path.read_text())
+        acled_time_steps = np.load(acled_time_path)
+
+        DEFAULT_GRID_CONFIG.assert_grid_shape(acled_grid)
+
+        acled_start_dt = acled_time_steps[0]
+        matches = np.where(time_steps == acled_start_dt)[0]
+        if len(matches) != 1:
+            print(
+                f"FAIL: ACLED start {acled_start_dt} not found "
+                f"in UCDP timeline (or ambiguous)"
+            )
+            return 1
+        acled_offset = int(matches[0])
+        n_acled_t = acled_grid.shape[0]
+        acled_end_idx = acled_offset + n_acled_t
+
+        if acled_end_idx > n_t:
+            print(
+                f"FAIL: ACLED extends beyond UCDP timeline "
+                f"(offset {acled_offset} + {n_acled_t} > {n_t})"
+            )
+            return 1
+
+        n_acled = len(acled_features)
+        print(
+            f"ACLED grid: [T={n_acled_t}, "
+            f"H={acled_grid.shape[1]}, "
+            f"W={acled_grid.shape[2]}, C={n_acled}]"
+        )
+        print(f"ACLED features: {acled_features}")
+        print(
+            f"ACLED temporal alignment: indices "
+            f"{acled_offset}–{acled_end_idx - 1} "
+            f"in assembled grid"
+        )
+        print(
+            f"  Zero-fill: 0–{acled_offset - 1}, "
+            f"{acled_end_idx}–{n_t - 1}"
+        )
 
     # Build gid → (row, col) lookup from pgids array
     gid_to_rowcol: dict[int, tuple[int, int]] = {}
@@ -196,8 +271,11 @@ def main() -> int:
 
     n_static = len(static_names)
     n_admin = len(admin_names)
-    n_total = n_ucdp + n_static + n_admin
-    all_features = ucdp_features + static_names + admin_names
+    n_total = n_ucdp + n_acled + n_static + n_admin
+    all_features = (
+        ucdp_features + acled_features
+        + static_names + admin_names
+    )
 
     print(
         f"Assembling [T={n_t}, H={n_h}, "
@@ -238,16 +316,29 @@ def main() -> int:
         assembled[:, :, :, :n_ucdp] = ucdp_grid
         del ucdp_grid  # free memory
 
+        # Copy ACLED channels (temporal slice, rest stays zero)
+        if acled_grid is not None:
+            acled_end = acled_offset + acled_grid.shape[0]
+            assembled[
+                acled_offset:acled_end,
+                :, :,
+                n_ucdp:n_ucdp + n_acled,
+            ] = acled_grid
+            del acled_grid
+
         # Fill static channels (broadcast in-place)
         for i, spatial in enumerate(static_spatial):
-            # spatial is [H, W] — assign to every time step
-            assembled[:, :, :, n_ucdp + i] = spatial
+            assembled[
+                :, :, :, n_ucdp + n_acled + i
+            ] = spatial
 
         del static_spatial  # free memory
 
         # Fill admin channels (broadcast in-place)
         for i, spatial in enumerate(admin_spatial):
-            assembled[:, :, :, n_ucdp + n_static + i] = spatial
+            assembled[
+                :, :, :, n_ucdp + n_acled + n_static + i
+            ] = spatial
 
         del admin_spatial  # free memory
 
@@ -283,6 +374,12 @@ def main() -> int:
     )
     ucdp_digest = compute_file_digest(grid_path)
 
+    acled_digest: str | None = None
+    if has_acled:
+        acled_digest = compute_file_digest(
+            args.acled_grid / "grid.npy"
+        )
+
     # Data boundary: last month with observed UCDP data
     ucdp_grid_ro = np.load(grid_path, mmap_mode="r")
     has_data = ucdp_grid_ro.sum(axis=(1, 2, 3)) > 0
@@ -300,10 +397,40 @@ def main() -> int:
         )
     del ucdp_grid_ro
 
+    # ACLED data boundary
+    last_valid_acled_month_id: int | None = None
+    if has_acled:
+        acled_grid_ro = np.load(
+            args.acled_grid / "grid.npy", mmap_mode="r",
+        )
+        acled_ts = np.load(args.acled_grid / "time_steps.npy")
+        acled_has_data = acled_grid_ro.sum(axis=(1, 2, 3)) > 0
+        acled_valid = np.where(acled_has_data)[0]
+        if len(acled_valid) > 0:
+            acled_last = int(acled_valid[-1])
+            acled_last_dt = acled_ts[acled_last]
+            last_valid_acled_month_id = int(
+                to_views_month_id(acled_last_dt)
+            )
+            print(
+                f"Last valid ACLED month: "
+                f"{last_valid_acled_month_id} ({acled_last_dt})"
+            )
+        del acled_grid_ro
+
     provenance = {
         "sources": {
             "ucdp_grid": str(grid_path),
             "ucdp_digest": ucdp_digest,
+            "acled_grid": (
+                str(args.acled_grid / "grid.npy")
+                if has_acled else None
+            ),
+            "acled_digest": acled_digest,
+            "acled_features": acled_features or None,
+            "acled_temporal_offset": (
+                acled_offset if has_acled else None
+            ),
             "static_dir": str(args.static_dir),
             "static_variables": static_names,
             "admin_dir": str(args.admin_dir),
@@ -316,6 +443,10 @@ def main() -> int:
     }
     if last_valid_month_id is not None:
         provenance["last_valid_month_id"] = last_valid_month_id
+    if last_valid_acled_month_id is not None:
+        provenance["last_valid_acled_month_id"] = (
+            last_valid_acled_month_id
+        )
     (args.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)
     )

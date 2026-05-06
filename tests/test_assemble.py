@@ -102,18 +102,110 @@ class TestFeatureConcatenation:
             "ged_ns_count", "ged_ns_best",
             "ged_os_count", "ged_os_best",
         ]
+        acled = [
+            "acled_count", "acled_battles",
+            "acled_explosions", "acled_vac",
+            "acled_protests", "acled_riots",
+            "acled_strategic", "acled_fatalities",
+        ]
         static = ["agri_gc", "forest_gc", "mountains_mean"]
         admin = ["gaul0_code", "gaul1_code", "gaul2_code"]
-        all_features = ucdp + static + admin
+        all_features = ucdp + acled + static + admin
         assert len(all_features) == len(set(all_features))
 
-    def test_order_is_ucdp_then_static_then_admin(self) -> None:
-        """Channel order: UCDP features first, then static, then admin."""
+    def test_order_is_ucdp_acled_static_admin(self) -> None:
+        """Channel order: UCDP, ACLED, static, admin."""
         ucdp = ["a", "b"]
-        static = ["c"]
-        admin = ["d"]
-        combined = ucdp + static + admin
-        assert combined == ["a", "b", "c", "d"]
+        acled = ["c", "d"]
+        static = ["e"]
+        admin = ["f"]
+        combined = ucdp + acled + static + admin
+        assert combined == ["a", "b", "c", "d", "e", "f"]
+
+
+class TestAcledTemporalAlignment:
+    """ACLED temporal alignment into the assembled grid."""
+
+    def test_acled_placed_at_correct_offset(self) -> None:
+        """ACLED data lands at the correct temporal offset."""
+        n_t, n_h, n_w = 10, 3, 4
+        n_ucdp, n_acled = 2, 2
+        n_total = n_ucdp + n_acled
+        acled_offset = 6
+        acled_t = 3
+
+        assembled = np.zeros(
+            (n_t, n_h, n_w, n_total), dtype=np.float32,
+        )
+        assembled[:, :, :, :n_ucdp] = 1.0
+
+        acled_grid = np.full(
+            (acled_t, n_h, n_w, n_acled), 7.0,
+            dtype=np.float32,
+        )
+        acled_end = acled_offset + acled_t
+        assembled[
+            acled_offset:acled_end, :, :,
+            n_ucdp:n_ucdp + n_acled,
+        ] = acled_grid
+
+        assert assembled[acled_offset, 0, 0, 2] == 7.0
+        assert assembled[acled_end - 1, 0, 0, 3] == 7.0
+
+    def test_zero_fill_outside_acled_range(self) -> None:
+        """ACLED channels are zero outside their temporal range."""
+        n_t, n_h, n_w = 10, 3, 4
+        n_ucdp, n_acled = 2, 2
+        n_total = n_ucdp + n_acled
+        acled_offset = 6
+        acled_t = 3
+
+        assembled = np.zeros(
+            (n_t, n_h, n_w, n_total), dtype=np.float32,
+        )
+        acled_grid = np.full(
+            (acled_t, n_h, n_w, n_acled), 7.0,
+            dtype=np.float32,
+        )
+        acled_end = acled_offset + acled_t
+        assembled[
+            acled_offset:acled_end, :, :,
+            n_ucdp:n_ucdp + n_acled,
+        ] = acled_grid
+
+        # Before ACLED range
+        assert assembled[:acled_offset, :, :, 2:].sum() == 0.0
+        # After ACLED range
+        assert assembled[acled_end:, :, :, 2:].sum() == 0.0
+
+    def test_datetime_alignment_finds_correct_index(self) -> None:
+        """np.where on datetime64 finds the right offset."""
+        ucdp_ts = np.array(
+            [f"20{y:02d}-{m:02d}" for y in range(20, 23)
+             for m in range(1, 13)],
+            dtype="datetime64[M]",
+        )
+        acled_start = np.datetime64("2021-06")
+        matches = np.where(ucdp_ts == acled_start)[0]
+        assert len(matches) == 1
+        assert int(matches[0]) == 17  # 12 months + 5
+
+    def test_assembly_without_acled_backward_compat(self) -> None:
+        """When n_acled=0, offsets collapse to pre-ACLED layout."""
+        n_ucdp, n_acled, n_static, n_admin = 2, 0, 1, 1
+        n_total = n_ucdp + n_acled + n_static + n_admin
+
+        assembled = np.zeros(
+            (2, 3, 4, n_total), dtype=np.float32,
+        )
+        static_val = 10.0
+        admin_val = -1.0
+        assembled[:, :, :, n_ucdp + n_acled] = static_val
+        assembled[:, :, :, n_ucdp + n_acled + n_static] = admin_val
+
+        assert assembled[0, 0, 0, 2] == static_val
+        assert assembled[0, 0, 0, 3] == admin_val
+        assert n_total == 4
 
 
 class TestAtomicWrite:
@@ -175,23 +267,32 @@ class TestAtomicWrite:
 
 
 class TestAssemblyRoundTrip:
-    """Full assembly: UCDP grid + static + admin → assembled grid."""
+    """Full assembly: UCDP + ACLED + static + admin → assembled grid."""
 
     def test_assembled_shape_and_channels(
         self, tmp_path: Path
     ) -> None:
         """Assemble tiny grid and verify shape + channel placement."""
-        n_t, n_h, n_w = 2, 3, 4
+        n_t, n_h, n_w = 10, 3, 4
         n_ucdp = 2
+        n_acled = 2
         n_static = 1
         n_admin = 1
-        n_total = n_ucdp + n_static + n_admin
+        n_total = n_ucdp + n_acled + n_static + n_admin
 
         # UCDP grid [T, H, W, C]
         ucdp_grid = np.ones(
             (n_t, n_h, n_w, n_ucdp), dtype=np.float32
         )
         ucdp_grid *= 5.0
+
+        # ACLED grid [acled_T, H, W, C] — subset of timeline
+        acled_offset = 6
+        acled_t = 3
+        acled_grid = np.full(
+            (acled_t, n_h, n_w, n_acled), 9.0,
+            dtype=np.float32,
+        )
 
         # Static: single [H, W] array
         static_spatial = np.full(
@@ -213,21 +314,34 @@ class TestAssemblyRoundTrip:
             shape=(n_t, n_h, n_w, n_total),
         )
         assembled[:, :, :, :n_ucdp] = ucdp_grid
-        assembled[:, :, :, n_ucdp] = static_spatial
-        assembled[:, :, :, n_ucdp + n_static] = admin_spatial
+        acled_end = acled_offset + acled_t
+        assembled[
+            acled_offset:acled_end, :, :,
+            n_ucdp:n_ucdp + n_acled,
+        ] = acled_grid
+        assembled[:, :, :, n_ucdp + n_acled] = static_spatial
+        assembled[
+            :, :, :, n_ucdp + n_acled + n_static
+        ] = admin_spatial
         assembled.flush()
 
         # Read back and verify
         result = np.load(output_path)
-        assert result.shape == (2, 3, 4, 4)
+        assert result.shape == (10, 3, 4, 6)
 
-        # UCDP channels
+        # UCDP channels (all time steps)
         assert result[0, 0, 0, 0] == 5.0
         assert result[0, 0, 0, 1] == 5.0
 
+        # ACLED channels (only at offset)
+        assert result[acled_offset, 0, 0, 2] == 9.0
+        assert result[acled_offset, 0, 0, 3] == 9.0
+        assert result[0, 0, 0, 2] == 0.0  # zero-fill before
+        assert result[9, 0, 0, 2] == 0.0  # zero-fill after
+
         # Static channel
-        assert result[0, 0, 0, 2] == 10.0
+        assert result[0, 0, 0, 4] == 10.0
 
         # Admin channel
-        assert result[0, 0, 0, 3] == -1.0  # missing
-        assert result[0, 1, 1, 3] == 42.0  # placed
+        assert result[0, 0, 0, 5] == -1.0  # missing
+        assert result[0, 1, 1, 5] == 42.0  # placed
