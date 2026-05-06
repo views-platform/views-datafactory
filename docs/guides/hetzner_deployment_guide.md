@@ -28,6 +28,8 @@ what all of this means.
 
 - The `UCDP_API_TOKEN` environment variable (must be in `~/.profile`,
   not `~/.bashrc` — see Phase 4 for why)
+- The `ACLED_USERNAME` and `ACLED_PASSWORD` environment variables
+  (must be in `~/.profile` — see `credential_setup.md`)
 - A domain name pointing to the server (e.g., `data.views.uu.se`)
   OR willingness to use the IP address directly (current)
 
@@ -87,6 +89,8 @@ uv sync
 # Add to ~/.profile (NOT .bashrc — .bashrc exits early in non-interactive
 # shells like cron, making env vars unreachable for automated jobs)
 echo 'export UCDP_API_TOKEN="your-token-here"' >> ~/.profile
+echo 'export ACLED_USERNAME="your-email@example.com"' >> ~/.profile
+echo 'export ACLED_PASSWORD="your-password-here"' >> ~/.profile
 source ~/.profile
 ```
 
@@ -104,10 +108,9 @@ bash scripts/refresh_pipeline.sh
 This takes 15-30 minutes (harvesting calls the UCDP API with
 rate limiting). Watch the output — each step prints PASS or FAIL.
 
-**Note:** ACLED harvesting and consolidation are implemented and
-tested but not yet integrated into `refresh_pipeline.sh`. Standalone
-scripts do not exist yet — ACLED will be added to the pipeline when
-Phase 2 (live API integration) is complete.
+**Note:** The pipeline now includes ACLED harvesting and compilation
+(8 ACLED features). Pre-flight checks (`scripts/preflight.py`)
+validate all credentials before any step runs.
 
 ### 2.2 Verify the output
 
@@ -750,13 +753,14 @@ chown -R views-deploy:views-deploy /home/views-deploy/views-datafactory
 su - views-deploy -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
 
 # ── Step 6: Copy environment variables ──
-# UCDP_API_TOKEN is required by the harvester scripts.
-# We put it in .profile (not .bashrc) because cron runs non-interactive
+# UCDP_API_TOKEN and ACLED credentials are required by harvester scripts.
+# We put them in .profile (not .bashrc) because cron runs non-interactive
 # shells where .bashrc exits early when PS1 is unset.
 # refresh_pipeline.sh sources $HOME/.profile explicitly (line 48).
-# IMPORTANT: Replace <token> with the actual token from /root/.bashrc
-# or /root/.profile. You can find it with: grep UCDP_API_TOKEN /root/.bashrc
+# IMPORTANT: Replace values with actual credentials.
 echo 'export UCDP_API_TOKEN="<token>"' >> /home/views-deploy/.profile
+echo 'export ACLED_USERNAME="<email>"' >> /home/views-deploy/.profile
+echo 'export ACLED_PASSWORD="<password>"' >> /home/views-deploy/.profile
 
 # ── Step 7: Copy the deployment gate file ──
 # ~/.views-deploy-tag tells refresh_pipeline.sh which git tag to run.

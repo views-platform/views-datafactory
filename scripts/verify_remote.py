@@ -35,40 +35,21 @@ from pathlib import Path
 import requests
 
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
+from datafactory_provenance.source_registry import get_all_features
 from datafactory_query.defaults import DEFAULT_REMOTE
 
 DEFAULT_SERVER = DEFAULT_REMOTE.server
 DEFAULT_PORT = 80
 
-EXPECTED_N_FEATURES = 43
+_ALL_FEATURES = get_all_features()
+EXPECTED_N_FEATURES = len(_ALL_FEATURES)
 EXPECTED_N_TIME = 456
 EXPECTED_N_LAT = DEFAULT_GRID_CONFIG.nrow
 EXPECTED_N_LON = DEFAULT_GRID_CONFIG.ncol
 EXPECTED_CRS = "EPSG:4326"
 EXPECTED_RESOLUTION = DEFAULT_GRID_CONFIG.resolution
 EXPECTED_SOURCE = "views-datafactory"
-
-EXPECTED_UCDP = {
-    "ged_sb_count", "ged_sb_best",
-    "ged_ns_count", "ged_ns_best",
-    "ged_os_count", "ged_os_best",
-}
-EXPECTED_ADMIN = {"gaul0_code", "gaul1_code", "gaul2_code"}
-EXPECTED_STATIC = {
-    "agri_gc", "aquaveg_gc", "barren_gc",
-    "cmr_max", "cmr_mean", "cmr_min", "cmr_sd",
-    "diamprim_s", "diamsec_s",
-    "forest_gc", "gem_s",
-    "goldplacer_s", "goldsurface_s", "goldvein_s",
-    "growend", "growstart", "harvarea",
-    "herb_gc",
-    "imr_max", "imr_mean", "imr_min", "imr_sd",
-    "landarea", "maincrop", "mountains_mean",
-    "petroleum_s", "rainseas",
-    "shrub_gc",
-    "ttime_max", "ttime_mean", "ttime_min", "ttime_sd",
-    "urban_gc", "water_gc",
-}
+EXPECTED_FEATURES = set(_ALL_FEATURES)
 
 
 def _result(
@@ -311,21 +292,17 @@ def main() -> int:
                 if k.endswith("/.zarray")
                 and k.split("/")[0] not in ("time", "lat", "lon", "pgid")
             }
-            missing_ucdp = EXPECTED_UCDP - found_vars
-            missing_static = EXPECTED_STATIC - found_vars
-            missing_admin = EXPECTED_ADMIN - found_vars
-            n_ucdp = len(EXPECTED_UCDP & found_vars)
-            n_static = len(EXPECTED_STATIC & found_vars)
-            n_admin = len(EXPECTED_ADMIN & found_vars)
-
-            all_missing = missing_ucdp | missing_static | missing_admin
-            if all_missing:
-                ok = _result(step, False, f"missing: {sorted(all_missing)}")
+            missing = EXPECTED_FEATURES - found_vars
+            if missing:
+                ok = _result(
+                    step, False,
+                    f"missing: {sorted(missing)}",
+                )
             else:
                 ok = _result(
                     step, True,
-                    f"{n_ucdp} UCDP + {n_static} static"
-                    f" + {n_admin} admin = {len(found_vars)}",
+                    f"{len(found_vars)} features"
+                    f" (expected {EXPECTED_N_FEATURES})",
                 )
         except Exception as e:
             ok = _result(step, False, str(e))

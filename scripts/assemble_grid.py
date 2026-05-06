@@ -42,7 +42,7 @@ class AssemblyConfig:
     """
 
     ucdp_grid_dir: Path = Path("data/compiled")
-    acled_grid_dir: Path = Path("data/compiled/acled")
+    acled_grid_dir: Path | None = None
     static_dir: Path = Path("data/raw/priogrid_static")
     admin_dir: Path = Path("data/raw/gaul_admin")
     output_dir: Path = Path("data/assembled")
@@ -112,8 +112,8 @@ def main() -> int:
     parser.add_argument(
         "--acled-grid",
         type=Path,
-        default=defaults.acled_grid_dir,
-        help="Compiled ACLED grid directory (optional)",
+        default=None,
+        help="Compiled ACLED grid directory (omit to skip ACLED)",
     )
     parser.add_argument(
         "--output-dir",
@@ -153,18 +153,19 @@ def main() -> int:
             "skipping admin channels"
         )
 
-    has_acled = config.acled_grid_dir.exists()
-    if not has_acled:
+    has_acled = config.acled_grid_dir is not None
+    if has_acled and not config.acled_grid_dir.exists():
         print(
-            f"NOTE: {config.acled_grid_dir} not found, "
-            "skipping ACLED channels"
+            f"FAIL: --acled-grid {config.acled_grid_dir} "
+            "not found"
         )
+        return 1
 
     print("=" * 60)
     print("GRID ASSEMBLY — All Data Sources")
     print(f"UCDP grid:  {config.ucdp_grid_dir}")
-    print(f"ACLED grid: {config.acled_grid_dir}"
-          f"{'' if has_acled else ' (skipped)'}")
+    print(f"ACLED grid: "
+          f"{config.acled_grid_dir if has_acled else '(skipped)'}")
     print(f"Static dir: {config.static_dir}")
     print(f"Admin dir:  {config.admin_dir}"
           f"{'' if has_admin else ' (skipped)'}")
