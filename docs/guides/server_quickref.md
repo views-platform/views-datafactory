@@ -26,14 +26,11 @@ sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv 
 ## Run the pipeline
 
 ```bash
-# Normal run (skips existing data)
-sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1'
+# Normal run (output streams to terminal + logs to file)
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log'
 
-# Force re-fetch everything
-sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh --force >> logs/refresh.log 2>&1'
-
-# Tail the log (in a second terminal)
-sudo -u views-deploy tail -f ~/views-datafactory/logs/refresh.log
+# Force re-fetch: delete data first, then run normally
+# (there is no --force flag; the pipeline skips existing data by default)
 ```
 
 ## Nuke and rebuild

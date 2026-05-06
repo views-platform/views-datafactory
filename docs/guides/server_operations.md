@@ -29,7 +29,7 @@ employee with exactly three permissions:
 
 1. Read code from GitHub (via a read-only deploy key)
 2. Read/write data files under its home directory
-3. Make HTTP requests to external APIs (UCDP, PRIO-GRID)
+3. Make HTTP requests to external APIs (UCDP, ACLED, PRIO-GRID, GAUL)
 
 It **cannot** install software, change system settings, or access
 your files. It exists so that if the pipeline has a bug, the damage
@@ -70,6 +70,8 @@ month. Branches can change; tags cannot.
 │   │   ├── raw/
 │   │   │   ├── ucdp_annual/     ← harvested annual parquet (~57 MB)
 │   │   │   ├── ucdp_candidate/  ← candidate monthly parquets
+│   │   │   ├── ucdp_dot9/       ← UCDP .9 estimates
+│   │   │   ├── acled/           ← ACLED event data
 │   │   │   ├── priogrid/        ← PRIO-GRID static features
 │   │   │   └── gaul_admin/      ← GAUL admin boundaries
 │   │   ├── consolidated/        ← merged UCDP event store
@@ -82,7 +84,7 @@ month. Branches can change; tags cannot.
 │   ├── logs/                    ← pipeline run logs
 │   └── provenance/              ← JSONL provenance ledgers
 ├── .views-deploy-tag            ← version to deploy (e.g., "v1.2.3")
-├── .profile                     ← env vars (UCDP_API_TOKEN, PATH)
+├── .profile                     ← env vars (UCDP_API_TOKEN, ACLED_USERNAME, ACLED_PASSWORD, PATH)
 └── .ssh/id_ed25519              ← read-only GitHub deploy key
 
 /srv/views-data/                 ← Caddy web server root
@@ -96,7 +98,7 @@ month. Branches can change; tags cannot.
 GitHub tag
   → git fetch on server
     → checkout tagged version
-      → harvest APIs (UCDP, PRIO-GRID, GAUL)
+      → harvest APIs (UCDP, ACLED, PRIO-GRID, GAUL)
         → consolidate → compile → assemble
           → export zarr
             → Caddy serves /srv/views-data/

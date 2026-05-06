@@ -78,6 +78,10 @@ Everything below is the full setup guide (one-time, ~1,200 lines).
 
 ### 1.1 SSH into the server
 
+> **Historical:** Phase 1 was performed as root during initial setup.
+> Root login is now disabled — see Phase 6.3. Current access uses
+> named accounts (e.g., `ssh <your-user>@204.168.219.108`).
+
 ```bash
 ssh root@204.168.219.108
 ```
@@ -137,8 +141,8 @@ cd ~/views-datafactory
 bash scripts/refresh_pipeline.sh
 ```
 
-This takes 15-30 minutes (harvesting calls the UCDP API with
-rate limiting). Watch the output — each step prints PASS or FAIL.
+This takes 15-30 minutes (harvesting calls the UCDP and ACLED APIs
+with rate limiting). Watch the output — each step prints PASS or FAIL.
 
 **Note:** The pipeline now includes ACLED harvesting and compilation
 (8 ACLED features). Pre-flight checks (`scripts/preflight.py`)
@@ -291,7 +295,7 @@ crontab -e
 Add this line (runs on the 21st of every month at midnight UTC):
 
 ```
-0 0 21 * * cd /root/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
+0 0 21 * * cd /home/views-deploy/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 # Note: refresh_pipeline.sh sources ~/.profile (not .bashrc) and adds
 # ~/.cargo/bin to PATH. Environment variables like UCDP_API_TOKEN must
 # be in ~/.profile, not .bashrc — .bashrc exits early in non-interactive
@@ -368,7 +372,7 @@ This runs 10 checks against the remote server:
 | 4. Metadata | `.zmetadata` returns valid JSON |
 | 5. Dataset attributes | CRS, resolution, source, feature count |
 | 6. Dimensions | 456 months, 360 lat, 720 lon |
-| 7. Variables | 6 UCDP + 34 static + 3 admin = 43 |
+| 7. Variables | 6 UCDP + 8 ACLED + 34 static + 3 admin = 51 |
 | 8. Data access | xarray opens store, loads 1 chunk |
 | 9. Data sanity | ged_sb_best has plausible non-zero values |
 | 10. Parquet | dataframe.parquet downloadable |
@@ -572,7 +576,7 @@ script. Before running any pipeline steps, it:
 2. Runs `git fetch --tags` to download any new tags from GitHub
 3. Checks that the tag exists
 4. Runs `git checkout v1.1.0` to switch to that exact version
-5. Then runs the 7 pipeline steps (harvest, compile, export, etc.)
+5. Then runs the 9 pipeline steps (pre-flight, harvest, consolidate, viewpoint, compile UCDP, compile ACLED, assemble, export, health check)
 
 If the `.views-deploy-tag` file is missing, empty, or contains a tag
 that doesn't exist, the script prints `FATAL` and stops immediately.
@@ -671,6 +675,10 @@ To apply a version change immediately, run the pipeline manually
 |-----|------|-------------|
 | `v1.0.0` | 2026-04-02 | First production release |
 | `v1.1.0` | 2026-04-06 | Deployment gate, Registry[T], 411 tests, server hardening docs |
+| `v1.2.0`–`v1.2.10` | 2026-04 | ACLED harvester, compilation, grid verification, assembly integration |
+| `v1.2.11` | 2026-05 | Source registry, pre-flight checks, deployment hardening |
+
+For a complete list: `git tag -l 'v*' --sort=-version:refname`
 
 ### Why this design?
 
@@ -696,7 +704,7 @@ A non-root Unix user dedicated to running the data pipeline. It owns:
 - `/home/views-deploy/views-datafactory/data/` — all harvested, consolidated, compiled, and exported data (~35 GB)
 - `/home/views-deploy/views-datafactory/logs/` — pipeline execution logs
 - `/home/views-deploy/.views-deploy-tag` — the deployment gate file (ADR-022)
-- `/home/views-deploy/.profile` — environment variables (UCDP_API_TOKEN)
+- `/home/views-deploy/.profile` — environment variables (UCDP_API_TOKEN, ACLED_USERNAME, ACLED_PASSWORD)
 - `/home/views-deploy/.ssh/id_ed25519` — repo-scoped deploy key (Phase 6.2)
 
 The pipeline cron job runs as `views-deploy`. The `refresh_pipeline.sh` script uses `$HOME` throughout, so all paths resolve to `/home/views-deploy/` automatically.
@@ -780,14 +788,14 @@ chown -R views-deploy:views-deploy /home/views-deploy/views-datafactory
 # ── Step 5: Install uv ──
 # The pipeline uses uv to manage Python dependencies and run scripts.
 # This installs uv to /home/views-deploy/.cargo/bin/uv.
-# refresh_pipeline.sh adds $HOME/.cargo/bin to PATH (line 43).
+# refresh_pipeline.sh adds $HOME/.cargo/bin to PATH (line 47).
 su - views-deploy -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
 
 # ── Step 6: Copy environment variables ──
 # UCDP_API_TOKEN and ACLED credentials are required by harvester scripts.
 # We put them in .profile (not .bashrc) because cron runs non-interactive
 # shells where .bashrc exits early when PS1 is unset.
-# refresh_pipeline.sh sources $HOME/.profile explicitly (line 48).
+# refresh_pipeline.sh sources $HOME/.profile explicitly (lines 52-55).
 # IMPORTANT: Replace values with actual credentials.
 echo 'export UCDP_API_TOKEN="<token>"' >> /home/views-deploy/.profile
 echo 'export ACLED_USERNAME="<email>"' >> /home/views-deploy/.profile
@@ -840,7 +848,7 @@ After completing all steps, verify the migration:
 ```bash
 # 1. Pipeline runs as views-deploy
 su - views-deploy -c "cd views-datafactory && uv run pytest"
-# Expected: 511 tests pass
+# Expected: all tests pass (currently ~820)
 
 # 2. Cron is in views-deploy's crontab
 crontab -u views-deploy -l | grep refresh_pipeline
@@ -1159,12 +1167,12 @@ uv run pytest --co -q | tail -3
 exit  # back to your own shell
 ```
 
-#### Verify on the server (as root)
+#### Verify on the server (as admin)
 
 After the user confirms their access works:
 
 ```bash
-ssh root@204.168.219.108 "passwd -S <username>"
+ssh <your-user>@204.168.219.108 "sudo passwd -S <username>"
 # Expected output:
 #   <username> P <today's date> 0 99999 7 -1
 # The 'P' means password is set (not 'L' = locked).
@@ -1256,7 +1264,7 @@ After completing all hardening steps:
 - [ ] Break-glass `emergency` account works
 - [ ] SSH from non-whitelisted IP is blocked
 - [ ] `verify_remote.py` passes 10/10 (data serving unaffected)
-- [ ] `cat /home/views-deploy/.views-deploy-tag` returns `v1.1.0`
+- [ ] `cat /home/views-deploy/.views-deploy-tag` returns the current deploy tag
 
 ---
 
