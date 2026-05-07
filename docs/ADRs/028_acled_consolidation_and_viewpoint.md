@@ -156,8 +156,8 @@ These costs are accepted. The v1 compilation should be correct and useful, not c
 
 - Consolidator: `src/datafactory_consolidation/consolidators/acled.py` (exists)
 - Viewpoint builder: `src/datafactory_viewpoint/builders/acled_v1.py` (exists)
-- Compilation: `src/datafactory_compilation/` (to be built — ACLED compiler does not exist yet)
-- The compiler should follow the same `FeatureSpec` pattern as UCDP compilation (ADR-024)
+- Compilation: `src/datafactory_compilation/` (implemented). `scripts/run_acled_pipeline.py` runs consolidation, viewpoint, and compilation end-to-end, producing output at `data/compiled/acled/`. It runs as step 5/9 in `refresh_pipeline.sh`. The compiler reuses `CompilationConfig` from `datafactory_compilation` with ACLED-specific column mappings.
+- The compiler follows the same `FeatureSpec` pattern as UCDP compilation (ADR-024)
 - `geo_precision` and `time_precision` are preserved in the consolidated store for future viewpoints
 
 ---

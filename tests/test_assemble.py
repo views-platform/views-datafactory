@@ -66,6 +66,16 @@ class TestAssemblyConfig:
         with pytest.raises(AttributeError):
             cfg.output_dtype = "float64"  # type: ignore[misc]
 
+    def test_acled_grid_dir_defaults_to_none(self) -> None:
+        cfg = _assembly_mod.AssemblyConfig()
+        assert cfg.acled_grid_dir is None
+
+    def test_acled_grid_dir_accepts_path(self) -> None:
+        cfg = _assembly_mod.AssemblyConfig(
+            acled_grid_dir=Path("/tmp/acled")
+        )
+        assert cfg.acled_grid_dir == Path("/tmp/acled")
+
 
 class TestGidLookup:
     """GID-to-(row, col) lookup construction."""

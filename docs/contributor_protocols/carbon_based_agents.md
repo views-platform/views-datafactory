@@ -31,7 +31,7 @@ Carbon-based agents are **stewards of intent**, not merely authors of code.
 
 Stewardship means:
 - preserving meaning over time,
-- enforcing architectural boundaries (the DAG of 5 packages),
+- enforcing architectural boundaries (the DAG of 10 packages),
 - and preventing silent failure under pressure.
 
 In a data factory whose outputs inform humanitarian forecasts, silent data corruption is not a debugging inconvenience -- it is a downstream harm.

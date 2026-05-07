@@ -40,14 +40,20 @@ The system **crashes and fails loud**. No stale data is served. When a harvest o
 
 ---
 
+## Pre-flight Checks
+
+Pre-flight validation is a concrete enforcement mechanism for fail-loud. `scripts/preflight.py` runs as step 0/9 of the pipeline (before any harvest or compilation begins). It calls `validate_preflight()` from `datafactory_provenance.source_registry`, which verifies that all declared sources have valid configuration, required environment variables are set, and SLO parameters are sane. If any check fails, the pipeline exits non-zero before any data work begins.
+
+---
+
 ## Future Work
 
 A future ADR should address graceful degradation when the system approaches production deployment. Specifically:
 
-- **Staleness thresholds:** How old can compiled data be before it should be considered invalid?
+- **Staleness thresholds:** How old can compiled data be before it should be considered invalid? (Partially addressed: per-source SLOs are now implemented via `SOURCE_SLO` in `datafactory_provenance.health`; see ADR-018.)
 - **Freshness indicators:** Should compiled grids carry a "data age" metadata field that consumers can check?
 - **Fallback policy:** Should the system serve the last-known-good grid with a staleness warning, or refuse entirely?
-- **Alerting:** Should failed harvests or compilations trigger alerts (Slack, email, etc.)?
+- **Alerting:** Should failed harvests or compilations trigger alerts (Slack, email, etc.)? (Partially addressed: `HEARTBEAT_URL` for uptime monitoring and `ALERT_FILE` sentinel for local failure signaling are now implemented in `refresh_pipeline.sh`.)
 
 These decisions require operational experience and stakeholder input (OCHA/FAO) that is not yet available.
 

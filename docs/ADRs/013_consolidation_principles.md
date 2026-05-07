@@ -28,7 +28,7 @@ Consolidation (Layer 2, ADR-012) must be **lossless**, **append-only**, and **ve
 
 > The consolidated event store preserves every version of every event from every source.
 > No fields are dropped. No records are discarded. No opinions are applied.
-> Opinions about which version is "right" belong to the golden record builder (Layer 3).
+> Opinions about which version is "right" belong to the viewpoint builder (Layer 3).
 
 ---
 
@@ -85,12 +85,12 @@ The following decisions are explicitly **out of scope** for the consolidation la
 
 | Decision | Owner |
 |----------|-------|
-| Choose between conflicting versions of an event | Golden record builder (Layer 3) |
-| Distribute summary events across months | Golden record builder (Layer 3) |
-| Handle temporal uncertainty (date_prec) | Golden record builder (Layer 3) |
+| Choose between conflicting versions of an event | Viewpoint builder (Layer 3) |
+| Distribute summary events across months | Viewpoint builder (Layer 3) |
+| Handle temporal uncertainty (date_prec) | Viewpoint builder (Layer 3) |
 | Assign events to grid cells | Compilation (Layer 4) |
 | Aggregate events into cell-month bins | Compilation (Layer 4) |
-| Decide which fields are "important" | Golden record builder (Layer 3) |
+| Decide which fields are "important" | Viewpoint builder (Layer 3) |
 
 If consolidation is making a judgment call about data meaning, it has overstepped its boundary.
 
@@ -113,8 +113,8 @@ If consolidation is making a judgment call about data meaning, it has oversteppe
 
 ### Positive
 
-- Golden record rules can be changed and reapplied without re-harvesting
-- Multiple golden record versions can coexist over the same consolidated store
+- Viewpoint rules can be changed and reapplied without re-harvesting
+- Multiple viewpoint versions can coexist over the same consolidated store
 - Evaluation can distinguish preliminary from final data (vintage-aware)
 - Full audit trail from raw source to any derived view
 - No data is ever lost
@@ -123,7 +123,7 @@ If consolidation is making a judgment call about data meaning, it has oversteppe
 
 - Storage cost is higher than a deduplicated store
 - Query patterns must account for multiple versions per event
-- Contributors must understand the consolidation/golden-record boundary
+- Contributors must understand the consolidation/viewpoint boundary
 
 These costs are accepted. Storage is cheap; lost data is irreplaceable.
 

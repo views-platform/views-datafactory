@@ -22,22 +22,36 @@ from datafactory_provenance.health import (
     report_ledger,
 )
 from datafactory_provenance.registry import Registry
+from datafactory_provenance.source_registry import (
+    PIPELINE_SOURCES,
+    SourceEntry,
+    get_all_features,
+    get_required_env_vars,
+    get_source_slo,
+    validate_preflight,
+)
 
 __all__ = [
     "DIGEST_SCHEME",
     "FRESHNESS_SLO_HOURS",
     "LEDGER_VERSION",
+    "PIPELINE_SOURCES",
     "Registry",
     "SOURCE_SLO",
+    "SourceEntry",
     "append_ledger_entry",
     "check_export_freshness",
     "compute_content_digest",
     "compute_file_digest",
     "file_lock",
+    "get_all_features",
+    "get_required_env_vars",
+    "get_source_slo",
     "last_digest",
     "last_digest_for_version",
     "read_last_entries",
     "report_ledger",
+    "validate_preflight",
 ]
 
 from importlib.metadata import version as _pkg_version

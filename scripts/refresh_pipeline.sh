@@ -5,6 +5,7 @@
 #   bash scripts/refresh_pipeline.sh
 #
 # This script runs the entire data pipeline end-to-end:
+#   0. Pre-flight checks (credentials, disk space)
 #   1. Harvest raw data from UCDP, PRIO-GRID, GAUL, and ACLED APIs
 #   2. Consolidate UCDP sources into event store
 #   3. Build viewpoint (survivorship + distribution + filtering)
@@ -29,13 +30,15 @@
 # Requires:
 #   - ~/.views-deploy-tag file containing a valid git tag
 #   - UCDP_API_TOKEN environment variable
-#   - Internet access (for UCDP, PRIO-GRID, GAUL APIs)
+#   - ACLED_USERNAME and ACLED_PASSWORD environment variables
+#   - Internet access (for UCDP, PRIO-GRID, GAUL, ACLED APIs)
 #   - uv installed
 #
 # The script stops on first error (set -e). Check output for
 # which step failed. Each step writes provenance to provenance/.
 #
-# For cron: 0 0 21 * * cd /path/to/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1
+# For cron:  0 0 21 * * cd /path/to/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
+# Manual:    sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log'
 
 set -euo pipefail
 
@@ -96,6 +99,10 @@ if ! git rev-parse "$DEPLOY_TAG" >/dev/null 2>&1; then
     exit 1
 fi
 
+# uv sync writes platform-specific changes to uv.lock which blocks
+# git checkout on the next deploy. Safe to discard — we never commit
+# on the server.
+git checkout -- uv.lock 2>/dev/null || true
 git checkout "$DEPLOY_TAG" --quiet
 
 PIPELINE_START=$(date +%s)
@@ -108,8 +115,14 @@ echo "Started: $PIPELINE_START_ISO"
 echo "========================================"
 echo
 
+# Step 0: Pre-flight checks (credentials, disk space)
+CURRENT_STEP="0/9: Pre-flight checks"
+echo "── $CURRENT_STEP ──"
+uv run python scripts/preflight.py
+echo
+
 # Step 1: Harvest
-CURRENT_STEP="1/8: Harvest raw data"
+CURRENT_STEP="1/9: Harvest raw data"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/harvest_ucdp.py
 uv run python scripts/harvest_priogrid.py
@@ -119,44 +132,44 @@ uv run python scripts/harvest_acled.py
 echo
 
 # Step 2: Consolidate
-CURRENT_STEP="2/8: Consolidate UCDP sources"
+CURRENT_STEP="2/9: Consolidate UCDP sources"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/consolidate_ucdp.py
 echo
 
 # Step 3: Build viewpoint
-CURRENT_STEP="3/8: Build viewpoint"
+CURRENT_STEP="3/9: Build viewpoint"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/build_viewpoint.py
 echo
 
 # Step 4: Compile UCDP grid
-CURRENT_STEP="4/8: Compile UCDP to PRIO-GRID"
+CURRENT_STEP="4/9: Compile UCDP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/compile_grid.py
 echo
 
 # Step 5: Compile ACLED grid
-CURRENT_STEP="5/8: Compile ACLED to PRIO-GRID"
+CURRENT_STEP="5/9: Compile ACLED to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_acled_pipeline.py --skip-to consolidate
 echo
 
 # Step 6: Assemble
-CURRENT_STEP="6/8: Assemble all features"
+CURRENT_STEP="6/9: Assemble all features"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/assemble_grid.py --acled-grid data/compiled/acled
 echo
 
 # Step 7: Export
-CURRENT_STEP="7/8: Export consumer formats"
+CURRENT_STEP="7/9: Export consumer formats"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/export_zarr.py
 uv run python scripts/export_dataframe.py
 echo
 
 # Step 8: Health check
-CURRENT_STEP="8/8: Health check"
+CURRENT_STEP="8/9: Health check"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/check_health.py
 echo

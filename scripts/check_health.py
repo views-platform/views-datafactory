@@ -27,6 +27,7 @@ from datafactory_provenance.health import (
     check_export_freshness,
     report_ledger,
 )
+from datafactory_provenance.source_registry import PIPELINE_SOURCES
 
 
 def main() -> int:
@@ -57,48 +58,11 @@ def main() -> int:
 
     now = datetime.now(tz=timezone.utc)
 
-    # Known ledger locations
+    # Ledger locations derived from the source registry
     ledgers = {
-        "UCDP Annual": (
-            args.provenance_dir
-            / "ucdp_annual"
-            / "ingestion_ledger.jsonl"
-        ),
-        "UCDP Candidate": (
-            args.provenance_dir
-            / "ucdp_candidate"
-            / "ingestion_ledger.jsonl"
-        ),
-        "UCDP .9": (
-            args.provenance_dir
-            / "ucdp_dot9"
-            / "ingestion_ledger.jsonl"
-        ),
-        "PRIO-GRID Static": (
-            args.provenance_dir
-            / "priogrid_static"
-            / "ingestion_ledger.jsonl"
-        ),
-        "Consolidation": (
-            args.provenance_dir
-            / "consolidation"
-            / "ledger.jsonl"
-        ),
-        "Viewpoint": (
-            args.provenance_dir
-            / "viewpoint"
-            / "ledger.jsonl"
-        ),
-        "Compilation": (
-            args.provenance_dir
-            / "compilation"
-            / "ledger.jsonl"
-        ),
-        "PRIO-GRID Shapefile": (
-            args.provenance_dir
-            / "priogrid"
-            / "ingestion_ledger.jsonl"
-        ),
+        s.name: args.provenance_dir / s.ledger_path
+        for s in PIPELINE_SOURCES
+        if s.ledger_path is not None
     }
 
     results = []

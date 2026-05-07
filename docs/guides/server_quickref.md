@@ -16,8 +16,8 @@ All commands below assume you are on the server.
 # Set version
 sudo -u views-deploy bash -c 'source ~/.profile && echo v1.2.6 > ~/.views-deploy-tag'
 
-# Pull and checkout
-sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && git fetch --tags && git checkout v1.2.6'
+# Pull and checkout (git checkout -- uv.lock discards platform-local lock changes)
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && git fetch --tags && git checkout -- uv.lock && git checkout v1.2.6'
 
 # Sync dependencies
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv sync'
@@ -26,14 +26,11 @@ sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv 
 ## Run the pipeline
 
 ```bash
-# Normal run (skips existing data)
-sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh >> logs/refresh.log 2>&1'
+# Normal run (output streams to terminal + logs to file)
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log'
 
-# Force re-fetch everything
-sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh --force >> logs/refresh.log 2>&1'
-
-# Tail the log (in a second terminal)
-sudo -u views-deploy tail -f ~/views-datafactory/logs/refresh.log
+# Force re-fetch: delete data first, then run normally
+# (there is no --force flag; the pipeline skips existing data by default)
 ```
 
 ## Nuke and rebuild

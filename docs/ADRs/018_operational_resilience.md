@@ -104,10 +104,11 @@ The "default: 7 days" staleness threshold above is a global fallback. In practic
 | PRIO-GRID Static / Shapefile | `None` (static) | Dataset is immutable — age alone never indicates staleness |
 | UCDP Annual | 8760h (1 year) | Yearly release cycle |
 | UCDP Candidate / .9 | 744h (~31 days) | Monthly release cycle |
+| ACLED | 744h (~31 days) | Monthly release |
 | Consolidation / Viewpoint / Compilation | 744h (~31 days) | Runs after upstream source updates |
 | Export freshness | 168h (7 days) | Global SLO — one missed monthly cycle |
 
-`check_health.py` displays per-source SLO labels (`[SLO: static]`, `[SLO: 1y]`, `[SLO: 31d]`). Static sources report OK regardless of age; dynamic sources are compared against their specific threshold. This eliminates false STALE warnings for datasets that are correct but old by design.
+`check_health.py` displays per-source SLO labels (`[SLO: static]`, `[SLO: 1y]`, `[SLO: 31d]`). Static sources report OK regardless of age; dynamic sources are compared against their specific threshold. This eliminates false STALE warnings for datasets that are correct but old by design. `SOURCE_SLO` is now derived from the source registry via `get_source_slo()`, ensuring SLO thresholds stay in sync with declared source definitions.
 
 ---
 
@@ -122,6 +123,7 @@ HTTP timeouts are sized by expected payload and upstream behavior:
 | PRIO-GRID shapefile | 120s | Zipped shapefile, ~20 MB |
 | PRIO-GRID land mask | 60s | Single JSON response |
 | GAUL admin | 300s | Zipped shapefiles, ~50 MB each |
+| ACLED API | 60s connect, 120s read | Paginated JSON, variable payload size |
 
 All timeouts are per-request (connect + read). Retries use exponential backoff with jitter (`datafactory_http.retry`). When adding a new source, choose a timeout proportional to the expected payload size. Document the choice in the config class.
 
