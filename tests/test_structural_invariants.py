@@ -283,11 +283,19 @@ class TestFeatureContract:
 
 
 def _import_module_from_path(name: str, path: Path):
-    """Import a Python module from an arbitrary file path."""
+    """Import a Python module from an arbitrary file path.
+
+    Raises pytest.skip if the module has unresolvable dependencies
+    (e.g. views_pipeline_core from the views-models repo).
+    """
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
-    spec.loader.exec_module(mod)
+    try:
+        spec.loader.exec_module(mod)
+    except ModuleNotFoundError as exc:
+        del sys.modules[name]
+        pytest.skip(f"{path.name}: {exc}")
     return mod
