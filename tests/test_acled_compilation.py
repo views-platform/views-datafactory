@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 
 from datafactory_compilation.compilation_config import (
     CompilationConfig,
@@ -387,10 +388,10 @@ class TestAcledCompilationRed:
             assert grid[3, row, col, feat_idx] == 0.0
         assert grid[3, row, col, 7] == 1.0  # fatalities
 
-    def test_missing_fatalities_field_defaults_to_zero(
+    def test_missing_fatalities_column_raises(
         self, tmp_path: Path,
     ) -> None:
-        """Event without fatalities field sums as 0."""
+        """Parquet missing a declared value_field column must fail loud."""
         events = [
             {
                 "event_id_cnty": "TST030",
@@ -404,9 +405,5 @@ class TestAcledCompilationRed:
             tmp_path / "acled.parquet", events,
         )
         cfg = _acled_config(tmp_path, src)
-        compile_grid(cfg)
-        grid = np.load(tmp_path / "output" / "grid.npy")
-
-        row, col = _cell_indices(-45.0, -90.0)
-        assert grid[4, row, col, 0] == 1.0  # counted
-        assert grid[4, row, col, 7] == 0.0  # fatalities = 0
+        with pytest.raises(ValueError, match="missing required columns.*fatalities"):
+            compile_grid(cfg)
