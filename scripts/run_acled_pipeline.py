@@ -64,10 +64,6 @@ def main() -> int:
     # ── Step 1: Harvest ──────────────────────────────────────
 
     raw_dir = Path("data/raw/acled")
-    snap_path = (
-        raw_dir
-        / f"acled_{args.start_year}_{args.end_year}.parquet"
-    )
 
     if skip_idx < 1:
         if (
@@ -97,7 +93,7 @@ def main() -> int:
 
         t0 = time.monotonic()
         try:
-            snap_path = fetch_acled(
+            data_dir = fetch_acled(
                 config, force_refresh=args.force,
             )
         except Exception as e:
@@ -106,20 +102,28 @@ def main() -> int:
 
         import pyarrow.parquet as pq
 
-        n_events = pq.read_metadata(snap_path).num_rows
+        snapshots = sorted(data_dir.glob("acled_*.parquet"))
+        total = sum(
+            pq.read_metadata(s).num_rows for s in snapshots
+        )
         print(
-            f"  {n_events:,} events → {snap_path}"
+            f"  {total:,} events across "
+            f"{len(snapshots)} snapshots → {data_dir}"
         )
         print(f"  ({time.monotonic() - t0:.1f}s)")
         print()
     else:
-        if not snap_path.exists():
+        snapshots = sorted(raw_dir.glob("acled_*.parquet"))
+        if not snapshots:
             print(
-                f"FAIL: Expected {snap_path} but not found. "
+                f"FAIL: No ACLED snapshots in {raw_dir}. "
                 f"Run without --skip-to first."
             )
             return 1
-        print(f"[1/4] HARVEST — skipped (using {snap_path})")
+        print(
+            f"[1/4] HARVEST — skipped "
+            f"({len(snapshots)} snapshots in {raw_dir})"
+        )
         print()
 
     # ── Step 2: Consolidate ──────────────────────────────────

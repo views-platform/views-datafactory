@@ -153,7 +153,7 @@ def _full_harvest(
 
     t0 = time.monotonic()
     try:
-        path = fetch_acled(config, force_refresh=force)
+        data_dir = fetch_acled(config, force_refresh=force)
     except Exception as e:
         print(f"[harvest] FAIL: {e}")
         return 1
@@ -162,9 +162,15 @@ def _full_harvest(
 
     import pyarrow.parquet as pq
 
-    t = pq.read_table(path)
+    snapshots = sorted(data_dir.glob("acled_*.parquet"))
+    total_events = 0
+    for snap in snapshots:
+        n = pq.read_metadata(snap).num_rows
+        total_events += n
+        print(f"  {snap.name}: {n:,} events")
     print(
-        f"[harvest] {t.num_rows:,} events stored at {path}"
+        f"[harvest] {total_events:,} events across "
+        f"{len(snapshots)} snapshots in {data_dir}"
     )
     print(f"[harvest] Completed in {elapsed:.1f}s — PASS")
     print("=" * 60)
