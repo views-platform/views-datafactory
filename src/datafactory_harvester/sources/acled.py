@@ -401,10 +401,8 @@ def _fetch_single_year(
     resolved_user: str,
     resolved_pass: str,
     token_state: _TokenState,
-    *,
-    force_refresh: bool = False,
 ) -> dict:
-    """Fetch one year of ACLED data: skip-check, fetch, validate, store.
+    """Fetch one year of ACLED data: fetch, validate, store.
 
     Returns a result dict with version, outcome, and path info.
     """
@@ -580,7 +578,6 @@ def fetch_acled(
             resolved_user,
             resolved_pass,
             token_state,
-            force_refresh=force_refresh,
         )
         results.append(result)
 
