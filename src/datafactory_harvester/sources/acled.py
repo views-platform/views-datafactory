@@ -109,7 +109,7 @@ class AcledConfig:
     page_size: int = 5000
     timeout: int = 60
     max_retries: int = 3
-    page_delay: float = 1.0
+    page_delay: float = 2.0
 
     # Storage
     data_dir: Path = Path("data/raw/acled")
@@ -313,6 +313,7 @@ def fetch_paginated(
 
         headers = {
             "Authorization": f"Bearer {token_state.access_token}",
+            "User-Agent": "VIEWS-DataFactory/1.0 (monthly-cron)",
         }
         params: dict = {
             "_format": "json",
@@ -362,7 +363,11 @@ def fetch_paginated(
         page += 1
         time.sleep(config.page_delay)
 
-    logger.info("Fetched %d total ACLED events", len(all_events))
+    logger.info(
+        "Fetched %d total ACLED events across %d pages",
+        len(all_events),
+        page,
+    )
     return all_events
 
 

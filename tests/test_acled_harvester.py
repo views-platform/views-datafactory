@@ -34,6 +34,7 @@ class TestAcledConfigGreen:
         assert cfg.end_year == 2025
         assert cfg.event_types == ALL_EVENT_TYPES
         assert cfg.page_size == 5000
+        assert cfg.page_delay == 2.0
 
     def test_frozen(self) -> None:
         cfg = AcledConfig()
@@ -531,6 +532,42 @@ class TestPaginationGreen:
         assert params["event_date"] == "2023-01-01|2024-12-31"
         assert params["event_date_where"] == "BETWEEN"
         assert "offset" not in params
+
+    def test_user_agent_header_sent(
+        self, tmp_path: Path,
+    ) -> None:
+        """API requests include a User-Agent header."""
+        events = _make_acled_events(2)
+        token_resp = _mock_token_response()
+
+        data_resp = MagicMock()
+        data_resp.json.return_value = _make_acled_response(
+            events
+        )
+        data_resp.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, data_resp],
+            ) as mock_req,
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            fetch_paginated(config, "user", "pass")
+
+        data_call = mock_req.call_args_list[1]
+        headers = data_call[1]["headers"]
+        assert "User-Agent" in headers
+        assert "VIEWS-DataFactory" in headers["User-Agent"]
 
     def test_mid_pagination_token_refresh(
         self, tmp_path: Path,
