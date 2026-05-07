@@ -262,21 +262,100 @@ def _mock_token_response() -> MagicMock:
 
 class TestFetchAcledGreen:
 
-    def test_full_flow(self, tmp_path: Path) -> None:
-        """Mock API: auth -> fetch -> validate -> store -> provenance."""
+    def test_full_flow_per_year(self, tmp_path: Path) -> None:
+        """Year-by-year fetch: each year gets its own snapshot."""
         events = _make_acled_events(5)
         token_resp = _mock_token_response()
 
-        data_resp = MagicMock()
-        data_resp.json.return_value = _make_acled_response(events)
-        data_resp.raise_for_status = MagicMock()
+        data_resp_2024 = MagicMock()
+        data_resp_2024.json.return_value = _make_acled_response(
+            events
+        )
+        data_resp_2024.raise_for_status = MagicMock()
+
+        data_resp_2025 = MagicMock()
+        data_resp_2025.json.return_value = _make_acled_response(
+            events
+        )
+        data_resp_2025.raise_for_status = MagicMock()
 
         config = AcledConfig(
-            start_year=2020,
-            end_year=2020,
+            start_year=2024,
+            end_year=2025,
             data_dir=tmp_path / "data",
             ledger_path=tmp_path / "provenance" / "ledger.jsonl",
         )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[
+                    token_resp, data_resp_2024, data_resp_2025,
+                ],
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+        ):
+            result = fetch_acled(config)
+
+        assert result == config.data_dir
+        assert (
+            config.data_dir / "acled_2024_2024.parquet"
+        ).exists()
+        assert (
+            config.data_dir / "acled_2025_2025.parquet"
+        ).exists()
+
+        ledger_lines = (
+            config.ledger_path.read_text()
+            .strip()
+            .splitlines()
+        )
+        assert len(ledger_lines) == 2
+        e1 = json.loads(ledger_lines[0])
+        e2 = json.loads(ledger_lines[1])
+        assert e1["version"] == "2024_2024"
+        assert e2["version"] == "2025_2025"
+        assert e1["outcome"] == "success"
+        assert e2["outcome"] == "success"
+
+    def test_skips_cached_years(
+        self, tmp_path: Path,
+    ) -> None:
+        """Cached year is skipped; only uncached year fetched."""
+        config = AcledConfig(
+            start_year=2024,
+            end_year=2025,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "provenance" / "ledger.jsonl",
+        )
+
+        snap_2024 = config.data_dir / "acled_2024_2024.parquet"
+        snap_2024.parent.mkdir(parents=True)
+        snap_2024.write_text("fake")
+
+        from datafactory_provenance import append_ledger_entry
+
+        append_ledger_entry(
+            config.ledger_path,
+            {
+                "content_digest": "abc123",
+                "version": "2024_2024",
+            },
+        )
+
+        events = _make_acled_events(3)
+        token_resp = _mock_token_response()
+        data_resp = MagicMock()
+        data_resp.json.return_value = _make_acled_response(
+            events
+        )
+        data_resp.raise_for_status = MagicMock()
 
         with (
             patch(
@@ -293,48 +372,63 @@ class TestFetchAcledGreen:
         ):
             result = fetch_acled(config)
 
-        assert result.exists()
-        assert result.suffix == ".parquet"
+        assert result == config.data_dir
+        assert (
+            config.data_dir / "acled_2025_2025.parquet"
+        ).exists()
 
-        ledger = config.ledger_path
-        assert ledger.exists()
-        entry = json.loads(
-            ledger.read_text().strip().splitlines()[-1]
+        ledger_lines = (
+            config.ledger_path.read_text()
+            .strip()
+            .splitlines()
         )
-        assert entry["dataset"] == "acled"
-        assert entry["outcome"] == "success"
-        assert "content_digest" in entry
+        last_entry = json.loads(ledger_lines[-1])
+        assert last_entry["version"] == "2025_2025"
+        assert last_entry["outcome"] == "success"
 
-    def test_skips_when_snapshot_exists(
+    def test_all_years_cached_skips_entirely(
         self, tmp_path: Path,
     ) -> None:
-        """When snapshot and ledger exist, skip fetch."""
+        """When all years are cached, no API calls are made."""
         config = AcledConfig(
-            start_year=2020,
-            end_year=2020,
+            start_year=2024,
+            end_year=2025,
             data_dir=tmp_path / "data",
             ledger_path=tmp_path / "provenance" / "ledger.jsonl",
         )
 
-        snap_path = (
-            config.data_dir / "acled_2020_2020.parquet"
-        )
-        snap_path.parent.mkdir(parents=True)
-        snap_path.write_text("fake")
-
         from datafactory_provenance import append_ledger_entry
 
-        append_ledger_entry(
-            config.ledger_path, {"content_digest": "abc123"}
-        )
+        for year in (2024, 2025):
+            snap = (
+                config.data_dir / f"acled_{year}_{year}.parquet"
+            )
+            snap.parent.mkdir(parents=True, exist_ok=True)
+            snap.write_text("fake")
+            append_ledger_entry(
+                config.ledger_path,
+                {
+                    "content_digest": f"digest_{year}",
+                    "version": f"{year}_{year}",
+                },
+            )
 
-        with patch(
-            "datafactory_http.retry.requests.request",
-        ) as mock_req:
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+            ) as mock_req,
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+        ):
             result = fetch_acled(config)
 
         mock_req.assert_not_called()
-        assert result == snap_path
+        assert result == config.data_dir
 
 
 class TestFetchAcledBeige:
@@ -353,6 +447,8 @@ class TestFetchAcledBeige:
         data_resp.raise_for_status = MagicMock()
 
         config = AcledConfig(
+            start_year=2024,
+            end_year=2024,
             data_dir=tmp_path / "data",
             ledger_path=tmp_path / "provenance" / "ledger.jsonl",
         )
@@ -378,6 +474,7 @@ class TestFetchAcledBeige:
             config.ledger_path.read_text().strip().splitlines()[-1]
         )
         assert entry["outcome"] == "failed"
+        assert entry["version"] == "2024_2024"
 
 
 # ---- Pagination ----
@@ -815,6 +912,8 @@ class TestFetchAcledRed:
         data_resp.json.return_value = {"data": bad_events}
 
         config = AcledConfig(
+            start_year=2024,
+            end_year=2024,
             data_dir=tmp_path / "data",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
         )

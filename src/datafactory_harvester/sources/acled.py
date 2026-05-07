@@ -36,7 +36,7 @@ from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
     append_ledger_entry,
-    last_digest,
+    last_digest_for_version,
 )
 
 logger = logging.getLogger(__name__)
@@ -278,6 +278,7 @@ def fetch_paginated(
     password: str,
     *,
     max_pages: int | None = None,
+    _token_state: _TokenState | None = None,
 ) -> list[dict]:
     """Fetch all ACLED events with page-based pagination.
 
@@ -286,11 +287,12 @@ def fetch_paginated(
         username: ACLED username.
         password: ACLED password.
         max_pages: Stop after this many pages (None = fetch all).
+        _token_state: Pre-acquired token (avoids re-auth per year).
 
     Returns:
         List of raw event dicts.
     """
-    token_state = _acquire_token(
+    token_state = _token_state or _acquire_token(
         username,
         password,
         config.token_url,
@@ -382,45 +384,69 @@ def _snapshot_path(config: AcledConfig) -> Path:
     )
 
 
-def fetch_acled(
-    config: AcledConfig | None = None,
+def _year_is_cached(year: int, config: AcledConfig) -> bool:
+    """Check if a year's snapshot exists with a ledger digest."""
+    version = f"{year}_{year}"
+    snap_path = config.data_dir / f"acled_{year}_{year}.parquet"
+    if not snap_path.exists():
+        return False
+    return last_digest_for_version(
+        config.ledger_path, version
+    ) is not None
+
+
+def _fetch_single_year(
+    year: int,
+    config: AcledConfig,
+    resolved_user: str,
+    resolved_pass: str,
+    token_state: _TokenState,
     *,
-    username: str | None = None,
-    password: str | None = None,
     force_refresh: bool = False,
-) -> Path:
-    """Fetch ACLED data: auth -> fetch -> validate -> store -> provenance.
+) -> dict:
+    """Fetch one year of ACLED data: skip-check, fetch, validate, store.
 
-    Args:
-        config: Harvest configuration (defaults to full range).
-        username: ACLED username (falls back to ACLED_USERNAME env var).
-        password: ACLED password (falls back to ACLED_PASSWORD env var).
-        force_refresh: If True, re-fetch even if snapshot exists.
-
-    Returns:
-        Path to the stored Parquet snapshot.
+    Returns a result dict with version, outcome, and path info.
     """
-    if config is None:
-        config = AcledConfig()
-
-    snap_path = _snapshot_path(config)
+    version = f"{year}_{year}"
+    year_config = AcledConfig(
+        start_year=year,
+        end_year=year,
+        event_types=config.event_types,
+        api_url=config.api_url,
+        token_url=config.token_url,
+        page_size=config.page_size,
+        timeout=config.timeout,
+        max_retries=config.max_retries,
+        page_delay=config.page_delay,
+        data_dir=config.data_dir,
+        ledger_path=config.ledger_path,
+    )
+    snap_path = _snapshot_path(year_config)
 
     if not force_refresh and snap_path.exists():
-        previous = last_digest(config.ledger_path)
+        previous = last_digest_for_version(
+            config.ledger_path, version
+        )
         if previous is not None:
             logger.info(
-                "Snapshot exists and ledger has digest; skipping "
-                "fetch (use force_refresh=True to override)"
+                "Year %d cached (digest: %s), skipping",
+                year,
+                previous,
             )
-            return snap_path
-
-    resolved_user, resolved_pass = get_acled_credentials(
-        username, password
-    )
+            return {
+                "version": version,
+                "outcome": "cached",
+                "digest": previous,
+                "path": str(snap_path),
+            }
 
     t0 = time.monotonic()
     events = fetch_paginated(
-        config, resolved_user, resolved_pass
+        year_config,
+        resolved_user,
+        resolved_pass,
+        _token_state=token_state,
     )
     fetch_duration = time.monotonic() - t0
 
@@ -431,12 +457,15 @@ def fetch_acled(
         digest_fields=("event_id_cnty", "fatalities"),
     )
 
-    min_date, max_date = date_range(events, field_name="event_date")
+    min_date, max_date = date_range(
+        events, field_name="event_date"
+    )
 
     base_entry = {
         "dataset": DATASET_ID,
-        "start_year": config.start_year,
-        "end_year": config.end_year,
+        "version": version,
+        "start_year": year,
+        "end_year": year,
         "n_events": validation.n_events,
         "min_date": min_date,
         "max_date": max_date,
@@ -449,7 +478,10 @@ def fetch_acled(
     }
 
     if not validation.valid:
-        err_msg = f"Validation failed: {validation.errors}"
+        err_msg = (
+            f"Validation failed for year {year}: "
+            f"{validation.errors}"
+        )
         logger.error(err_msg)
         append_ledger_entry(config.ledger_path, {
             **base_entry,
@@ -469,7 +501,8 @@ def fetch_acled(
         )
         if comparison.has_previous and comparison.n_revised == 0:
             logger.info(
-                "No revisions detected since previous snapshot"
+                "Year %d: no revisions since previous snapshot",
+                year,
             )
 
     if snap_path.exists():
@@ -487,7 +520,99 @@ def fetch_acled(
         "errors": validation.errors,
     })
 
-    return snap_path
+    return {
+        "version": version,
+        "outcome": "success",
+        "digest": validation.content_digest,
+        "path": str(snap_path),
+        "n_events": validation.n_events,
+    }
+
+
+def fetch_acled(
+    config: AcledConfig | None = None,
+    *,
+    username: str | None = None,
+    password: str | None = None,
+    force_refresh: bool = False,
+) -> Path:
+    """Fetch ACLED data year-by-year: auth, then per-year fetch/skip.
+
+    Each year gets its own snapshot and version-aware ledger entry.
+    Cached years (snapshot + ledger digest) are skipped, so monthly
+    cron runs only fetch the current year.
+
+    Args:
+        config: Harvest configuration (defaults to full range).
+        username: ACLED username (falls back to ACLED_USERNAME env var).
+        password: ACLED password (falls back to ACLED_PASSWORD env var).
+        force_refresh: If True, re-fetch even if snapshot exists.
+
+    Returns:
+        Path to the data directory containing per-year snapshots.
+    """
+    if config is None:
+        config = AcledConfig()
+
+    resolved_user, resolved_pass = get_acled_credentials(
+        username, password
+    )
+
+    token_state: _TokenState | None = None
+
+    results = []
+    for year in range(config.start_year, config.end_year + 1):
+        if not force_refresh and _year_is_cached(
+            year, config
+        ):
+            version = f"{year}_{year}"
+            logger.info("Year %d cached, skipping", year)
+            results.append({
+                "version": version,
+                "outcome": "cached",
+            })
+            continue
+
+        if token_state is None:
+            token_state = _acquire_token(
+                resolved_user,
+                resolved_pass,
+                config.token_url,
+                config.timeout,
+                config.max_retries,
+            )
+        else:
+            token_state = _ensure_token(
+                token_state,
+                resolved_user,
+                resolved_pass,
+                config.token_url,
+                config.timeout,
+                config.max_retries,
+            )
+
+        result = _fetch_single_year(
+            year,
+            config,
+            resolved_user,
+            resolved_pass,
+            token_state,
+            force_refresh=force_refresh,
+        )
+        results.append(result)
+
+    cached = sum(1 for r in results if r["outcome"] == "cached")
+    fetched = sum(
+        1 for r in results if r["outcome"] == "success"
+    )
+    logger.info(
+        "ACLED harvest: %d years total, %d cached, %d fetched",
+        len(results),
+        cached,
+        fetched,
+    )
+
+    return config.data_dir
 
 
 register_source("acled", fetch_acled)
