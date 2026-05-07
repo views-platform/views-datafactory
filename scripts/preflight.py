@@ -6,7 +6,7 @@ Usage:
     uv run python scripts/preflight.py --data-dir data
 
 Validates that all prerequisites are met before the 30-minute
-pipeline begins: credentials, disk space, data directories.
+pipeline begins: credentials and disk space.
 Exits 0 if all pass, 1 if any fail.
 
 Called by refresh_pipeline.sh as step 0 (before harvest).

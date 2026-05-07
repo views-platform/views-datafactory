@@ -46,9 +46,6 @@ class SourceEntry:
         root directory (e.g. ``ucdp_annual/ingestion_ledger.jsonl``,
         not ``provenance/ucdp_annual/...``). Health scripts prepend
         their ``--provenance-dir`` argument.
-    compiled_dir : Path | None
-        Path to compiled output directory. Used by pre-flight to
-        verify compilation products exist before assembly.
     """
 
     name: str
@@ -56,7 +53,6 @@ class SourceEntry:
     features: tuple[str, ...] = ()
     slo_hours: int | None = None
     ledger_path: Path | None = None
-    compiled_dir: Path | None = None
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -89,7 +85,6 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         ledger_path=Path(
             "ucdp_annual/ingestion_ledger.jsonl"
         ),
-        compiled_dir=Path("data/compiled"),
     ),
     SourceEntry(
         name="UCDP Candidate",
@@ -120,7 +115,6 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         ledger_path=Path(
             "acled/ingestion_ledger.jsonl"
         ),
-        compiled_dir=Path("data/compiled/acled"),
     ),
     SourceEntry(
         name="PRIO-GRID Static",
@@ -157,6 +151,9 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
             "gaul0_code", "gaul1_code", "gaul2_code",
         ),
         slo_hours=None,
+        # No ledger_path: GAUL admin boundaries are static shapefiles
+        # read directly by assemble_grid.py, not harvested via a
+        # provenance-tracked ingestion pipeline.
     ),
     # ── Downstream layers ──
     SourceEntry(

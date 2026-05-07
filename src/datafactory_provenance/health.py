@@ -121,7 +121,9 @@ def report_ledger(
             age_str = "unknown"
             age_hours = -1
 
-        if slo_hours is None:
+        if age_hours < 0:
+            status = "STALE"
+        elif slo_hours is None:
             status = "OK"
         else:
             status = "OK" if age_hours < slo_hours else "STALE"

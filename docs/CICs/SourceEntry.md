@@ -43,7 +43,6 @@ The source registry (`PIPELINE_SOURCES`) is a tuple of `SourceEntry` instances t
 - `features`: tuple of feature names this source contributes to the assembled grid. Empty for sources that don't produce grid features directly (e.g., downstream layers like Consolidation).
 - `slo_hours`: maximum acceptable age in hours. None for static sources.
 - `ledger_path`: Path relative to the provenance root. Health scripts prepend their `--provenance-dir` argument.
-- `compiled_dir`: Path to compiled output directory. Used by pre-flight to verify compilation products exist.
 
 Empty `name` causes immediate `ValueError`. Empty strings in `required_env_vars` or `features` cause immediate `ValueError`. Non-positive `slo_hours` causes immediate `ValueError`.
 
