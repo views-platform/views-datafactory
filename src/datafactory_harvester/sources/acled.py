@@ -424,23 +424,6 @@ def _fetch_single_year(
     )
     snap_path = _snapshot_path(year_config)
 
-    if not force_refresh and snap_path.exists():
-        previous = last_digest_for_version(
-            config.ledger_path, version
-        )
-        if previous is not None:
-            logger.info(
-                "Year %d cached (digest: %s), skipping",
-                year,
-                previous,
-            )
-            return {
-                "version": version,
-                "outcome": "cached",
-                "digest": previous,
-                "path": str(snap_path),
-            }
-
     t0 = time.monotonic()
     events = fetch_paginated(
         year_config,
