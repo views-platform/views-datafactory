@@ -99,6 +99,10 @@ if ! git rev-parse "$DEPLOY_TAG" >/dev/null 2>&1; then
     exit 1
 fi
 
+# uv sync writes platform-specific changes to uv.lock which blocks
+# git checkout on the next deploy. Safe to discard — we never commit
+# on the server.
+git checkout -- uv.lock 2>/dev/null || true
 git checkout "$DEPLOY_TAG" --quiet
 
 PIPELINE_START=$(date +%s)

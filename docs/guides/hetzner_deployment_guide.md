@@ -14,18 +14,22 @@ If the server is already set up and you're just deploying a new tag:
 
 ```bash
 # 1. On your laptop — tag and push
-git checkout main && git pull
-git tag v1.2.11
-git push --tags
+git checkout development && git pull
+git tag vX.Y.Z
+git push origin vX.Y.Z
 
 # 2. SSH into the server (replace <your-user> with your username)
 ssh <your-user>@204.168.219.108
 
-# 3. Update the deploy tag and run
+# 3. Deploy and run
 sudo -u views-deploy bash -c '
   source ~/.profile
-  echo "v1.2.11" > ~/.views-deploy-tag
+  echo "vX.Y.Z" > ~/.views-deploy-tag
   cd ~/views-datafactory
+  git fetch --tags
+  git checkout -- uv.lock
+  git checkout vX.Y.Z
+  uv sync
   bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 '
 ```

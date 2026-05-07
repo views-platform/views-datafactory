@@ -16,8 +16,8 @@ All commands below assume you are on the server.
 # Set version
 sudo -u views-deploy bash -c 'source ~/.profile && echo v1.2.6 > ~/.views-deploy-tag'
 
-# Pull and checkout
-sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && git fetch --tags && git checkout v1.2.6'
+# Pull and checkout (git checkout -- uv.lock discards platform-local lock changes)
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && git fetch --tags && git checkout -- uv.lock && git checkout v1.2.6'
 
 # Sync dependencies
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv sync'
