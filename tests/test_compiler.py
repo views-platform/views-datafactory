@@ -559,15 +559,14 @@ class TestCompileGridRed:
         grid = np.load(tmp_path / "output" / "grid.npy")
         assert grid.sum() == 0.0, "NaN coordinates should not place events"
 
-    def test_missing_best_field_does_not_crash(self, tmp_path: Path) -> None:
-        """Events lacking the 'best' field should not crash sum_best."""
+    def test_missing_value_field_raises(self, tmp_path: Path) -> None:
+        """Config declaring a value_field absent from the Parquet must fail loud."""
         events = [
             {
                 "id": 1,
                 "latitude": -45.0,
                 "longitude": -90.0,
                 "date_start": "2024-01-15",
-                # No "best" field
             },
         ]
         src = _make_parquet(tmp_path / "source.parquet", events)
@@ -579,10 +578,8 @@ class TestCompileGridRed:
             output_dir=tmp_path / "output",
             ledger_path=tmp_path / "ledger.jsonl",
         )
-        compile_grid(cfg)
-        grid = np.load(tmp_path / "output" / "grid.npy")
-        # Event is placed (it has valid coords) but sum_best should be 0
-        assert grid.sum() == 0.0
+        with pytest.raises(ValueError, match="missing required columns.*best"):
+            compile_grid(cfg)
 
     def test_empty_parquet_produces_zero_grid(self, tmp_path: Path) -> None:
         """An empty Parquet with correct schema should produce an all-zero grid."""

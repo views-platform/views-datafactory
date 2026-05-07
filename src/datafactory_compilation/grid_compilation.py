@@ -35,6 +35,17 @@ DATASET_ID = "compilation"
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+def _required_columns(config: CompilationConfig) -> set[str]:
+    """Derive the minimal set of Parquet columns needed for compilation."""
+    cols = {config.lat_field, config.lon_field, config.date_field}
+    for feat in config.features:
+        if feat.filter:
+            cols.update(feat.filter.keys())
+        if feat.strategy != "count" and feat.value_field:
+            cols.add(feat.value_field)
+    return cols
+
+
 def _parse_month_index(
     date_str: str,
     start_year: int,
@@ -68,9 +79,9 @@ def _place_events_columnar(
     """Assign events to (pgid_index, time_index) bins using columnar data.
 
     Extracts only placement columns (lat, lon, date) as lists,
-    computes bin assignments, then materializes full event dicts
+    computes bin assignments, then materializes event dicts
     only for events that land in valid bins. This avoids creating
-    ~19M dict objects upfront for large tables.
+    dict objects upfront for large tables.
 
     Args:
         table: A PyArrow Table with event data.
@@ -191,17 +202,18 @@ def compile_grid(config: CompilationConfig) -> Path:
     # Compute source digest (chunked to avoid doubling memory)
     source_digest = compute_file_digest(config.source_path)
 
-    # Read source Parquet
-    table = pq.read_table(config.source_path)
-    required_cols = {config.lat_field, config.lon_field, config.date_field}
-    missing_cols = required_cols - set(table.column_names)
+    # Read only the columns needed for placement + aggregation
+    needed_cols = _required_columns(config)
+    available_cols = set(pq.read_schema(config.source_path).names)
+    missing_cols = needed_cols - available_cols
     if missing_cols:
         err_msg = (
             f"Source Parquet missing required columns: {sorted(missing_cols)}. "
-            f"Available: {sorted(table.column_names)}"
+            f"Available: {sorted(available_cols)}"
         )
         logger.error(err_msg)
         raise ValueError(err_msg)
+    table = pq.read_table(config.source_path, columns=sorted(needed_cols))
 
     # Place events into (cell, month) bins using columnar extraction.
     # Only placement columns (lat, lon, date) are read as lists;
