@@ -9,13 +9,13 @@
 
 ## Context
 
-The data factory fetches from external APIs (UCDP, future: ACLED, V-Dem) and serves derived data over HTTP (Hetzner zarr store). Each interaction requires credentials. The codebase already has a working pattern -- UCDP uses an environment variable (`UCDP_API_TOKEN`), Hetzner uses standard Unix `~/.netrc` -- but this pattern was never declared as an architectural decision. It exists as implicit knowledge in operational guides.
+The data factory fetches from external APIs (UCDP, ACLED, future: V-Dem) and serves derived data over HTTP (Hetzner zarr store). Each interaction requires credentials. The codebase already has a working pattern -- UCDP uses an environment variable (`UCDP_API_TOKEN`), Hetzner uses standard Unix `~/.netrc` -- but this pattern was never declared as an architectural decision. It exists as implicit knowledge in operational guides.
 
 This matters for three reasons:
 
 1. **PyPI publishability.** The package will be distributed on PyPI. No credential material can exist in the source tree or the published package. The env-var pattern is PyPI-safe by construction (the package ships code that *reads* a variable name, not a secret), but this guarantee needs to be explicit.
 
-2. **ACLED integration.** ACLED uses OAuth2 (username + password -> bearer token with 24h expiry). Their EULA prohibits credential sharing. Each user must authenticate independently. This is architecturally different from UCDP's static API token but must follow the same resolution pattern.
+2. **ACLED integration.** ACLED uses an API key + email credential pair. Their EULA prohibits credential sharing. Each user must authenticate independently. This is architecturally different from UCDP's static API token but follows the same resolution pattern. ACLED credential management is now implemented: `get_acled_credentials()` in `src/datafactory_harvester/sources/acled.py` resolves credentials using the documented arg -> env (`ACLED_ACCESS_KEY`, `ACLED_EMAIL`) -> fail-loud order.
 
 3. **Contributor guidance.** Without a declared strategy, a new contributor might add `python-dotenv`, embed a shared token in a config file, or put credentials in a frozen dataclass (where they leak via `repr()`).
 
@@ -53,17 +53,17 @@ def get_ucdp_token(token: str | None = None) -> str:
     return resolved
 ```
 
-Future sources (ACLED, V-Dem) implement their own resolver following the same pattern. A generic `_resolve_credential()` utility is deferred until two or more sources share identical resolution logic -- premature abstraction before that point.
+ACLED implements its own resolver (`get_acled_credentials()`) following the same pattern. Future sources (V-Dem) will do likewise. A generic `_resolve_credential()` utility is deferred until two or more sources share identical resolution logic -- premature abstraction before that point.
 
 ### 4. No config file fallback (deferred)
 
-XDG config support (`~/.config/views-datafactory/credentials.toml`) is explicitly deferred. Environment variables are sufficient for the current credential set (one UCDP token + one netrc entry). Revisit when ACLED integration requires persistent storage of username + password for OAuth2.
+XDG config support (`~/.config/views-datafactory/credentials.toml`) is explicitly deferred. Environment variables are sufficient for the current credential set (UCDP token, ACLED key + email, netrc entry). Revisit if a future source requires persistent credential storage beyond env vars.
 
-### 5. ACLED-specific constraints (forward-looking)
+### 5. ACLED-specific constraints (implemented)
 
-ACLED's EULA (as of 2025) imposes constraints that shape future credential handling:
+ACLED's EULA (as of 2025) imposes constraints that shape credential handling:
 
-- **OAuth2 password grant.** Requires username + password -> POST to token endpoint -> bearer token (24h expiry, 14d refresh). Token lifecycle management lives in the ACLED harvester, not in a generic resolver.
+- **API key + email authentication.** Requires `ACLED_ACCESS_KEY` and `ACLED_EMAIL` environment variables. Resolved by `get_acled_credentials()` in `src/datafactory_harvester/sources/acled.py` using the same arg -> env -> fail-loud precedence as UCDP.
 - **Credential sharing prohibited.** Each user authenticates with their own account. No shared service account for harvesting on behalf of others.
 - **Redistribution restrictions.** Raw or lightly-transformed ACLED data cannot be redistributed. Grid-aggregated features (e.g., event counts per PRIO-GRID cell-month) are defensible as transformative. PRIO has a separate data agreement covering what is served via the zarr store.
 - **AI/ML clause.** Models trained on ACLED data must not "create a substitute for ACLED." VIEWS conflict forecasting does not create a substitute (it forecasts, not provides event data).

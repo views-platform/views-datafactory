@@ -79,6 +79,7 @@ Synthetic data follows an independent path: it produces npy output directly and 
 | `datafactory_viewpoint` | provenance | consolidation |
 | `datafactory_compilation` | provenance, priogrid | viewpoint |
 | `datafactory_adapters` | nothing | compilation (reads grid npy) |
+| `datafactory_query` | priogrid, adapters | assembly (reads assembled files) |
 
 ### Data Flow (Filesystem-Mediated)
 
@@ -121,7 +122,7 @@ datafactory_viewpoint/               # Layer 3
     temporal_distribution.py         # Strategy registry (OCP: add strategy = add function)
 ```
 
-Adding a new source (e.g., ACLED) means adding `consolidators/acled.py` and `builders/acled_v1.py`. No existing files are modified. This is the Open-Closed Principle applied to the DAG.
+Adding a new source means adding `consolidators/<source>.py` and `builders/<source>_v1.py`. No existing files are modified. This is the Open-Closed Principle applied to the DAG. ACLED is now fully integrated with its own consolidator (`consolidators/acled.py`), viewpoint builder (`builders/acled_v1.py`), compiler (ACLED-specific `CompilationConfig`), and assembly integration (see ADR-028).
 
 ---
 

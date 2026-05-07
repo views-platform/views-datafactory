@@ -11,6 +11,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from datafactory_provenance.source_registry import get_source_slo
+
 __all__ = [
     "FRESHNESS_SLO_HOURS",
     "SOURCE_SLO",
@@ -24,19 +26,9 @@ __all__ = [
 # cycle before data is flagged as stale.
 FRESHNESS_SLO_HOURS = 168
 
-# Per-source freshness SLO (hours). None = static (never stale from age).
-# Downstream layers (consolidation, viewpoint, compilation) inherit the
-# cadence of the most-frequent upstream source (monthly).
-SOURCE_SLO: dict[str, int | None] = {
-    "UCDP Annual": 8760,          # yearly release
-    "UCDP Candidate": 744,        # monthly release (~31 days)
-    "UCDP .9": 744,               # monthly release (~31 days)
-    "PRIO-GRID Static": None,     # static dataset — never stale
-    "PRIO-GRID Shapefile": None,  # static dataset — never stale
-    "Consolidation": 744,         # runs after source updates
-    "Viewpoint": 744,             # runs after consolidation
-    "Compilation": 744,           # runs after viewpoint
-}
+# Per-source freshness SLO (hours). Derived from the source registry
+# (single source of truth). None = static (never stale from age).
+SOURCE_SLO: dict[str, int | None] = get_source_slo()
 
 
 def _format_age(age_hours: float) -> str:
@@ -129,7 +121,9 @@ def report_ledger(
             age_str = "unknown"
             age_hours = -1
 
-        if slo_hours is None:
+        if age_hours < 0:
+            status = "STALE"
+        elif slo_hours is None:
             status = "OK"
         else:
             status = "OK" if age_hours < slo_hours else "STALE"

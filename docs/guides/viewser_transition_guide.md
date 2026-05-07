@@ -19,7 +19,7 @@ Your model is fine. The data factory replaces *how data reaches your model*, not
 
 ## What changes
 
-Five things are different. None affect your model code — they affect the data that enters it.
+Six things are different. None affect your model code — they affect the data that enters it.
 
 | # | Change | Impact |
 |---|--------|--------|
@@ -28,6 +28,7 @@ Five things are different. None affect your model code — they affect the data 
 | 3 | [Country identity (c_id)](#3-country-identity-c_id) | Different coding system, same role |
 | 4 | [Data freshness](#4-data-freshness) | ~0.1% of conflict cells may differ |
 | 5 | [NaN handling](#5-nan-handling) | Same result, explicit mechanism |
+| 6 | [ACLED features](#6-acled-features) | 8 new features not available in VIEWSER |
 
 ---
 
@@ -160,6 +161,12 @@ For model training, this level of variation is well within normal data noise. If
 **datafactory:** Missing values are filled with `df.fillna(0.0)` explicitly in `config_queryset.py`'s `fetch_data()` function.
 
 The result is the same: no NaN values in the parquet. The difference is that the datafactory approach is explicit and visible in the model's config, rather than hidden in a viewser transform chain.
+
+---
+
+## 6. ACLED features
+
+The data factory provides 8 ACLED-derived features that have no equivalent in VIEWSER: `acled_count`, `acled_battles`, `acled_explosions`, `acled_vac`, `acled_protests`, `acled_riots`, `acled_strategic`, and `acled_fatalities`. These are compiled as cell-month aggregates on the same PRIO-GRID and are available alongside the UCDP features in the assembled grid.
 
 ---
 

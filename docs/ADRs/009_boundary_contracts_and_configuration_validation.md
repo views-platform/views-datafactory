@@ -16,7 +16,7 @@ Complex systems fail most often at boundaries:
 - between data producers and consumers,
 - between raw source data and compiled grid output.
 
-views-datafactory has seven packages across four layers (ADR-012), with data flowing through the filesystem between them. The most critical boundaries are:
+views-datafactory has ten packages across four layers (ADR-012), with data flowing through the filesystem between them. The ten packages are: provenance, http, priogrid, harvester, synthetic, consolidation, viewpoint, compilation, adapters, and query. The most critical boundaries are:
 
 1. **Configuration to runtime** -- frozen dataclasses with `__post_init__` validation must catch invalid parameters before any operation begins.
 2. **Harvester to filesystem** -- raw Parquet snapshots with content digests must be validated before storage.
@@ -59,6 +59,10 @@ Every boundary between components must define:
 **CompilationConfig boundary (implemented):** `__post_init__` validates features non-empty. Source existence checked at compile time (FileNotFoundError). Feature list declared in config, never inferred from Parquet columns.
 
 **Compiled output contract (implemented):** Shape is always `(n_cells, n_steps, n_features)`. Coordinate arrays (`pgids.npy`, `time_steps.npy`, `feature_names.json`) shipped alongside `grid.npy`. Provenance JSON links source digest to output digest. Dimension order fixed: cells, time, features.
+
+**SourceEntry boundary (implemented):** `SourceEntry` frozen dataclass in `datafactory_provenance.source_registry` validates name non-empty, env vars non-empty, features non-empty, and `slo_hours` positive.
+
+**AssemblyConfig boundary (implemented):** `AssemblyConfig` frozen dataclass in `scripts/assemble_grid.py` validates `output_dtype` against a whitelist, `disk_space_margin` >= 1.0, `admin_numeric_fields` non-empty and no duplicates.
 
 Implicit contracts are prohibited. If a boundary assumption cannot be declared clearly, the boundary is ill-defined and must be redesigned.
 

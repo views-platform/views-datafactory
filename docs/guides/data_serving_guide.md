@@ -107,7 +107,7 @@ Here's what actually happens:
 2. xarray figures out which chunk contains year 2020 (chunk 2.0.0,
    since 2020 is months 372-383, and chunks are 12 months each)
 3. xarray downloads ONLY that one chunk (about 1 MB)
-4. Done. The other 37 chunks and 42 other features are never touched.
+4. Done. The other 37 chunks and 50 other features are never touched.
 
 **This is why zarr is the standard for serving gridded data.**
 The web server just serves files. The intelligence is in the format
@@ -174,8 +174,8 @@ Example: "Run the data pipeline on the 21st of every month at midnight"
 That line means: minute 0, hour 0, day 21, every month, every
 day-of-week. Run the script.
 
-Your pipeline takes about 10-20 minutes (harvesting is the slow
-part — it calls the UCDP API). After it finishes, the new zarr
+Your pipeline takes about 15-30 minutes (harvesting is the slow
+part — it calls the UCDP and ACLED APIs). After it finishes, the new zarr
 and parquet files are in the same directory the web server serves.
 Consumers automatically get the new data on their next request.
 
@@ -194,13 +194,15 @@ Your laptop                       Hetzner server
 ──────────                        ──────────────
 
 scripts/refresh_pipeline.sh  ──→  Runs monthly via cron:
-                                    1. harvest_ucdp.py
+                                    0. preflight.py (credentials, disk)
+                                    1. harvest (UCDP, ACLED, PRIO-GRID, GAUL)
                                     2. consolidate_ucdp.py
                                     3. build_viewpoint.py
-                                    4. compile_grid.py
-                                    5. assemble_grid.py
-                                    6. export_zarr.py
-                                    7. export_dataframe.py
+                                    4. compile_grid.py (UCDP)
+                                    5. run_acled_pipeline.py (ACLED)
+                                    6. assemble_grid.py
+                                    7. export_zarr.py + export_dataframe.py
+                                    8. check_health.py
                                         │
                                         ▼
                                   data/assembled/grid.zarr/  (1.8 GB)

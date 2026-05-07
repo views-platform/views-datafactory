@@ -207,13 +207,19 @@ class TestPerSourceSLO:
         result = report_ledger("test", ledger, NOW)
         assert result["status"] == "STALE"
 
-    def test_source_slo_dict_has_all_known_sources(self) -> None:
-        """SOURCE_SLO covers all sources used in check_health.py."""
-        expected = {
-            "UCDP Annual", "UCDP Candidate", "UCDP .9",
-            "PRIO-GRID Static", "PRIO-GRID Shapefile",
-            "Consolidation", "Viewpoint", "Compilation",
-        }
+    def test_unparseable_timestamp_is_stale(self, tmp_path: Path) -> None:
+        """Corrupt timestamp must not silently pass as OK."""
+        ledger = tmp_path / "ledger.jsonl"
+        _write_ledger(ledger, [_make_entry("not-a-date")])
+        result = report_ledger("test", ledger, NOW, slo_hours=744)
+        assert result["status"] == "STALE"
+
+    def test_source_slo_dict_matches_registry(self) -> None:
+        """SOURCE_SLO is derived from PIPELINE_SOURCES."""
+        from datafactory_provenance.source_registry import (
+            PIPELINE_SOURCES,
+        )
+        expected = {s.name for s in PIPELINE_SOURCES}
         assert expected == set(SOURCE_SLO.keys())
 
     def test_static_sources_have_none_slo(self) -> None:
