@@ -48,7 +48,7 @@ Separates harvest transport and storage concerns from credential management (ADR
 - `page_size`: int, >= 1, records per API page (default: `5000`)
 - `timeout`: int, >= 1, HTTP request timeout in seconds (default: `60`)
 - `max_retries`: int, >= 1, retry attempts (default: `3`)
-- `page_delay`: float, > 0, seconds between pages (default: `1.0`)
+- `page_delay`: float, > 0, seconds between pages (default: `2.0`)
 - `data_dir`: Path, output directory for Parquet snapshots
 - `ledger_path`: Path, provenance ledger location
 

@@ -152,6 +152,14 @@ with rate limiting). Watch the output — each step prints PASS or FAIL.
 (8 ACLED features). Pre-flight checks (`scripts/preflight.py`)
 validate all credentials before any step runs.
 
+**ACLED API courtesy:** The ACLED harvester fetches data year-by-year.
+On monthly cron runs only the current year is fetched (~80 pages).
+When redeploying outside the monthly cron (especially after a data
+wipe), the full date range is re-fetched (~480 pages across 6 years).
+If doing a full re-fetch, email Katayoun at ACLED with a heads-up:
+"We're redeploying our data pipeline and will fetch ACLED data in full.
+This is a one-time operation, not our regular monthly cron."
+
 ### 2.2 Verify the output
 
 ```bash
