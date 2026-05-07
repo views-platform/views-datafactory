@@ -18,6 +18,7 @@ from datafactory_harvester.sources.acled import (
     _acquire_token,
     _ensure_token,
     _TokenState,
+    _year_is_cached,
     fetch_acled,
     fetch_paginated,
     get_acled_credentials,
@@ -63,6 +64,10 @@ class TestAcledConfigBeige:
     def test_rejects_nonpositive_page_delay(self) -> None:
         with pytest.raises(ValueError, match="page_delay"):
             AcledConfig(page_delay=0)
+
+    def test_rejects_negative_page_delay(self) -> None:
+        with pytest.raises(ValueError, match="page_delay"):
+            AcledConfig(page_delay=-1.0)
 
     def test_rejects_zero_timeout(self) -> None:
         with pytest.raises(ValueError, match="timeout"):
@@ -431,7 +436,113 @@ class TestFetchAcledGreen:
         assert result == config.data_dir
 
 
+class TestYearCacheGreen:
+
+    def test_uncached_when_no_snapshot(
+        self, tmp_path: Path,
+    ) -> None:
+        """Year is not cached when snapshot file is missing."""
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        assert not _year_is_cached(2024, config)
+
+    def test_uncached_when_no_ledger_entry(
+        self, tmp_path: Path,
+    ) -> None:
+        """Year is not cached when snapshot exists but no digest."""
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        snap = config.data_dir / "acled_2024_2024.parquet"
+        snap.parent.mkdir(parents=True)
+        snap.write_text("fake")
+        assert not _year_is_cached(2024, config)
+
+    def test_cached_when_snapshot_and_digest(
+        self, tmp_path: Path,
+    ) -> None:
+        """Year is cached when both snapshot and ledger digest exist."""
+        from datafactory_provenance import append_ledger_entry
+
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        snap = config.data_dir / "acled_2024_2024.parquet"
+        snap.parent.mkdir(parents=True)
+        snap.write_text("fake")
+        append_ledger_entry(
+            config.ledger_path,
+            {
+                "content_digest": "abc123",
+                "version": "2024_2024",
+            },
+        )
+        assert _year_is_cached(2024, config)
+
+
 class TestFetchAcledBeige:
+
+    def test_force_refresh_overrides_cache(
+        self, tmp_path: Path,
+    ) -> None:
+        """force_refresh=True re-fetches even if year is cached."""
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+
+        config = AcledConfig(
+            start_year=2024,
+            end_year=2024,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "provenance" / "ledger.jsonl",
+        )
+
+        from datafactory_provenance import append_ledger_entry
+
+        snap = config.data_dir / "acled_2024_2024.parquet"
+        snap.parent.mkdir(parents=True)
+        old_events = _make_acled_events(2)
+        pq.write_table(
+            pa.Table.from_pylist(old_events), snap,
+        )
+        append_ledger_entry(
+            config.ledger_path,
+            {
+                "content_digest": "old_digest",
+                "version": "2024_2024",
+            },
+        )
+
+        events = _make_acled_events(3)
+        token_resp = _mock_token_response()
+        data_resp = MagicMock()
+        data_resp.json.return_value = _make_acled_response(
+            events
+        )
+        data_resp.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, data_resp],
+            ) as mock_req,
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+        ):
+            result = fetch_acled(
+                config, force_refresh=True,
+            )
+
+        assert mock_req.call_count == 2
+        assert result == config.data_dir
 
     def test_validation_failure_records_ledger(
         self, tmp_path: Path,
@@ -665,6 +776,79 @@ class TestPaginationGreen:
         headers = data_call[1]["headers"]
         assert "User-Agent" in headers
         assert "VIEWS-DataFactory" in headers["User-Agent"]
+
+    def test_event_type_filter_sent(
+        self, tmp_path: Path,
+    ) -> None:
+        """Subset event_types adds event_type param to request."""
+        events = _make_acled_events(2)
+        token_resp = _mock_token_response()
+
+        data_resp = MagicMock()
+        data_resp.json.return_value = _make_acled_response(
+            events
+        )
+        data_resp.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            event_types=("Battles", "Riots"),
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, data_resp],
+            ) as mock_req,
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            fetch_paginated(config, "user", "pass")
+
+        data_call = mock_req.call_args_list[1]
+        params = data_call[1]["params"]
+        assert "event_type" in params
+        assert params["event_type"] == "Battles|Riots"
+
+    def test_max_pages_limits_pagination(
+        self, tmp_path: Path,
+    ) -> None:
+        """max_pages stops pagination after the given page count."""
+        page_events = _make_acled_events(3)
+        token_resp = _mock_token_response()
+
+        resp1 = MagicMock()
+        resp1.json.return_value = _make_acled_response(
+            page_events
+        )
+        resp1.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=3,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp1],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(
+                config, "user", "pass", max_pages=1,
+            )
+
+        assert len(events) == 3
 
     def test_mid_pagination_token_refresh(
         self, tmp_path: Path,

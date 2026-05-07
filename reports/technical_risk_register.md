@@ -1,8 +1,8 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-05-07)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07
-**Status:** 158 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 106 resolved, 44 open/deferred (14 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07
+**Status:** 160 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 106 resolved, 46 open/deferred (14 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -70,6 +70,8 @@
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Third data source needs visual verification | Visual audit |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
+| C-159 | 4 | ACLED snapshot archiving and revision comparison paths untested | Archiving logic implicated in data integrity incident | ACLED test coverage |
+| C-160 | 4 | ACLED `fetch_paginated` string-data corruption has no guard | ACLED API returns non-list `data` field | ACLED data integrity |
 | ~~C-157~~ | ~~3~~ | ~~Systematic ACLED documentation drift across ADRs, CICs, and guides~~ | Resolved 2026-05-07 | Documentation |
 | ~~C-158~~ | ~~4~~ | ~~No CICs for SourceEntry or AssemblyConfig~~ | Resolved 2026-05-07 | Documentation |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
@@ -517,6 +519,32 @@ See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-15
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10). DDIA Ch.7 pp.234-236, Ch.8 pp.301-303.
+
+### C-159: ACLED snapshot archiving and revision comparison paths untested — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-159 |
+| Tier | 4 |
+| Source | ACLED test review (2026-05-07) |
+| Trigger | When `archive_snapshot` or `compare_snapshots` behavior changes in a refactor, or when snapshot archiving logic is implicated in a data integrity incident |
+| Location | `src/datafactory_harvester/sources/acled.py:476-490` (`compare_snapshots` and `archive_snapshot` calls in `_fetch_single_year`) |
+
+`_fetch_single_year` compares the new fetch against the previous snapshot (via `compare_snapshots`) and archives the old snapshot before saving the new one (via `archive_snapshot`). Neither branch is exercised in `test_acled_harvester.py`. The `force_refresh` test creates a valid previous Parquet so it exercises the `compare_snapshots` path, but does not assert on the comparison result or archiving behavior. Both functions are tested in their own modules, so the risk is limited to integration wiring.
+
+See also C-44 (harvest pipeline template — shared archiving pattern).
+
+### C-160: ACLED `fetch_paginated` string-data corruption has no guard — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-160 |
+| Tier | 4 |
+| Source | ACLED test review (2026-05-07) |
+| Trigger | ACLED API returns a string instead of a list for the `data` field, or returns a non-iterable type |
+| Location | `src/datafactory_harvester/sources/acled.py:347` (`all_events.extend(results)` where `results = data.get("data", [])`) |
+
+`test_api_returns_non_list_data_silently_corrupts` documents that if the API returns `"data": "abc"`, `extend()` iterates characters and `events == ["a", "b", "c"]`. This is caught by downstream `validate_events` (field presence check), but the fetch layer itself has no type guard. The UCDP harvester has the same pattern. Accepted: validation catches it, and adding a type guard here would be defense-in-depth (not load-bearing). Cross-ref: C-153 (no TotalCount for truncation detection).
 
 ---
 
