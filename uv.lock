@@ -2031,7 +2031,7 @@ wheels = [
 
 [[package]]
 name = "views-datafactory"
-version = "1.2.13"
+version = "1.2.14"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
