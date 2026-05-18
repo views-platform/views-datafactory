@@ -53,6 +53,7 @@ class TestGhsPopConfigGreen:
         assert cfg.crs == "4326"
         assert cfg.release == "R2023A"
         assert cfg.data_dir == Path("data/raw/ghspop")
+        assert cfg.ledger_path == Path("provenance/ghspop/ingestion_ledger.jsonl")
         assert cfg.timeout > 0
 
     def test_frozen(self) -> None:
@@ -123,9 +124,10 @@ class TestFetchGhsPopGreen:
         assert r["dataset"] == "ghspop"
         assert "content_digest" in r
 
-        # TIF extracted to data_dir
+        # TIF extracted to data_dir with correct content
         tif_path = cfg.data_dir / tif_name
         assert tif_path.exists()
+        assert tif_path.read_bytes() == b"fake geotiff data"
 
     def test_provenance_recorded(self, tmp_path: Path) -> None:
         """Ledger entry written after successful download."""
@@ -158,6 +160,12 @@ class TestFetchGhsPopGreen:
         assert entry["outcome"] == "success"
         assert "content_digest" in entry
         assert "timestamp" in entry
+
+        # Digest matches the extracted TIF content
+        from datafactory_provenance import compute_content_digest
+
+        expected_digest = compute_content_digest(b"fake geotiff data")
+        assert entry["content_digest"] == expected_digest
 
     def test_skips_cached_epoch(self, tmp_path: Path) -> None:
         """When TIF exists and ledger has a digest, skip download."""
@@ -266,6 +274,19 @@ class TestGhsPopConfigBeige:
         with pytest.raises(ValueError, match="timeout"):
             GhsPopConfig(timeout=0)
 
+    def test_rejects_negative_timeout(self) -> None:
+        from datafactory_harvester.sources.ghspop import GhsPopConfig
+
+        with pytest.raises(ValueError, match="timeout"):
+            GhsPopConfig(timeout=-5)
+
+    def test_empty_epochs_accepted(self) -> None:
+        """Empty epochs tuple is valid — fetch returns empty list."""
+        from datafactory_harvester.sources.ghspop import GhsPopConfig
+
+        cfg = GhsPopConfig(epochs=())
+        assert cfg.epochs == ()
+
 
 class TestFetchGhsPopBeige:
     """Fetch boundary conditions."""
@@ -349,8 +370,8 @@ class TestFetchGhsPopRed:
         entry = json.loads(cfg.ledger_path.read_text().strip().split("\n")[-1])
         assert entry["outcome"] == "failed"
 
-    def test_corrupt_zip_raises(self, tmp_path: Path) -> None:
-        """Non-ZIP content raises, not silently ignored."""
+    def test_corrupt_zip_raises_and_records_ledger(self, tmp_path: Path) -> None:
+        """Non-ZIP content raises and records failure in ledger."""
         from datafactory_harvester.sources.ghspop import (
             GhsPopConfig,
             fetch_ghspop,
@@ -369,5 +390,36 @@ class TestFetchGhsPopRed:
             patch("datafactory_http.retry.requests.request", return_value=mock_resp),
             patch("datafactory_http.retry.time.sleep"),
             pytest.raises(zipfile.BadZipFile),
+        ):
+            fetch_ghspop(cfg)
+
+        assert cfg.ledger_path.exists()
+        entry = json.loads(cfg.ledger_path.read_text().strip().split("\n")[-1])
+        assert entry["outcome"] == "failed"
+
+    def test_zip_with_no_tif_raises(self, tmp_path: Path) -> None:
+        """Valid ZIP containing no .tif file raises BadZipFile."""
+        from datafactory_harvester.sources.ghspop import (
+            GhsPopConfig,
+            fetch_ghspop,
+        )
+
+        cfg = GhsPopConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        # Valid ZIP but contains only a README, no .tif
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("README.txt", "no geotiff here")
+        mock_resp = MagicMock()
+        mock_resp.content = buf.getvalue()
+
+        with (
+            patch("datafactory_http.retry.requests.request", return_value=mock_resp),
+            patch("datafactory_http.retry.time.sleep"),
+            pytest.raises(zipfile.BadZipFile, match="No .tif"),
         ):
             fetch_ghspop(cfg)
