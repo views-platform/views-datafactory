@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from datafactory_provenance.health import (
@@ -56,7 +56,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
 
     # Ledger locations derived from the source registry
     ledgers = {

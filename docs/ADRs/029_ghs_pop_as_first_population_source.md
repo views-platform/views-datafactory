@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-05-17
 **Deciders:** Simon Polichinel von der Maase, Claude Code
-**Applies:** ADR-012 (Four-Layer Data Architecture), ADR-024 (Compilation Grid Invariants)
+**Applies:** ADR-012 (Four-Layer Data Architecture), ADR-013 (Consolidation Principles), ADR-014 (Viewpoints as Derived Views), ADR-024 (Compilation Grid Invariants)
 
 ---
 
@@ -37,8 +37,8 @@ A surface-level review of the global gridded population data landscape was condu
 
 ### Out of scope
 
-- Annual interpolation between GHS-POP epochs (deferred design decision)
 - Population-derived features (density, change rate, urbanization) beyond the raw count
+- Cross-source derived features (e.g., conflict-adjusted population — see Considered Alternatives)
 - Cross-validation against other population products (GPW, LandScan)
 - Sub-national population modeling or nowcasting
 
@@ -61,6 +61,25 @@ GHS-POP publishes ~6 epochs (1975, 1990, 2000, 2015, 2020, 2025) rather than ann
 ### Raster tooling investment
 
 GHS-POP's GeoTIFF format and Mollweide projection require raster I/O and reprojection tooling. rasterio is the most likely solution, but alternatives exist (e.g., rioxarray, GDAL bindings, or pure-xarray workflows for regularly-gridded data). The specific toolchain choice warrants its own ADR. Regardless of which tool is chosen, this is a one-time infrastructure investment that pays forward: LandScan, nightlights (VIIRS), built-up area (GHS-BUILT), and land cover (ESA CCI) all share the same raster ingest pattern. Solving raster I/O now opens Direction 3 on the roadmap.
+
+### Flow through the four-layer graph
+
+GHS-POP traverses all four layers of the data architecture (ADR-012), but with different operations than event sources. Each layer does real work.
+
+**Harvest (Layer 1):** Download GeoTIFF files from JRC, store as-is in `data/raw/ghspop/`. Pure acquisition with provenance ledger entry per download. Analogous to UCDP/ACLED API fetches.
+
+**Consolidation (Layer 2):** Track GHS-POP release versions (R2023A, R2024A, ...) with metadata following ADR-013 principles. When JRC publishes a new release with revised population estimates, both releases are preserved in the consolidated store. This enables vintage-aware analysis: "what population estimates were we using when we made prediction X?" The consolidator tags each release with version metadata and content digests, same as UCDP/ACLED.
+
+**Viewpoint (Layer 3):** This is where opinionated decisions live, following ADR-014. For raster data, the viewpoint owns different operations than for event data, because the input is a gridded raster rather than coordinate-bearing event records:
+
+- **Release survivorship** — which GHS-POP release to use when multiple are available (analogous to UCDP's `annual_wins`)
+- **Reprojection** — Mollweide (ESRI:54009) → WGS84 (EPSG:4326)
+- **Spatial aggregation** — sum ~1 km cells into 0.5° PRIO-GRID cells. For event sources, spatial assignment (lat/lon → cell) is a compilation concern because events are coordinate points that need binning. For raster sources, the data is already gridded — the aggregation function (sum vs. mean vs. area-weighted) is an opinion about how to present the data at a different resolution, making it a viewpoint concern.
+- **Temporal interpolation** — how to fill the gap between ~6 epochs and 456 monthly time steps (step function, linear interpolation, etc.). This is analogous to UCDP's temporal distribution of summary events — an opinion about what the data looks like between observations.
+
+The viewpoint output should be tabular: one row per (pgid, month_id) with population value(s). This gives compilation a uniform input shape across all sources.
+
+**Compilation (Layer 4):** Mechanical placement of viewpoint output into the [T, H, W, C] grid array (ADR-024). With the viewpoint producing (pgid, month_id, value) rows, compilation for GHS-POP is structurally identical to UCDP/ACLED compilation — read tabular input, fill the grid.
 
 ---
 
@@ -91,7 +110,16 @@ GHS-POP's GeoTIFF format and Mollweide projection require raster I/O and reproje
 - **Investigation finding:** None of these companies produce population counts. Microsoft publishes Global Building Footprints (polygons of building outlines). Google publishes Open Buildings (similar). Meta published HRSL (High Resolution Settlement Layer), which is now discontinued and folded into WorldPop. All three produce **building footprints**, which are used as **inputs to** GHS-POP and WorldPop, not as standalone population products.
 - **Reason for rejection:** These are covariates for population modeling, not population data sources. By choosing GHS-POP, we consume their contributions indirectly through a product that has been validated and published by domain experts.
 
-### Alternative E: V-Dem or WDI (non-population sources)
+### Alternative E: Conflict-adjusted population
+
+- **Idea:** Subtract cumulative conflict fatalities (from UCDP/ACLED) from GHS-POP estimates to produce a "corrected" population feature that accounts for conflict deaths.
+- **Reason for rejection (three grounds):**
+  1. **Violates viewpoint independence.** ADR-014 requires that a viewpoint be a pure function of its own consolidated store plus configuration. A conflict-adjusted population viewpoint would need to read from the UCDP/ACLED consolidated stores, creating a cross-source dependency that breaks the layer boundary.
+  2. **Selectively dishonest.** Conflict kills ~100K–200K people per year globally. Conflict *displaces* tens of millions. Birth rates in many conflict-affected regions far exceed death rates. Adjusting for fatalities without accounting for displacement, migration, and births corrects for the smallest effect while ignoring the largest ones. The result is neither the census estimate nor the true population — it is a hybrid that is wrong in a specific, misleading way.
+  3. **Double-counting risk.** If models consume both population and fatality features, the conflict signal appears in both. This kind of redundant encoding produces correlated features that look powerful in training but are fragile in deployment.
+- **Conclusion:** Population is what GHS-POP says it is. If conflict-population interaction matters, that is a model-level concern (feature engineering in the training scripts), not a data factory concern.
+
+### Alternative F: V-Dem or WDI (non-population sources)
 
 - **Pros:** Strong theoretical relevance (democracy indicators, development indicators). Country-year tabular data — no rasterio needed.
 - **Cons:** Would be a third event/tabular source with the same pipeline shape as UCDP and ACLED. Would not test whether the architecture handles raster data. Would not solve the rasterio gate for future raster sources.
@@ -114,9 +142,9 @@ GHS-POP's GeoTIFF format and Mollweide projection require raster I/O and reproje
 - **Raster tooling dependency.** GeoTIFF I/O and Mollweide reprojection require tooling beyond the current pure-Python stack. rasterio (GDAL bindings) is the most likely choice but adds a compiled dependency that may require system-level libraries on the server. The raster toolchain selection warrants its own ADR.
 - **Mollweide reprojection.** GHS-POP's native CRS requires coordinate transformation before PRIO-GRID alignment. This adds a processing step that GPW would not require.
 - **Temporal sparsity.** ~6 epochs across 456 monthly time steps means most months will carry interpolated or repeated population values. Models must be aware that inter-epoch population is not independently measured. This is honestly the same situation as LandScan (where inter-censal years are modeled), but GHS-POP makes it explicit rather than hiding it behind annual releases.
-- **New pipeline shape.** Raster sources do not follow the harvest-API → consolidate-events → viewpoint → compile path. The graph architecture (ADR-012) must accommodate a shorter path: harvest-raster → aggregate-to-grid → compile. This is the first test of the architecture's claim to be a graph, not a pipeline.
+- **Different operations per layer.** Although GHS-POP traverses all four layers, the viewpoint does fundamentally different work than for event sources — raster reprojection and spatial aggregation instead of survivorship and temporal distribution. This tests whether the viewpoint layer is general enough to accommodate non-event data, or whether it needs to evolve.
 
-These costs are accepted. The raster tooling investment and pipeline shape novelty are features of this choice, not bugs — they are exactly why population is the right third source.
+These costs are accepted. The raster tooling investment and architectural novelty are features of this choice, not bugs — they are exactly why population is the right third source.
 
 ---
 
@@ -132,13 +160,19 @@ Implementation design is deferred to a separate discussion. This ADR anchors the
 - **GAUL integration:** Population features will be per-cell, not per-country. The GAUL admin boundaries (ADR-025) are not needed for spatial assignment — the raster-to-grid aggregation handles this directly via coordinate alignment
 - **Compilation output:** One or more population features in the assembled grid, following the [T, H, W, C] invariant (ADR-024). Feature naming convention TBD.
 
+### Resolved design questions
+
+- **Graph flow:** GHS-POP traverses all four layers. No layers are skipped. See "Flow through the four-layer graph" above.
+- **Spatial aggregation ownership:** Viewpoint layer, not compilation. For raster sources, the input is already gridded — the aggregation function is an opinion about how to present data at a different resolution, unlike event sources where coordinate-to-cell binning is mechanical.
+- **Temporal interpolation ownership:** Viewpoint layer. Analogous to UCDP temporal distribution of summary events.
+
 ### What requires design decisions
 
-- How does raster data flow through the 4-layer graph? (Does it skip layers? Does it introduce a new layer type?)
-- What aggregation function maps ~1 km population cells to 0.5° PRIO-GRID cells? (Sum is the natural choice for population counts)
-- How should temporal epochs be handled? (Step function? Linear interpolation? Explicit epoch indicator?)
+- What aggregation function for spatial aggregation? (Sum is the natural choice for population counts, but this is a viewpoint v1 decision)
+- What temporal interpolation strategy? (Step function? Linear? This is a viewpoint v1 decision)
 - Should the harvester download all epochs or only those within the configured temporal range?
-- What features to produce? (Raw population count? Log-population? Population density?)
+- What features to produce in v1? (Raw population count? Log-population? Population density?)
+- What raster I/O toolchain? (Warrants its own ADR)
 
 ---
 
@@ -157,9 +191,10 @@ Implementation design is deferred to a separate discussion. This ADR anchors the
 - What is the exact download URL structure for GHS-POP R2023A GeoTIFF tiles? (Requires checking the JRC data portal)
 - Does JRC provide the 1 km product in WGS84 (EPSG:4326) in addition to Mollweide? If so, reprojection may be unnecessary.
 - What is the total download size for all epochs at 1 km resolution?
-- Should population data be log-transformed before serving to models? (Common practice, but a compilation decision, not a source decision)
+- Should population data be log-transformed before serving to models? (Common practice, but a viewpoint decision — different viewpoints might present raw counts vs. log-transformed)
 - How should the temporal gap between epochs interact with the ACLED temporal boundary (C-156)? Both represent "no data before year X" but for different reasons.
 - Is there a versioning/update cadence for GHS-POP releases? (R2023A superseded R2022A — how often do new releases appear?)
+- What does the consolidated store look like for raster data? (Parquet metadata catalog pointing to versioned GeoTIFF files? Or something else?)
 
 ---
 
@@ -170,6 +205,8 @@ Implementation design is deferred to a separate discussion. This ADR anchors the
 - GHS-WUP 2025 (urbanization projections): https://human-settlement.emergency.copernicus.eu/ghs_wup2025.php
 - JRC GHSL data catalogue: https://data.jrc.ec.europa.eu/collection/ghsl
 - ADR-012: Four-Layer Data Architecture
+- ADR-013: Consolidation Principles (lossless, append-only, version-aware)
+- ADR-014: Viewpoints as Derived Views (opinionated, rebuildable, versioned)
 - ADR-024: Compilation Grid Invariants
 - ADR-025: Country Identity Uses GAUL Codes
 - ADR-028: ACLED Consolidation and Viewpoint Specifics (template for source-specific ADRs)

@@ -30,6 +30,7 @@ import argparse
 import json
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -150,10 +151,8 @@ def main() -> int:
 
     # Freshness indicator (D-03): consumers can check when data
     # was last exported. ISO 8601 UTC timestamp.
-    from datetime import datetime, timezone
-
     attrs["export_timestamp"] = (
-        datetime.now(tz=timezone.utc).isoformat()
+        datetime.now(tz=UTC).isoformat()
     )
 
     # Data boundary: last month with real UCDP observations.

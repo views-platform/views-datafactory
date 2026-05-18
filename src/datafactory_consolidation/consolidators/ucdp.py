@@ -23,7 +23,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow as pa
@@ -186,7 +186,7 @@ def _get_harvest_metadata(
     # Fallback: compute from file
     digest = compute_content_digest(fallback_path.read_bytes())
     timestamp = datetime.fromtimestamp(
-        fallback_path.stat().st_mtime, tz=timezone.utc
+        fallback_path.stat().st_mtime, tz=UTC
     ).isoformat()
     logger.info(
         "No ledger entry for version %s — using file digest %s",
@@ -295,7 +295,7 @@ def consolidate_ucdp(
     if config is None:
         config = UcdpConsolidationConfig()
 
-    ingested_at = datetime.now(tz=timezone.utc).isoformat()
+    ingested_at = datetime.now(tz=UTC).isoformat()
 
     # Build harvest indexes from ledgers
     annual_index = _build_harvest_index(config.annual_ledger_path)

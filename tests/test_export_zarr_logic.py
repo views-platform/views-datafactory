@@ -7,7 +7,7 @@ without requiring real assembled data or a running server.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -141,7 +141,7 @@ class TestZarrRoundTrip:
         }
         attrs = {
             "export_timestamp": datetime.now(
-                tz=timezone.utc
+                tz=UTC
             ).isoformat(),
         }
 
@@ -159,7 +159,7 @@ class TestZarrRoundTrip:
 
     def test_export_timestamp_is_iso8601(self) -> None:
         """Export timestamp is valid ISO 8601."""
-        ts = datetime.now(tz=timezone.utc).isoformat()
+        ts = datetime.now(tz=UTC).isoformat()
         parsed = datetime.fromisoformat(ts)
         assert parsed.tzinfo is not None
 

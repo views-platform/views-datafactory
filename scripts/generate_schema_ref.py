@@ -12,7 +12,7 @@ real data, not manually maintained.
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -124,7 +124,7 @@ def main() -> int:
     tables = {name: pq.read_table(path) for name, path in datasets.items()}
 
     # Generate reference
-    now = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         "# Schema Reference (Generated)",
         "",
