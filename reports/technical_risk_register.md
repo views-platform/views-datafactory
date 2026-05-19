@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-18)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18
-**Status:** 161 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 107 resolved, 46 open/deferred (15 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-05-19)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19
+**Status:** 163 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 109 resolved, 46 open/deferred (15 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -73,6 +73,8 @@
 | C-159 | 4 | ACLED snapshot archiving and revision comparison paths untested | Archiving logic implicated in data integrity incident | ACLED test coverage |
 | C-160 | 4 | ACLED `fetch_paginated` string-data corruption has no guard | ACLED API returns non-list `data` field | ACLED data integrity |
 | ~~C-161~~ | ~~4~~ | ~~GHS-POP harvester failure-path provenance partially untested~~ | Resolved 2026-05-18 | GHS-POP test coverage |
+| ~~C-162~~ | ~~1~~ | ~~GHS-POP PGID mapping has no direct correctness test~~ | Resolved 2026-05-19 | GHS-POP data integrity |
+| ~~C-163~~ | ~~2~~ | ~~`_aggregate_to_prio_grid` silently truncates non-divisible raster dimensions~~ | Resolved 2026-05-19 | GHS-POP data integrity |
 | ~~C-157~~ | ~~3~~ | ~~Systematic ACLED documentation drift across ADRs, CICs, and guides~~ | Resolved 2026-05-07 | Documentation |
 | ~~C-158~~ | ~~4~~ | ~~No CICs for SourceEntry or AssemblyConfig~~ | Resolved 2026-05-07 | Documentation |
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
@@ -112,9 +114,17 @@ Items that should be resolved together:
 
 ## Tier 1 — Fix Immediately
 
+### ~~C-162: GHS-POP PGID mapping has no direct correctness test~~ — RESOLVED
+**Resolved 2026-05-19.** Added `test_pgid_mapping_correctness` (4 distinct populations in 2x2 grid, asserts specific pgid→value mapping including row-flip), `test_month_id_correctness` (verifies Jan/Feb/Mar 2000 → month_ids 241/242/243), and `test_no_duplicate_pgid_month_id` (uniqueness constraint on output). Test count: 21 → 29.
+**Source:** GHS-POP viewpoint test review (2026-05-19). Cross-ref: C-149 (GAUL unmapped cells).
+
 ---
 
 ## Tier 2 — Fix Before Sharing Server Access
+
+### ~~C-163: `_aggregate_to_prio_grid` silently truncates non-divisible raster dimensions~~ — RESOLVED
+**Resolved 2026-05-19.** Added dimension validation (`nrow % 60 != 0 or ncol % 60 != 0` → `ValueError`) to `_aggregate_to_prio_grid`. Added `test_non_divisible_dimensions_raises` to verify the guard. Also added: `test_no_args_raises`, `test_unknown_epoch_raises`, `test_all_zero_raster_produces_empty_output`, `test_source_dir_shortcut`.
+**Source:** GHS-POP viewpoint test review (2026-05-19). Cross-ref: C-162 (PGID mapping correctness).
 
 ### C-88: SSH not restricted to PRIO/Uppsala IPs — [DEFER]
 SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.

@@ -66,16 +66,16 @@ GHS-POP's GeoTIFF format and Mollweide projection require raster I/O and reproje
 
 GHS-POP traverses all four layers of the data architecture (ADR-012), but with different operations than event sources. Each layer does real work.
 
-**Harvest (Layer 1):** Download GeoTIFF files from JRC, store as-is in `data/raw/ghspop/`. Pure acquisition with provenance ledger entry per download. Analogous to UCDP/ACLED API fetches.
+**Harvest (Layer 1):** Download GeoTIFF files from JRC, store as-is in `data/raw/ghspop/`. Pure acquisition with provenance ledger entry per download. Analogous to UCDP/ACLED API fetches. WGS84 (EPSG:4326) data is available at 30 arcsecond resolution, eliminating the need for reprojection (see ADR-030).
 
-**Consolidation (Layer 2):** Track GHS-POP release versions (R2023A, R2024A, ...) with metadata following ADR-013 principles. When JRC publishes a new release with revised population estimates, both releases are preserved in the consolidated store. This enables vintage-aware analysis: "what population estimates were we using when we made prediction X?" The consolidator tags each release with version metadata and content digests, same as UCDP/ACLED.
+**Consolidation (Layer 2): Skipped.** GHS-POP has a single release (R2023A) with no event records to merge or deduplicate. The consolidation layer exists for vintage-aware tracking of multiple release versions — there is nothing to consolidate until JRC publishes R2024A. The viewpoint reads directly from `data/raw/ghspop/`. This is consistent with ADR-012's design principle that "not all paths traverse all layers" — synthetic data already skips consolidation, viewpoint, and compilation. When a second GHS-POP release arrives, a consolidator will be added to track both releases with the same ADR-013 guarantees as UCDP/ACLED.
 
 **Viewpoint (Layer 3):** This is where opinionated decisions live, following ADR-014. For raster data, the viewpoint owns different operations than for event data, because the input is a gridded raster rather than coordinate-bearing event records:
 
-- **Release survivorship** — which GHS-POP release to use when multiple are available (analogous to UCDP's `annual_wins`)
-- **Reprojection** — Mollweide (ESRI:54009) → WGS84 (EPSG:4326)
-- **Spatial aggregation** — sum ~1 km cells into 0.5° PRIO-GRID cells. For event sources, spatial assignment (lat/lon → cell) is a compilation concern because events are coordinate points that need binning. For raster sources, the data is already gridded — the aggregation function (sum vs. mean vs. area-weighted) is an opinion about how to present the data at a different resolution, making it a viewpoint concern.
-- **Temporal interpolation** — how to fill the gap between ~6 epochs and 456 monthly time steps (step function, linear interpolation, etc.). This is analogous to UCDP's temporal distribution of summary events — an opinion about what the data looks like between observations.
+- **Spatial aggregation** — sum 30-arcsecond cells into 0.5° PRIO-GRID cells. Each PRIO-GRID cell contains exactly 60×60 source pixels, so aggregation is a numpy reshape+sum with no coordinate transformation. For event sources, spatial assignment (lat/lon → cell) is a compilation concern because events are coordinate points that need binning. For raster sources, the data is already gridded — the aggregation function (sum vs. mean vs. area-weighted) is an opinion about how to present the data at a different resolution, making it a viewpoint concern.
+- **Temporal interpolation** — how to fill the gap between 12 epochs and monthly time steps (step function, linear interpolation, etc.). This is analogous to UCDP's temporal distribution of summary events — an opinion about what the data looks like between observations.
+
+No reprojection is needed — JRC provides WGS84 data directly (ADR-030). No release survivorship is needed until a second release exists.
 
 The viewpoint output should be tabular: one row per (pgid, month_id) with population value(s). This gives compilation a uniform input shape across all sources.
 
@@ -162,7 +162,9 @@ Implementation design is deferred to a separate discussion. This ADR anchors the
 
 ### Resolved design questions
 
-- **Graph flow:** GHS-POP traverses all four layers. No layers are skipped. See "Flow through the four-layer graph" above.
+- **Graph flow:** Harvest → Viewpoint → Compilation. Consolidation is skipped until a second JRC release exists. See "Flow through the four-layer graph" above.
+- **Reprojection:** Not needed. JRC provides WGS84 (EPSG:4326) at 30 arcsecond resolution. Each PRIO-GRID cell is exactly 60×60 source pixels. See ADR-030.
+- **Raster tooling:** tifffile (pure Python). See ADR-030.
 - **Spatial aggregation ownership:** Viewpoint layer, not compilation. For raster sources, the input is already gridded — the aggregation function is an opinion about how to present data at a different resolution, unlike event sources where coordinate-to-cell binning is mechanical.
 - **Temporal interpolation ownership:** Viewpoint layer. Analogous to UCDP temporal distribution of summary events.
 
