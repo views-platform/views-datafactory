@@ -747,6 +747,65 @@ class TestGhsPopViewpointRed:
         with pytest.raises(FileNotFoundError, match="2020"):
             build_ghspop_v1(cfg)
 
+    def test_align_to_globe_exact(self) -> None:
+        """Raster already at correct size passes through."""
+        from datafactory_viewpoint.builders.ghspop_v1 import (
+            _align_to_globe,
+        )
+
+        data = np.ones((21600, 43200), dtype=np.float32)
+        result = _align_to_globe(
+            data,
+            tiepoint_x=-180.0,
+            tiepoint_y=90.0,
+            pixel_scale_x=1 / 120,
+            pixel_scale_y=1 / 120,
+        )
+        assert result.shape == (21600, 43200)
+        assert result.sum() == data.sum()
+
+    def test_align_to_globe_polar_gap(self) -> None:
+        """Raster missing poles gets zero-padded at top and bottom."""
+        from datafactory_viewpoint.builders.ghspop_v1 import (
+            _align_to_globe,
+        )
+
+        nrow = 21384
+        ncol = 43200
+        data = np.ones((nrow, ncol), dtype=np.float32)
+        result = _align_to_globe(
+            data,
+            tiepoint_x=-180.0,
+            tiepoint_y=89.1,
+            pixel_scale_x=1 / 120,
+            pixel_scale_y=1 / 120,
+        )
+        assert result.shape == (21600, 43200)
+
+        row_offset = round((90.0 - 89.1) * 120)  # 108
+        assert result[:row_offset, :].sum() == 0.0
+        bottom_start = row_offset + nrow
+        assert result[bottom_start:, :].sum() == 0.0
+        assert result[row_offset:bottom_start, :].sum() == nrow * ncol
+
+    def test_align_to_globe_col_crop(self) -> None:
+        """Raster with extra columns gets cropped to 43200."""
+        from datafactory_viewpoint.builders.ghspop_v1 import (
+            _align_to_globe,
+        )
+
+        data = np.ones((120, 43202), dtype=np.float32)
+        result = _align_to_globe(
+            data,
+            tiepoint_x=-180.008333,
+            tiepoint_y=90.0,
+            pixel_scale_x=1 / 120,
+            pixel_scale_y=1 / 120,
+        )
+        assert result.shape == (21600, 43200)
+        assert result[:120, :].sum() > 0
+        assert result[120:, :].sum() == 0.0
+
     def test_negative_population_clamped(self) -> None:
         """Negative pixel values are clamped to zero before aggregation."""
         from datafactory_viewpoint.builders.ghspop_v1 import (

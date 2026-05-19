@@ -17,6 +17,7 @@ dependencies = [
     "fsspec>=2023.9,<2025",
     "aiohttp>=3.9,<4",
     "tifffile>=2024.1",
+    "imagecodecs>=2024.1",
 ]
 
 [dependency-groups]

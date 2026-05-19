@@ -108,6 +108,112 @@ class GhsPopViewpointConfig:
         return f"{stem}_V1_0.tif"
 
 
+# ---- Spatial alignment ----
+
+PRIO_NROW = 360
+PRIO_NCOL = 720
+GLOBE_PIXEL_ROWS = PRIO_NROW * PIXELS_PER_CELL  # 21600
+GLOBE_PIXEL_COLS = PRIO_NCOL * PIXELS_PER_CELL  # 43200
+
+
+def _read_geotiff(
+    path: Path,
+) -> tuple[np.ndarray, float, float, float, float]:
+    """Read GeoTIFF and extract geotransform from TIFF tags.
+
+    Returns:
+        (data, tiepoint_x, tiepoint_y, pixel_scale_x, pixel_scale_y)
+        where tiepoint is the top-left geographic coordinate.
+    """
+    with tifffile.TiffFile(str(path)) as tif:
+        page = tif.pages[0]
+        data = page.asarray()
+
+        scale_tag = page.tags.get("ModelPixelScaleTag")
+        tie_tag = page.tags.get("ModelTiepointTag")
+
+        if scale_tag is None or tie_tag is None:
+            msg = (
+                f"GeoTIFF {path} missing geotransform tags "
+                "(ModelPixelScaleTag, ModelTiepointTag)"
+            )
+            logger.error(msg)
+            raise ValueError(msg)
+
+        scale = scale_tag.value
+        tie = tie_tag.value
+
+        pixel_scale_x = float(scale[0])
+        pixel_scale_y = float(scale[1])
+        tiepoint_x = float(tie[3])
+        tiepoint_y = float(tie[4])
+
+    return data, tiepoint_x, tiepoint_y, pixel_scale_x, pixel_scale_y
+
+
+def _align_to_globe(
+    data: np.ndarray,
+    tiepoint_x: float,
+    tiepoint_y: float,
+    pixel_scale_x: float,
+    pixel_scale_y: float,
+) -> np.ndarray:
+    """Embed a raster into the full PRIO-GRID pixel space.
+
+    JRC GHS-POP WGS84 30ss rasters do not cover the poles and may
+    have slight longitude offsets. This function places the raster
+    into a 21600x43200 (360x60, 720x60) array at the correct
+    geographic position, padding with zeros where the raster has
+    no coverage (polar regions).
+
+    Args:
+        data: 2-D raster array.
+        tiepoint_x, tiepoint_y: Top-left geographic coordinate.
+        pixel_scale_x, pixel_scale_y: Pixel size in degrees.
+
+    Returns:
+        2-D float64 array of shape (21600, 43200).
+    """
+    row_offset = round((90.0 - tiepoint_y) / pixel_scale_y)
+    col_offset = round((tiepoint_x - (-180.0)) / pixel_scale_x)
+
+    globe = np.zeros(
+        (GLOBE_PIXEL_ROWS, GLOBE_PIXEL_COLS), dtype=np.float64,
+    )
+
+    src_row_start = max(0, -row_offset)
+    src_col_start = max(0, -col_offset)
+    dst_row_start = max(0, row_offset)
+    dst_col_start = max(0, col_offset)
+
+    copy_nrow = min(
+        data.shape[0] - src_row_start,
+        GLOBE_PIXEL_ROWS - dst_row_start,
+    )
+    copy_ncol = min(
+        data.shape[1] - src_col_start,
+        GLOBE_PIXEL_COLS - dst_col_start,
+    )
+
+    globe[
+        dst_row_start:dst_row_start + copy_nrow,
+        dst_col_start:dst_col_start + copy_ncol,
+    ] = data[
+        src_row_start:src_row_start + copy_nrow,
+        src_col_start:src_col_start + copy_ncol,
+    ]
+
+    logger.info(
+        "Aligned %dx%d raster into %dx%d globe "
+        "(row_offset=%d, col_offset=%d)",
+        data.shape[0], data.shape[1],
+        GLOBE_PIXEL_ROWS, GLOBE_PIXEL_COLS,
+        row_offset, col_offset,
+    )
+
+    return globe
+
+
 # ---- Spatial aggregation ----
 
 
@@ -116,18 +222,17 @@ def _aggregate_to_prio_grid(
     *,
     nodata: float = DEFAULT_NODATA,
 ) -> np.ndarray:
-    """Aggregate 30-arcsecond raster to 0.5-degree PRIO-GRID cells.
+    """Aggregate aligned 30-arcsecond raster to PRIO-GRID cells.
 
-    Each PRIO-GRID cell is exactly 60x60 source pixels (WGS84 30ss).
-    Aggregation is block-sum via reshape — no reprojection, exact.
+    Input must be 21600x43200 (already aligned to the globe via
+    _align_to_globe). Block-sum via reshape — no reprojection.
 
     Args:
-        data: 2-D float array (nrow, ncol). Dimensions must be
-            divisible by 60.
+        data: 2-D float array, shape (21600, 43200).
         nodata: Fill value treated as zero.
 
     Returns:
-        2-D array of shape (nrow//60, ncol//60) with population sums.
+        2-D array of shape (360, 720) with population sums.
     """
     nrow, ncol = data.shape
     p = PIXELS_PER_CELL
@@ -247,12 +352,31 @@ def build_ghspop_v1(
             raise FileNotFoundError(err_msg)
 
         logger.info("Reading epoch %d from %s", epoch, tif_path)
-        raw = tifffile.imread(str(tif_path))
-        grid = _aggregate_to_prio_grid(raw, nodata=config.nodata)
+        raw, tie_x, tie_y, sc_x, sc_y = _read_geotiff(tif_path)
+
+        p = PIXELS_PER_CELL
+        needs_align = (
+            raw.shape[0] % p != 0 or raw.shape[1] % p != 0
+        )
+        if needs_align:
+            aligned = _align_to_globe(
+                raw, tie_x, tie_y, sc_x, sc_y,
+            )
+            del raw
+            grid = _aggregate_to_prio_grid(
+                aligned, nodata=config.nodata,
+            )
+            del aligned
+        else:
+            grid = _aggregate_to_prio_grid(
+                raw, nodata=config.nodata,
+            )
+            del raw
+
         epoch_grids[epoch] = grid
         logger.info(
-            "Epoch %d: %d×%d → %d×%d cells, total pop %.0f",
-            epoch, raw.shape[0], raw.shape[1],
+            "Epoch %d: → %d×%d cells, total pop %.0f",
+            epoch,
             grid.shape[0], grid.shape[1], grid.sum(),
         )
 
