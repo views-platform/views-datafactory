@@ -76,6 +76,16 @@ class TestAssemblyConfig:
         )
         assert cfg.acled_grid_dir == Path("/tmp/acled")
 
+    def test_ghspop_grid_dir_defaults_to_none(self) -> None:
+        cfg = _assembly_mod.AssemblyConfig()
+        assert cfg.ghspop_grid_dir is None
+
+    def test_ghspop_grid_dir_accepts_path(self) -> None:
+        cfg = _assembly_mod.AssemblyConfig(
+            ghspop_grid_dir=Path("/tmp/ghspop")
+        )
+        assert cfg.ghspop_grid_dir == Path("/tmp/ghspop")
+
 
 class TestGidLookup:
     """GID-to-(row, col) lookup construction."""
@@ -173,19 +183,21 @@ class TestFeatureConcatenation:
             "acled_protests", "acled_riots",
             "acled_strategic", "acled_fatalities",
         ]
+        ghspop = ["ghspop_pop_count"]
         static = ["agri_gc", "forest_gc", "mountains_mean"]
         admin = ["gaul0_code", "gaul1_code", "gaul2_code"]
-        all_features = ucdp + acled + static + admin
+        all_features = ucdp + acled + ghspop + static + admin
         assert len(all_features) == len(set(all_features))
 
-    def test_order_is_ucdp_acled_static_admin(self) -> None:
-        """Channel order: UCDP, ACLED, static, admin."""
+    def test_order_is_ucdp_acled_ghspop_static_admin(self) -> None:
+        """Channel order: UCDP, ACLED, GHS-POP, static, admin."""
         ucdp = ["a", "b"]
         acled = ["c", "d"]
-        static = ["e"]
-        admin = ["f"]
-        combined = ucdp + acled + static + admin
-        assert combined == ["a", "b", "c", "d", "e", "f"]
+        ghspop = ["e"]
+        static = ["f"]
+        admin = ["g"]
+        combined = ucdp + acled + ghspop + static + admin
+        assert combined == ["a", "b", "c", "d", "e", "f", "g"]
 
 
 class TestAcledTemporalAlignment:
@@ -257,20 +269,116 @@ class TestAcledTemporalAlignment:
 
     def test_assembly_without_acled_backward_compat(self) -> None:
         """When n_acled=0, offsets collapse to pre-ACLED layout."""
-        n_ucdp, n_acled, n_static, n_admin = 2, 0, 1, 1
-        n_total = n_ucdp + n_acled + n_static + n_admin
+        n_ucdp, n_acled, n_ghspop, n_static, n_admin = 2, 0, 0, 1, 1
+        n_total = n_ucdp + n_acled + n_ghspop + n_static + n_admin
 
         assembled = np.zeros(
             (2, 3, 4, n_total), dtype=np.float32,
         )
         static_val = 10.0
         admin_val = -1.0
-        assembled[:, :, :, n_ucdp + n_acled] = static_val
-        assembled[:, :, :, n_ucdp + n_acled + n_static] = admin_val
+        ch_offset = n_ucdp + n_acled + n_ghspop
+        assembled[:, :, :, ch_offset] = static_val
+        assembled[:, :, :, ch_offset + n_static] = admin_val
 
         assert assembled[0, 0, 0, 2] == static_val
         assert assembled[0, 0, 0, 3] == admin_val
         assert n_total == 4
+
+
+class TestGhsPopTemporalAlignment:
+    """GHS-POP temporal alignment into the assembled grid."""
+
+    def test_ghspop_full_timeline_offset_zero(self) -> None:
+        """GHS-POP compiled with same temporal range → offset 0."""
+        n_t, n_h, n_w = 10, 3, 4
+        n_ucdp, n_acled, n_ghspop = 2, 2, 1
+        n_total = n_ucdp + n_acled + n_ghspop
+
+        assembled = np.zeros(
+            (n_t, n_h, n_w, n_total), dtype=np.float32,
+        )
+        assembled[:, :, :, :n_ucdp] = 1.0
+
+        ghspop_grid = np.full(
+            (n_t, n_h, n_w, n_ghspop), 100.0,
+            dtype=np.float32,
+        )
+        ghspop_offset = 0
+        ghspop_end = ghspop_offset + n_t
+        ch_start = n_ucdp + n_acled
+        assembled[
+            ghspop_offset:ghspop_end, :, :,
+            ch_start:ch_start + n_ghspop,
+        ] = ghspop_grid
+
+        assert assembled[0, 0, 0, ch_start] == 100.0
+        assert assembled[n_t - 1, 0, 0, ch_start] == 100.0
+
+    def test_ghspop_partial_timeline(self) -> None:
+        """GHS-POP with shorter timeline placed at correct offset."""
+        n_t, n_h, n_w = 10, 3, 4
+        n_ucdp, n_acled, n_ghspop = 2, 0, 1
+        n_total = n_ucdp + n_acled + n_ghspop
+        ghspop_offset = 3
+        ghspop_t = 5
+
+        assembled = np.zeros(
+            (n_t, n_h, n_w, n_total), dtype=np.float32,
+        )
+        ghspop_grid = np.full(
+            (ghspop_t, n_h, n_w, n_ghspop), 42.0,
+            dtype=np.float32,
+        )
+        ch_start = n_ucdp + n_acled
+        ghspop_end = ghspop_offset + ghspop_t
+        assembled[
+            ghspop_offset:ghspop_end, :, :,
+            ch_start:ch_start + n_ghspop,
+        ] = ghspop_grid
+
+        assert assembled[ghspop_offset, 0, 0, ch_start] == 42.0
+        assert assembled[ghspop_end - 1, 0, 0, ch_start] == 42.0
+
+    def test_zero_fill_outside_ghspop_range(self) -> None:
+        """GHS-POP channels are zero outside their temporal range."""
+        n_t, n_h, n_w = 10, 3, 4
+        n_ucdp, n_acled, n_ghspop = 2, 0, 1
+        n_total = n_ucdp + n_acled + n_ghspop
+        ghspop_offset = 3
+        ghspop_t = 5
+
+        assembled = np.zeros(
+            (n_t, n_h, n_w, n_total), dtype=np.float32,
+        )
+        ghspop_grid = np.full(
+            (ghspop_t, n_h, n_w, n_ghspop), 42.0,
+            dtype=np.float32,
+        )
+        ch_start = n_ucdp + n_acled
+        ghspop_end = ghspop_offset + ghspop_t
+        assembled[
+            ghspop_offset:ghspop_end, :, :,
+            ch_start:ch_start + n_ghspop,
+        ] = ghspop_grid
+
+        assert assembled[:ghspop_offset, :, :, ch_start:].sum() == 0.0
+        assert assembled[ghspop_end:, :, :, ch_start:].sum() == 0.0
+
+    def test_assembly_without_ghspop_backward_compat(self) -> None:
+        """When n_ghspop=0, offsets collapse gracefully."""
+        n_ucdp, n_acled, n_ghspop, n_static = 2, 2, 0, 1
+        n_total = n_ucdp + n_acled + n_ghspop + n_static
+
+        assembled = np.zeros(
+            (2, 3, 4, n_total), dtype=np.float32,
+        )
+        static_val = 10.0
+        ch_static = n_ucdp + n_acled + n_ghspop
+        assembled[:, :, :, ch_static] = static_val
+
+        assert assembled[0, 0, 0, ch_static] == static_val
+        assert n_total == 5
 
 
 class TestAtomicWrite:
@@ -341,9 +449,10 @@ class TestAssemblyRoundTrip:
         n_t, n_h, n_w = 10, 3, 4
         n_ucdp = 2
         n_acled = 2
+        n_ghspop = 1
         n_static = 1
         n_admin = 1
-        n_total = n_ucdp + n_acled + n_static + n_admin
+        n_total = n_ucdp + n_acled + n_ghspop + n_static + n_admin
 
         # UCDP grid [T, H, W, C]
         ucdp_grid = np.ones(
@@ -356,6 +465,12 @@ class TestAssemblyRoundTrip:
         acled_t = 3
         acled_grid = np.full(
             (acled_t, n_h, n_w, n_acled), 9.0,
+            dtype=np.float32,
+        )
+
+        # GHS-POP grid [T, H, W, C] — full timeline
+        ghspop_grid = np.full(
+            (n_t, n_h, n_w, n_ghspop), 100.0,
             dtype=np.float32,
         )
 
@@ -384,15 +499,21 @@ class TestAssemblyRoundTrip:
             acled_offset:acled_end, :, :,
             n_ucdp:n_ucdp + n_acled,
         ] = acled_grid
-        assembled[:, :, :, n_ucdp + n_acled] = static_spatial
+        ch_ghspop = n_ucdp + n_acled
         assembled[
-            :, :, :, n_ucdp + n_acled + n_static
+            :, :, :,
+            ch_ghspop:ch_ghspop + n_ghspop,
+        ] = ghspop_grid
+        ch_static = ch_ghspop + n_ghspop
+        assembled[:, :, :, ch_static] = static_spatial
+        assembled[
+            :, :, :, ch_static + n_static
         ] = admin_spatial
         assembled.flush()
 
         # Read back and verify
         result = np.load(output_path)
-        assert result.shape == (10, 3, 4, 6)
+        assert result.shape == (10, 3, 4, 7)
 
         # UCDP channels (all time steps)
         assert result[0, 0, 0, 0] == 5.0
@@ -404,9 +525,13 @@ class TestAssemblyRoundTrip:
         assert result[0, 0, 0, 2] == 0.0  # zero-fill before
         assert result[9, 0, 0, 2] == 0.0  # zero-fill after
 
+        # GHS-POP channel (full timeline)
+        assert result[0, 0, 0, 4] == 100.0
+        assert result[9, 0, 0, 4] == 100.0
+
         # Static channel
-        assert result[0, 0, 0, 4] == 10.0
+        assert result[0, 0, 0, 5] == 10.0
 
         # Admin channel
-        assert result[0, 0, 0, 5] == -1.0  # missing
-        assert result[0, 1, 1, 5] == 42.0  # placed
+        assert result[0, 0, 0, 6] == -1.0  # missing
+        assert result[0, 1, 1, 6] == 42.0  # placed

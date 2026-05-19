@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-05-07
-**Related ADRs:** ADR-003, ADR-009, ADR-011, ADR-012
+**Last reviewed:** 2026-05-19
+**Related ADRs:** ADR-003, ADR-009, ADR-011, ADR-012, ADR-029
 
 ---
 
@@ -11,7 +11,7 @@
 
 > Immutable configuration for grid assembly: declares all input directories, output destination, admin boundary fields, dtype, and disk-space safety margin.
 
-Assembly is the final stage of the data graph — it combines compiled UCDP, compiled ACLED (optional), static PRIO-GRID features, and GAUL admin boundaries into the canonical `grid.npy`. The config ensures all paths and parameters are declared upfront and validated before any I/O.
+Assembly is the final stage of the data graph — it combines compiled UCDP, compiled ACLED (optional), compiled GHS-POP population (optional), static PRIO-GRID features, and GAUL admin boundaries into the canonical `grid.npy`. The config ensures all paths and parameters are declared upfront and validated before any I/O.
 
 ---
 
@@ -33,6 +33,7 @@ Assembly is the final stage of the data graph — it combines compiled UCDP, com
 - Guarantees `output_dtype` is one of `float16`, `float32`, `float64`
 - Guarantees `disk_space_margin` is >= 1.0
 - `acled_grid_dir` defaults to None — assembly works without ACLED for local development
+- `ghspop_grid_dir` defaults to None — assembly works without GHS-POP for local development
 
 ---
 
@@ -40,6 +41,7 @@ Assembly is the final stage of the data graph — it combines compiled UCDP, com
 
 - `ucdp_grid_dir`: Path to compiled UCDP grid directory (default: `data/compiled`)
 - `acled_grid_dir`: Path to compiled ACLED grid directory, or None to skip ACLED
+- `ghspop_grid_dir`: Path to compiled GHS-POP grid directory, or None to skip GHS-POP
 - `static_dir`: Path to PRIO-GRID static features (default: `data/raw/priogrid_static`)
 - `admin_dir`: Path to GAUL admin boundaries (default: `data/raw/gaul_admin`)
 - `output_dir`: Path for assembled output (default: `data/assembled`)
@@ -76,7 +78,7 @@ All failures are immediate and loud. No silent fallbacks.
 - Defined in `scripts/assemble_grid.py` (script-level, not a library)
 - Used only by the `main()` function in the same file
 - Argparse populates fields from CLI arguments; the dataclass validates
-- `refresh_pipeline.sh` passes `--acled-grid data/compiled/acled` to assembly — if the directory doesn't exist, assembly fails loud
+- `refresh_pipeline.sh` passes `--acled-grid data/compiled/acled --ghspop-grid data/compiled/ghspop` to assembly — if either directory doesn't exist, assembly fails loud
 - Must not depend on any `datafactory_*` package (scripts are consumers, not library code)
 
 ---
@@ -89,10 +91,11 @@ from scripts.assemble_grid import AssemblyConfig
 # Standard production config
 cfg = AssemblyConfig(
     acled_grid_dir=Path("data/compiled/acled"),
+    ghspop_grid_dir=Path("data/compiled/ghspop"),
 )
 
-# Local development without ACLED
-cfg = AssemblyConfig()  # acled_grid_dir=None by default
+# Local development without ACLED or GHS-POP
+cfg = AssemblyConfig()  # optional dirs default to None
 
 # Custom admin fields
 cfg = AssemblyConfig(
@@ -122,9 +125,9 @@ dirs = [d for d in Path("data/compiled").iterdir() if d.is_dir()]  # Violates AD
 
 ## 10. Test Alignment
 
-- **Green:** Default construction, frozen enforcement, acled_grid_dir defaults to None, accepts Path
+- **Green:** Default construction, frozen enforcement, acled_grid_dir defaults to None, ghspop_grid_dir defaults to None, accepts Path
 - **Beige:** Empty admin fields rejection, duplicate admin fields rejection, invalid dtype rejection, margin below 1.0 rejection
-- **Red:** (via integration tests) Assembly with nonexistent acled-grid dir fails loud; assembly without acled-grid backward-compatible
+- **Red:** (via integration tests) Assembly with nonexistent acled/ghspop dir fails loud; assembly without acled/ghspop backward-compatible
 
 Tests in `tests/test_assemble.py`.
 
