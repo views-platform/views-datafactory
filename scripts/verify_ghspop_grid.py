@@ -85,7 +85,7 @@ SPOT_CHECK_LOCATIONS = [
     ("New York", 40.7, -74.0),
     ("Sahara", 23.0, 5.0),
     ("Pacific Ocean", 0.0, -160.0),
-    ("Amazon", -3.0, -60.0),
+    ("Amazon interior", -5.0, -65.0),
 ]
 
 
@@ -358,17 +358,18 @@ def plot_monthly_time_series(d: PrecomputedData, out: Path) -> None:
     ax.plot(d.dates, d.monthly_pop / 1e9,
             color=COLOR_ACCENT, linewidth=1.5)
 
-    for year, t_idx in d.epoch_time_indices.items():
+    for year in sorted(KNOWN_WORLD_POP):
+        t_idx = (year - d.start_year) * 12
         if 0 < t_idx < d.n_t:
             ax.axvline(d.dates[t_idx], color="#C0392B",
-                       linewidth=0.8, linestyle="--", alpha=0.5)
+                       linewidth=0.8, linestyle="--", alpha=0.3)
             ax.text(d.dates[t_idx], ax.get_ylim()[1] * 0.98,
                     f" {year}", fontsize=7, color="#C0392B",
                     va="top", rotation=90)
 
     style_ax(
         ax,
-        title="GHS-POP global population (step interpolation)",
+        title="GHS-POP global population (monthly)",
         xlabel="Date", ylabel="Population (billions)",
     )
     ax.set_xlim(d.dates[0], d.dates[-1])
@@ -381,15 +382,17 @@ def plot_epoch_comparison(d: PrecomputedData, out: Path) -> None:
     import matplotlib.pyplot as plt
     import numpy as np
 
-    sorted_epochs = sorted(d.epoch_time_indices.items())
-    n_epochs = min(len(sorted_epochs), 3)
+    end_year = d.start_year + d.n_t // 12
+    mid_year = (d.start_year + end_year) // 2
+    snapshot_years = [d.start_year, mid_year, end_year - 1]
+    selected = [
+        (y, (y - d.start_year) * 12)
+        for y in snapshot_years
+        if 0 <= (y - d.start_year) * 12 < d.n_t
+    ]
+    n_epochs = len(selected)
     if n_epochs == 0:
         return
-
-    indices = [0, len(sorted_epochs) // 2, len(sorted_epochs) - 1]
-    if n_epochs < 3:
-        indices = list(range(n_epochs))
-    selected = [sorted_epochs[i] for i in indices[:n_epochs]]
 
     fig, axes = plt.subplots(1, n_epochs, figsize=FIG_PANEL_1x3)
     if n_epochs == 1:
@@ -565,7 +568,7 @@ def plot_spot_checks(d: PrecomputedData, out: Path) -> None:
         pop = d.latest_pop[row, col]
         first_pop = d.grid[0, row, col, d.pop_idx]
 
-        is_urban = name not in ("Sahara", "Pacific Ocean", "Amazon")
+        is_urban = name not in ("Sahara", "Pacific Ocean", "Amazon interior")
         if is_urban:
             status = "PASS" if pop > 100_000 else "INVESTIGATE"
         else:
