@@ -128,7 +128,7 @@ class TestGhsPopViewpointConfigGreen:
             2000, 2005, 2010, 2015, 2020, 2025, 2030,
         )
         assert cfg.aggregation == "sum"
-        assert cfg.temporal_interpolation == "step"
+        assert cfg.temporal_interpolation == "linear"
 
     def test_frozen(self) -> None:
         from datafactory_viewpoint.builders.ghspop_v1 import (
@@ -229,6 +229,7 @@ class TestTemporalInterpolationGreen:
         epoch_values = {2000: 100.0, 2005: 200.0}
         months = _interpolate_temporal(
             epoch_values,
+            strategy="step",
             start_year=2000,
             start_month=1,
             end_year=2005,
@@ -254,6 +255,7 @@ class TestTemporalInterpolationGreen:
         epoch_values = {2020: 500.0}
         months = _interpolate_temporal(
             epoch_values,
+            strategy="step",
             start_year=2019,
             start_month=1,
             end_year=2021,
@@ -278,12 +280,108 @@ class TestTemporalInterpolationGreen:
         epoch_values = {2000: 100.0}
         months = _interpolate_temporal(
             epoch_values,
+            strategy="step",
             start_year=2000,
             start_month=6,
             end_year=2001,
             end_month=5,
         )
         assert len(months) == 12
+
+    def test_linear_basic(self) -> None:
+        """Linear interpolation between two epochs."""
+        from datafactory_viewpoint.builders.ghspop_v1 import (
+            _interpolate_temporal,
+        )
+
+        epoch_values = {2000: 100.0, 2010: 200.0}
+        months = _interpolate_temporal(
+            epoch_values,
+            strategy="linear",
+            start_year=2000,
+            start_month=1,
+            end_year=2010,
+            end_month=12,
+        )
+
+        assert months[0] == pytest.approx(100.0)
+        assert months[-1] == pytest.approx(200.0)
+
+        # Midpoint (2005-01): ~150
+        mid_idx = 60  # Jan 2005 = month 61 (0-indexed: 60)
+        assert months[mid_idx] == pytest.approx(150.0, abs=2.0)
+
+        assert len(months) == 132
+
+    def test_linear_holds_before_first_epoch(self) -> None:
+        """Months before the first epoch are 0."""
+        from datafactory_viewpoint.builders.ghspop_v1 import (
+            _interpolate_temporal,
+        )
+
+        epoch_values = {2005: 300.0, 2010: 400.0}
+        months = _interpolate_temporal(
+            epoch_values,
+            strategy="linear",
+            start_year=2000,
+            start_month=1,
+            end_year=2010,
+            end_month=12,
+        )
+
+        assert months[0] == 0.0  # Jan 2000: before any epoch
+
+    def test_linear_holds_after_last_epoch(self) -> None:
+        """Months after the last epoch hold the last value."""
+        from datafactory_viewpoint.builders.ghspop_v1 import (
+            _interpolate_temporal,
+        )
+
+        epoch_values = {2000: 100.0, 2005: 200.0}
+        months = _interpolate_temporal(
+            epoch_values,
+            strategy="linear",
+            start_year=2000,
+            start_month=1,
+            end_year=2010,
+            end_month=12,
+        )
+
+        # After 2005: holds at 200.0
+        assert months[-1] == pytest.approx(200.0)
+        assert months[72] == pytest.approx(200.0)  # Jan 2006
+
+    def test_linear_single_epoch(self) -> None:
+        """Single epoch: 0 before, flat from epoch onward."""
+        from datafactory_viewpoint.builders.ghspop_v1 import (
+            _interpolate_temporal,
+        )
+
+        epoch_values = {2005: 500.0}
+        months = _interpolate_temporal(
+            epoch_values,
+            strategy="linear",
+            start_year=2000,
+            start_month=1,
+            end_year=2010,
+            end_month=12,
+        )
+
+        assert months[0] == 0.0  # before epoch
+        assert months[60] == pytest.approx(500.0)  # Jan 2005
+        assert months[-1] == pytest.approx(500.0)  # Dec 2010
+
+    def test_invalid_strategy_in_config_raises(self) -> None:
+        """Config rejects unknown temporal_interpolation."""
+        from datafactory_viewpoint.builders.ghspop_v1 import (
+            GhsPopViewpointConfig,
+        )
+
+        with pytest.raises(ValueError, match="temporal_interpolation"):
+            GhsPopViewpointConfig(
+                source_dir=Path("x"),
+                temporal_interpolation="cubic",
+            )
 
 
 # ===================================================================

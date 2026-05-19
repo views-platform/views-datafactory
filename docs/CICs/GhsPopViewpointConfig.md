@@ -24,7 +24,7 @@ This is a raster viewpoint — it performs spatial aggregation (30-arcsecond pix
 - This class does **not** read or write any files
 - This class does **not** know about the harvester, consolidation, or compilation layers
 - This class does **not** implement survivorship strategies (raster data has no event identity)
-- This class does **not** validate `aggregation` or `temporal_interpolation` against known strategies
+- This class does **not** validate `aggregation` against known strategies (only `"sum"` is implemented)
 
 ---
 
@@ -34,6 +34,7 @@ This is a raster viewpoint — it performs spatial aggregation (30-arcsecond pix
 - Guarantees `version` is non-empty
 - Guarantees `epochs` is non-empty
 - Guarantees all `epochs` are members of `KNOWN_EPOCHS` (1975..2030 in 5-year steps)
+- Guarantees `temporal_interpolation` is one of `VALID_TEMPORAL_INTERPOLATIONS` (`"step"`, `"linear"`)
 - Carries `source_dir`: Path to harvested GeoTIFFs (required, no default)
 - Carries `output_path`: viewpoint Parquet destination
 - Carries `ledger_path`: viewpoint provenance ledger destination
@@ -51,7 +52,7 @@ This is a raster viewpoint — it performs spatial aggregation (30-arcsecond pix
 - `resolution`: str, raster resolution code (default: `"30ss"`)
 - `crs`: str, coordinate reference system code (default: `"4326"`)
 - `aggregation`: str, spatial aggregation method (default: `"sum"`)
-- `temporal_interpolation`: str, temporal fill method (default: `"step"`)
+- `temporal_interpolation`: str, temporal fill method; must be one of `VALID_TEMPORAL_INTERPOLATIONS` (`"step"`, `"linear"`) (default: `"linear"`)
 - `start_year`: int, first output year (default: `1975`)
 - `start_month`: int, first output month (default: `1`)
 - `end_year`: int, last output year (default: `2030`)
@@ -143,7 +144,8 @@ Tests in `tests/test_ghspop_viewpoint.py`.
 
 ## 11. Evolution Notes
 
-- `aggregation` and `temporal_interpolation` are currently string fields with no validation against known strategies. If additional strategies are added (e.g., linear interpolation), consider validating against an enum.
+- `temporal_interpolation` is validated against `VALID_TEMPORAL_INTERPOLATIONS` (`"step"`, `"linear"`). `aggregation` remains unvalidated — only `"sum"` is implemented.
+- Default temporal interpolation changed from `"step"` to `"linear"` — linear interpolation between epochs with flat extrapolation beyond the last epoch.
 - If JRC publishes R2024A, a new version tag and potentially new epochs would be needed. The config supports this without structural changes.
 - Consolidation layer is currently skipped (ADR-029). If a second release requires consolidation, `source_dir` would change from harvest output to consolidated store.
 

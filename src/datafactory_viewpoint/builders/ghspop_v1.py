@@ -44,6 +44,8 @@ PIXELS_PER_CELL = 60
 
 DEFAULT_NODATA = -200.0
 
+VALID_TEMPORAL_INTERPOLATIONS = ("step", "linear")
+
 _VIEWS_EPOCH_YEAR = 1980
 
 
@@ -71,7 +73,7 @@ class GhsPopViewpointConfig:
     crs: str = "4326"
 
     aggregation: str = "sum"
-    temporal_interpolation: str = "step"
+    temporal_interpolation: str = "linear"
 
     start_year: int = 1975
     start_month: int = 1
@@ -99,6 +101,14 @@ class GhsPopViewpointConfig:
                 )
                 logger.error(err_msg)
                 raise ValueError(err_msg)
+        if self.temporal_interpolation not in VALID_TEMPORAL_INTERPOLATIONS:
+            err_msg = (
+                f"Unknown temporal_interpolation "
+                f"'{self.temporal_interpolation}'. "
+                f"Valid: {VALID_TEMPORAL_INTERPOLATIONS}"
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
 
     def tif_filename(self, epoch: int) -> str:
         stem = (
@@ -262,18 +272,22 @@ def _aggregate_to_prio_grid(
 def _interpolate_temporal(
     epoch_values: dict[int, float],
     *,
+    strategy: str,
     start_year: int,
     start_month: int,
     end_year: int,
     end_month: int,
 ) -> list[float]:
-    """Step-function interpolation from epoch values to monthly.
+    """Interpolate epoch values to monthly time steps.
 
-    For each month, use the value from the most recent epoch that
-    is on or before that month. Months before all epochs get 0.
+    Strategies:
+        step — hold last known epoch value until the next epoch.
+        linear — linearly interpolate between adjacent epochs;
+                 hold flat before the first and after the last.
 
     Args:
         epoch_values: Mapping of epoch year → aggregated value.
+        strategy: One of VALID_TEMPORAL_INTERPOLATIONS.
         start_year, start_month: First output month.
         end_year, end_month: Last output month (inclusive).
 
@@ -287,19 +301,76 @@ def _interpolate_temporal(
     )
 
     sorted_epochs = sorted(epoch_values.keys())
-    result: list[float] = []
 
+    if strategy == "step":
+        return _interp_step(
+            n_months, sorted_epochs, epoch_values,
+            start_year, start_month,
+        )
+    if strategy == "linear":
+        return _interp_linear(
+            n_months, sorted_epochs, epoch_values,
+            start_year, start_month,
+        )
+    msg = (
+        f"Unknown interpolation strategy '{strategy}'. "
+        f"Valid: {VALID_TEMPORAL_INTERPOLATIONS}"
+    )
+    raise ValueError(msg)
+
+
+def _interp_step(
+    n_months: int,
+    sorted_epochs: list[int],
+    epoch_values: dict[int, float],
+    start_year: int,
+    start_month: int,
+) -> list[float]:
+    result: list[float] = []
     for i in range(n_months):
         year = start_year + (start_month - 1 + i) // 12
-
         value = 0.0
         for ep in sorted_epochs:
             if ep <= year:
                 value = epoch_values[ep]
             else:
                 break
-
         result.append(value)
+    return result
+
+
+def _interp_linear(
+    n_months: int,
+    sorted_epochs: list[int],
+    epoch_values: dict[int, float],
+    start_year: int,
+    start_month: int,
+) -> list[float]:
+    result: list[float] = []
+    for i in range(n_months):
+        year = start_year + (start_month - 1 + i) // 12
+        month = (start_month - 1 + i) % 12 + 1
+        t = year + (month - 1) / 12.0
+
+        if not sorted_epochs or t < sorted_epochs[0]:
+            result.append(0.0)
+            continue
+
+        if t >= sorted_epochs[-1]:
+            result.append(epoch_values[sorted_epochs[-1]])
+            continue
+
+        for j in range(len(sorted_epochs) - 1):
+            ep_lo = sorted_epochs[j]
+            ep_hi = sorted_epochs[j + 1]
+            if ep_lo <= t < ep_hi:
+                frac = (t - ep_lo) / (ep_hi - ep_lo)
+                val = (
+                    epoch_values[ep_lo] * (1 - frac)
+                    + epoch_values[ep_hi] * frac
+                )
+                result.append(val)
+                break
 
     return result
 
@@ -396,6 +467,7 @@ def build_ghspop_v1(
 
             monthly = _interpolate_temporal(
                 epoch_values,
+                strategy=config.temporal_interpolation,
                 start_year=config.start_year,
                 start_month=config.start_month,
                 end_year=config.end_year,
