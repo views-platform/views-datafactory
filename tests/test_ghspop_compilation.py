@@ -19,6 +19,7 @@ import pytest
 
 from datafactory_priogrid.grid_config import GridConfig
 from datafactory_priogrid.temporal_config import TemporalConfig
+from datafactory_priogrid.temporal_generator import VIEWS_EPOCH_YEAR
 
 # Tiny grid: 2×4 = 8 cells at 90° resolution, 3 months
 TINY_GRID = GridConfig(resolution=90.0)
@@ -27,8 +28,7 @@ TINY_TEMPORAL = TemporalConfig(
 )
 
 # VIEWS month_id for Jan 2020: (2020 - 1980) * 12 + 1 = 481
-_VIEWS_EPOCH_YEAR = 1980
-JAN_2020_MID = (2020 - _VIEWS_EPOCH_YEAR) * 12 + 1
+JAN_2020_MID = (2020 - VIEWS_EPOCH_YEAR) * 12 + 1
 FEB_2020_MID = JAN_2020_MID + 1
 MAR_2020_MID = JAN_2020_MID + 2
 
@@ -425,8 +425,8 @@ class TestPregriddedCompilationBeige:
 
         # month_id for Dec 2019 = (2019-1980)*12 + 12 = 480 (before range)
         # month_id for Apr 2020 = 484 (after range, which ends Mar 2020)
-        before_range = (2019 - _VIEWS_EPOCH_YEAR) * 12 + 12
-        after_range = (2020 - _VIEWS_EPOCH_YEAR) * 12 + 4
+        before_range = (2019 - VIEWS_EPOCH_YEAR) * 12 + 12
+        after_range = (2020 - VIEWS_EPOCH_YEAR) * 12 + 4
 
         src = _write_pregridded_parquet(
             tmp_path / "source.parquet",
