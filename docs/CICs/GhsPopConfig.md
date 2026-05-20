@@ -63,6 +63,11 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on `timeout < 1`
 - `AttributeError` on any attempt to mutate fields (frozen)
 
+Runtime failures from `fetch_ghspop` (the primary consumer):
+- `ValueError` on unexpected ZIP contents — expected TIF filename not found (ADR-011: fail loud, no silent fallback to wrong file). Ledger records the failure with reason.
+- `requests.RequestException` on network failure (after retries). Ledger records the failure.
+- `zipfile.BadZipFile` on corrupt download. Ledger records the failure.
+
 All failures are immediate and loud. No silent fallbacks.
 
 ---

@@ -145,11 +145,11 @@ cd ~/views-datafactory
 bash scripts/refresh_pipeline.sh
 ```
 
-This takes 15-30 minutes (harvesting calls the UCDP and ACLED APIs
-with rate limiting). Watch the output — each step prints PASS or FAIL.
+This takes 25-45 minutes (harvesting calls external APIs and downloads
+large raster files). Watch the output — each step prints PASS or FAIL.
 
-**Note:** The pipeline now includes ACLED harvesting and compilation
-(8 ACLED features). Pre-flight checks (`scripts/preflight.py`)
+**Note:** The pipeline includes ACLED (8 features) and GHS-POP
+population data (1 feature). Pre-flight checks (`scripts/preflight.py`)
 validate all credentials before any step runs.
 
 **ACLED API courtesy:** The ACLED harvester fetches data year-by-year.
@@ -159,6 +159,14 @@ wipe), the full date range is re-fetched (~480 pages across 6 years).
 If doing a full re-fetch, email Katayoun at ACLED with a heads-up:
 "We're redeploying our data pipeline and will fetch ACLED data in full.
 This is a one-time operation, not our regular monthly cron."
+
+**GHS-POP (population):** Downloads 12 GeoTIFF epochs from the EU JRC
+(open access, no credentials). First run downloads ~5.3 GB of raster
+data (~6 minutes). Subsequent runs cache — existing files are skipped.
+The viewpoint step (~5 minutes) aggregates 30-arcsecond pixels to
+PRIO-GRID cells and interpolates to monthly. No consolidation layer
+(single release R2023A, ADR-029). Ensure at least 8 GB free disk
+space before first run.
 
 ### 2.2 Verify the output
 
