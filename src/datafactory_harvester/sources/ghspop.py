@@ -202,16 +202,24 @@ def _fetch_epoch(
 
     with zf:
         if tif_name not in zf.namelist():
-            matching = [
-                n for n in zf.namelist()
-                if n.endswith(".tif")
-            ]
-            if not matching:
-                msg = (
-                    f"No .tif file found in ZIP for epoch {epoch}"
-                )
-                raise zipfile.BadZipFile(msg)
-            tif_name = matching[0]
+            append_ledger_entry(config.ledger_path, {
+                "dataset": DATASET_ID,
+                "version": version,
+                "outcome": "failed",
+                "reason": (
+                    f"Expected {tif_name} in ZIP but found: "
+                    f"{zf.namelist()}"
+                ),
+                "ledger_version": LEDGER_VERSION,
+                "digest_algorithm": DIGEST_SCHEME,
+            })
+            msg = (
+                f"Expected {tif_name} in ZIP for epoch {epoch} "
+                f"but found: {zf.namelist()} — "
+                f"JRC naming convention may have changed"
+            )
+            logger.error(msg)
+            raise ValueError(msg)
 
         tif_data = zf.read(tif_name)
 

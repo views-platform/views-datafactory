@@ -398,7 +398,7 @@ class TestFetchGhsPopRed:
         assert entry["outcome"] == "failed"
 
     def test_zip_with_no_tif_raises(self, tmp_path: Path) -> None:
-        """Valid ZIP containing no .tif file raises BadZipFile."""
+        """Valid ZIP containing no expected TIF raises ValueError."""
         from datafactory_harvester.sources.ghspop import (
             GhsPopConfig,
             fetch_ghspop,
@@ -410,7 +410,6 @@ class TestFetchGhsPopRed:
             ledger_path=tmp_path / "ledger.jsonl",
         )
 
-        # Valid ZIP but contains only a README, no .tif
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("README.txt", "no geotiff here")
@@ -420,6 +419,44 @@ class TestFetchGhsPopRed:
         with (
             patch("datafactory_http.retry.requests.request", return_value=mock_resp),
             patch("datafactory_http.retry.time.sleep"),
-            pytest.raises(zipfile.BadZipFile, match="No .tif"),
+            pytest.raises(ValueError, match="Expected.*in ZIP"),
         ):
             fetch_ghspop(cfg)
+
+        entry = json.loads(
+            cfg.ledger_path.read_text().strip().split("\n")[-1]
+        )
+        assert entry["outcome"] == "failed"
+        assert "reason" in entry
+
+    def test_zip_with_wrong_tif_name_raises(self, tmp_path: Path) -> None:
+        """ZIP with a TIF under unexpected name raises ValueError (ADR-011)."""
+        from datafactory_harvester.sources.ghspop import (
+            GhsPopConfig,
+            fetch_ghspop,
+        )
+
+        cfg = GhsPopConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("some_other_file.tif", b"raster data")
+        mock_resp = MagicMock()
+        mock_resp.content = buf.getvalue()
+
+        with (
+            patch("datafactory_http.retry.requests.request", return_value=mock_resp),
+            patch("datafactory_http.retry.time.sleep"),
+            pytest.raises(ValueError, match="JRC naming"),
+        ):
+            fetch_ghspop(cfg)
+
+        entry = json.loads(
+            cfg.ledger_path.read_text().strip().split("\n")[-1]
+        )
+        assert entry["outcome"] == "failed"
+        assert "Expected" in entry["reason"]

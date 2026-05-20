@@ -106,7 +106,7 @@ cfg.timeout = 300  # AttributeError
 
 - **Green:** Default construction, frozen enforcement, custom epochs, URL construction, TIF filename construction
 - **Beige:** Unknown epoch rejection, zero timeout, negative timeout, empty epochs accepted
-- **Red:** Network failure records ledger, corrupt ZIP raises, ZIP without TIF raises
+- **Red:** Network failure records ledger, corrupt ZIP raises, unexpected ZIP contents raises ValueError and records ledger (ADR-011: no silent fallback to wrong file)
 
 Tests in `tests/test_ghspop_harvester.py`.
 

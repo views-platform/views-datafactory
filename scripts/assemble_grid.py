@@ -584,6 +584,30 @@ def main() -> int:
             )
         del acled_grid_ro
 
+    # GHS-POP data boundary
+    last_valid_ghspop_month_id: int | None = None
+    if has_ghspop:
+        ghspop_grid_ro = np.load(
+            config.ghspop_grid_dir / "grid.npy", mmap_mode="r",
+        )
+        ghspop_ts = np.load(
+            config.ghspop_grid_dir / "time_steps.npy",
+        )
+        ghspop_has_data = ghspop_grid_ro.sum(axis=(1, 2, 3)) > 0
+        ghspop_valid = np.where(ghspop_has_data)[0]
+        if len(ghspop_valid) > 0:
+            ghspop_last = int(ghspop_valid[-1])
+            ghspop_last_dt = ghspop_ts[ghspop_last]
+            last_valid_ghspop_month_id = int(
+                to_views_month_id(ghspop_last_dt)
+            )
+            print(
+                f"Last valid GHS-POP month: "
+                f"{last_valid_ghspop_month_id} "
+                f"({ghspop_last_dt})"
+            )
+        del ghspop_grid_ro
+
     provenance = {
         "sources": {
             "ucdp_grid": str(grid_path),
@@ -621,6 +645,10 @@ def main() -> int:
     if last_valid_acled_month_id is not None:
         provenance["last_valid_acled_month_id"] = (
             last_valid_acled_month_id
+        )
+    if last_valid_ghspop_month_id is not None:
+        provenance["last_valid_ghspop_month_id"] = (
+            last_valid_ghspop_month_id
         )
     (config.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)
