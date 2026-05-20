@@ -258,7 +258,7 @@ def _aggregate_to_prio_grid(
         logger.error(msg)
         raise ValueError(msg)
 
-    clean = data.astype(np.float64).copy()
+    clean = data.copy()
     clean[clean == nodata] = 0.0
     clean[clean < 0.0] = 0.0
 
@@ -266,7 +266,82 @@ def _aggregate_to_prio_grid(
     prio_cols = ncol // p
 
     blocks = clean.reshape(prio_rows, p, prio_cols, p)
-    result: np.ndarray = blocks.sum(axis=(1, 3))
+    result: np.ndarray = blocks.sum(axis=(1, 3), dtype=np.float64)
+    return result
+
+
+def _aggregate_with_alignment(
+    data: np.ndarray,
+    row_offset: int,
+    col_offset: int,
+    *,
+    nodata: float = DEFAULT_NODATA,
+) -> np.ndarray:
+    """Aggregate raw raster to PRIO-GRID via strip processing.
+
+    Combines alignment and aggregation without allocating a full
+    21600x43200 globe array. Processes one PRIO-GRID row (60 pixel
+    rows) at a time — peak memory is raw_array + ~20 MB instead of
+    raw_array + globe_array (~7.4 GB combined).
+
+    Args:
+        data: Raw 2-D raster (e.g. 21384x43202).
+        row_offset: Globe pixel row where the raster's first row lands.
+        col_offset: Globe pixel column where the raster's first column
+            lands.
+        nodata: Fill value treated as zero.
+
+    Returns:
+        2-D float64 array of shape (360, 720) with population sums.
+    """
+    p = PIXELS_PER_CELL
+    result = np.zeros((PRIO_NROW, PRIO_NCOL), dtype=np.float64)
+
+    for prio_row in range(PRIO_NROW):
+        globe_r0 = prio_row * p
+        raw_r0 = globe_r0 - row_offset
+        raw_r1 = raw_r0 + p
+
+        src_r0 = max(0, raw_r0)
+        src_r1 = min(data.shape[0], raw_r1)
+
+        if src_r0 >= src_r1:
+            continue
+
+        strip = data[src_r0:src_r1, :].copy()
+        strip[(strip == nodata) | (strip < 0.0)] = 0.0
+
+        n_rows = strip.shape[0]
+        aligned = np.zeros(
+            (n_rows, GLOBE_PIXEL_COLS), dtype=strip.dtype,
+        )
+
+        dst_c0 = max(0, col_offset)
+        src_c0 = max(0, -col_offset)
+        n_cols = min(
+            strip.shape[1] - src_c0,
+            GLOBE_PIXEL_COLS - dst_c0,
+        )
+        if n_cols > 0:
+            aligned[:, dst_c0:dst_c0 + n_cols] = (
+                strip[:, src_c0:src_c0 + n_cols]
+            )
+        del strip
+
+        blocks = aligned.reshape(n_rows, PRIO_NCOL, p)
+        result[prio_row, :] = blocks.sum(
+            axis=(0, 2), dtype=np.float64,
+        )
+        del aligned
+
+    logger.info(
+        "Aggregated %dx%d raster to %dx%d PRIO-GRID "
+        "(row_offset=%d, col_offset=%d, strip processing)",
+        data.shape[0], data.shape[1],
+        PRIO_NROW, PRIO_NCOL,
+        row_offset, col_offset,
+    )
+
     return result
 
 
@@ -434,14 +509,12 @@ def build_ghspop_v1(
             raw.shape[0] % p != 0 or raw.shape[1] % p != 0
         )
         if needs_align:
-            aligned = _align_to_globe(
-                raw, tie_x, tie_y, sc_x, sc_y,
+            row_off = round((90.0 - tie_y) / sc_y)
+            col_off = round((tie_x - (-180.0)) / sc_x)
+            grid = _aggregate_with_alignment(
+                raw, row_off, col_off, nodata=config.nodata,
             )
             del raw
-            grid = _aggregate_to_prio_grid(
-                aligned, nodata=config.nodata,
-            )
-            del aligned
         else:
             grid = _aggregate_to_prio_grid(
                 raw, nodata=config.nodata,
