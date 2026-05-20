@@ -76,12 +76,11 @@ def _place_events(
     table: pa.Table,
     config: CompilationConfig,
 ) -> dict[tuple[int, int], list[dict]]:
-    """Assign events to (pgid_index, time_index) bins using columnar data.
+    """Assign events to (pgid_index, time_index) bins.
 
-    Extracts only placement columns (lat, lon, date) as lists,
-    computes bin assignments, then materializes event dicts
-    only for events that land in valid bins. This avoids creating
-    dict objects upfront for large tables.
+    Extracts placement columns (lat, lon, date) as lists, computes
+    bin assignments, then materializes event dicts only for events
+    that land in valid bins.
 
     Args:
         table: A PyArrow Table with event data.

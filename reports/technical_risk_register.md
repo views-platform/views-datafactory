@@ -1,6 +1,6 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-20)
+**Date:** 2026-03-17 (updated 2026-05-21)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21
 **Status:** 180 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 115 resolved, 57 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 25 disagreements: 22 resolved, 3 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
@@ -28,7 +28,7 @@
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
 | C-74 | 4 | CompilationConfig leaks strategy vocabulary | User confusion observed | — |
 | C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns | — |
-| C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s | Test infra |
+| C-78 | 4 | `_place_events` hard to test in isolation | Compilation tests exceed 5s | Test infra |
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
 | C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed | — |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
@@ -479,8 +479,8 @@ Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and fi
 8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; monitor if callers misuse. **Trigger: deepen if recurring misuse patterns emerge.**
 **Source:** Ousterhout (expert review #4)
 
-### C-78: `_place_events_columnar` hard to test in isolation; name misleading — [DEFER]
-100 lines of columnar bin-assignment logic tested only indirectly through `compile_grid()`. Core algorithm (lat/lon -> pgid, date -> month_index) could be extracted into a pure function. **Update 2026-05-21 (ADR-031 review):** The `_columnar` suffix falsely claims columnar processing — the function receives Python lists from `.to_pylist()` and iterates row-by-row. Renamed to `_place_events` to accurately reflect behavior. The underlying P1 violation (`.to_pylist()` materialization) remains tracked in C-144. **Trigger: extract `compute_bin_assignments()` when compilation tests exceed 5 seconds.**
+### C-78: `_place_events` hard to test in isolation — [DEFER]
+100 lines of bin-assignment logic tested only indirectly through `compile_grid()`. Core algorithm (lat/lon -> pgid, date -> month_index) could be extracted into a pure function. **Update 2026-05-21 (ADR-031 review):** Renamed from `_place_events_columnar` — the old name falsely claimed columnar processing. The function receives Python lists from `.to_pylist()` and iterates row-by-row. The underlying P1 violation (`.to_pylist()` materialization) remains tracked in C-144. **Trigger: extract `compute_bin_assignments()` when compilation tests exceed 5 seconds.**
 **Source:** Feathers (expert review #4), ADR-031 compliance review (2026-05-21). Cross-ref: C-144, C-74.
 
 ### C-79: Compilation/consolidation require real Parquet I/O in tests — [DEFER]

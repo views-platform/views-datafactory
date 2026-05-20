@@ -181,10 +181,10 @@ def compile_pregridded(config: PregriddedCompilationConfig) -> Path:
     )
 
     n_rows = table.num_rows
-    pgids = table[config.pgid_field].to_numpy()
-    month_ids = table[config.month_id_field].to_numpy()
+    pgids = table[config.pgid_field].to_numpy(zero_copy_only=False)
+    month_ids = table[config.month_id_field].to_numpy(zero_copy_only=False)
     value_arrays = [
-        table[feat.value_field].to_numpy()
+        table[feat.value_field].to_numpy(zero_copy_only=False)
         for feat in config.features
     ]
     del table
