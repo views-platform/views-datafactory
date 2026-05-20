@@ -28,7 +28,7 @@ from __future__ import annotations
 import argparse
 import socket
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from netrc import netrc
 from pathlib import Path
 
@@ -226,7 +226,7 @@ def main() -> int:
                 age_str = ""
                 try:
                     ts_dt = datetime.fromisoformat(ts)
-                    now = datetime.now(tz=timezone.utc)
+                    now = datetime.now(tz=UTC)
                     age_h = (now - ts_dt).total_seconds() / 3600
                     if age_h < 48:
                         age_str = f", age {age_h:.0f}h"

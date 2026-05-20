@@ -18,7 +18,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow as pa
@@ -114,7 +114,7 @@ def _get_harvest_metadata(
 
     digest = compute_content_digest(fallback_path.read_bytes())
     timestamp = datetime.fromtimestamp(
-        fallback_path.stat().st_mtime, tz=timezone.utc
+        fallback_path.stat().st_mtime, tz=UTC
     ).isoformat()
     logger.info(
         "No ledger entry for version %s — using file digest %s",
@@ -196,7 +196,7 @@ def consolidate_acled(
     if config is None:
         config = AcledConsolidationConfig()
 
-    ingested_at = datetime.now(tz=timezone.utc).isoformat()
+    ingested_at = datetime.now(tz=UTC).isoformat()
 
     harvest_index = _build_harvest_index(
         config.harvest_ledger_path

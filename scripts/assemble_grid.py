@@ -4,15 +4,17 @@
 Usage:
     uv run python scripts/assemble_grid.py
     uv run python scripts/assemble_grid.py --acled-grid data/compiled/acled
+    uv run python scripts/assemble_grid.py --ghspop-grid data/compiled/ghspop
     uv run python scripts/assemble_grid.py --admin-dir data/gaul_admin
 
 Combines the compiled UCDP conflict grid, ACLED conflict grid,
-PRIO-GRID static features, and GAUL admin boundary codes into a
-single array. ACLED is temporally aligned to the UCDP timeline and
-zero-filled outside its coverage range (C-156). Static and admin
-features are broadcast across all time steps.
+GHS-POP population grid, PRIO-GRID static features, and GAUL admin
+boundary codes into a single array. ACLED and GHS-POP are temporally
+aligned to the UCDP timeline and zero-filled outside their coverage
+range. Static and admin features are broadcast across all time steps.
 
-Output: grid.npy [T, H, W, F] with F = UCDP + ACLED + static + admin.
+Output: grid.npy [T, H, W, F]
+        F = UCDP + ACLED + GHS-POP + static + admin.
 
 Admin channels (gaul0_code, gaul1_code, gaul2_code) are categorical
 integers stored as float32. Downstream models should treat them as
@@ -43,6 +45,7 @@ class AssemblyConfig:
 
     ucdp_grid_dir: Path = Path("data/compiled")
     acled_grid_dir: Path | None = None
+    ghspop_grid_dir: Path | None = None
     static_dir: Path = Path("data/raw/priogrid_static")
     admin_dir: Path = Path("data/raw/gaul_admin")
     output_dir: Path = Path("data/assembled")
@@ -116,6 +119,12 @@ def main() -> int:
         help="Compiled ACLED grid directory (omit to skip ACLED)",
     )
     parser.add_argument(
+        "--ghspop-grid",
+        type=Path,
+        default=None,
+        help="Compiled GHS-POP grid directory (omit to skip GHS-POP)",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=defaults.output_dir,
@@ -126,6 +135,7 @@ def main() -> int:
     config = AssemblyConfig(
         ucdp_grid_dir=args.ucdp_grid,
         acled_grid_dir=args.acled_grid,
+        ghspop_grid_dir=args.ghspop_grid,
         static_dir=args.static_dir,
         admin_dir=args.admin_dir,
         output_dir=args.output_dir,
@@ -161,15 +171,25 @@ def main() -> int:
         )
         return 1
 
+    has_ghspop = config.ghspop_grid_dir is not None
+    if has_ghspop and not config.ghspop_grid_dir.exists():
+        print(
+            f"FAIL: --ghspop-grid {config.ghspop_grid_dir} "
+            "not found"
+        )
+        return 1
+
     print("=" * 60)
     print("GRID ASSEMBLY — All Data Sources")
-    print(f"UCDP grid:  {config.ucdp_grid_dir}")
-    print(f"ACLED grid: "
+    print(f"UCDP grid:   {config.ucdp_grid_dir}")
+    print(f"ACLED grid:  "
           f"{config.acled_grid_dir if has_acled else '(skipped)'}")
-    print(f"Static dir: {config.static_dir}")
-    print(f"Admin dir:  {config.admin_dir}"
+    print(f"GHS-POP grid: "
+          f"{config.ghspop_grid_dir if has_ghspop else '(skipped)'}")
+    print(f"Static dir:  {config.static_dir}")
+    print(f"Admin dir:   {config.admin_dir}"
           f"{'' if has_admin else ' (skipped)'}")
-    print(f"Output:     {config.output_dir}")
+    print(f"Output:      {config.output_dir}")
     print("=" * 60)
     print()
 
@@ -247,10 +267,77 @@ def main() -> int:
             f"{acled_offset}–{acled_end_idx - 1} "
             f"in assembled grid"
         )
-        print(
-            f"  Zero-fill: 0–{acled_offset - 1}, "
-            f"{acled_end_idx}–{n_t - 1}"
+        if acled_offset > 0 or acled_end_idx < n_t:
+            print(
+                f"  Zero-fill: 0–{acled_offset - 1}, "
+                f"{acled_end_idx}–{n_t - 1}"
+            )
+
+    # ── GHS-POP channels (temporal, same alignment as ACLED) ──
+    ghspop_features: list[str] = []
+    ghspop_grid = None
+    ghspop_offset: int = 0
+    n_ghspop: int = 0
+
+    if has_ghspop:
+        ghspop_grid_path = config.ghspop_grid_dir / "grid.npy"
+        ghspop_feat_path = (
+            config.ghspop_grid_dir / "feature_names.json"
         )
+        ghspop_time_path = (
+            config.ghspop_grid_dir / "time_steps.npy"
+        )
+
+        for p in (
+            ghspop_grid_path, ghspop_feat_path, ghspop_time_path,
+        ):
+            if not p.exists():
+                print(f"FAIL: {p} not found")
+                return 1
+
+        ghspop_grid = np.load(ghspop_grid_path, mmap_mode="r")
+        ghspop_features = json.loads(ghspop_feat_path.read_text())
+        ghspop_time_steps = np.load(ghspop_time_path)
+
+        DEFAULT_GRID_CONFIG.assert_grid_shape(ghspop_grid)
+
+        ghspop_start_dt = ghspop_time_steps[0]
+        matches = np.where(time_steps == ghspop_start_dt)[0]
+        if len(matches) != 1:
+            print(
+                f"FAIL: GHS-POP start {ghspop_start_dt} not "
+                f"found in UCDP timeline (or ambiguous)"
+            )
+            return 1
+        ghspop_offset = int(matches[0])
+        n_ghspop_t = ghspop_grid.shape[0]
+        ghspop_end_idx = ghspop_offset + n_ghspop_t
+
+        if ghspop_end_idx > n_t:
+            print(
+                f"FAIL: GHS-POP extends beyond UCDP timeline "
+                f"(offset {ghspop_offset} + "
+                f"{n_ghspop_t} > {n_t})"
+            )
+            return 1
+
+        n_ghspop = len(ghspop_features)
+        print(
+            f"GHS-POP grid: [T={n_ghspop_t}, "
+            f"H={ghspop_grid.shape[1]}, "
+            f"W={ghspop_grid.shape[2]}, C={n_ghspop}]"
+        )
+        print(f"GHS-POP features: {ghspop_features}")
+        print(
+            f"GHS-POP temporal alignment: indices "
+            f"{ghspop_offset}–{ghspop_end_idx - 1} "
+            f"in assembled grid"
+        )
+        if ghspop_offset > 0 or ghspop_end_idx < n_t:
+            print(
+                f"  Zero-fill: 0–{ghspop_offset - 1}, "
+                f"{ghspop_end_idx}–{n_t - 1}"
+            )
 
     # Build gid → (row, col) lookup from pgids array
     gid_to_rowcol: dict[int, tuple[int, int]] = {}
@@ -330,9 +417,9 @@ def main() -> int:
 
     n_static = len(static_names)
     n_admin = len(admin_names)
-    n_total = n_ucdp + n_acled + n_static + n_admin
+    n_total = n_ucdp + n_acled + n_ghspop + n_static + n_admin
     all_features = (
-        ucdp_features + acled_features
+        ucdp_features + acled_features + ghspop_features
         + static_names + admin_names
     )
 
@@ -390,19 +477,28 @@ def main() -> int:
             ] = acled_grid
             del acled_grid
 
-        # Fill static channels (broadcast in-place)
-        for i, spatial in enumerate(static_spatial):
+        # Copy GHS-POP channels (temporal slice, rest stays zero)
+        if ghspop_grid is not None:
+            ghspop_end = ghspop_offset + ghspop_grid.shape[0]
+            ch_ghspop = n_ucdp + n_acled
             assembled[
-                :, :, :, n_ucdp + n_acled + i
-            ] = spatial
+                ghspop_offset:ghspop_end,
+                :, :,
+                ch_ghspop:ch_ghspop + n_ghspop,
+            ] = ghspop_grid
+            del ghspop_grid
+
+        # Fill static channels (broadcast in-place)
+        ch_static = n_ucdp + n_acled + n_ghspop
+        for i, spatial in enumerate(static_spatial):
+            assembled[:, :, :, ch_static + i] = spatial
 
         del static_spatial  # free memory
 
         # Fill admin channels (broadcast in-place)
+        ch_admin = ch_static + n_static
         for i, spatial in enumerate(admin_spatial):
-            assembled[
-                :, :, :, n_ucdp + n_acled + n_static + i
-            ] = spatial
+            assembled[:, :, :, ch_admin + i] = spatial
 
         del admin_spatial  # free memory
 
@@ -444,6 +540,12 @@ def main() -> int:
             config.acled_grid_dir / "grid.npy"
         )
 
+    ghspop_digest: str | None = None
+    if has_ghspop:
+        ghspop_digest = compute_file_digest(
+            config.ghspop_grid_dir / "grid.npy"
+        )
+
     # Data boundary: last month with observed UCDP data
     ucdp_grid_ro = np.load(grid_path, mmap_mode="r")
     has_data = ucdp_grid_ro.sum(axis=(1, 2, 3)) > 0
@@ -482,6 +584,30 @@ def main() -> int:
             )
         del acled_grid_ro
 
+    # GHS-POP data boundary
+    last_valid_ghspop_month_id: int | None = None
+    if has_ghspop:
+        ghspop_grid_ro = np.load(
+            config.ghspop_grid_dir / "grid.npy", mmap_mode="r",
+        )
+        ghspop_ts = np.load(
+            config.ghspop_grid_dir / "time_steps.npy",
+        )
+        ghspop_has_data = ghspop_grid_ro.sum(axis=(1, 2, 3)) > 0
+        ghspop_valid = np.where(ghspop_has_data)[0]
+        if len(ghspop_valid) > 0:
+            ghspop_last = int(ghspop_valid[-1])
+            ghspop_last_dt = ghspop_ts[ghspop_last]
+            last_valid_ghspop_month_id = int(
+                to_views_month_id(ghspop_last_dt)
+            )
+            print(
+                f"Last valid GHS-POP month: "
+                f"{last_valid_ghspop_month_id} "
+                f"({ghspop_last_dt})"
+            )
+        del ghspop_grid_ro
+
     provenance = {
         "sources": {
             "ucdp_grid": str(grid_path),
@@ -494,6 +620,15 @@ def main() -> int:
             "acled_features": acled_features or None,
             "acled_temporal_offset": (
                 acled_offset if has_acled else None
+            ),
+            "ghspop_grid": (
+                str(config.ghspop_grid_dir / "grid.npy")
+                if has_ghspop else None
+            ),
+            "ghspop_digest": ghspop_digest,
+            "ghspop_features": ghspop_features or None,
+            "ghspop_temporal_offset": (
+                ghspop_offset if has_ghspop else None
             ),
             "static_dir": str(config.static_dir),
             "static_variables": static_names,
@@ -510,6 +645,10 @@ def main() -> int:
     if last_valid_acled_month_id is not None:
         provenance["last_valid_acled_month_id"] = (
             last_valid_acled_month_id
+        )
+    if last_valid_ghspop_month_id is not None:
+        provenance["last_valid_ghspop_month_id"] = (
+            last_valid_ghspop_month_id
         )
     (config.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)

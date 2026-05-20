@@ -9,10 +9,10 @@ The system is a **graph, not a pipeline** (ADR-012). Layers are decoupled by the
 - **Consolidation** (`datafactory_consolidation`) reads raw Parquet, writes lossless event store → `data/consolidated/`
 - **Viewpoints** (`datafactory_viewpoint`) reads consolidated store, writes materialized views → `data/viewpoint/`
 - **Compilation** (`datafactory_compilation`) reads viewpoint Parquet, writes grid npy → `data/compiled/`
-- **Assembly** (`scripts/assemble_grid.py`) combines compiled UCDP + static + admin → `data/assembled/`
+- **Assembly** (`scripts/assemble_grid.py`) combines compiled UCDP + ACLED + GHS-POP + static + admin → `data/assembled/`
 - **Query** (`datafactory_query`) reads assembled grid (npy or zarr), provides `load_dataset()` API
 - **Consumer bridge** (`scripts/generate_consumer_data.py`) translates factory → VIEWSER vocabulary
-- Not all paths traverse all layers. Synthetic data reaches consumers directly (skips consolidation, viewpoint, and compilation).
+- Not all paths traverse all layers. Synthetic data reaches consumers directly (skips consolidation, viewpoint, and compilation). GHS-POP skips consolidation (single release, ADR-029).
 
 ## Package Layout
 
@@ -20,7 +20,7 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 - `datafactory_provenance` — content digests and JSONL ledger operations (Layer 0, no outbound imports)
 - `datafactory_http` — HTTP request utilities: retry with exponential backoff (Layer 0, no outbound imports)
 - `datafactory_priogrid` — PRIO-GRID spatial + temporal backbone (Layer 1, imports provenance + http)
-- `datafactory_harvester` — data ingestion with pluggable sources: UCDP (annual, candidate, .9), PRIO-GRID static, GAUL admin boundaries (Layer 1, imports provenance + http)
+- `datafactory_harvester` — data ingestion with pluggable sources: UCDP (annual, candidate, .9), ACLED, GHS-POP, PRIO-GRID static, GAUL admin boundaries (Layer 1, imports provenance + http)
 - `datafactory_synthetic` — grid-native synthetic generation (Layer 1, imports provenance only)
 - `datafactory_consolidation` — lossless consolidation of raw snapshots (Layer 2, imports provenance only)
 - `datafactory_viewpoint` — opinionated, versioned views over consolidated data (Layer 3, imports provenance only)

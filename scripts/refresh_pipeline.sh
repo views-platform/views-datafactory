@@ -5,15 +5,16 @@
 #   bash scripts/refresh_pipeline.sh
 #
 # This script runs the entire data pipeline end-to-end:
-#   0. Pre-flight checks (credentials, disk space)
-#   1. Harvest raw data from UCDP, PRIO-GRID, GAUL, and ACLED APIs
-#   2. Consolidate UCDP sources into event store
-#   3. Build viewpoint (survivorship + distribution + filtering)
-#   4. Compile UCDP grid
-#   5. Compile ACLED grid (consolidate + viewpoint + compile)
-#   6. Assemble all features (UCDP + ACLED + static + admin)
-#   7. Export to consumer formats (zarr, parquet)
-#   8. Run health check
+#   0.  Pre-flight checks (credentials, disk space)
+#   1.  Harvest raw data from UCDP, PRIO-GRID, GAUL, ACLED, GHS-POP
+#   2.  Consolidate UCDP sources into event store
+#   3.  Build viewpoint (survivorship + distribution + filtering)
+#   4.  Compile UCDP grid
+#   5.  Compile ACLED grid (consolidate + viewpoint + compile)
+#   6.  Compile GHS-POP grid (viewpoint + compile, no consolidation)
+#   7.  Assemble all features (UCDP + ACLED + GHS-POP + static + admin)
+#   8.  Export to consumer formats (zarr, parquet)
+#   9.  Run health check
 #
 # Deployment gate:
 #   Before running any steps, the script reads ~/.views-deploy-tag
@@ -116,60 +117,69 @@ echo "========================================"
 echo
 
 # Step 0: Pre-flight checks (credentials, disk space)
-CURRENT_STEP="0/9: Pre-flight checks"
+CURRENT_STEP="0/10: Pre-flight checks"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/preflight.py
 echo
 
 # Step 1: Harvest
-CURRENT_STEP="1/9: Harvest raw data"
+CURRENT_STEP="1/10: Harvest raw data"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/harvest_ucdp.py
 uv run python scripts/harvest_priogrid.py
 uv run python scripts/harvest_shapefile.py
 uv run python scripts/harvest_gaul.py
 uv run python scripts/harvest_acled.py
+uv run python scripts/harvest_ghspop.py
 echo
 
 # Step 2: Consolidate
-CURRENT_STEP="2/9: Consolidate UCDP sources"
+CURRENT_STEP="2/10: Consolidate UCDP sources"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/consolidate_ucdp.py
 echo
 
 # Step 3: Build viewpoint
-CURRENT_STEP="3/9: Build viewpoint"
+CURRENT_STEP="3/10: Build viewpoint"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/build_viewpoint.py
 echo
 
 # Step 4: Compile UCDP grid
-CURRENT_STEP="4/9: Compile UCDP to PRIO-GRID"
+CURRENT_STEP="4/10: Compile UCDP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/compile_grid.py
 echo
 
 # Step 5: Compile ACLED grid
-CURRENT_STEP="5/9: Compile ACLED to PRIO-GRID"
+CURRENT_STEP="5/10: Compile ACLED to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_acled_pipeline.py --skip-to consolidate
 echo
 
-# Step 6: Assemble
-CURRENT_STEP="6/9: Assemble all features"
+# Step 6: Compile GHS-POP grid (no consolidation — ADR-029)
+CURRENT_STEP="6/10: Compile GHS-POP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
-uv run python scripts/assemble_grid.py --acled-grid data/compiled/acled
+uv run python scripts/run_ghspop_pipeline.py --skip-to viewpoint
 echo
 
-# Step 7: Export
-CURRENT_STEP="7/9: Export consumer formats"
+# Step 7: Assemble
+CURRENT_STEP="7/10: Assemble all features"
+echo "── $CURRENT_STEP ──"
+uv run python scripts/assemble_grid.py \
+    --acled-grid data/compiled/acled \
+    --ghspop-grid data/compiled/ghspop
+echo
+
+# Step 8: Export
+CURRENT_STEP="8/10: Export consumer formats"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/export_zarr.py
 uv run python scripts/export_dataframe.py
 echo
 
-# Step 8: Health check
-CURRENT_STEP="8/9: Health check"
+# Step 9: Health check
+CURRENT_STEP="9/10: Health check"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/check_health.py
 echo

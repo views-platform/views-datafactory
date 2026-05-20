@@ -7,7 +7,7 @@ No knowledge of specific data sources.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow as pa
@@ -79,7 +79,7 @@ def archive_snapshot(path: Path) -> Path | None:
     if not path.exists():
         return None
 
-    stamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+    stamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
     archive_path = path.with_stem(f"{path.stem}_{stamp}")
     path.rename(archive_path)
 
