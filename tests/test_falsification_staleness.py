@@ -22,6 +22,7 @@ P6 (soft): Warning bypassed when end=None (load full dataset).
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -32,15 +33,13 @@ class TestP3HealthCheckDataValidity:
     last_valid_month_id, not just export_timestamp."""
 
     def test_check_export_freshness_reports_data_recency(self) -> None:
-        from datetime import datetime, timezone
-
         from datafactory_provenance.health import check_export_freshness
 
         zarr_path = Path("data/assembled/grid.zarr")
         if not zarr_path.exists():
             pytest.skip("local zarr store not found")
 
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         result = check_export_freshness(zarr_path, now)
 
         assert "last_valid_month_id" in result, (

@@ -7,7 +7,7 @@ read_last_entries, report_ledger, and check_export_freshness.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -43,7 +43,7 @@ def _make_entry(
     }
 
 
-NOW = datetime(2030, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+NOW = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
 RECENT_TS = (NOW - timedelta(hours=24)).isoformat()
 STALE_TS = (NOW - timedelta(hours=FRESHNESS_SLO_HOURS + 32)).isoformat()
 

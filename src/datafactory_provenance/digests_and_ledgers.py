@@ -18,7 +18,7 @@ import tempfile
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -200,7 +200,7 @@ def append_ledger_entry(
     """
     stamped = {
         **entry,
-        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
     }
     try:
         line = json.dumps(stamped, sort_keys=True) + "\n"

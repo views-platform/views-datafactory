@@ -21,6 +21,7 @@ from datafactory_priogrid.shapefile_reader import PyShpReader
 from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 from datafactory_priogrid.temporal_config import TemporalConfig
 from datafactory_priogrid.temporal_generator import (
+    VIEWS_EPOCH_YEAR,
     from_views_month_id,
     generate_time_steps,
     to_views_month_id,
@@ -33,6 +34,7 @@ from datafactory_priogrid.temporal_generator import (
 __all__ = [
     "GridConfig",
     "TemporalConfig",
+    "VIEWS_EPOCH_YEAR",
     "SpatioTemporalGrid",
     "generate_grid",
     "generate_bounding_boxes",

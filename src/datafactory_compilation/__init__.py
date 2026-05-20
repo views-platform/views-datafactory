@@ -10,10 +10,18 @@ from datafactory_compilation.compilation_config import (
     FeatureSpec,
 )
 from datafactory_compilation.grid_compilation import compile_grid
+from datafactory_compilation.pregridded_compilation import (
+    PregriddedCompilationConfig,
+    PregriddedFeatureSpec,
+    compile_pregridded,
+)
 
 __all__ = [
     "CompilationConfig",
     "FeatureSpec",
+    "PregriddedCompilationConfig",
+    "PregriddedFeatureSpec",
     "compile_grid",
+    "compile_pregridded",
     "get_strategy",
 ]
