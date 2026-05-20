@@ -139,7 +139,7 @@ def _read_geotiff(
         where tiepoint is the top-left geographic coordinate.
     """
     with tifffile.TiffFile(str(path)) as tif:
-        page = tif.pages[0]
+        page = tif.pages.first
         data = page.asarray().astype(np.float32, copy=False)
 
         scale_tag = page.tags.get("ModelPixelScaleTag")
@@ -266,7 +266,8 @@ def _aggregate_to_prio_grid(
     prio_cols = ncol // p
 
     blocks = clean.reshape(prio_rows, p, prio_cols, p)
-    return blocks.sum(axis=(1, 3))
+    result: np.ndarray = blocks.sum(axis=(1, 3))
+    return result
 
 
 # ---- Temporal interpolation ----
