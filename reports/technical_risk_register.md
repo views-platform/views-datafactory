@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-19)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19
-**Status:** 167 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 112 resolved, 47 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-05-20)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20
+**Status:** 169 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 112 resolved, 49 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -68,7 +68,9 @@
 | ~~C-152~~ | ~~3~~ | ~~ACLED profiles and `list_acled_profiles()` untested~~ | Resolved 2026-05-02 | ACLED test coverage |
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
-| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Third data source needs visual verification | Visual audit |
+| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | **Trigger fired** (GHS-POP is 3rd script). Reassess at 4th source | Visual audit |
+| C-168 | 3 | TemporalConfig defaults to end_year=2024 — footgun for new sources | Next pipeline script uses bare TemporalConfig() without --end-year | ADR-003 compliance |
+| C-169 | 4 | 2 CI tests fail due to missing infrastructure (netrc, sibling repo) | Real regression hidden by permanent UNSTABLE status | Test infra |
 | ~~C-167~~ | ~~4~~ | ~~reports/audit_ghspop/ not in .gitignore~~ | Resolved 2026-05-20 | GHS-POP hygiene |
 | C-164 | 3 | Cross-layer WET debt: 3 sources replicate patterns across all 4 layers | 4th source (V-Dem or WDI) requires copying 6+ structural patterns | WET-before-DRY |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
@@ -100,11 +102,11 @@ Items that should be resolved together:
 | **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
-| **Test infrastructure** | C-29, C-78, C-79, C-146 | Test suite growth (C-60 resolved) |
+| **Test infrastructure** | C-29, C-78, C-79, C-146, C-169 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | ~~C-31~~, C-93 | Next refactor opportunity (C-80, C-112, C-31 resolved) |
 | ~~**Consumer integration**~~ | ~~C-122, C-123, C-124~~ | ~~Resolved~~ |
 | ~~**Query correctness**~~ | ~~C-127~~ | Resolved 2026-04-27: warning on fallback, export already writes feature_order |
-| **ADR-003 compliance** | ~~C-128~~, C-129 | Before next assembly/compilation change (C-128 resolved) |
+| **ADR-003 compliance** | ~~C-128~~, C-129, C-168 | Before next assembly/compilation change (C-128 resolved) |
 | **Operational monitoring** | C-131, C-132, C-136, C-147 | Before relying on Hetzner pipeline without manual checks |
 | **Scaling headroom** | C-144, C-145 | Before consolidated store exceeds ~5M rows |
 | **Data integrity** | C-137, C-138, C-139, C-149 | Before relying on served data for model training |
@@ -328,6 +330,20 @@ ACLED integration completed across harvester, consolidation, viewpoint, compilat
 
 Cross-ref: C-158 (missing CICs).
 
+### C-168: TemporalConfig defaults to end_year=2024 — footgun for new pipeline sources — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-168 |
+| Tier | 3 |
+| Source | PR #53 review, GHS-POP post-mortem (2026-05-20) |
+| Trigger | Next pipeline script (e.g., V-Dem, WDI, GHS-BUILT) uses bare `TemporalConfig()` without explicit `--end-year`, producing 432 months instead of 456 |
+| Location | `src/datafactory_priogrid/temporal_generator.py` (`TemporalConfig` default `end_year=2024`), `scripts/run_ghspop_pipeline.py` (fixed), `scripts/compile_grid.py`, `scripts/compile_acled.py` |
+
+`TemporalConfig()` defaults to `end_year=2024`. Pipeline scripts that don't pass `--end-year 2026` produce shorter temporal ranges (432 months) than sources using `--end-year 2026` (456 months). Assembly zero-fills the trailing 24 months — subtly wrong because population data should extrapolate, not drop to zero. This already bit us during GHS-POP implementation: `run_ghspop_pipeline.py` initially used bare `TemporalConfig()` while `compile_grid.py` and `run_acled_pipeline.py` used `--end-year 2026`. Caught by falsification round 2 (2026-05-20), fixed by adding `--end-year` argument. The default remains `2024` — each new source must remember to override it. Post-mortem recommendation: make `end_year` a required argument with no default, so each caller must be explicit (ADR-003 compliance: declarations over inference).
+
+Cross-ref: C-130 (zero-filled months indistinguishable from observations), C-129 (partition boundaries no single source of truth), C-156 (ACLED temporal range mismatch).
+
 ### C-156: ACLED temporal range mismatch — zero-fill before 2020 in assembled grid — [DEFER]
 
 | Field | Value |
@@ -537,12 +553,14 @@ Cross-ref: C-157 (documentation drift), C-151 (resolved, ACLED CICs).
 | ID | C-155 |
 | Tier | 4 |
 | Source | ACLED grid verification (2026-05-06) |
-| Trigger | Third data source (e.g. V-Dem) needs visual verification and a third bespoke script would be written |
-| Location | `scripts/visualize_audit.py` (UCDP), `scripts/verify_acled_grid.py` (ACLED), `scripts/viz_style.py` (shared aesthetics only) |
+| Trigger | **Trigger fired (2026-05-20):** GHS-POP added `verify_ghspop_grid.py` as the third bespoke visual audit script. Reassess at 4th source. |
+| Location | `scripts/visualize_audit.py` (UCDP), `scripts/verify_acled_grid.py` (ACLED), `scripts/verify_ghspop_grid.py` (GHS-POP), `scripts/viz_style.py` (shared aesthetics only) |
 
-Each data source has its own plotting/audit script with duplicated structural patterns: `PrecomputedData` dataclass, single-pass `precompute()`, `cell_to_label()`, `REGION_BOUNDS`, per-plot functions, and statistical pass/fail checks. The scripts share `viz_style.py` for aesthetic constants and helpers (`spatial_imshow`, `style_ax`, `save_plot`) but nothing for plot structure, check logic, or report generation. Currently accepted as WET-before-DRY: two concrete instances is too few to extract the right abstraction. The right time is when the third source arrives and common patterns crystallize. Future options include: (a) shared audit framework with pluggable feature specs and check definitions, (b) interactive dashboard (Streamlit, Panel, or Plotly Dash) for exploratory visual audit, (c) automated visual regression testing against baseline plots.
+Each data source has its own plotting/audit script with duplicated structural patterns: `PrecomputedData` dataclass, single-pass `precompute()`, `cell_to_label()`, `REGION_BOUNDS`, per-plot functions, and statistical pass/fail checks. The scripts share `viz_style.py` for aesthetic constants and helpers (`spatial_imshow`, `style_ax`, `save_plot`) but nothing for plot structure, check logic, or report generation.
 
-See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication).
+**Note (2026-05-20):** Trigger condition met — GHS-POP is the third visual audit script. The three scripts share structural patterns but differ in domain-specific checks (population density vs. fatality rates vs. event counts). Accepted for now: three scripts is enough to see the abstraction clearly, but the abstraction is moderate complexity (pluggable feature specs, check definitions, report generation). Consider extraction when 4th source arrives. Cross-ref: C-164 (WET inventory).
+
+See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication), C-164 (cross-layer WET inventory).
 ### ~~C-161: GHS-POP harvester failure-path provenance partially untested~~ — RESOLVED
 **Resolved 2026-05-18.** Added 3 tests and strengthened 2 existing tests: `test_corrupt_zip_raises_and_records_ledger` (verifies both exception and failure ledger entry), `test_zip_with_no_tif_raises` (valid ZIP with no .tif), `test_rejects_negative_timeout`, `test_empty_epochs_accepted`. Strengthened `test_download_single_epoch` (content round-trip: `read_bytes() == b"fake geotiff data"`), `test_provenance_recorded` (digest correctness: computed digest matches ledger entry), `test_defaults` (asserts `ledger_path` default). Test count: 15 → 18.
 **Source:** GHS-POP harvester test review (2026-05-18). Cross-ref: C-44 (harvest pipeline template).
@@ -587,6 +605,20 @@ Cross-ref: C-44 (harvest pipeline template), C-07 (frozen dataclass pattern), C-
 ### ~~C-167: reports/audit_ghspop/ not in .gitignore~~ — RESOLVED
 **Resolved 2026-05-20.** Added `reports/audit_ghspop/` to `.gitignore` alongside `reports/audit_acled/`.
 **Source:** Falsification audit (2026-05-19), probe F5. Cross-ref: C-155 (visual audit framework).
+
+### C-169: 2 CI tests fail due to missing infrastructure — permanent UNSTABLE — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-169 |
+| Tier | 4 |
+| Source | PR #53 review (2026-05-20) |
+| Trigger | Real test regression is introduced but masked by permanent UNSTABLE status, causing a broken build to be merged |
+| Location | `tests/test_query.py::test_remote_zarr_has_last_valid_month_id` (requires `.netrc` for server auth), `tests/test_consumer_data.py::test_at_least_one_model_found` (requires `../views-models/` sibling repo) |
+
+Two tests consistently fail in CI because they require infrastructure the CI runner doesn't have: (1) `test_remote_zarr_has_last_valid_month_id` gets HTTP 401 because CI has no `.netrc` with server credentials; (2) `test_at_least_one_model_found` gets `FileNotFoundError` because CI has no `../views-models/` checkout. Both pass locally on the development machine. The permanent failures make `mergeStateStatus: UNSTABLE` the baseline, so real regressions are invisible in the CI signal. Resolution options: (a) mark these tests with `@pytest.mark.skipif` when CI environment detected, (b) mock the external dependencies, (c) move them to a separate `tests/integration/` directory excluded from CI.
+
+Cross-ref: C-96 (fsspec netrc), C-29 (no e2e integration test).
 
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
