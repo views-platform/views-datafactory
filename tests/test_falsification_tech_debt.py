@@ -95,7 +95,7 @@ class TestTechDebtResolved:
 
         # Summary table should match full entry count
         summary_re = re.compile(
-            r"^\| C-\d+", re.MULTILINE
+            r"^\| [CD]-\d+", re.MULTILINE
         )
         n_summary = len(summary_re.findall(active_text))
         assert n_summary == n_active, (

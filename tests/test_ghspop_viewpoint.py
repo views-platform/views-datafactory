@@ -600,15 +600,18 @@ class TestGhsPopViewpointFullFlowGreen:
             strict=True,
         ))
 
-        # PRIO-GRID: row-major from bottom-left, 1-indexed
-        # pgid 1 = south-west = raster bottom-left = 3.0 * 3600
-        # pgid 2 = south-east = raster bottom-right = 4.0 * 3600
-        # pgid 3 = north-west = raster top-left = 1.0 * 3600
-        # pgid 4 = north-east = raster top-right = 2.0 * 3600
-        assert pgid_to_pop[1] == 3.0 * 3600
-        assert pgid_to_pop[2] == 4.0 * 3600
-        assert pgid_to_pop[3] == 1.0 * 3600
-        assert pgid_to_pop[4] == 2.0 * 3600
+        # PRIO-GRID: row-major from bottom-left, 1-indexed, 720 cols
+        # The 120x120 raster at tiepoint (-180, 90) occupies the
+        # top-left 2x2 PRIO-GRID cells of the full 360x720 globe.
+        # Raster row 0 (north) → globe PRIO row 359, row 1 → 358.
+        sw_pgid = 358 * 720 + 0 + 1  # 257761
+        se_pgid = 358 * 720 + 1 + 1  # 257762
+        nw_pgid = 359 * 720 + 0 + 1  # 258481
+        ne_pgid = 359 * 720 + 1 + 1  # 258482
+        assert pgid_to_pop[sw_pgid] == 3.0 * 3600
+        assert pgid_to_pop[se_pgid] == 4.0 * 3600
+        assert pgid_to_pop[nw_pgid] == 1.0 * 3600
+        assert pgid_to_pop[ne_pgid] == 2.0 * 3600
 
     def test_month_id_correctness(self, tmp_path: Path) -> None:
         """Month IDs follow VIEWS convention: 1 = January 1980."""

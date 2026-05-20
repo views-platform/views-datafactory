@@ -180,12 +180,14 @@ def compile_pregridded(config: PregriddedCompilationConfig) -> Path:
         dtype=dtype,
     )
 
-    pgids = table[config.pgid_field].to_pylist()
-    month_ids = table[config.month_id_field].to_pylist()
-    value_lists = [
-        table[feat.value_field].to_pylist()
+    n_rows = table.num_rows
+    pgids = table[config.pgid_field].to_numpy()
+    month_ids = table[config.month_id_field].to_numpy()
+    value_arrays = [
+        table[feat.value_field].to_numpy()
         for feat in config.features
     ]
+    del table
 
     n_placed = 0
     n_skipped_spatial = 0
@@ -194,7 +196,7 @@ def compile_pregridded(config: PregriddedCompilationConfig) -> Path:
     start_year = config.temporal_config.start_year
     start_month = config.temporal_config.start_month
 
-    for i in range(table.num_rows):
+    for i in range(n_rows):
         pgid = pgids[i]
         if pgid < 1 or pgid > n_cells:
             n_skipped_spatial += 1
@@ -212,8 +214,8 @@ def compile_pregridded(config: PregriddedCompilationConfig) -> Path:
         col = pgid_idx % ncol
 
         for feat_idx in range(n_features):
-            val = value_lists[feat_idx][i]
-            if val is not None:
+            val = value_arrays[feat_idx][i]
+            if not np.isnan(val):
                 grid_array[time_idx, row, col, feat_idx] = val
 
         n_placed += 1

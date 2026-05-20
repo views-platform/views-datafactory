@@ -26,7 +26,7 @@ from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
     append_ledger_entry,
-    compute_content_digest,
+    compute_file_digest,
 )
 from datafactory_viewpoint.builders import register_builder
 from datafactory_viewpoint.viewpoint_result import ViewpointResult
@@ -142,7 +142,7 @@ def _read_geotiff(
     """
     with tifffile.TiffFile(str(path)) as tif:
         page = tif.pages.first
-        data = page.asarray()
+        data = page.asarray(maxworkers=1)
 
         scale_tag = page.tags.get("ModelPixelScaleTag")
         tie_tag = page.tags.get("ModelTiepointTag")
@@ -241,6 +241,14 @@ def _aggregate_to_prio_grid(
 
     Input must be 21600x43200 (already aligned to the globe via
     _align_to_globe). Block-sum via reshape — no reprojection.
+
+    .. warning::
+        ADR-031 P3 violation: ``clean = data.copy()`` doubles peak
+        memory (~14 GiB for a full globe float32 raster). This
+        function is retained for test compatibility but is no longer
+        called from ``build_ghspop_v1`` (v1.2.18 switched to
+        ``_aggregate_with_alignment``). If re-activated, rewrite to
+        replace nodata in-place. See C-177.
 
     Args:
         data: 2-D float array, shape (21600, 43200).
@@ -506,22 +514,12 @@ def build_ghspop_v1(
         logger.info("Reading epoch %d from %s", epoch, tif_path)
         raw, tie_x, tie_y, sc_x, sc_y = _read_geotiff(tif_path)
 
-        p = PIXELS_PER_CELL
-        needs_align = (
-            raw.shape[0] % p != 0 or raw.shape[1] % p != 0
+        row_off = round((90.0 - tie_y) / sc_y)
+        col_off = round((tie_x - (-180.0)) / sc_x)
+        grid = _aggregate_with_alignment(
+            raw, row_off, col_off, nodata=config.nodata,
         )
-        if needs_align:
-            row_off = round((90.0 - tie_y) / sc_y)
-            col_off = round((tie_x - (-180.0)) / sc_x)
-            grid = _aggregate_with_alignment(
-                raw, row_off, col_off, nodata=config.nodata,
-            )
-            del raw
-        else:
-            grid = _aggregate_to_prio_grid(
-                raw, nodata=config.nodata,
-            )
-            del raw
+        del raw
 
         epoch_grids[epoch] = grid
         logger.info(
@@ -578,15 +576,14 @@ def build_ghspop_v1(
         "month_id": pa.array(month_id_rows, type=pa.int32()),
         "pop_count": pa.array(pop_count_rows, type=pa.float64()),
     })
+    del pgid_rows, month_id_rows, pop_count_rows
 
     n_output = table.num_rows
 
     config.output_path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(table, config.output_path)
 
-    output_digest = compute_content_digest(
-        config.output_path.read_bytes()
-    )
+    output_digest = compute_file_digest(config.output_path)
 
     append_ledger_entry(config.ledger_path, {
         "dataset": DATASET_ID,
