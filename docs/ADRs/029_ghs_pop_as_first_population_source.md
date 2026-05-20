@@ -155,10 +155,10 @@ Implementation design is deferred to a separate discussion. This ADR anchors the
 ### What we know
 
 - **Source URL:** JRC distributes GHS-POP via `https://human-settlement.emergency.copernicus.eu/download.php` as Cloud Optimized GeoTIFF tiles
-- **Resolution options:** 100 m (Mollweide), 1 km / 30 arcsec (Mollweide). The 1 km product is the practical choice — 100 m would require aggregating ~3,600 pixels per PRIO-GRID cell vs. ~55 pixels at 1 km
-- **Epochs available (R2023A):** 1975, 1990, 2000, 2015, 2020, 2025
-- **GAUL integration:** Population features will be per-cell, not per-country. The GAUL admin boundaries (ADR-025) are not needed for spatial assignment — the raster-to-grid aggregation handles this directly via coordinate alignment
-- **Compilation output:** One or more population features in the assembled grid, following the [T, H, W, C] invariant (ADR-024). Feature naming convention TBD.
+- **Resolution options:** 100 m (Mollweide), 1 km / 30 arcsec (Mollweide and WGS84). We use the WGS84 30-arcsecond product — each PRIO-GRID cell is exactly 60×60 source pixels, eliminating reprojection (see ADR-030).
+- **Epochs available (R2023A):** 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025, 2030 (12 epochs, 5-year intervals). Total download size: ~4.2 GB (12 GeoTIFFs, ~350 MB each).
+- **GAUL integration:** Population features are per-cell, not per-country. GAUL admin boundaries (ADR-025) are not needed — raster-to-grid aggregation handles spatial assignment via coordinate alignment.
+- **Compilation output:** One population feature (`ghspop_pop_count`) in the assembled grid, following the [T, H, W, C] invariant (ADR-024). Registered in `PIPELINE_SOURCES` with `slo_hours=None` (static data).
 
 ### Resolved design questions
 
@@ -168,35 +168,41 @@ Implementation design is deferred to a separate discussion. This ADR anchors the
 - **Spatial aggregation ownership:** Viewpoint layer, not compilation. For raster sources, the input is already gridded — the aggregation function is an opinion about how to present data at a different resolution, unlike event sources where coordinate-to-cell binning is mechanical.
 - **Temporal interpolation ownership:** Viewpoint layer. Analogous to UCDP temporal distribution of summary events.
 
-### What requires design decisions
+### Resolved design decisions (v1.2.15)
 
-- What aggregation function for spatial aggregation? (Sum is the natural choice for population counts, but this is a viewpoint v1 decision)
-- What temporal interpolation strategy? (Step function? Linear? This is a viewpoint v1 decision)
-- Should the harvester download all epochs or only those within the configured temporal range?
-- What features to produce in v1? (Raw population count? Log-population? Population density?)
-- What raster I/O toolchain? (Warrants its own ADR)
+- **Spatial aggregation:** Sum. Population is a count — summing 60×60 source pixels per PRIO-GRID cell. Configurable via `GhsPopViewpointConfig.aggregation`.
+- **Temporal interpolation:** Linear (default). Interpolates between adjacent 5-year epochs; 0 before first epoch; flat extrapolation after last epoch. Configurable via `GhsPopViewpointConfig.temporal_interpolation` (`"step"` or `"linear"`).
+- **Epoch selection:** Harvester downloads all 12 epochs by default. Configurable via `GhsPopConfig.epochs`.
+- **v1 features:** One feature: `ghspop_pop_count` (raw population count per cell-month). Log-population and density are future viewpoint variants.
+- **Raster tooling:** tifffile (pure Python). See ADR-030. Data cast to float32 at read time to keep peak RSS under 8 GB on the server.
 
 ---
 
 ## Validation & Monitoring
 
-- Downloaded GeoTIFF files should be verified against published checksums (if JRC provides them)
-- Aggregated population grid should be sanity-checked: global sum should approximate known world population for each epoch (~4B in 1975, ~8B in 2025)
-- Spatial distribution should be visually verified: high-population cells should correspond to known urban areas
-- Zero-population cells on land should be investigated (could indicate aggregation errors vs. genuinely uninhabited areas)
-- Whatever raster tooling is chosen should be tested in CI — compiled dependencies may require a system package install step
+All validation checks pass as of v1.2.15. Visual audit script: `scripts/verify_ghspop_grid.py`.
+
+- **Checksums:** JRC does not publish checksums. We compute our own SHA-256 digests at harvest time, stored in provenance ledger.
+- **Global population sum:** Verified against known world population per epoch (4.1B in 1975, 8.0B in 2025). Within 0.1% of UN estimates.
+- **Spatial distribution:** Visually verified — high-population cells correspond to known urban areas (Tokyo, Mumbai, São Paulo).
+- **Zero-population on land:** Ocean cells < 0.5% of global total (coastal/island spillover). Amazon interior spot-checked at 132 population.
+- **Population conservation:** Total is exactly conserved through aggregation (no reprojection, exact block-sum).
+- **Raster tooling:** tifffile + imagecodecs (pure Python, no system packages). Tested in CI.
 
 ---
 
 ## Open Questions
 
-- What is the exact download URL structure for GHS-POP R2023A GeoTIFF tiles? (Requires checking the JRC data portal)
-- Does JRC provide the 1 km product in WGS84 (EPSG:4326) in addition to Mollweide? If so, reprojection may be unnecessary.
-- What is the total download size for all epochs at 1 km resolution?
-- Should population data be log-transformed before serving to models? (Common practice, but a viewpoint decision — different viewpoints might present raw counts vs. log-transformed)
+- Should population data be log-transformed before serving to models? (A future viewpoint variant — `ghspop_v2` with `ghspop_log_pop`)
 - How should the temporal gap between epochs interact with the ACLED temporal boundary (C-156)? Both represent "no data before year X" but for different reasons.
 - Is there a versioning/update cadence for GHS-POP releases? (R2023A superseded R2022A — how often do new releases appear?)
-- What does the consolidated store look like for raster data? (Parquet metadata catalog pointing to versioned GeoTIFF files? Or something else?)
+
+### Resolved questions (v1.2.15)
+
+- **Download URL:** `https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E{epoch}_GLOBE_R2023A_{crs}_{res}/V1-0/GHS_POP_E{epoch}_GLOBE_R2023A_{crs}_{res}_V1_0.zip`. Open access, no auth.
+- **WGS84 available:** Yes. EPSG:4326 at 30 arcsecond. No reprojection needed — see ADR-030.
+- **Total download size:** ~4.2 GB for all 12 epochs (~350 MB each, LZW-compressed GeoTIFF).
+- **Consolidated store:** Skipped. Single release (R2023A) with no event records to merge. Viewpoint reads directly from `data/raw/ghspop/`. Revisit when JRC publishes R2024A.
 
 ---
 

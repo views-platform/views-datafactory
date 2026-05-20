@@ -5,6 +5,7 @@ Usage:
     uv run python scripts/run_ghspop_pipeline.py
     uv run python scripts/run_ghspop_pipeline.py --skip-to compile
     uv run python scripts/run_ghspop_pipeline.py --epochs 2020 2025
+    uv run python scripts/run_ghspop_pipeline.py --end-year 2026
 
 Consolidation is skipped — GHS-POP R2023A is a single release with
 nothing to merge (ADR-029). The viewpoint reads directly from the
@@ -47,6 +48,12 @@ def main() -> int:
         help="Skip earlier steps (reuse existing data)",
     )
     parser.add_argument(
+        "--end-year",
+        type=int,
+        default=2026,
+        help="Temporal range end year (default: 2026)",
+    )
+    parser.add_argument(
         "--force", action="store_true",
         help="Force re-download even if cached",
     )
@@ -64,6 +71,7 @@ def main() -> int:
     print("=" * 60)
     print("GHS-POP PIPELINE (Layers 1, 3, 4)")
     print(f"Epochs: {epoch_label}")
+    print(f"End year: {args.end_year}")
     print("Consolidation: skipped (single release, ADR-029)")
     if args.skip_to:
         print(f"Skipping to: {args.skip_to}")
@@ -196,7 +204,9 @@ def main() -> int:
     config = PregriddedCompilationConfig(
         source_path=viewpoint_path,
         grid_config=GridConfig(),
-        temporal_config=TemporalConfig(),
+        temporal_config=TemporalConfig(
+            end_year=args.end_year,
+        ),
         features=(
             PregriddedFeatureSpec(
                 "ghspop_pop_count", "pop_count",

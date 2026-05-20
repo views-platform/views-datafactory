@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-05-19)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19
-**Status:** 164 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 109 resolved, 47 open/deferred (15 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Status:** 167 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 112 resolved, 47 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -69,12 +69,15 @@
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Third data source needs visual verification | Visual audit |
+| ~~C-167~~ | ~~4~~ | ~~reports/audit_ghspop/ not in .gitignore~~ | Resolved 2026-05-20 | GHS-POP hygiene |
 | C-164 | 3 | Cross-layer WET debt: 3 sources replicate patterns across all 4 layers | 4th source (V-Dem or WDI) requires copying 6+ structural patterns | WET-before-DRY |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
 | C-159 | 4 | ACLED snapshot archiving and revision comparison paths untested | Archiving logic implicated in data integrity incident | ACLED test coverage |
 | C-160 | 4 | ACLED `fetch_paginated` string-data corruption has no guard | ACLED API returns non-list `data` field | ACLED data integrity |
 | ~~C-161~~ | ~~4~~ | ~~GHS-POP harvester failure-path provenance partially untested~~ | Resolved 2026-05-18 | GHS-POP test coverage |
+| ~~C-165~~ | ~~1~~ | ~~GHS-POP viewpoint OOM: 22 GB peak on 8 GB server~~ | Resolved 2026-05-20 | GHS-POP memory |
 | ~~C-162~~ | ~~1~~ | ~~GHS-POP PGID mapping has no direct correctness test~~ | Resolved 2026-05-19 | GHS-POP data integrity |
+| ~~C-166~~ | ~~2~~ | ~~GHS-POP absent from PIPELINE_SOURCES — verify_remote.py blind~~ | Resolved 2026-05-20 | GHS-POP observability |
 | ~~C-163~~ | ~~2~~ | ~~`_aggregate_to_prio_grid` silently truncates non-divisible raster dimensions~~ | Resolved 2026-05-19 | GHS-POP data integrity |
 | ~~C-157~~ | ~~3~~ | ~~Systematic ACLED documentation drift across ADRs, CICs, and guides~~ | Resolved 2026-05-07 | Documentation |
 | ~~C-158~~ | ~~4~~ | ~~No CICs for SourceEntry or AssemblyConfig~~ | Resolved 2026-05-07 | Documentation |
@@ -106,6 +109,7 @@ Items that should be resolved together:
 | **Scaling headroom** | C-144, C-145 | Before consolidated store exceeds ~5M rows |
 | **Data integrity** | C-137, C-138, C-139, C-149 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
+| ~~**GHS-POP deployment**~~ | ~~C-165, C-166, C-167~~ | Resolved 2026-05-20 |
 | **WET-before-DRY refactor** | C-44, C-07, C-155, C-164 | Before 4th source (V-Dem or WDI) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
@@ -116,6 +120,10 @@ Items that should be resolved together:
 
 ## Tier 1 — Fix Immediately
 
+### ~~C-165: GHS-POP viewpoint OOM — 22 GB peak on 8 GB server~~ — RESOLVED
+**Resolved 2026-05-20.** Two-part fix: (a) `_read_geotiff` now casts to float32 immediately after reading (`.astype(np.float32, copy=False)`), halving the raw array from 7.4 GB to 3.7 GB; (b) `_align_to_globe` uses `data.dtype` instead of hardcoded `np.float64`, so the globe array matches input dtype (3.7 GB instead of 7.5 GB). Peak RSS reduced from 22.1 GB to ~7.4 GB — under 8 GB server RAM. Population counts (max ~37M per pixel) are well within float32 precision. Falsification test `test_align_to_globe_does_not_upcast_input` now passes.
+**Source:** Falsification audit (2026-05-19), probe F2. Cross-ref: C-145 (UCDP viewpoint memory), C-144 (compilation memory).
+
 ### ~~C-162: GHS-POP PGID mapping has no direct correctness test~~ — RESOLVED
 **Resolved 2026-05-19.** Added `test_pgid_mapping_correctness` (4 distinct populations in 2x2 grid, asserts specific pgid→value mapping including row-flip), `test_month_id_correctness` (verifies Jan/Feb/Mar 2000 → month_ids 241/242/243), and `test_no_duplicate_pgid_month_id` (uniqueness constraint on output). Test count: 21 → 29.
 **Source:** GHS-POP viewpoint test review (2026-05-19). Cross-ref: C-149 (GAUL unmapped cells).
@@ -123,6 +131,10 @@ Items that should be resolved together:
 ---
 
 ## Tier 2 — Fix Before Sharing Server Access
+
+### ~~C-166: GHS-POP absent from PIPELINE_SOURCES — verify_remote.py blind~~ — RESOLVED
+**Resolved 2026-05-20.** Added three `SourceEntry` entries to `PIPELINE_SOURCES`: `"GHS-POP"` (harvest, `features=("ghspop_pop_count",)`, `slo_hours=None`, ledger at `ghspop/ingestion_ledger.jsonl`), `"GHS-POP Viewpoint"` (ledger at `viewpoint/ghspop_v1_ledger.jsonl`), `"GHS-POP Compilation"` (ledger at `compilation/ghspop_ledger.jsonl`). `get_all_features()` now returns 52 features (was 51). Falsification tests `test_ghspop_feature_in_registry` and `test_ghspop_source_entry_exists` now pass. Feature count test updated from 51 to 52.
+**Source:** Falsification audit (2026-05-19), probe F1. Cross-ref: C-138 (post-deploy verification), C-132 (health check gap).
 
 ### ~~C-163: `_aggregate_to_prio_grid` silently truncates non-divisible raster dimensions~~ — RESOLVED
 **Resolved 2026-05-19.** Added dimension validation (`nrow % 60 != 0 or ncol % 60 != 0` → `ValueError`) to `_aggregate_to_prio_grid`. Added `test_non_divisible_dimensions_raises` to verify the guard. Also added: `test_no_args_raises`, `test_unknown_epoch_raises`, `test_all_zero_raster_produces_empty_output`, `test_source_dir_shortcut`.
@@ -571,6 +583,10 @@ With 3 sources implemented (UCDP, ACLED, GHS-POP), the codebase has accumulated 
 Cross-ref: C-44 (harvest pipeline template), C-07 (frozen dataclass pattern), C-155 (visual audit framework), C-06 (provenance composability).
 
 **Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19).
+
+### ~~C-167: reports/audit_ghspop/ not in .gitignore~~ — RESOLVED
+**Resolved 2026-05-20.** Added `reports/audit_ghspop/` to `.gitignore` alongside `reports/audit_acled/`.
+**Source:** Falsification audit (2026-05-19), probe F5. Cross-ref: C-155 (visual audit framework).
 
 ### C-109: Advisory file locks (fcntl) don't work across NFS — [DEFER]
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**

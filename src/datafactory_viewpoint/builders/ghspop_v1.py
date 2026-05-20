@@ -131,13 +131,16 @@ def _read_geotiff(
 ) -> tuple[np.ndarray, float, float, float, float]:
     """Read GeoTIFF and extract geotransform from TIFF tags.
 
+    Data is cast to float32 to keep peak RSS under 8 GB when
+    _align_to_globe holds both the raw and globe arrays (C-165).
+
     Returns:
         (data, tiepoint_x, tiepoint_y, pixel_scale_x, pixel_scale_y)
         where tiepoint is the top-left geographic coordinate.
     """
     with tifffile.TiffFile(str(path)) as tif:
         page = tif.pages[0]
-        data = page.asarray()
+        data = page.asarray().astype(np.float32, copy=False)
 
         scale_tag = page.tags.get("ModelPixelScaleTag")
         tie_tag = page.tags.get("ModelTiepointTag")
@@ -182,13 +185,13 @@ def _align_to_globe(
         pixel_scale_x, pixel_scale_y: Pixel size in degrees.
 
     Returns:
-        2-D float64 array of shape (21600, 43200).
+        2-D array of shape (21600, 43200), same dtype as input.
     """
     row_offset = round((90.0 - tiepoint_y) / pixel_scale_y)
     col_offset = round((tiepoint_x - (-180.0)) / pixel_scale_x)
 
     globe = np.zeros(
-        (GLOBE_PIXEL_ROWS, GLOBE_PIXEL_COLS), dtype=np.float64,
+        (GLOBE_PIXEL_ROWS, GLOBE_PIXEL_COLS), dtype=data.dtype,
     )
 
     src_row_start = max(0, -row_offset)
