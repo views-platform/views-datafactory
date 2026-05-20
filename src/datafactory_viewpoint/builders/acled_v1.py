@@ -24,7 +24,7 @@ from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
     append_ledger_entry,
-    compute_content_digest,
+    compute_file_digest,
 )
 from datafactory_viewpoint.builders import register_builder
 from datafactory_viewpoint.viewpoint_result import ViewpointResult
@@ -180,9 +180,7 @@ def build_acled_v1(
     config.output_path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(table, config.output_path)
 
-    output_digest = compute_content_digest(
-        config.output_path.read_bytes()
-    )
+    output_digest = compute_file_digest(config.output_path)
 
     append_ledger_entry(config.ledger_path, {
         "dataset": DATASET_ID,

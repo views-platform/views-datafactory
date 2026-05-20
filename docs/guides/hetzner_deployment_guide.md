@@ -496,6 +496,22 @@ backoff). If it still fails, try again later.
 **"Disk full"** — The full data pipeline needs about 35 GB.
 Check with `df -h`.
 
+**"OOM killed" (exit code 137)** — A pipeline step exceeded
+physical RAM. The CPX32 has 8 GB and no swap by default. Add a
+2 GB swap file as a safety net:
+
+```bash
+# One-time setup (as root)
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+```
+
+If the pipeline routinely uses swap, investigate memory usage
+(`htop` during the run) rather than increasing swap size.
+
 ---
 
 ## What you've built

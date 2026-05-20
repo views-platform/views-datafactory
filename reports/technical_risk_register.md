@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-20)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20
-**Status:** 169 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 112 resolved, 49 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 22 disagreements: 22 resolved.
+**Date:** 2026-03-17 (updated 2026-05-21)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21
+**Status:** 180 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60): 115 resolved, 57 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 25 disagreements: 22 resolved, 3 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -28,7 +28,7 @@
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
 | C-74 | 4 | CompilationConfig leaks strategy vocabulary | User confusion observed | — |
 | C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns | — |
-| C-78 | 4 | `_place_events_columnar` hard to test in isolation | Compilation tests exceed 5s | Test infra |
+| C-78 | 4 | `_place_events` hard to test in isolation | Compilation tests exceed 5s | Test infra |
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
 | C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed | — |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
@@ -58,6 +58,13 @@
 | ~~C-143~~ | ~~4~~ | ~~request_with_retry has no Red tests~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-125~~ | ~~3~~ | ~~No cm aggregation — 48/70 models cannot migrate~~ | Resolved 2026-04-21 | Migration scope |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
+| C-177 | 3 | `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) | Function is re-activated for a new data source | ADR-031 compliance |
+| C-178 | 3 | `compute_content_digest(path.read_bytes())` loads entire output into memory | Viewpoint output exceeds ~1 GB | ADR-031 compliance |
+| C-179 | 4 | Consolidation dedup uses `.to_pylist()` + Python set (ADR-031 P1) | Consolidated store exceeds ~5M rows on 8 GB machine | ADR-031 compliance |
+| C-180 | 4 | No falsification tests for non-GHS-POP compilation/viewpoint paths | Memory regression introduced in UCDP or ACLED path | Test coverage |
+| D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
+| D-24 | — | Hardware upgrade vs software optimization for 8 GB ceiling | Open | ADR-031 compliance |
+| D-25 | — | Dead function retention — `_aggregate_to_prio_grid` after v1.2.18 | Open | ADR-031 compliance |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
 | C-146 | 3 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
@@ -71,9 +78,16 @@
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | **Trigger fired** (GHS-POP is 3rd script). Reassess at 4th source | Visual audit |
 | C-168 | 3 | TemporalConfig defaults to end_year=2024 — footgun for new sources | Next pipeline script uses bare TemporalConfig() without --end-year | ADR-003 compliance |
 | C-169 | 4 | 2 CI tests fail due to missing infrastructure (netrc, sibling repo) | Real regression hidden by permanent UNSTABLE status | Test infra |
+| ~~C-170~~ | ~~1~~ | ~~GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
+| ~~C-171~~ | ~~1~~ | ~~Pregridded compilation `.to_pylist()` OOM (~6 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
+| ~~C-172~~ | ~~3~~ | ~~Latent OOM in `_aggregate_to_prio_grid` dead branch~~ | Resolved 2026-05-20 | GHS-POP memory |
+| C-173 | 3 | Hetzner CPX32 has no swap — OOM kills with zero safety net | Any transient memory spike above physical RAM on server | Server hardening |
 | ~~C-167~~ | ~~4~~ | ~~reports/audit_ghspop/ not in .gitignore~~ | Resolved 2026-05-20 | GHS-POP hygiene |
 | C-164 | 3 | Cross-layer WET debt: 3 sources replicate patterns across all 4 layers | 4th source (V-Dem or WDI) requires copying 6+ structural patterns | WET-before-DRY |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
+| C-174 | 3 | `latlon_to_pgid` silently clamps out-of-bounds coordinates | Source provides coordinates outside [-90,90]×[-180,180] | Compilation correctness |
+| C-175 | 3 | Aggregation missing-field coalesced to zero, not NaN | Source removes or renames a field used in `FeatureSpec` | Compilation correctness |
+| C-176 | 4 | `datafactory_synthetic` is a dead module with zero exports | Synthetic generation needed for a consumer | Code cleanup |
 | C-159 | 4 | ACLED snapshot archiving and revision comparison paths untested | Archiving logic implicated in data integrity incident | ACLED test coverage |
 | C-160 | 4 | ACLED `fetch_paginated` string-data corruption has no guard | ACLED API returns non-list `data` field | ACLED data integrity |
 | ~~C-161~~ | ~~4~~ | ~~GHS-POP harvester failure-path provenance partially untested~~ | Resolved 2026-05-18 | GHS-POP test coverage |
@@ -98,12 +112,13 @@ Items that should be resolved together:
 
 | Package | Items | Trigger |
 |---------|-------|---------|
-| **Server hardening** | C-88, C-121 (C-84, C-85, C-86, C-87 resolved) | Before production deployment |
+| **Server hardening** | C-88, C-121, C-173 (C-84, C-85, C-86, C-87 resolved) | Before production deployment |
 | **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
-| **UCDP schema defense** | C-36, C-37, C-45 | UCDP API change |
+| **Compilation correctness** | C-174, C-175 | Source with unvalidated coordinates or renamed fields |
+| **UCDP schema defense** | C-36, C-37, C-45, C-175 | UCDP API change |
 | **Test infrastructure** | C-29, C-78, C-79, C-146, C-169 | Test suite growth (C-60 resolved) |
-| **Code cleanup** | ~~C-31~~, C-93 | Next refactor opportunity (C-80, C-112, C-31 resolved) |
+| **Code cleanup** | ~~C-31~~, C-93, C-176 | Next refactor opportunity (C-80, C-112, C-31 resolved) |
 | ~~**Consumer integration**~~ | ~~C-122, C-123, C-124~~ | ~~Resolved~~ |
 | ~~**Query correctness**~~ | ~~C-127~~ | Resolved 2026-04-27: warning on fallback, export already writes feature_order |
 | **ADR-003 compliance** | ~~C-128~~, C-129, C-168 | Before next assembly/compilation change (C-128 resolved) |
@@ -112,6 +127,7 @@ Items that should be resolved together:
 | **Data integrity** | C-137, C-138, C-139, C-149 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
 | ~~**GHS-POP deployment**~~ | ~~C-165, C-166, C-167~~ | Resolved 2026-05-20 |
+| ~~**GHS-POP memory**~~ | ~~C-170, C-171, C-172~~ | Resolved 2026-05-20 |
 | **WET-before-DRY refactor** | C-44, C-07, C-155, C-164 | Before 4th source (V-Dem or WDI) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
@@ -123,8 +139,20 @@ Items that should be resolved together:
 ## Tier 1 — Fix Immediately
 
 ### ~~C-165: GHS-POP viewpoint OOM — 22 GB peak on 8 GB server~~ — RESOLVED
-**Resolved 2026-05-20.** Two-part fix: (a) `_read_geotiff` now casts to float32 immediately after reading (`.astype(np.float32, copy=False)`), halving the raw array from 7.4 GB to 3.7 GB; (b) `_align_to_globe` uses `data.dtype` instead of hardcoded `np.float64`, so the globe array matches input dtype (3.7 GB instead of 7.5 GB). Peak RSS reduced from 22.1 GB to ~7.4 GB — under 8 GB server RAM. Population counts (max ~37M per pixel) are well within float32 precision. Falsification test `test_align_to_globe_does_not_upcast_input` now passes.
-**Source:** Falsification audit (2026-05-19), probe F2. Cross-ref: C-145 (UCDP viewpoint memory), C-144 (compilation memory).
+**Resolved 2026-05-20.** Multi-phase fix across v1.2.15–v1.2.18: (a) strip-based aggregation replaced full-globe array allocation (v1.2.16); (b) removed float64→float32 whole-array conversion, deferred to per-strip conversion (v1.2.17); (c) `del` Python lists after Arrow creation, `maxworkers=1` on tifffile, unconditional strip aggregation (v1.2.18, see C-170/C-171/C-172). Peak RSS reduced from 22.1 GB to ~1.5 GB for viewpoint output, ~7.4 GB during GeoTIFF load (irreducible). Falsification test `test_align_to_globe_does_not_upcast_input` now passes.
+**Source:** Falsification audit (2026-05-19), probe F2. Cross-ref: C-170 (list accumulation), C-171 (compilation), C-172 (latent branch), C-173 (no swap).
+
+### ~~C-170: GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ — RESOLVED
+**Resolved 2026-05-20.** `build_ghspop_v1` accumulated ~60M Python objects in three lists (`pgid_rows`, `month_id_rows`, `pop_count_rows`) that coexisted with the Arrow table during `pa.table()` creation. Peak: 7.4–8.3 GiB on a swapless 8 GiB server. Fixed by adding `del pgid_rows, month_id_rows, pop_count_rows` after Arrow table creation. Additionally, `page.asarray(maxworkers=1)` reduces tifffile decompression buffering by ~400 MB, and the `needs_align` branching was removed so `build_ghspop_v1` always uses `_aggregate_with_alignment` (eliminating the latent OOM in `_aggregate_to_prio_grid`'s `data.copy()`). Falsification tests `test_lists_deleted_before_digest`, `test_read_geotiff_limits_decompression_threads`, `test_build_always_uses_strip_aggregation` now pass.
+**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-165 (original OOM), C-171 (compilation variant), C-172 (latent branch OOM).
+
+### ~~C-171: Pregridded compilation `.to_pylist()` OOM (~6 GB Python objects)~~ — RESOLVED
+**Resolved 2026-05-20.** `compile_pregridded` called `.to_pylist()` three times on Arrow columns, inflating ~60M rows into ~6 GB of Python objects alongside the Arrow table (~1 GB) and grid array (~0.5 GB). Peak: ~7.7 GiB. Fixed by replacing `.to_pylist()` with `.to_numpy()` and adding `del table` after extraction. Null guard updated from `val is not None` to `not np.isnan(val)` for numpy compatibility. Falsification test `test_compilation_avoids_to_pylist` now passes.
+**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-144 (same pattern in `grid_compilation.py`, still deferred), C-170 (viewpoint variant).
+
+### ~~C-172: Latent OOM in `_aggregate_to_prio_grid` dead branch~~ — RESOLVED
+**Resolved 2026-05-20.** `build_ghspop_v1` had a `needs_align` branch that called `_aggregate_to_prio_grid` when raster dimensions were divisible by 60. That function does `data.copy()` — doubling a 6.88 GiB float64 array to 13.76 GiB peak. The only protection was JRC's accidental non-divisible-by-60 raster dimensions (21384×43202). Fixed by removing the branching and always using `_aggregate_with_alignment` (which handles both aligned and unaligned data via offset computation). `_aggregate_to_prio_grid` and `_align_to_globe` retained as module-level functions (tested directly in 7 existing tests). Falsification test `test_build_always_uses_strip_aggregation` now passes.
+**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-163 (dimension truncation, resolved), C-170 (main memory fix).
 
 ### ~~C-162: GHS-POP PGID mapping has no direct correctness test~~ — RESOLVED
 **Resolved 2026-05-19.** Added `test_pgid_mapping_correctness` (4 distinct populations in 2x2 grid, asserts specific pgid→value mapping including row-flip), `test_month_id_correctness` (verifies Jan/Feb/Mar 2000 → month_ids 241/242/243), and `test_no_duplicate_pgid_month_id` (uniqueness constraint on output). Test count: 21 → 29.
@@ -278,7 +306,7 @@ The metric lab code being migrated has its own tests, but this repo has no "gold
 
 `_place_events_columnar` uses a two-phase approach: Phase 1 extracts only lat/lon/date as Python lists for bin assignment (efficient). Phase 2 calls `table.to_pydict()` on the full table (~40 columns), creating a dict of 40 lists with ~2.3M elements each, then constructs individual event dicts for every placed event. This is the dominant memory allocation. Production reports ~30s completion, so it works today, but scales linearly with event count. The performance test (`test_performance.py`) uses only 50 events, so this path is untested at production scale. Currently mitigated by sufficient server RAM (32GB).
 
-See also C-78 (`_place_events_columnar` testability).
+See also C-78 (`_place_events_columnar` testability). The pregridded variant (`pregridded_compilation.py`) had the same pattern with `.to_pylist()` and was fixed in C-171 by replacing with `.to_numpy()`.
 
 ### C-145: Viewpoint builder loads full consolidated store into memory — [DEFER]
 
@@ -290,9 +318,9 @@ See also C-78 (`_place_events_columnar` testability).
 | Trigger | When the consolidated store exceeds ~5M rows on a memory-constrained machine, or when building viewpoints on developer laptops with <16GB RAM |
 | Location | `src/datafactory_viewpoint/builders/ucdp_v1.py:129` (`pq.read_table(config.consolidated_path)`) |
 
-`build_ucdp_v1` calls `pq.read_table()` which materializes the entire consolidated Parquet store as a PyArrow Table. The table is then sorted by `id` (creating a second copy), and iterated as groups of Python dicts. The docstring notes peak memory was reduced from ~4GB to ~1GB via streaming output columns, but the initial `pq.read_table` plus the sorted copy still dominate. At ~2.3M events with ~45 columns this is manageable on the 32GB server. A future migration to row-group streaming or predicate pushdown would decouple viewpoint memory from store size.
+`build_ucdp_v1` calls `pq.read_table()` which materializes the entire consolidated Parquet store as a PyArrow Table. The table is then sorted by `id` (creating a second copy), and iterated as groups of Python dicts. The docstring notes peak memory was reduced from ~4GB to ~1GB via streaming output columns, but the initial `pq.read_table` plus the sorted copy still dominate. At ~2.3M events with ~45 columns this is manageable on the 32GB server. A future migration to row-group streaming or predicate pushdown would decouple viewpoint memory from store size. **Update 2026-05-21 (ADR-031 review):** Output accumulation at lines 257-303 builds a dict-of-lists (~1.3 GB at current data volume) — an ADR-031 P1 spirit violation. Currently harmless because UCDP data volume is ~60x smaller than GHS-POP, but will become acute if consolidated store grows significantly.
 
-See also C-79 (Parquet I/O in tests).
+See also C-79 (Parquet I/O in tests), C-179 (consolidation dedup to_pylist).
 
 ### C-146: Assembly logic lives in script, not importable package — [DEFER]
 
@@ -343,6 +371,38 @@ Cross-ref: C-158 (missing CICs).
 `TemporalConfig()` defaults to `end_year=2024`. Pipeline scripts that don't pass `--end-year 2026` produce shorter temporal ranges (432 months) than sources using `--end-year 2026` (456 months). Assembly zero-fills the trailing 24 months — subtly wrong because population data should extrapolate, not drop to zero. This already bit us during GHS-POP implementation: `run_ghspop_pipeline.py` initially used bare `TemporalConfig()` while `compile_grid.py` and `run_acled_pipeline.py` used `--end-year 2026`. Caught by falsification round 2 (2026-05-20), fixed by adding `--end-year` argument. The default remains `2024` — each new source must remember to override it. Post-mortem recommendation: make `end_year` a required argument with no default, so each caller must be explicit (ADR-003 compliance: declarations over inference).
 
 Cross-ref: C-130 (zero-filled months indistinguishable from observations), C-129 (partition boundaries no single source of truth), C-156 (ACLED temporal range mismatch).
+
+### C-174: `latlon_to_pgid` silently clamps out-of-bounds coordinates — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-174 |
+| Tier | 3 |
+| Source | repo-assimilation (2026-05-20) |
+| Trigger | Source provides event coordinates outside [-90,90]×[-180,180] — e.g., geocoding error yields lat=91° or lon=200° |
+| Location | `src/datafactory_priogrid/cell_generator.py:113-118` (`np.clip` clamping), `src/datafactory_compilation/grid_compilation.py:117-128` (pgid bounds check after clamping) |
+
+`latlon_to_pgid` uses `np.clip(rows, 0, nrow-1)` and `np.clip(cols, 0, ncol-1)` to clamp out-of-bounds coordinates to the grid edge rather than raising. This means a lat=91° event is silently placed in the northernmost row of cells (the Arctic). The downstream bounds check in `grid_compilation.py:126` (`if pgid < 1 or pgid > n_cells`) is dead code for clamped inputs — it can never trigger because clamping already guarantees a valid pgid. Current sources (UCDP, ACLED, GHS-POP) provide pre-validated coordinates, so the risk is hypothetical today. A new source with less-validated geocoding could silently misplace events. Not Tier 1 because: (a) no current path produces OOB coordinates, (b) the misplacement is bounded to edge cells. Tier 3 because: if triggered, corruption is silent and multi-cell.
+
+See also C-130 (zero-fill ambiguity — same class of silent data misrepresentation).
+
+---
+
+### C-175: Aggregation missing-field coalesced to zero, not NaN — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-175 |
+| Tier | 3 |
+| Source | repo-assimilation (2026-05-20) |
+| Trigger | Source removes or renames a field that a `FeatureSpec.value_field` references — e.g., UCDP renames `best` to `best_estimate` |
+| Location | `src/datafactory_compilation/aggregation.py:18-19` (`sum_field`: `e.get(field, 0) or 0`), `src/datafactory_compilation/aggregation.py:28-29` (`max_field`: `e.get(field, 0) or 0`) |
+
+`sum_field` and `max_field` aggregation strategies treat missing event fields as 0 via `e.get(field, 0) or 0`. If UCDP renames `best` to `best_estimate`, every event would contribute 0 to the `fatalities` feature — the compiled grid would contain all zeros for that column, indistinguishable from "zero events." The `count` strategy is unaffected (ignores field). The current mitigation is that `grid_compilation.py:_required_columns()` validates that `config.lat_field`, `config.lon_field`, and `config.date_field` exist in the table — but `value_field` is not validated at the column level before aggregation. Not Tier 1 because: (a) current sources have stable field names, (b) the zero-fill is consistent (every event contributes 0, so the feature is uniformly zero rather than subtly wrong). Tier 3 because: if triggered, the entire feature column is silently useless.
+
+See also C-45 (no Parquet schema evolution), C-36 (UCDP API contract no schema versioning).
+
+---
 
 ### C-156: ACLED temporal range mismatch — zero-fill before 2020 in assembled grid — [DEFER]
 
@@ -419,9 +479,9 @@ Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and fi
 8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; monitor if callers misuse. **Trigger: deepen if recurring misuse patterns emerge.**
 **Source:** Ousterhout (expert review #4)
 
-### C-78: `_place_events_columnar` hard to test in isolation — [DEFER]
-100 lines of columnar bin-assignment logic tested only indirectly through `compile_grid()`. Core algorithm (lat/lon -> pgid, date -> month_index) could be extracted into a pure function. **Trigger: extract `compute_bin_assignments()` when compilation tests exceed 5 seconds.**
-**Source:** Feathers (expert review #4)
+### C-78: `_place_events` hard to test in isolation — [DEFER]
+100 lines of bin-assignment logic tested only indirectly through `compile_grid()`. Core algorithm (lat/lon -> pgid, date -> month_index) could be extracted into a pure function. **Update 2026-05-21 (ADR-031 review):** Renamed from `_place_events_columnar` — the old name falsely claimed columnar processing. The function receives Python lists from `.to_pylist()` and iterates row-by-row. The underlying P1 violation (`.to_pylist()` materialization) remains tracked in C-144. **Trigger: extract `compute_bin_assignments()` when compilation tests exceed 5 seconds.**
+**Source:** Feathers (expert review #4), ADR-031 compliance review (2026-05-21). Cross-ref: C-144, C-74.
 
 ### C-79: Compilation/consolidation require real Parquet I/O in tests — [DEFER]
 `compile_grid()` and `consolidate_ucdp()` always read from disk. No seam to inject mock reader. Tests create actual Parquet files. **Trigger: add `read_table_fn` parameter when test suite exceeds 30 seconds.**
@@ -624,6 +684,22 @@ Cross-ref: C-96 (fsspec netrc), C-29 (no e2e integration test).
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10). DDIA Ch.7 pp.234-236, Ch.8 pp.301-303.
 
+### C-176: `datafactory_synthetic` is a dead module with zero exports — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-176 |
+| Tier | 4 |
+| Source | repo-assimilation (2026-05-20) |
+| Trigger | When synthetic data generation is needed for a consumer or test infrastructure |
+| Location | `src/datafactory_synthetic/__init__.py` (empty `__all__`), `pyproject.toml:46` (declared in wheel) |
+
+`datafactory_synthetic` is declared in `pyproject.toml` as a wheel package, tested for `__all__` existence in `test_package_structure.py`, and subject to import enforcement in `test_import_enforcement.py` — but exports nothing and is imported by nothing. The `ARCHITECTURE.md` inside the package plans 3 Protocols before any implementation (see C-03). The module occupies a slot in the dependency DAG and test infrastructure while providing zero functionality. Tier 4 because: no correctness or reliability impact; single-developer scope.
+
+See also C-03 (protocol proliferation in synthetic module).
+
+---
+
 ### C-159: ACLED snapshot archiving and revision comparison paths untested — [DEFER]
 
 | Field | Value |
@@ -649,6 +725,92 @@ See also C-44 (harvest pipeline template — shared archiving pattern).
 | Location | `src/datafactory_harvester/sources/acled.py:347` (`all_events.extend(results)` where `results = data.get("data", [])`) |
 
 `test_api_returns_non_list_data_silently_corrupts` documents that if the API returns `"data": "abc"`, `extend()` iterates characters and `events == ["a", "b", "c"]`. This is caught by downstream `validate_events` (field presence check), but the fetch layer itself has no type guard. The UCDP harvester has the same pattern. Accepted: validation catches it, and adding a type guard here would be defense-in-depth (not load-bearing). Cross-ref: C-153 (no TotalCount for truncation detection).
+
+### C-173: Hetzner CPX32 has no swap — OOM kills with zero safety net — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-173 |
+| Tier | 3 |
+| Source | Falsification audit + 8-expert code review (2026-05-20) |
+| Trigger | Any transient memory spike above physical RAM during pipeline execution on the Hetzner server |
+| Location | Hetzner CPX32 server configuration, `docs/guides/hetzner_deployment_guide.md` (troubleshooting section) |
+
+The Hetzner CPX32 (8 GB RAM) has no swap partition or swapfile. Without swap, the Linux OOM killer is the only backstop — any process that exceeds available RAM is killed immediately (exit code 137) with no chance to degrade gracefully. The GHS-POP viewpoint loads a 6.88 GiB GeoTIFF array, leaving ~600 MB headroom for Python, tifffile buffers, and OS services. A 2 GB swapfile would convert hard kills into degraded performance. Swap setup documented in deployment guide troubleshooting section (v1.2.18). Cross-ref: C-165 (original OOM), C-170 (list accumulation OOM), C-88 (server hardening).
+
+### C-177: `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-177 |
+| Tier | 3 |
+| Source | ADR-031 compliance review (2026-05-21) |
+| Trigger | When `_aggregate_to_prio_grid` is re-activated for a new data source or the function is called outside the builder's strip-based path |
+| Location | `src/datafactory_viewpoint/builders/ghspop_v1.py:263` (`clean = data.copy()`) |
+
+`_aggregate_to_prio_grid` creates a full copy of the input array (`clean = data.copy()`) to replace nodata with 0.0. For a 43200x86400 float32 array (~14 GiB), this doubles peak memory — a direct ADR-031 P3 violation ("never hold source and copy simultaneously at scale"). The function is no longer called from `build_ghspop_v1` (v1.2.18 switched to unconditional `_aggregate_with_alignment`), but it is retained because 7 tests exercise it directly. A docstring warning has been added (v1.2.18). If the function is ever re-activated, it must be rewritten to use in-place nodata replacement.
+
+Cross-ref: C-170 (GHS-POP list accumulation OOM, resolved), C-173 (no swap on Hetzner).
+
+### C-178: `compute_content_digest(path.read_bytes())` loads entire output into memory — ~~[DEFER]~~ FIX APPLIED
+
+| Field | Value |
+|-------|-------|
+| ID | C-178 |
+| Tier | 3 |
+| Source | ADR-031 compliance review (2026-05-21) |
+| Trigger | When viewpoint output exceeds ~1 GB (GHS-POP output is currently ~240 MB, but UCDP grows with time) |
+| Location | `src/datafactory_viewpoint/builders/ghspop_v1.py:578`, `ucdp_v1.py:325`, `acled_v1.py:183` |
+
+Three viewpoint builders compute the output file digest by calling `compute_content_digest(config.output_path.read_bytes())`, which reads the entire output Parquet into a Python `bytes` object. `compute_file_digest()` already exists in `datafactory_provenance` and reads the file in 8 KiB chunks — zero peak memory overhead. The `.read_bytes()` pattern is a P2 violation (holding an unnecessary copy) and a latent P3 violation (Python `bytes` + the file's OS page cache). **Fixed 2026-05-21:** All three call sites updated to use `compute_file_digest(path)`.
+
+Cross-ref: C-145 (viewpoint full store load), C-144 (compilation to_pydict).
+
+### C-179: Consolidation dedup uses `.to_pylist()` + Python set (ADR-031 P1) — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-179 |
+| Tier | 4 |
+| Source | ADR-031 compliance review (2026-05-21) |
+| Trigger | When consolidated store exceeds ~5M rows on an 8 GB machine |
+| Location | `src/datafactory_consolidation/consolidators/ucdp.py:451-458`, `src/datafactory_consolidation/consolidators/acled.py:283-291` |
+
+Both UCDP and ACLED consolidators extract 4 columns via `.to_pylist()` and build Python sets for deduplication. At ~2.3M UCDP rows this is ~260 MB (manageable). The pattern is a P1 violation (columnar Arrow → row-oriented Python objects). PyArrow's `pc.is_in()` + `pc.filter()` would accomplish dedup without materialization. Deferred: current data volume fits comfortably, and consolidation runs infrequently.
+
+Cross-ref: C-145 (viewpoint full store load), C-144 (compilation to_pydict).
+
+### C-180: No falsification tests for non-GHS-POP compilation/viewpoint paths — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-180 |
+| Tier | 4 |
+| Source | ADR-031 compliance review (2026-05-21) |
+| Trigger | When a memory regression is introduced in the UCDP or ACLED compilation/viewpoint path |
+| Location | `tests/test_falsification_ghspop_memory.py` (GHS-POP only; no equivalent for UCDP/ACLED) |
+
+The GHS-POP memory falsification tests (`test_falsification_ghspop_memory.py`) use AST analysis to verify structural memory safety properties (e.g., `del` targets, no `.to_pylist()`, maxworkers=1). No equivalent tests exist for UCDP viewpoint (`ucdp_v1.py`), ACLED viewpoint (`acled_v1.py`), or grid compilation (`grid_compilation.py`). Memory regressions in those paths would not be caught by the falsification framework. Deferred: the GHS-POP path is the only one that currently operates near the memory ceiling.
+
+Cross-ref: C-144 (grid_compilation to_pydict), C-145 (viewpoint full store load), C-178 (compute_content_digest).
+
+### D-23: ADR-031 P1 — strict columnar purity vs pragmatic materialization
+
+Martin/Hickey favor strict P1 compliance: every `.to_pylist()` and dict-of-lists accumulation is a violation regardless of data volume. Beck/Feathers counter that fixing low-volume paths (UCDP at ~2.3M rows, ACLED at ~800K) adds complexity without preventing any real failure — the 8 GB constraint only binds on GHS-POP (~60M cells). **Resolution: fix GHS-POP and compilation paths (where it matters), defer UCDP/ACLED (where data volume is 60x smaller). Re-evaluate when any non-GHS-POP path exceeds 5M rows.**
+
+**Source:** ADR-031 compliance review (2026-05-21). Cross-ref: C-144, C-145, C-179.
+
+### D-24: Hardware upgrade vs software optimization for 8 GB ceiling
+
+Nygard/Kleppmann argue the 8 GB server is the wrong constraint to optimize for — a €5/month upgrade to 16 GB CPX42 would eliminate all current OOM risks with zero code changes. Martin/Hickey counter that the code should be correct regardless of hardware: `data.copy()` on a 14 GiB array and `.read_bytes()` on output files are bugs in any memory budget. **Resolution: both — fix the bugs (they make the code simpler, not more complex), and document swap as a safety net. Hardware upgrade is an operational decision, not a code decision.**
+
+**Source:** ADR-031 compliance review (2026-05-21). Cross-ref: C-173 (no swap), C-177 (_aggregate_to_prio_grid copy).
+
+### D-25: Dead function retention — `_aggregate_to_prio_grid` after v1.2.18
+
+Feathers argues retaining `_aggregate_to_prio_grid` (no longer called from the builder) creates a maintenance hazard: tests exercise a dead path, and a future developer might re-activate it without noticing the P3 violation. Beck argues the function is tested, documented with a warning, and deletion would break 7 passing tests — the risk of re-activation is lower than the risk of deleting tested code. **Resolution: retain with docstring warning, track as C-177. Delete only when the test suite is restructured to test alignment via `_aggregate_with_alignment` instead.**
+
+**Source:** ADR-031 compliance review (2026-05-21). Cross-ref: C-177.
 
 ---
 
