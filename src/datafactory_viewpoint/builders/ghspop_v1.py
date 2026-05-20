@@ -131,8 +131,10 @@ def _read_geotiff(
 ) -> tuple[np.ndarray, float, float, float, float]:
     """Read GeoTIFF and extract geotransform from TIFF tags.
 
-    Data is cast to float32 to keep peak RSS under 8 GB when
-    _align_to_globe holds both the raw and globe arrays (C-165).
+    Returns native dtype (float64 for JRC GHS-POP). No in-memory
+    dtype conversion — on 8 GB servers the float64+float32 peak
+    (~11 GB) triggers the OOM killer. Strip-based aggregation in
+    _aggregate_with_alignment handles float64 input directly.
 
     Returns:
         (data, tiepoint_x, tiepoint_y, pixel_scale_x, pixel_scale_y)
@@ -140,7 +142,7 @@ def _read_geotiff(
     """
     with tifffile.TiffFile(str(path)) as tif:
         page = tif.pages.first
-        data = page.asarray().astype(np.float32, copy=False)
+        data = page.asarray()
 
         scale_tag = page.tags.get("ModelPixelScaleTag")
         tie_tag = page.tags.get("ModelTiepointTag")
@@ -308,12 +310,12 @@ def _aggregate_with_alignment(
         if src_r0 >= src_r1:
             continue
 
-        strip = data[src_r0:src_r1, :].copy()
+        strip = data[src_r0:src_r1, :].astype(np.float32)
         strip[(strip == nodata) | (strip < 0.0)] = 0.0
 
         n_rows = strip.shape[0]
         aligned = np.zeros(
-            (n_rows, GLOBE_PIXEL_COLS), dtype=strip.dtype,
+            (n_rows, GLOBE_PIXEL_COLS), dtype=np.float32,
         )
 
         dst_c0 = max(0, col_offset)
