@@ -331,10 +331,11 @@ def last_digest_for_version(
     version_field: str = "version",
     digest_field: str = "content_digest",
 ) -> str | None:
-    """Return the most recent content digest for a specific version.
+    """Return the most recent content digest for a successful version.
 
     Scans the ledger in reverse for the first entry matching the
-    requested version.
+    requested version with outcome "success" (or no outcome field,
+    for backward compatibility with pre-outcome ledger entries).
 
     Args:
         ledger_path: Path to the JSONL ledger file.
@@ -347,6 +348,10 @@ def last_digest_for_version(
     """
     entries = _read_ledger_entries(ledger_path)
     for entry in reversed(entries):
-        if entry.get(version_field) == version:
-            return entry.get(digest_field)
+        if entry.get(version_field) != version:
+            continue
+        outcome = entry.get("outcome")
+        if outcome is not None and outcome != "success":
+            continue
+        return entry.get(digest_field)
     return None

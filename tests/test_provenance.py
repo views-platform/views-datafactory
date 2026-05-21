@@ -129,6 +129,36 @@ class TestLastDigestForVersionGreen:
         append_ledger_entry(ledger, {"version": "25.1", "content_digest": "aaa"})
         assert last_digest_for_version(ledger, "99.0") is None
 
+    def test_skips_failed_entries(self, tmp_path: Path) -> None:
+        """C-182: failed entries must not count as cached."""
+        ledger = tmp_path / "ledger.jsonl"
+        append_ledger_entry(ledger, {
+            "version": "25.1", "content_digest": "good",
+            "outcome": "success",
+        })
+        append_ledger_entry(ledger, {
+            "version": "25.1", "content_digest": "bad",
+            "outcome": "failed",
+        })
+        assert last_digest_for_version(ledger, "25.1") == "good"
+
+    def test_returns_none_when_only_failed(self, tmp_path: Path) -> None:
+        """C-182: version with only failed entries returns None."""
+        ledger = tmp_path / "ledger.jsonl"
+        append_ledger_entry(ledger, {
+            "version": "25.1", "content_digest": "bad",
+            "outcome": "failed",
+        })
+        assert last_digest_for_version(ledger, "25.1") is None
+
+    def test_accepts_entries_without_outcome(self, tmp_path: Path) -> None:
+        """Backward compat: pre-outcome ledger entries are accepted."""
+        ledger = tmp_path / "ledger.jsonl"
+        append_ledger_entry(ledger, {
+            "version": "25.1", "content_digest": "old_format",
+        })
+        assert last_digest_for_version(ledger, "25.1") == "old_format"
+
 
 # ============================================================
 # Beige team — realistic misuse
