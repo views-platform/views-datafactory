@@ -23,7 +23,8 @@ def _parse_single(value: str | int) -> np.datetime64:
     """Parse a single time value to datetime64[M]."""
     if isinstance(value, int):
         # VIEWS month_id
-        return from_views_month_id(value).item()
+        result: np.datetime64 = from_views_month_id(value).item()
+        return result
 
     if _YEAR_RE.match(value):
         return np.datetime64(f"{value}-01", "M")

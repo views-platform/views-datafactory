@@ -918,6 +918,119 @@ class TestPaginationGreen:
         assert len(events) == 5
 
 
+class TestPaginationBeige:
+
+    def test_401_mid_pagination_refreshes_token(
+        self, tmp_path: Path,
+    ) -> None:
+        """A 401 during pagination triggers token refresh and
+        retries the same page, recovering transparently."""
+        import requests as _requests
+
+        events = _make_acled_events(3)
+
+        # Initial token acquisition
+        token_resp1 = _mock_token_response()
+
+        # Page 1 succeeds
+        resp1 = MagicMock()
+        resp1.json.return_value = _make_acled_response(events)
+        resp1.raise_for_status = MagicMock()
+
+        # Page 2: server returns 401 (token invalidated)
+        resp_401 = MagicMock()
+        resp_401.status_code = 401
+        http_err = _requests.HTTPError(response=resp_401)
+        resp_401.raise_for_status = MagicMock(
+            side_effect=http_err,
+        )
+
+        # Token refresh
+        token_resp2 = _mock_token_response()
+
+        # Page 2 retry succeeds with fresh token
+        page2_events = [
+            {**e, "event_id_cnty": f"SOM{i + 10:04d}"}
+            for i, e in enumerate(
+                _make_acled_events(2), start=1
+            )
+        ]
+        resp2 = MagicMock()
+        resp2.json.return_value = _make_acled_response(
+            page2_events
+        )
+        resp2.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=3,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[
+                    token_resp1, resp1, resp_401,
+                    token_resp2, resp2,
+                ],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled."
+                "time.sleep",
+            ),
+        ):
+            result = fetch_paginated(
+                config, "user", "pass"
+            )
+
+        assert len(result) == 5
+
+    def test_non_401_http_error_still_raises(
+        self, tmp_path: Path,
+    ) -> None:
+        """A 403 during pagination is not recoverable and
+        propagates immediately."""
+        import requests as _requests
+
+        events = _make_acled_events(3)
+        token_resp = _mock_token_response()
+
+        resp1 = MagicMock()
+        resp1.json.return_value = _make_acled_response(events)
+        resp1.raise_for_status = MagicMock()
+
+        resp_403 = MagicMock()
+        resp_403.status_code = 403
+        http_err = _requests.HTTPError(response=resp_403)
+        resp_403.raise_for_status = MagicMock(
+            side_effect=http_err,
+        )
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=3,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp1, resp_403],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled."
+                "time.sleep",
+            ),
+            pytest.raises(_requests.HTTPError),
+        ):
+            fetch_paginated(config, "user", "pass")
+
+
 # ---- Characterization (Real Data) ----
 
 

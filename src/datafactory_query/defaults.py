@@ -61,7 +61,7 @@ def get_last_valid_month_id(
 
     try:
         nrc = netrc(str(Path.home() / ".netrc"))
-        creds = nrc.authenticators(parsed.hostname)
+        creds = nrc.authenticators(parsed.hostname or "")
         if creds:
             login, _, password = creds
             encoded = base64.b64encode(

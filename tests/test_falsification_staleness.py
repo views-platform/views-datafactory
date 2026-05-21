@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -56,7 +57,10 @@ class TestP5RemoteZarrAttr:
     def test_remote_zarr_has_last_valid_month_id(self) -> None:
         from datafactory_query.defaults import get_last_valid_month_id
 
-        result = get_last_valid_month_id()
+        try:
+            result = get_last_valid_month_id()
+        except (URLError, HTTPError, TimeoutError, OSError) as exc:
+            pytest.skip(f"Remote zarr unreachable: {exc}")
         assert result is not None, (
             "Remote zarr store .zattrs missing last_valid_month_id — "
             "all remote consumers get no zero-padding warning. "

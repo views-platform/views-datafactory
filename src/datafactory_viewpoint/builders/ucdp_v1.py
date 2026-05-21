@@ -31,7 +31,7 @@ from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
     append_ledger_entry,
-    compute_content_digest,
+    compute_file_digest,
 )
 from datafactory_viewpoint.builders import register_builder
 from datafactory_viewpoint.survivorship import get_survivorship
@@ -322,9 +322,7 @@ def build_ucdp_v1(
     config.output_path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(output_table, config.output_path)
 
-    output_digest = compute_content_digest(
-        config.output_path.read_bytes()
-    )
+    output_digest = compute_file_digest(config.output_path)
 
     n_output = len(output_columns["date_month"])
 

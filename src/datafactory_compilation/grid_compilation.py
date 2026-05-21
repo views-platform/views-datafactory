@@ -72,16 +72,15 @@ def _parse_month_index(
     return idx if idx >= 0 else None
 
 
-def _place_events_columnar(
+def _place_events(
     table: pa.Table,
     config: CompilationConfig,
 ) -> dict[tuple[int, int], list[dict]]:
-    """Assign events to (pgid_index, time_index) bins using columnar data.
+    """Assign events to (pgid_index, time_index) bins.
 
-    Extracts only placement columns (lat, lon, date) as lists,
-    computes bin assignments, then materializes event dicts
-    only for events that land in valid bins. This avoids creating
-    dict objects upfront for large tables.
+    Extracts placement columns (lat, lon, date) as lists, computes
+    bin assignments, then materializes event dicts only for events
+    that land in valid bins.
 
     Args:
         table: A PyArrow Table with event data.
@@ -219,7 +218,7 @@ def compile_grid(config: CompilationConfig) -> Path:
     # Only placement columns (lat, lon, date) are read as lists;
     # full event dicts are materialized only for placed events.
     logger.info("Read %d events from %s", table.num_rows, config.source_path)
-    bins = _place_events_columnar(table, config)
+    bins = _place_events(table, config)
 
     # Build output array: [T, H, W, C] — canonical z-stack layout
     nrow = config.grid_config.nrow

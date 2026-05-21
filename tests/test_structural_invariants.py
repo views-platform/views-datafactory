@@ -145,6 +145,8 @@ class TestPartitionAlignment:
     def test_at_least_one_model_found(
         self, model_partitions: dict,
     ) -> None:
+        if not MODELS_ROOT.exists():
+            pytest.skip(f"views-models not available at {MODELS_ROOT}")
         assert model_partitions, (
             "No model config_partitions.py found — "
             f"checked {MODELS_ROOT}"

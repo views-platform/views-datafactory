@@ -110,12 +110,12 @@ class FeatureFrame:
     @property
     def n_rows(self) -> int:
         """Number of observations (N)."""
-        return self.y_features.shape[0]
+        return int(self.y_features.shape[0])
 
     @property
     def n_features(self) -> int:
         """Number of features (D)."""
-        return self.y_features.shape[1]
+        return int(self.y_features.shape[1])
 
     @property
     def sample_count(self) -> int:
@@ -124,7 +124,7 @@ class FeatureFrame:
         Returns 1 for deterministic (2D) features.
         """
         if self.y_features.ndim == 3:
-            return self.y_features.shape[2]
+            return int(self.y_features.shape[2])
         return 1
 
     @property
