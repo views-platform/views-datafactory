@@ -816,7 +816,7 @@ Cross-ref: C-44 (harvest pipeline template), C-184 (ACLED same structural gap), 
 **Resolved 2026-05-21.** Both `last_digest` and `last_digest_for_version` now skip entries where `entry.get(digest_field)` is `None`, continuing the reverse scan to find a valid entry. Added digest-field guard: `digest = entry.get(digest_field); if digest is not None: return digest`. Falsification tests in `test_falsification_pr59_merge_r2.py` now pass.
 **Source:** Falsification audit round 2 of PR #59 (2026-05-21). Cross-ref: C-182 (outcome filtering fix), C-46 (ledger write idempotency).
 
-### C-188: GAUL admin failure path writes no ledger entry — ~~[DEFER]~~ RESOLVED
+### ~~C-188: GAUL admin failure path writes no ledger entry~~ — RESOLVED
 
 | Field | Value |
 |-------|-------|

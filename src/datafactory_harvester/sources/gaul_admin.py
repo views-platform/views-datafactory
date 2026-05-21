@@ -555,7 +555,7 @@ def fetch_gaul_admin(
                 "dataset": DATASET_ID,
                 "version": var_name,
                 "outcome": "failed",
-                "error": str(exc),
+                "errors": [str(exc)],
                 "ledger_version": LEDGER_VERSION,
             })
             results.append({

@@ -191,4 +191,4 @@ class TestGaulAdminFailureLedger:
         )
         assert failed[0]["version"] == "gaul0_code"
         assert failed[0]["dataset"] == "gaul_admin"
-        assert "disk full" in failed[0]["error"]
+        assert "disk full" in failed[0]["errors"][0]
