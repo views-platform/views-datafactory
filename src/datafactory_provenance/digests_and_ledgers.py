@@ -44,7 +44,6 @@ DIGEST_SCHEME: str = f"{DIGEST_ALGORITHM}_{DIGEST_TRUNCATE}"
 
 # I/O buffer sizes — tune for throughput vs. memory tradeoff.
 _FILE_CHUNK_SIZE: int = 65536  # 64 KB — file digest streaming reads
-_LEDGER_READ_CHUNK: int = 4096  # 4 KB — reverse-read for last_digest
 
 
 def compute_content_digest(
@@ -263,31 +262,6 @@ def _read_ledger_entries(ledger_path: Path) -> list[dict[str, Any]]:
         except json.JSONDecodeError:
             logger.warning("Skipping malformed ledger line %d in %s", i, ledger_path)
     return entries
-
-
-def _read_last_line(path: Path) -> str | None:
-    """Read the last non-empty line from a file without loading it all.
-
-    Seeks to the end and reads backwards in 4KB chunks until a
-    complete non-empty line is found. O(1) for typical JSONL files.
-    """
-    with open(path, "rb") as f:
-        f.seek(0, 2)
-        pos = f.tell()
-        if pos == 0:
-            return None
-        buf = b""
-        while pos > 0:
-            read_size = min(_LEDGER_READ_CHUNK, pos)
-            pos -= read_size
-            f.seek(pos)
-            buf = f.read(read_size) + buf
-            lines = buf.split(b"\n")
-            for line in reversed(lines):
-                stripped = line.strip()
-                if stripped:
-                    return stripped.decode("utf-8")
-    return None
 
 
 _VALID_CACHE_OUTCOMES: frozenset[str] = frozenset({
