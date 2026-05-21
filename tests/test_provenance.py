@@ -151,6 +151,28 @@ class TestLastDigestForVersionGreen:
         })
         assert last_digest_for_version(ledger, "25.1") is None
 
+    def test_accepts_unchanged_entries(self, tmp_path: Path) -> None:
+        """Two-tier cache: 'unchanged' is a valid cache hit."""
+        ledger = tmp_path / "ledger.jsonl"
+        append_ledger_entry(ledger, {
+            "version": "25.1", "content_digest": "same",
+            "outcome": "unchanged",
+        })
+        assert last_digest_for_version(ledger, "25.1") == "same"
+
+    def test_skips_cached_outcome(self, tmp_path: Path) -> None:
+        """'cached' entries are informational, not cache hits."""
+        ledger = tmp_path / "ledger.jsonl"
+        append_ledger_entry(ledger, {
+            "version": "25.1", "content_digest": "original",
+            "outcome": "success",
+        })
+        append_ledger_entry(ledger, {
+            "version": "25.1", "content_digest": "original",
+            "outcome": "cached",
+        })
+        assert last_digest_for_version(ledger, "25.1") == "original"
+
     def test_accepts_entries_without_outcome(self, tmp_path: Path) -> None:
         """Backward compat: pre-outcome ledger entries are accepted."""
         ledger = tmp_path / "ledger.jsonl"

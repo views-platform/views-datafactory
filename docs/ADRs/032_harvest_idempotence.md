@@ -34,7 +34,7 @@ A harvest version is cached if and only if:
 
 Both conditions must hold. File existence alone is insufficient (partial write, orphan from a previous run). Ledger entry alone is insufficient (file may have been deleted or corrupted).
 
-`last_digest_for_version` enforces condition 2 by filtering on `outcome != "failed"`. Entries without an `outcome` field are accepted for backward compatibility.
+`last_digest_for_version` enforces condition 2 by accepting only entries with `outcome` in `("success", "unchanged")` or entries without an `outcome` field (backward compatibility). Entries with `outcome = "failed"` or `"cached"` are skipped.
 
 ### Source mutability determines cache tier
 

@@ -334,8 +334,9 @@ def last_digest_for_version(
     """Return the most recent content digest for a successful version.
 
     Scans the ledger in reverse for the first entry matching the
-    requested version with outcome "success" (or no outcome field,
-    for backward compatibility with pre-outcome ledger entries).
+    requested version with a non-failed outcome. Accepted outcomes:
+    "success", "unchanged", or absent (backward compatibility with
+    pre-outcome ledger entries). Skipped: "failed", "cached".
 
     Args:
         ledger_path: Path to the JSONL ledger file.
@@ -351,7 +352,9 @@ def last_digest_for_version(
         if entry.get(version_field) != version:
             continue
         outcome = entry.get("outcome")
-        if outcome is not None and outcome != "success":
+        if outcome is not None and outcome not in (
+            "success", "unchanged",
+        ):
             continue
         return entry.get(digest_field)
     return None
