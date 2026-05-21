@@ -295,7 +295,9 @@ def last_digest(
         outcome = entry.get("outcome")
         if outcome is not None and outcome not in _VALID_CACHE_OUTCOMES:
             continue
-        return entry.get(digest_field)
+        digest = entry.get(digest_field)
+        if digest is not None:
+            return digest
     return None
 
 
@@ -329,5 +331,7 @@ def last_digest_for_version(
         outcome = entry.get("outcome")
         if outcome is not None and outcome not in _VALID_CACHE_OUTCOMES:
             continue
-        return entry.get(digest_field)
+        digest = entry.get(digest_field)
+        if digest is not None:
+            return digest
     return None

@@ -1,8 +1,8 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-05-21)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21
-**Status:** 184 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44): 116 resolved, 60 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 27 disagreements: 22 resolved, 5 open.
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21
+**Status:** 188 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44): 118 resolved, 62 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 29 disagreements: 22 resolved, 7 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -66,11 +66,16 @@
 | ~~C-182~~ | ~~2~~ | ~~`last_digest_for_version` returns digest from failed ledger entries~~ | Resolved 2026-05-21 | Harvest correctness |
 | C-184 | 3 | ACLED `_year_is_cached` checks file existence, not file integrity | Truncated/corrupted Parquet accepted as valid cache hit | Harvest correctness |
 | C-185 | 4 | GHS-POP caching has no digest comparison (no change detection) | JRC silently updates a GeoTIFF epoch without changing the URL | Harvest correctness |
+| C-186 | 3 | Shapefile harvester lacks outcome vocabulary; ADR-032 overstates compliance | New harvester trusts ADR-032 claim that all harvesters record failed entries | Harvest correctness |
+| ~~C-187~~ | ~~4~~ | ~~Digest-field assumption in reverse scan shadows valid entries~~ | Resolved 2026-05-21 | Provenance correctness |
+| ~~C-188~~ | ~~3~~ | ~~GAUL admin failure path writes no ledger entry~~ | Resolved 2026-05-21 | Harvest correctness |
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
 | D-24 | — | Hardware upgrade vs software optimization for 8 GB ceiling | Open | ADR-031 compliance |
 | D-25 | — | Dead function retention — `_aggregate_to_prio_grid` after v1.2.18 | Open | ADR-031 compliance |
 | D-26 | — | Discovery probing cost vs cache staleness (UCDP candidate/dot9) | Open | Harvest caching |
 | D-27 | — | Two-tier cache (UCDP) vs single-tier cache (ACLED/GHS-POP) | Open | Harvest caching |
+| D-28 | — | One function vs two for digest lookup (`last_digest` + `last_digest_for_version`) | Open | Provenance API |
+| D-29 | — | Shapefile harvester retrofit depth — full outcome compliance vs organic | Open | Harvest correctness |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
 | C-146 | 3 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
@@ -134,7 +139,7 @@ Items that should be resolved together:
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
 | ~~**GHS-POP deployment**~~ | ~~C-165, C-166, C-167~~ | Resolved 2026-05-20 |
 | ~~**GHS-POP memory**~~ | ~~C-170, C-171, C-172~~ | Resolved 2026-05-20 |
-| **Harvest correctness** | C-182, C-184, C-185 | Before relying on harvest caching for correctness |
+| **Harvest correctness** | ~~C-182~~, C-184, C-185, C-186, ~~C-188~~ | Before relying on harvest caching for correctness |
 | **WET-before-DRY refactor** | C-44, C-07, C-155, C-164 | Before 4th source (V-Dem or WDI) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
@@ -792,6 +797,39 @@ The Hetzner CPX32 (8 GB RAM) has no swap partition or swapfile. Without swap, th
 
 Cross-ref: C-182 (`last_digest_for_version` accepts failed entries), C-185 (GHS-POP same weakness), C-44 (harvest pipeline template).
 
+### C-186: Shapefile harvester lacks outcome vocabulary; ADR-032 overstates compliance — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-186 |
+| Tier | 3 |
+| Source | Falsification audit round 2 of PR #59 (2026-05-21) |
+| Trigger | Developer implements a new harvester by following ADR-032's "all harvesters record failed entries" claim and relies on that assumption for the shapefile harvester path |
+| Location | `src/datafactory_priogrid/shapefile_harvester.py:120-167` (fetch/extract logic, no try/except), `docs/ADRs/032_harvest_idempotence.md:141` (false claim) |
+
+The shapefile harvester (`shapefile_harvester.py`) predates the outcome vocabulary introduced for C-182. Its ledger entries use `"changed": True/False` instead of `"outcome": "success"/"unchanged"/"failed"`. There is no try/except around the fetch/extract path, so failures write no ledger entry at all. This is not a correctness bug — entries without an `outcome` field are accepted by backward compatibility, and the absence of a failed entry means the next run will re-fetch. However, ADR-032 Implementation Notes claim "All harvesters record 'failed' entries in except handlers before re-raising," which is false for this harvester. Additionally, ADR-032 mentions `last_digest_for_version` 6 times but `last_digest` (the non-versioned sibling) 0 times — UCDP annual (`ucdp_annual.py:339`) and the shapefile harvester (`shapefile_harvester.py:137`) use `last_digest`, not `last_digest_for_version`. Tier 3 because: (a) no silent corruption (backward compat handles it), (b) the ADR false claim affects future developers reading the contract, (c) the harvester has zero failure observability in the ledger.
+
+Cross-ref: C-44 (harvest pipeline template), C-184 (ACLED same structural gap), C-185 (GHS-POP same gap), ADR-032.
+
+### ~~C-187: Digest-field assumption in reverse scan shadows valid entries~~ — RESOLVED
+
+**Resolved 2026-05-21.** Both `last_digest` and `last_digest_for_version` now skip entries where `entry.get(digest_field)` is `None`, continuing the reverse scan to find a valid entry. Added digest-field guard: `digest = entry.get(digest_field); if digest is not None: return digest`. Falsification tests in `test_falsification_pr59_merge_r2.py` now pass.
+**Source:** Falsification audit round 2 of PR #59 (2026-05-21). Cross-ref: C-182 (outcome filtering fix), C-46 (ledger write idempotency).
+
+### C-188: GAUL admin failure path writes no ledger entry — ~~[DEFER]~~ RESOLVED
+
+| Field | Value |
+|-------|-------|
+| ID | C-188 |
+| Tier | 3 |
+| Source | Expert code review of provenance/shapefile (2026-05-21) |
+| Trigger | GAUL admin variable write fails in production; operator queries ledger for failure history and finds no record |
+| Location | `src/datafactory_harvester/sources/gaul_admin.py:550-558` |
+
+**Resolved (v1.2.18):** Added `append_ledger_entry` call with `"outcome": "failed"` inside the existing except block. GAUL admin failures are now recorded in the provenance ledger with dataset, version, outcome, and error message. Test: `test_gaul_admin.py::TestGaulAdminFailureLedger::test_write_variable_failure_records_ledger_entry`.
+
+Cross-ref: C-186 (shapefile harvester same gap, deferred), C-44 (harvest pipeline template), ADR-032.
+
 ### C-177: `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) — [DEFER]
 
 | Field | Value |
@@ -877,6 +915,18 @@ Nygard argues the 98+ discovery probes per run are a reliability risk: if UCDP s
 Martin argues all harvesters should use two-tier caching (file exists + digest match + post-fetch digest comparison for change detection), creating a uniform contract enforced by a shared base. Hickey argues the distinction is correct: mutable sources (UCDP candidate, updated monthly) need change detection; immutable sources (GHS-POP epochs, ACLED historical years) don't — re-downloading 450 MB to confirm it hasn't changed is waste. The ADR should document both tiers as valid choices, with selection criteria based on source mutability. **Resolution: document in harvest idempotence ADR. Two-tier for mutable sources, single-tier for immutable sources, with source-declared mutability.**
 
 **Source:** Expert code review of harvest caching (2026-05-21). Cross-ref: C-184, C-185, C-44.
+
+### D-28: One function vs two for digest lookup (`last_digest` + `last_digest_for_version`)
+
+Ousterhout and Hickey argue for merging into a single function with optional `version` parameter — eliminates the desynchronization bug class (C-182 was fixed in one function, missed in the other until falsification F5). GoF recommends a shared `_find_latest_valid_entry` helper with both public functions as thin wrappers — preserves the API while centralizing logic. Martin values the explicit naming. Feathers cautions that changing 15+ call sites is a refactor that should be done separately from a bug fix. Beck: "make it work first, then make it right." **No resolution yet — defer to next refactoring cycle.**
+
+**Source:** Expert code review of provenance/shapefile (2026-05-21). Cross-ref: C-187 (digest-field assumption), C-182 (original desync bug).
+
+### D-29: Shapefile harvester retrofit depth — full outcome compliance vs organic
+
+Nygard and Martin argue for full outcome-vocabulary compliance now (add try/except, record `"failed"` entries, use `"outcome": "success"/"unchanged"`). Feathers and Beck argue the current code works correctly via backward compat and the retrofit should happen organically when the shapefile harvester is next touched or when V-Dem is added. Hickey notes `"changed": True/False` is accidental complexity but not dangerous. **No resolution yet — the shapefile harvester is rarely touched (one-time artifact).**
+
+**Source:** Expert code review of provenance/shapefile (2026-05-21). Cross-ref: C-186 (shapefile lacks outcome vocabulary), C-44 (harvest pipeline template).
 
 ---
 

@@ -34,7 +34,7 @@ A harvest version is cached if and only if:
 
 Both conditions must hold. File existence alone is insufficient (partial write, orphan from a previous run). Ledger entry alone is insufficient (file may have been deleted or corrupted).
 
-`last_digest_for_version` enforces condition 2 by accepting only entries with `outcome` in `("success", "unchanged")` or entries without an `outcome` field (backward compatibility). Entries with `outcome = "failed"` or `"cached"` are skipped.
+`last_digest_for_version` (versioned sources) and `last_digest` (non-versioned sources like UCDP annual) enforce condition 2 by accepting only entries with `outcome` in `("success", "unchanged")` or entries without an `outcome` field (backward compatibility). Entries with `outcome = "failed"` or `"cached"` are skipped. Both functions also skip entries that lack the `content_digest` field entirely, preventing malformed entries from shadowing valid ones.
 
 ### Source mutability determines cache tier
 
@@ -82,7 +82,7 @@ Every ledger entry must include an `outcome` field with one of these values:
 | `"unchanged"` | Fetched but content matches previous (two-tier only) | After digest comparison shows no change |
 | `"failed"` | An error occurred during fetch or validation | In the `except` handler, before re-raising |
 
-Only `"success"` and `"unchanged"` entries are considered valid cache hits by `last_digest_for_version`. `"cached"` entries are informational (they don't add a new digest). `"failed"` entries are never used for cache decisions.
+Only `"success"` and `"unchanged"` entries are considered valid cache hits by `last_digest_for_version` and `last_digest`. `"cached"` entries are informational (they don't add a new digest). `"failed"` entries are never used for cache decisions.
 
 ### Discovery probing is separate from data fetching
 
@@ -106,7 +106,7 @@ For immutable sources (GHS-POP, PRIO-GRID static), the only way to detect a chan
 
 ### Why filter failed entries at the provenance layer, not the caller?
 
-Every caller that uses `last_digest_for_version` for cache decisions would need to independently check `outcome`. Moving the filter into the shared function (provenance layer) prevents the bug class entirely. No caller can accidentally use a failed digest.
+Every caller that uses `last_digest_for_version` or `last_digest` for cache decisions would need to independently check `outcome`. Moving the filter into the shared functions (provenance layer) prevents the bug class entirely. No caller can accidentally use a failed digest.
 
 ### Why backward compatibility for missing `outcome`?
 
@@ -118,9 +118,9 @@ Early ledger entries (pre-v1.2) don't have an `outcome` field. These are necessa
 
 ### Positive
 
-- **Safe retry after failure:** A failed harvest followed by a retry will correctly re-fetch, because `last_digest_for_version` skips the failed entry (C-182 fix).
+- **Safe retry after failure:** A failed harvest followed by a retry will correctly re-fetch, because `last_digest_for_version` and `last_digest` skip failed entries (C-182 fix).
 - **Source-appropriate caching:** Immutable sources don't waste bandwidth on redundant downloads. Mutable sources detect silent updates.
-- **Shared vocabulary:** All harvesters use the same outcome values, making ledger analysis consistent.
+- **Shared vocabulary:** Harvesters with outcome vocabulary use the same outcome values, making ledger analysis consistent. Pre-outcome harvesters (PRIO-GRID shapefile) rely on backward compatibility.
 - **`--force` is always safe:** Re-fetching never deletes data; it atomically replaces.
 
 ### Negative
@@ -133,11 +133,14 @@ Early ledger entries (pre-v1.2) don't have an `outcome` field. These are necessa
 
 ## Implementation Notes
 
-- `last_digest_for_version` in `datafactory_provenance/digests_and_ledgers.py` filters by `outcome` as of v1.2.18.
-- UCDP candidate (`ucdp_candidate.py:_fetch_version`), UCDP dot9 (`ucdp_dot9.py:_fetch_dot9_version`): two-tier with `"unchanged"` heartbeat.
-- ACLED (`acled.py:_year_is_cached`, `_fetch_single_year`): single-tier with `"cached"` outcome on skip.
-- GHS-POP (`ghspop.py:_fetch_epoch`): single-tier with `"cached"` outcome on skip.
-- All harvesters record `"failed"` entries in `except` handlers before re-raising.
+- `last_digest_for_version` and `last_digest` in `datafactory_provenance/digests_and_ledgers.py` filter by `outcome` and skip entries missing the digest field, as of v1.2.18.
+- UCDP annual (`ucdp_annual.py:fetch_ucdp_annual`): uses `last_digest` (non-versioned). Records `"failed"` on validation failure.
+- UCDP candidate (`ucdp_candidate.py:_fetch_version`), UCDP dot9 (`ucdp_dot9.py:_fetch_dot9_version`): uses `last_digest_for_version`. Two-tier with `"unchanged"` heartbeat. Records `"failed"` on validation failure.
+- ACLED (`acled.py:_year_is_cached`, `_fetch_single_year`): uses `last_digest_for_version`. Single-tier with `"cached"` outcome on skip. Records `"failed"` on validation failure.
+- GHS-POP (`ghspop.py:_fetch_epoch`): uses `last_digest_for_version`. Single-tier with `"cached"` outcome on skip. Records `"failed"` on download, ZIP, or extraction failure.
+- PRIO-GRID static (`priogrid_static.py:_fetch_variable`): uses `last_digest_for_version`. Records `"failed"` on empty or invalid API response.
+- GAUL admin (`gaul_admin.py:fetch_gaul_admin`): uses `last_digest_for_version`. Records `"failed"` in ledger via `append_ledger_entry` in the except block wrapping `_write_variable` (C-188, fixed v1.2.18).
+- PRIO-GRID shapefile (`shapefile_harvester.py:fetch_shapefile`): uses `last_digest` (non-versioned). Pre-outcome harvester — entries use `"changed": True/False` instead of outcome vocabulary. No failure recording (C-186). Backward-compatible: entries without `outcome` are accepted by the digest functions.
 
 ---
 
@@ -147,4 +150,4 @@ Early ledger entries (pre-v1.2) don't have an `outcome` field. These are necessa
 - ADR-008 (Observability and Explicit Failure)
 - ADR-011 (Fail Loud, No Stale Data Serving)
 - ADR-027 (Harvest Count Verification)
-- `reports/technical_risk_register.md` C-44, C-46, C-181, C-182, C-183, C-184, C-185, D-26, D-27
+- `reports/technical_risk_register.md` C-44, C-46, C-181, C-182, C-183, C-184, C-185, C-186, C-187, C-188, D-26, D-27, D-28, D-29
