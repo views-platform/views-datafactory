@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -58,7 +59,7 @@ class TestP5RemoteZarrAttr:
 
         try:
             result = get_last_valid_month_id()
-        except Exception as exc:
+        except (URLError, HTTPError, TimeoutError, OSError) as exc:
             pytest.skip(f"Remote zarr unreachable: {exc}")
         assert result is not None, (
             "Remote zarr store .zattrs missing last_valid_month_id — "
