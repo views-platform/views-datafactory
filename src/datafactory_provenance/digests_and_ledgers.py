@@ -44,7 +44,6 @@ DIGEST_SCHEME: str = f"{DIGEST_ALGORITHM}_{DIGEST_TRUNCATE}"
 
 # I/O buffer sizes — tune for throughput vs. memory tradeoff.
 _FILE_CHUNK_SIZE: int = 65536  # 64 KB — file digest streaming reads
-_LEDGER_READ_CHUNK: int = 4096  # 4 KB — reverse-read for last_digest
 
 
 def compute_content_digest(
@@ -265,29 +264,9 @@ def _read_ledger_entries(ledger_path: Path) -> list[dict[str, Any]]:
     return entries
 
 
-def _read_last_line(path: Path) -> str | None:
-    """Read the last non-empty line from a file without loading it all.
-
-    Seeks to the end and reads backwards in 4KB chunks until a
-    complete non-empty line is found. O(1) for typical JSONL files.
-    """
-    with open(path, "rb") as f:
-        f.seek(0, 2)
-        pos = f.tell()
-        if pos == 0:
-            return None
-        buf = b""
-        while pos > 0:
-            read_size = min(_LEDGER_READ_CHUNK, pos)
-            pos -= read_size
-            f.seek(pos)
-            buf = f.read(read_size) + buf
-            lines = buf.split(b"\n")
-            for line in reversed(lines):
-                stripped = line.strip()
-                if stripped:
-                    return stripped.decode("utf-8")
-    return None
+_VALID_CACHE_OUTCOMES: frozenset[str] = frozenset({
+    "success", "unchanged",
+})
 
 
 def last_digest(
@@ -297,31 +276,29 @@ def last_digest(
 ) -> str | None:
     """Return the most recent content digest from a ledger.
 
-    Uses reverse-read for O(1) performance on the common case.
-    Falls back to full read if the last line is malformed.
+    Scans the ledger in reverse for the first entry with a valid
+    outcome. Accepted outcomes: "success", "unchanged", or absent
+    (backward compatibility). Skipped: "failed", "cached".
 
     Args:
         ledger_path: Path to the JSONL ledger file.
         digest_field: Name of the digest field in ledger entries.
 
     Returns:
-        The digest string from the last entry, or None if the ledger
-        is empty, missing, or the last entry lacks the digest field.
+        The digest string, or None if the ledger is empty, missing,
+        or contains no entries with a valid outcome.
     """
     if not ledger_path.exists():
         return None
-    last_line = _read_last_line(ledger_path)
-    if last_line is None:
-        return None
-    try:
-        entry = json.loads(last_line)
-        result: str | None = entry.get(digest_field)
-        return result
-    except json.JSONDecodeError:
-        # Fall back to full read if last line is malformed
-        entries = _read_ledger_entries(ledger_path)
-        result = entries[-1].get(digest_field) if entries else None
-        return result
+    entries = _read_ledger_entries(ledger_path)
+    for entry in reversed(entries):
+        outcome = entry.get("outcome")
+        if outcome is not None and outcome not in _VALID_CACHE_OUTCOMES:
+            continue
+        digest: str | None = entry.get(digest_field)
+        if digest is not None:
+            return digest
+    return None
 
 
 def last_digest_for_version(
@@ -331,10 +308,12 @@ def last_digest_for_version(
     version_field: str = "version",
     digest_field: str = "content_digest",
 ) -> str | None:
-    """Return the most recent content digest for a specific version.
+    """Return the most recent content digest for a successful version.
 
     Scans the ledger in reverse for the first entry matching the
-    requested version.
+    requested version with a non-failed outcome. Accepted outcomes:
+    "success", "unchanged", or absent (backward compatibility with
+    pre-outcome ledger entries). Skipped: "failed", "cached".
 
     Args:
         ledger_path: Path to the JSONL ledger file.
@@ -347,6 +326,12 @@ def last_digest_for_version(
     """
     entries = _read_ledger_entries(ledger_path)
     for entry in reversed(entries):
-        if entry.get(version_field) == version:
-            return entry.get(digest_field)
+        if entry.get(version_field) != version:
+            continue
+        outcome = entry.get("outcome")
+        if outcome is not None and outcome not in _VALID_CACHE_OUTCOMES:
+            continue
+        digest: str | None = entry.get(digest_field)
+        if digest is not None:
+            return digest
     return None

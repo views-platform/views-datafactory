@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import logging
 import zipfile
 from pathlib import Path
@@ -138,3 +139,56 @@ class TestGaulAdminADR008:
         assert len(
             [r for r in caplog.records if r.levelno >= logging.ERROR]
         ) >= 1
+
+
+# ---- C-188: failure path writes ledger entry ----
+
+_GAUL_MODULE = "datafactory_harvester.sources.gaul_admin"
+
+
+class TestGaulAdminFailureLedger:
+
+    def test_write_variable_failure_records_ledger_entry(
+        self, tmp_path: Path,
+    ) -> None:
+        """When _write_variable raises, a 'failed' entry must
+        appear in the provenance ledger (C-188)."""
+        ledger = tmp_path / "ledger.jsonl"
+        config = GaulAdminConfig(
+            data_dir=tmp_path / "data",
+            cache_dir=tmp_path / "cache",
+            ledger_path=ledger,
+            variables=("gaul0_code",),
+        )
+
+        with (
+            patch(f"{_GAUL_MODULE}._download_shapefile_zip") as mock_dl,
+            patch(f"{_GAUL_MODULE}._load_centroids") as mock_cen,
+            patch(f"{_GAUL_MODULE}._spatial_join") as mock_sj,
+            patch(f"{_GAUL_MODULE}._write_variable") as mock_wv,
+        ):
+            mock_dl.return_value = tmp_path / "fake.shp"
+            mock_cen.return_value = []
+            mock_sj.return_value = {}
+            mock_wv.side_effect = RuntimeError("disk full")
+
+            from datafactory_harvester.sources.gaul_admin import (
+                fetch_gaul_admin,
+            )
+
+            results = fetch_gaul_admin(config, force_refresh=True)
+
+        assert results[0]["outcome"] == "failed"
+
+        entries = [
+            json.loads(line)
+            for line in ledger.read_text().splitlines()
+            if line.strip()
+        ]
+        failed = [e for e in entries if e.get("outcome") == "failed"]
+        assert len(failed) == 1, (
+            f"Expected 1 failed ledger entry, got {len(failed)}"
+        )
+        assert failed[0]["version"] == "gaul0_code"
+        assert failed[0]["dataset"] == "gaul_admin"
+        assert "disk full" in failed[0]["errors"][0]

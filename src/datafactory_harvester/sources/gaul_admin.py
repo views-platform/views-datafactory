@@ -551,6 +551,13 @@ def fetch_gaul_admin(
             logger.error(
                 "Failed to write %s: %s", var_name, exc
             )
+            append_ledger_entry(config.ledger_path, {
+                "dataset": DATASET_ID,
+                "version": var_name,
+                "outcome": "failed",
+                "errors": [str(exc)],
+                "ledger_version": LEDGER_VERSION,
+            })
             results.append({
                 "variable": var_name,
                 "outcome": "failed",

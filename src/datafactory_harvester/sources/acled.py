@@ -20,6 +20,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+import requests
+
 from datafactory_harvester.event_validation import (
     ComparisonResult,
     compare_snapshots,
@@ -272,6 +274,62 @@ def _ensure_token(
 # ---- API client ----
 
 
+def _authenticated_request(
+    url: str,
+    params: dict,
+    state: _TokenState,
+    username: str,
+    password: str,
+    token_url: str,
+    timeout: int,
+    max_retries: int,
+) -> tuple[requests.Response, _TokenState]:
+    """Make an authenticated request, recovering from 401.
+
+    Handles the full OAuth2 token lifecycle:
+    1. Proactive refresh if local clock says token is near expiry
+    2. Reactive recovery if the server returns 401
+
+    Returns the response and the (possibly refreshed) token state.
+    Credentials are passed as arguments, never stored (ADR-026).
+    """
+    state = _ensure_token(
+        state, username, password,
+        token_url, timeout, max_retries,
+    )
+
+    def _do_request(s: _TokenState) -> requests.Response:
+        return request_with_retry(
+            url,
+            headers={
+                "Authorization": f"Bearer {s.access_token}",
+                "User-Agent": (
+                    "VIEWS-DataFactory/1.0 (monthly-cron)"
+                ),
+            },
+            params=params,
+            max_retries=max_retries,
+            timeout=timeout,
+        )
+
+    try:
+        return _do_request(state), state
+    except requests.HTTPError as exc:
+        if (
+            exc.response is not None
+            and exc.response.status_code == 401
+        ):
+            logger.warning(
+                "401 from %s — forcing token refresh", url,
+            )
+            state = _acquire_token(
+                username, password,
+                token_url, timeout, max_retries,
+            )
+            return _do_request(state), state
+        raise
+
+
 def fetch_paginated(
     config: AcledConfig,
     username: str,
@@ -304,19 +362,6 @@ def fetch_paginated(
     page = 1
 
     while True:
-        token_state = _ensure_token(
-            token_state,
-            username,
-            password,
-            config.token_url,
-            config.timeout,
-            config.max_retries,
-        )
-
-        headers = {
-            "Authorization": f"Bearer {token_state.access_token}",
-            "User-Agent": "VIEWS-DataFactory/1.0 (monthly-cron)",
-        }
         params: dict = {
             "_format": "json",
             "event_date": (
@@ -331,12 +376,15 @@ def fetch_paginated(
         if config.event_types != ALL_EVENT_TYPES:
             params["event_type"] = "|".join(config.event_types)
 
-        response = request_with_retry(
+        response, token_state = _authenticated_request(
             config.api_url,
-            headers=headers,
-            params=params,
-            max_retries=config.max_retries,
-            timeout=config.timeout,
+            params,
+            token_state,
+            username,
+            password,
+            config.token_url,
+            config.timeout,
+            config.max_retries,
         )
         data = response.json()
 
