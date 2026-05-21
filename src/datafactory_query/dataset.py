@@ -86,7 +86,7 @@ def _resolve_storage_options(
         from netrc import NetrcParseError, netrc
 
         nrc = netrc(str(Path.home() / ".netrc"))
-        creds = nrc.authenticators(parsed.hostname)
+        creds = nrc.authenticators(parsed.hostname or "")
         if creds:
             login, _, password = creds
             client_kwargs["auth"] = aiohttp.BasicAuth(
