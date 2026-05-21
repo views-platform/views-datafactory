@@ -747,7 +747,7 @@ def plot_concentration(
     cum_share = np.cumsum(land_vals) / land_vals.sum()
     x_pct = np.arange(1, n_land + 1) / n_land
 
-    _trapz = getattr(np, "trapezoid", np.trapz)
+    _trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
     gini = 1.0 - 2.0 * _trapz(
         cum_share, dx=1 / n_land,
     )
