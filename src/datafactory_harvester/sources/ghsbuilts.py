@@ -72,6 +72,9 @@ class GhsBuiltSConfig:
     timeout: int = 600
 
     def __post_init__(self) -> None:
+        if not self.epochs:
+            msg = "At least one epoch is required"
+            raise ValueError(msg)
         for epoch in self.epochs:
             if epoch not in KNOWN_EPOCHS:
                 msg = (

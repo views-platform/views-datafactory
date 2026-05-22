@@ -176,6 +176,60 @@ class TestFetchGhsBuiltSGreen:
         assert results[0]["outcome"] == "cached"
         assert mock_req.call_count == 1
 
+    def test_multi_epoch_download(self, tmp_path: Path) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_2020 = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        tif_2025 = (
+            "GHS_BUILT_S_E2025_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+
+        def _side_effect(url, **kwargs):
+            resp = MagicMock()
+            if "E2020" in url:
+                resp.content = _make_fake_geotiff_zip(tif_2020)
+            else:
+                resp.content = _make_fake_geotiff_zip(tif_2025)
+            return resp
+
+        config = GhsBuiltSConfig(
+            epochs=(2020, 2025),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            side_effect=_side_effect,
+        ):
+            results = fetch_ghsbuilts(config)
+
+        assert len(results) == 2
+        assert all(r["outcome"] == "success" for r in results)
+        assert (tmp_path / "raw" / tif_2020).exists()
+        assert (tmp_path / "raw" / tif_2025).exists()
+
+    def test_url_structure_matches_jrc(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+        )
+
+        cfg = GhsBuiltSConfig()
+        url = cfg.download_url(2020)
+
+        assert "jrc" in url.lower() or "jeodpp" in url.lower()
+        assert "GHS_BUILT_S" in url
+        assert "E2020" in url
+        assert "R2023A" in url
+        assert "4326" in url
+        assert "30ss" in url
+
     def test_force_refresh_re_downloads(
         self, tmp_path: Path,
     ) -> None:
@@ -231,6 +285,20 @@ class TestGhsBuiltSConfigBeige:
 
         with pytest.raises(ValueError, match="timeout"):
             GhsBuiltSConfig(timeout=0)
+
+    def test_empty_epochs_raises(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        with pytest.raises(ValueError, match="epoch"):
+            GhsBuiltSConfig(epochs=())
+
+    def test_custom_data_dir(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig(
+            data_dir=Path("/custom/path"),
+        )
+        assert cfg.data_dir == Path("/custom/path")
 
 
 # ===================================================================

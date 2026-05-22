@@ -6,6 +6,7 @@ Usage:
     uv run python scripts/run_ghsbuilts_pipeline.py --skip-to compile
     uv run python scripts/run_ghsbuilts_pipeline.py --epochs 2020 2025
     uv run python scripts/run_ghsbuilts_pipeline.py --end-year 2026
+    uv run python scripts/run_ghsbuilts_pipeline.py --verify
 
 Consolidation is skipped — GHS-BUILT-S R2023A is a single release with
 nothing to merge (ADR-034). The viewpoint reads directly from the
@@ -17,6 +18,7 @@ No authentication required — JRC data is open access.
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -58,6 +60,10 @@ def main() -> int:
     parser.add_argument(
         "--force", action="store_true",
         help="Force re-download even if cached",
+    )
+    parser.add_argument(
+        "--verify", action="store_true",
+        help="Run visual audit after compilation",
     )
     args = parser.parse_args()
 
@@ -234,6 +240,25 @@ def main() -> int:
     print(f"  Output: {result_dir}")
     print(f"  ({time.monotonic() - t0:.1f}s)")
     print()
+
+    # ── Step 4 (optional): Verify ───────────────────────────
+
+    if args.verify:
+        print("[4/4] VERIFY")
+        t0 = time.monotonic()
+        rc = subprocess.run(
+            [
+                sys.executable,
+                "scripts/verify_ghsbuilts_grid.py",
+                "--input", str(output_dir),
+            ],
+            check=False,
+        ).returncode
+        print(f"  ({time.monotonic() - t0:.1f}s)")
+        if rc != 0:
+            print("  FAIL: verify script exited non-zero")
+            return 1
+        print()
 
     # ── Summary ──────────────────────────────────────────────
 
