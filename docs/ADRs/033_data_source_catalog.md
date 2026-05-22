@@ -165,7 +165,7 @@ Several fields recommended by the literature are excluded with explicit rational
 |--------|----------|----------|-------------------|-------------|---------|----------------|
 | UCDP | Uppsala | 6 | 1989– | Daily events | events → 0.5° | Annual (GED) + monthly (candidate) |
 | ACLED | ACLED | 8 | 1997– | Daily events | events → 0.5° | Weekly |
-| GHS-POP | JRC/Copernicus | 1 | 1975–2030 | 5-year epochs | 30″ → 0.5° | ~Decadal releases |
+| GHS-POP | JRC/Copernicus | 1 | 1975–2030 | 5-year epochs | 30″ → 0.5° | ~2–3 year releases |
 | PRIO-GRID Static | PRIO | 33 | Static | — | 0.5° | One-time |
 | GAUL Admin | FAO | 3 | Static | — | Polygons → 0.5° | One-time |
 ```
@@ -213,7 +213,7 @@ UCDP GED has annual temporal resolution (events are coded per calendar year for 
 
 ### Temporal properties: four artifacts, four facets
 
-Each data source has three temporal properties, each owned by a different artifact:
+Each data source has four temporal properties, each owned by a different artifact:
 
 | Property | What it describes | Owned by | Example (ACLED) |
 |----------|-------------------|----------|-----------------|
