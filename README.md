@@ -20,6 +20,7 @@ Part of the [VIEWS Platform](https://github.com/views-platform) ecosystem.
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Strategic Documents](#strategic-documents)
+- [Where to Find What](#where-to-find-what)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -370,6 +371,25 @@ The `reports/` directory contains living documents that define the project's dir
 - **[Product Development Plan](reports/product_development_plan05.md)** — Users, requirements, architecture, release plan. Focuses on what must be *built*.
 - **[Technical Risk Register](reports/technical_risk_register.md)** — 64 concerns tracked, 38 resolved, 26 deferred with trigger conditions (ADR-020).
 - **[.9 Investigation](reports/dot9_investigation/)** — Empirical findings on UCDP .9 data stream characteristics.
+
+---
+
+## Where to Find What
+
+This system separates information by ownership and change frequency (ADR-003). Different questions have different authoritative sources:
+
+| If you need to know… | Look in… | Why there |
+|----------------------|----------|-----------|
+| What data sources we use, who publishes them, what license/format/coverage | `docs/sources/` — catalog cards | Upstream facts, rarely change |
+| Why we chose a specific source, what alternatives we considered | `docs/ADRs/` — source selection ADRs (028, 029) | One-time decisions |
+| How a derived feature is constructed (aggregation, survivorship, distribution) | Viewpoint CICs (`docs/CICs/Viewpoint*.md`) and profile configs (`src/datafactory_viewpoint/profiles.py`) | Volatile — changes as research evolves |
+| What SLO, env vars, or feature list a source has | `src/datafactory_provenance/source_registry.py` — `SourceEntry` | Operational config, changes on redeploy |
+| Current harvest status, data versions, content digests | `provenance/*.jsonl` ledgers, or run `uv run python scripts/check_health.py` | Volatile state, changes every pipeline run |
+| What a config class guarantees | `docs/CICs/` — Class Intent Contracts | Code contracts |
+| Why the system is designed this way | `docs/ADRs/` — Architecture Decision Records | Immutable decisions |
+| Known technical risks and their status | `reports/technical_risk_register.md` | Living risk tracking |
+
+**Rule of thumb:** if the information changes when *the upstream provider* changes something → catalog card. When *we* make a decision → ADR. When *we redeploy* → code config. When *the pipeline runs* → provenance ledger. When in doubt, the provenance ledger is the most authoritative source for anything operational.
 
 ---
 
