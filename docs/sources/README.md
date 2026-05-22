@@ -9,10 +9,11 @@ Upstream data sources consumed by the VIEWS data factory. One card per source �
 | [UCDP](ucdp.md) | Uppsala | 6 | 1989– | Daily events | Events → 0.5° | Annual (GED) + monthly (candidate) |
 | [ACLED](acled.md) | ACLED | 8 | 1997– | Daily events | Events → 0.5° | Weekly |
 | [GHS-POP](ghspop.md) | JRC/Copernicus | 1 | 1975–2030 | 5-year epochs | 30″ → 0.5° | ~2–3 year releases |
-| [PRIO-GRID Static](priogrid_static.md) | PRIO | 33 | Static | — | 0.5° | One-time |
+| [GHS-BUILT-S](ghsbuilts.md) | JRC/Copernicus | 1 | 1975–2030 | 5-year epochs | 30″ → 0.5° | ~2–3 year releases |
+| [PRIO-GRID Static](priogrid_static.md) | PRIO | 34 | Static | — | 0.5° | One-time |
 | [GAUL Admin](gaul_admin.md) | FAO | 3 | Static | — | Polygons → 0.5° | One-time |
 
-**Total features in assembled grid:** 51
+**Total features in assembled grid:** 53
 
 ## Current status
 

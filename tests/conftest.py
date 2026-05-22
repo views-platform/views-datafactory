@@ -121,6 +121,7 @@ def _clean_source_registry() -> None:  # type: ignore[misc]
     # Save built-in sources (registered at import time)
     # and only clear if test sources were added
     import datafactory_harvester.sources.acled  # noqa: F401
+    import datafactory_harvester.sources.ghsbuilts  # noqa: F401
     import datafactory_harvester.sources.ghspop  # noqa: F401
     import datafactory_harvester.sources.priogrid_static  # noqa: F401
     import datafactory_harvester.sources.ucdp_annual  # noqa: F401
@@ -130,8 +131,8 @@ def _clean_source_registry() -> None:  # type: ignore[misc]
 
     # Remove any test-registered sources by keeping only known ones
     known = {
-        "acled", "ghspop", "ucdp_annual", "ucdp_candidate",
-        "ucdp_dot9", "priogrid_static",
+        "acled", "ghsbuilts", "ghspop", "ucdp_annual",
+        "ucdp_candidate", "ucdp_dot9", "priogrid_static",
     }
     test_sources = set(_SOURCES.keys()) - known
     for name in test_sources:
