@@ -1,8 +1,9 @@
-"""GHS-POP population grid harvester — GeoTIFF download from JRC.
+"""GHS-BUILT-S built-up surface grid harvester — GeoTIFF download from JRC.
 
-Downloads GHS-POP R2023A population grids as GeoTIFF files from
-the EU Joint Research Centre (JRC/Copernicus). Each epoch is a
-single global WGS84 raster at 30-arcsecond (~1 km) resolution.
+Downloads GHS-BUILT-S R2023A built-up surface grids as GeoTIFF files from
+the EU Joint Research Centre (JRC/Copernicus). Each epoch is a single
+global WGS84 raster at 30-arcsecond (~1 km) resolution. Values are
+built-up surface area in m² per pixel (uint32).
 
 Files are downloaded as ZIP archives, extracted to data_dir with
 original JRC filenames, and recorded in the provenance ledger.
@@ -10,7 +11,7 @@ original JRC filenames, and recorded in the provenance ledger.
 Source: EU JRC Global Human Settlement Layer (CC-BY-4.0)
     https://human-settlement.emergency.copernicus.eu/
 
-Ref: ADR-029 (GHS-POP source selection), ADR-030 (tifffile tooling).
+Ref: ADR-034 (GHS-BUILT-S source selection), ADR-030 (tifffile tooling).
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ from datafactory_provenance import (
 
 logger = logging.getLogger(__name__)
 
-DATASET_ID = "ghspop"
+DATASET_ID = "ghsbuilts"
 
 KNOWN_EPOCHS = (
     1975, 1980, 1985, 1990, 1995,
@@ -45,7 +46,7 @@ KNOWN_EPOCHS = (
 
 BASE_URL = (
     "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL"
-    "/GHS_POP_GLOBE_R2023A"
+    "/GHS_BUILT_S_GLOBE_R2023A"
 )
 
 
@@ -53,8 +54,8 @@ BASE_URL = (
 
 
 @dataclass(frozen=True)
-class GhsPopConfig:
-    """Configuration for harvesting GHS-POP population grids.
+class GhsBuiltSConfig:
+    """Configuration for harvesting GHS-BUILT-S built-up surface grids.
 
     Each epoch is a single global GeoTIFF (WGS84, 30 arcsec).
     Downloaded as ZIP from JRC, extracted with original filename.
@@ -64,13 +65,16 @@ class GhsPopConfig:
     resolution: str = "30ss"
     crs: str = "4326"
     release: str = "R2023A"
-    data_dir: Path = Path("data/raw/ghspop")
+    data_dir: Path = Path("data/raw/ghsbuilts")
     ledger_path: Path = Path(
-        "provenance/ghspop/ingestion_ledger.jsonl"
+        "provenance/ghsbuilts/ingestion_ledger.jsonl"
     )
     timeout: int = 600
 
     def __post_init__(self) -> None:
+        if not self.epochs:
+            msg = "At least one epoch is required"
+            raise ValueError(msg)
         for epoch in self.epochs:
             if epoch not in KNOWN_EPOCHS:
                 msg = (
@@ -84,7 +88,7 @@ class GhsPopConfig:
 
     def _stem(self, epoch: int) -> str:
         return (
-            f"GHS_POP_E{epoch}_GLOBE"
+            f"GHS_BUILT_S_E{epoch}_GLOBE"
             f"_{self.release}_{self.crs}_{self.resolution}"
         )
 
@@ -99,21 +103,21 @@ class GhsPopConfig:
 # ---- Fetch ----
 
 
-def fetch_ghspop(
-    config: GhsPopConfig | None = None,
+def fetch_ghsbuilts(
+    config: GhsBuiltSConfig | None = None,
     *,
     force_refresh: bool = False,
 ) -> list[dict]:
-    """Download GHS-POP GeoTIFF files from JRC.
+    """Download GHS-BUILT-S GeoTIFF files from JRC.
 
     For each epoch in config.epochs:
-    1. Check cache (TIF exists + ledger has digest) → skip
-    2. Download ZIP archive (~450 MB per epoch)
+    1. Check cache (TIF exists + ledger has digest) -> skip
+    2. Download ZIP archive (~178 MB per epoch)
     3. Extract TIF to config.data_dir
     4. Record provenance in ledger
 
     Args:
-        config: Harvest configuration. Defaults to GhsPopConfig().
+        config: Harvest configuration. Defaults to GhsBuiltSConfig().
         force_refresh: Re-download even if cached.
 
     Returns:
@@ -125,7 +129,7 @@ def fetch_ghspop(
         zipfile.BadZipFile: Downloaded content is not a valid ZIP.
     """
     if config is None:
-        config = GhsPopConfig()
+        config = GhsBuiltSConfig()
 
     config.data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -138,11 +142,11 @@ def fetch_ghspop(
 
 
 def _fetch_epoch(
-    config: GhsPopConfig,
+    config: GhsBuiltSConfig,
     epoch: int,
     force_refresh: bool,
 ) -> dict:
-    """Fetch a single GHS-POP epoch."""
+    """Fetch a single GHS-BUILT-S epoch."""
     tif_name = config.tif_filename(epoch)
     tif_path = config.data_dir / tif_name
     version = f"E{epoch}"
@@ -256,4 +260,4 @@ def _fetch_epoch(
 
 
 # Auto-register
-register_source("ghspop", fetch_ghspop)
+register_source("ghsbuilts", fetch_ghsbuilts)

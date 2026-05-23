@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-20
+**Last reviewed:** 2026-05-23
 **Related ADRs:** ADR-001, ADR-009
 
 ---
@@ -11,7 +11,7 @@
 
 > Immutable temporal backbone configuration defining the year/month range for a spatiotemporal grid.
 
-Default values produce the standard VIEWS temporal range: January 1989 to December 2024 (432 monthly steps).
+Default values produce the standard VIEWS temporal range: January 1989 to December 2026 (456 monthly steps).
 
 ---
 
@@ -77,7 +77,7 @@ All failures are immediate and loud. No silent fallbacks.
 ## 8. Examples of Correct Usage
 
 ```python
-cfg = TemporalConfig()  # 1989-01 to 2024-12: 432 steps
+cfg = TemporalConfig()  # 1989-01 to 2026-12: 456 steps
 cfg = TemporalConfig(start_year=2000, end_year=2020)  # Custom range
 ```
 
@@ -97,7 +97,7 @@ n_months = data.shape[1]  # Violates ADR-003
 
 ## 10. Test Alignment
 
-- **Green:** Default step count (432), derived datetime properties
+- **Green:** Default step count (456), derived datetime properties
 - **Beige:** Start after end, month outside range, negative year
 - **Red:** Mutation attempt (frozen enforcement)
 

@@ -443,3 +443,130 @@ GoF: extract to `datafactory_query.consumer_contract` for reuse. Beck: test the 
 ### C-31: Candidate source depends on annual source — RESOLVED
 ~~candidate and .9 imported shared symbols from ucdp_annual, creating tight coupling.~~ **Resolved 2026-04-27:** Extracted `_ucdp_common.py` with `ENVELOPE_KEYS`, `UCDP_GED_API_BASE`, `validate_envelope()`. Discovery functions now call `validate_envelope()` and use `data["TotalCount"]` instead of `.get("TotalCount", 0)`. 2 envelope rejection tests added.
 **Source:** Martin (expert review 5), magic-values audit 2026-04-21. Work package: Code cleanup.
+
+### Tier 1 — Resolved (batch 2026-05-22)
+
+### ~~C-165: GHS-POP viewpoint OOM — 22 GB peak on 8 GB server~~ — RESOLVED
+**Resolved 2026-05-20.** Multi-phase fix across v1.2.15–v1.2.18: (a) strip-based aggregation replaced full-globe array allocation (v1.2.16); (b) removed float64→float32 whole-array conversion, deferred to per-strip conversion (v1.2.17); (c) `del` Python lists after Arrow creation, `maxworkers=1` on tifffile, unconditional strip aggregation (v1.2.18, see C-170/C-171/C-172). Peak RSS reduced from 22.1 GB to ~1.5 GB for viewpoint output, ~7.4 GB during GeoTIFF load (irreducible). Falsification test `test_align_to_globe_does_not_upcast_input` now passes.
+**Source:** Falsification audit (2026-05-19), probe F2. Cross-ref: C-170 (list accumulation), C-171 (compilation), C-172 (latent branch), C-173 (no swap).
+
+### ~~C-170: GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ — RESOLVED
+**Resolved 2026-05-20.** `build_ghspop_v1` accumulated ~60M Python objects in three lists (`pgid_rows`, `month_id_rows`, `pop_count_rows`) that coexisted with the Arrow table during `pa.table()` creation. Peak: 7.4–8.3 GiB on a swapless 8 GiB server. Fixed by adding `del pgid_rows, month_id_rows, pop_count_rows` after Arrow table creation. Additionally, `page.asarray(maxworkers=1)` reduces tifffile decompression buffering by ~400 MB, and the `needs_align` branching was removed so `build_ghspop_v1` always uses `_aggregate_with_alignment` (eliminating the latent OOM in `_aggregate_to_prio_grid`'s `data.copy()`). Falsification tests `test_lists_deleted_before_digest`, `test_read_geotiff_limits_decompression_threads`, `test_build_always_uses_strip_aggregation` now pass.
+**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-165 (original OOM), C-171 (compilation variant), C-172 (latent branch OOM).
+
+### ~~C-171: Pregridded compilation `.to_pylist()` OOM (~6 GB Python objects)~~ — RESOLVED
+**Resolved 2026-05-20.** `compile_pregridded` called `.to_pylist()` three times on Arrow columns, inflating ~60M rows into ~6 GB of Python objects alongside the Arrow table (~1 GB) and grid array (~0.5 GB). Peak: ~7.7 GiB. Fixed by replacing `.to_pylist()` with `.to_numpy()` and adding `del table` after extraction. Null guard updated from `val is not None` to `not np.isnan(val)` for numpy compatibility. Falsification test `test_compilation_avoids_to_pylist` now passes.
+**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-144 (same pattern in `grid_compilation.py`, still deferred), C-170 (viewpoint variant).
+
+### ~~C-172: Latent OOM in `_aggregate_to_prio_grid` dead branch~~ — RESOLVED
+**Resolved 2026-05-20.** `build_ghspop_v1` had a `needs_align` branch that called `_aggregate_to_prio_grid` when raster dimensions were divisible by 60. That function does `data.copy()` — doubling a 6.88 GiB float64 array to 13.76 GiB peak. The only protection was JRC's accidental non-divisible-by-60 raster dimensions (21384×43202). Fixed by removing the branching and always using `_aggregate_with_alignment` (which handles both aligned and unaligned data via offset computation). `_aggregate_to_prio_grid` and `_align_to_globe` retained as module-level functions (tested directly in 7 existing tests). Falsification test `test_build_always_uses_strip_aggregation` now passes.
+**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-163 (dimension truncation, resolved), C-170 (main memory fix).
+
+### ~~C-162: GHS-POP PGID mapping has no direct correctness test~~ — RESOLVED
+**Resolved 2026-05-19.** Added `test_pgid_mapping_correctness` (4 distinct populations in 2x2 grid, asserts specific pgid→value mapping including row-flip), `test_month_id_correctness` (verifies Jan/Feb/Mar 2000 → month_ids 241/242/243), and `test_no_duplicate_pgid_month_id` (uniqueness constraint on output). Test count: 21 → 29.
+**Source:** GHS-POP viewpoint test review (2026-05-19). Cross-ref: C-149 (GAUL unmapped cells).
+
+### Tier 2 — Resolved (batch 2026-05-22)
+
+### ~~C-166: GHS-POP absent from PIPELINE_SOURCES — verify_remote.py blind~~ — RESOLVED
+**Resolved 2026-05-20.** Added three `SourceEntry` entries to `PIPELINE_SOURCES`: `"GHS-POP"` (harvest, `features=("ghspop_pop_count",)`, `slo_hours=None`, ledger at `ghspop/ingestion_ledger.jsonl`), `"GHS-POP Viewpoint"` (ledger at `viewpoint/ghspop_v1_ledger.jsonl`), `"GHS-POP Compilation"` (ledger at `compilation/ghspop_ledger.jsonl`). `get_all_features()` now returns 52 features (was 51). Falsification tests `test_ghspop_feature_in_registry` and `test_ghspop_source_entry_exists` now pass. Feature count test updated from 51 to 52.
+**Source:** Falsification audit (2026-05-19), probe F1. Cross-ref: C-138 (post-deploy verification), C-132 (health check gap).
+
+### ~~C-163: `_aggregate_to_prio_grid` silently truncates non-divisible raster dimensions~~ — RESOLVED
+**Resolved 2026-05-19.** Added dimension validation (`nrow % 60 != 0 or ncol % 60 != 0` → `ValueError`) to `_aggregate_to_prio_grid`. Added `test_non_divisible_dimensions_raises` to verify the guard. Also added: `test_no_args_raises`, `test_unknown_epoch_raises`, `test_all_zero_raster_produces_empty_output`, `test_source_dir_shortcut`.
+**Source:** GHS-POP viewpoint test review (2026-05-19). Cross-ref: C-162 (PGID mapping correctness).
+
+### ~~C-182: `last_digest_for_version` returns digest from failed ledger entries~~ — RESOLVED
+**Resolved 2026-05-21.** `last_digest_for_version` now skips entries where `outcome` is present and not `"success"`. Entries without an `outcome` field are accepted for backward compatibility with pre-outcome ledger entries. Added 3 tests: `test_skips_failed_entries`, `test_returns_none_when_only_failed`, `test_accepts_entries_without_outcome`.
+**Source:** Expert code review of harvest caching (2026-05-21). Cross-ref: C-184 (ACLED no file integrity check), C-185 (GHS-POP no digest comparison), C-46 (ledger write idempotency).
+
+### ~~C-150: Zero Red team tests for ACLED pipeline~~ — RESOLVED
+**Resolved 2026-05-02.** Added `TestFetchAcledRed` (5 tests), `TestConsolidateAcledRed` (4 tests), `TestBuildAcledV1Red` (4 tests) covering: token endpoint garbage, missing `expires_in` fallback, non-list API data, missing required fields, frozen mutation, malformed filenames, corrupted Parquet, schema drift, malformed event dates, total filter elimination, missing store columns.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
+
+### ~~C-140: v1.2.6/v1.2.7 incident fixes have zero test coverage~~ — RESOLVED
+**Resolved 2026-04-26.** Added 7 tests: `TestTotalCountAssertionBeige` (4 tests: tolerance pass, truncation raises, exact boundary, max_pages skip) and `TestRateLimitBackoffRed` (3 tests: HTTP 400 retry with backoff, exhaustion raises, non-400 bypass). Also added `TestValidateEnvelopeRed` (3 tests) and `TestUcdpAnnualRegistration` (1 test).
+**Source:** Test review 2026-04-26. Cross-ref: C-137, C-138, C-139 (data integrity).
+
+### Tier 3 — Resolved (batch 2026-05-22)
+
+### ~~C-141: UCDP config class validation partially untested~~ — RESOLVED
+**Resolved 2026-04-26.** Added 8 Beige tests across three config classes: `UcdpAnnualConfig` (page_delay, timeout), `UcdpCandidateConfig` (page_size, max_retries, timeout), `UcdpDot9Config` (page_size, max_retries, timeout). All CIC-guaranteed fail-loud branches now tested.
+**Source:** Test review 2026-04-26. Cross-ref: C-31, C-07.
+
+### ~~C-142: datafactory_query consumer entry point has zero Red/Beige tests~~ — RESOLVED
+**Resolved 2026-04-26.** Added `TestLoadDatasetBeige` (2 tests: single-feature request, explicit-matches-default) and `TestLoadDatasetRed` (5 tests: corrupted grid, mismatched feature count, mismatched pgids shape, NaN-filled grid, zero time steps).
+**Source:** Test review 2026-04-26. Cross-ref: C-127, C-130.
+
+### ~~C-151: No CICs for ACLED config classes~~ — RESOLVED
+**Resolved 2026-05-02.** Created `docs/CICs/AcledConfig.md`, `docs/CICs/AcledConsolidationConfig.md`, `docs/CICs/AcledViewpointConfig.md` following the 11-section template. Frozen-enforcement tests added for all three configs.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-07 (frozen dataclass pattern repeated), C-150 (zero Red tests).
+
+### ~~C-152: ACLED profiles and `list_acled_profiles()` untested~~ — RESOLVED
+**Resolved 2026-05-02.** Added `TestAcledProfilesGreen` (4 tests: `load_acled_violence_only`, `load_acled_all_events`, `load_with_override`, `list_acled_profiles`) and `TestAcledProfilesRed` (1 test: `unknown_acled_profile_raises`) in `tests/test_acled_viewpoint.py`.
+**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-150 (ACLED test gaps).
+
+### ~~C-157: Systematic ACLED documentation drift across ADRs, CICs, and guides — [RESOLVED 2026-05-07]~~
+
+| Field | Value |
+|-------|-------|
+| ID | C-157 |
+| Tier | 3 |
+| Source | base documentation review (2026-05-07) |
+| Trigger | New team member (Dylan, Sonaj) reads stale documentation and builds on wrong assumptions about feature counts, pipeline steps, or ACLED integration status |
+| Location | ADR-028 (critical: says compiler doesn't exist), ADR-009, ADR-021 (high: wrong counts), ADR-003/011/012/018/022 (medium), consumer_data_guide.md, zarr_consumer_guide.md (consumer-facing), plus 7 low-severity items |
+
+ACLED integration completed across harvester, consolidation, viewpoint, compilation, and assembly — but ~15 documents still reference ACLED as hypothetical or future work. Three concrete harms: (1) ADR-028 Implementation Notes say "ACLED compiler does not exist yet" while it runs in production as pipeline step 5; a developer could re-implement it. (2) Consumer-facing guides (consumer_data_guide.md, zarr_consumer_guide.md) say "43 features" — consumers write code expecting 43 and get 51. (3) zarr_consumer_guide.md has `petroleum_y` typo (correct name: `petroleum_s`) which would cause `KeyError` for consumers. Additional drift: ADR-009 says "seven packages" (now 10), ADR-022 says "7 pipeline steps" (now 9), ADR-018 omits ACLED from SLO tables.
+
+Cross-ref: C-158 (missing CICs).
+
+### Tier 4 — Resolved (batch 2026-05-22)
+
+### ~~C-143: request_with_retry has no Red tests~~ — RESOLVED
+**Resolved 2026-04-26.** Added `TestRequestWithRetryRed` (2 tests: `requests.Timeout` retried, `HTTPError` with `response=None` retried not treated as 4xx).
+**Source:** Test review 2026-04-26. Cross-ref: C-70, C-72.
+
+### ~~C-125: No country-month (cm) aggregation — 48/70 models cannot migrate~~ — [RESOLVED]
+Resolved 2026-04-21. `load_dataset(output_format="country_month")` now aggregates grid cells by country per month using `gaul0_code` as the grouping key. Adapter: `grid_to_country_month()` in `datafactory_adapters`. Active conflict features (ged_sb/ns/os_best) summed per (month_id, country_id). WDI/V-DEM/topic features remain out of scope (C-126 covers the transform gap).
+**Source:** Falsification audit 2026-04-20 (F3). Cross-ref: S1 in `test_falsification_viewser_replacement.py`.
+
+### ~~C-158: No CICs for SourceEntry or AssemblyConfig — [RESOLVED 2026-05-07]~~
+
+| Field | Value |
+|-------|-------|
+| ID | C-158 |
+| Tier | 4 |
+| Source | base documentation review (2026-05-07), CIC audit |
+| Trigger | Developer modifies SourceEntry fields or AssemblyConfig validation without understanding the contract — e.g., removing a `__post_init__` check that 5 consumers depend on |
+| Location | `src/datafactory_provenance/source_registry.py:28` (SourceEntry), `scripts/assemble_grid.py:36` (AssemblyConfig) |
+
+Two frozen dataclasses with `__post_init__` validation lack CICs. `SourceEntry` is the backbone of the source registry — health checks, pre-flight validation, assembly, and remote verification all import from it. `AssemblyConfig` governs grid assembly with validated defaults. Both follow the ADR-009 boundary contract pattern. Analogous to resolved C-151 (ACLED config CICs) but for different classes. Also noted: `SpatioTemporalGrid` CIC has medium drift — documents `pgids`/`lats`/`lons` as 1-D arrays but they are actually 2-D `[H, W]`.
+
+Cross-ref: C-157 (documentation drift), C-151 (resolved, ACLED CICs).
+
+### ~~C-161: GHS-POP harvester failure-path provenance partially untested~~ — RESOLVED
+**Resolved 2026-05-18.** Added 3 tests and strengthened 2 existing tests: `test_corrupt_zip_raises_and_records_ledger` (verifies both exception and failure ledger entry), `test_zip_with_no_tif_raises` (valid ZIP with no .tif), `test_rejects_negative_timeout`, `test_empty_epochs_accepted`. Strengthened `test_download_single_epoch` (content round-trip: `read_bytes() == b"fake geotiff data"`), `test_provenance_recorded` (digest correctness: computed digest matches ledger entry), `test_defaults` (asserts `ledger_path` default). Test count: 15 → 18.
+**Source:** GHS-POP harvester test review (2026-05-18). Cross-ref: C-44 (harvest pipeline template).
+
+### ~~C-167: reports/audit_ghspop/ not in .gitignore~~ — RESOLVED
+**Resolved 2026-05-20.** Added `reports/audit_ghspop/` to `.gitignore` alongside `reports/audit_acled/`.
+**Source:** Falsification audit (2026-05-19), probe F5. Cross-ref: C-155 (visual audit framework).
+
+### ~~C-187: Digest-field assumption in reverse scan shadows valid entries~~ — RESOLVED
+
+**Resolved 2026-05-21.** Both `last_digest` and `last_digest_for_version` now skip entries where `entry.get(digest_field)` is `None`, continuing the reverse scan to find a valid entry. Added digest-field guard: `digest = entry.get(digest_field); if digest is not None: return digest`. Falsification tests in `test_falsification_pr59_merge_r2.py` now pass.
+**Source:** Falsification audit round 2 of PR #59 (2026-05-21). Cross-ref: C-182 (outcome filtering fix), C-46 (ledger write idempotency).
+
+### ~~C-188: GAUL admin failure path writes no ledger entry~~ — RESOLVED
+
+| Field | Value |
+|-------|-------|
+| ID | C-188 |
+| Tier | 3 |
+| Source | Expert code review of provenance/shapefile (2026-05-21) |
+| Trigger | GAUL admin variable write fails in production; operator queries ledger for failure history and finds no record |
+| Location | `src/datafactory_harvester/sources/gaul_admin.py:550-558` |
+
+**Resolved (v1.2.18):** Added `append_ledger_entry` call with `"outcome": "failed"` inside the existing except block. GAUL admin failures are now recorded in the provenance ledger with dataset, version, outcome, and error message. Test: `test_gaul_admin.py::TestGaulAdminFailureLedger::test_write_variable_failure_records_ledger_entry`.
+
+Cross-ref: C-186 (shapefile harvester same gap, deferred), C-44 (harvest pipeline template), ADR-032.

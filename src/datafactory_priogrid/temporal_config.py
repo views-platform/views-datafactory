@@ -26,7 +26,7 @@ class TemporalConfig:
 
     start_year: int = 1989
     start_month: int = 1
-    end_year: int = 2024
+    end_year: int = 2026
     end_month: int = 12
 
     def __post_init__(self) -> None:
