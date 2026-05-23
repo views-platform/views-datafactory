@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-22)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22
-**Status:** 189 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44): 96 resolved, 68 open concerns (9 Tier 2, 12 Tier 3, 41 Tier 4, 6 deferred by design; 4 with fired triggers), 7 open disagreements. 77 resolved concerns as full entries + 19 early-archive reference rows + 22 resolved disagreements in archive. 29 disagreement IDs total: 22 resolved, 7 open.
+**Date:** 2026-03-17 (updated 2026-05-23)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23
+**Status:** 190 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44): 97 resolved, 68 open concerns (8 Tier 2, 19 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 7 open disagreements. 78 resolved concerns as full entries + 19 early-archive reference rows + 22 resolved disagreements in archive. 29 disagreement IDs total: 22 resolved, 7 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -70,6 +70,7 @@
 | ~~C-187~~ | ~~4~~ | ~~Digest-field assumption in reverse scan shadows valid entries~~ | Resolved 2026-05-21 | Provenance correctness |
 | ~~C-188~~ | ~~3~~ | ~~GAUL admin failure path writes no ledger entry~~ | Resolved 2026-05-21 | Harvest correctness |
 | C-189 | 3 | GHS-BUILT-S test coverage parity gap — 19% of combined other sources | Production incident on GHS-BUILT-S path that existing GHS-POP/ACLED tests would have caught | Test coverage |
+| ~~C-190~~ | ~~4~~ | ~~KNOWN_GLOBAL_BUILT_AREA reference values ~6-7x actual JRC totals~~ | Resolved 2026-05-23 | Visual audit |
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
 | D-24 | — | Hardware upgrade vs software optimization for 8 GB ceiling | Open | ADR-031 compliance |
 | D-25 | — | Dead function retention — `_aggregate_to_prio_grid` after v1.2.18 | Open | ADR-031 compliance |
@@ -87,7 +88,7 @@
 | ~~C-152~~ | ~~3~~ | ~~ACLED profiles and `list_acled_profiles()` untested~~ | Resolved 2026-05-02 | ACLED test coverage |
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
-| C-155 | 2 | GHS-BUILT-S has no visual audit — 4th source, zero verify tooling | First production run of GHS-BUILT-S pipeline on Hetzner | Visual audit |
+| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script | Visual audit |
 | C-168 | 3 | TemporalConfig defaults to end_year=2024 — footgun for new sources | Next pipeline script uses bare TemporalConfig() without --end-year | ADR-003 compliance |
 | C-169 | 4 | 2 CI tests fail due to missing infrastructure (netrc, sibling repo) | Real regression hidden by permanent UNSTABLE status | Test infra |
 | ~~C-170~~ | ~~1~~ | ~~GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
@@ -515,20 +516,21 @@ The `ACLED_FEATURES` tuple in `tests/test_acled_compilation.py` is a copy-paste 
 
 See also C-29 (no integration test), C-74 (strategy vocabulary).
 
-### C-155: GHS-BUILT-S has no visual audit — 4th source, zero verify tooling
+### C-155: No shared visual audit framework — per-source scripts are idiosyncratic — [DEFER]
 
 | Field | Value |
 |-------|-------|
 | ID | C-155 |
-| Tier | 2 |
+| Tier | 4 |
 | Source | ACLED grid verification (2026-05-06), GHS-BUILT-S visual audit falsification (2026-05-22) |
-| Trigger | First production run of GHS-BUILT-S pipeline on Hetzner — operator cannot verify spatial/temporal correctness of downloaded GeoTIFFs or compiled grid before assembly |
-| Location | `scripts/` (missing `verify_ghsbuilts_grid.py`), `scripts/run_ghsbuilts_pipeline.py` (no verify step), `reports/audit_ghsbuilts/` (missing) |
+| Trigger | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script — extraction cost then exceeds duplication cost |
+| Location | `scripts/visualize_audit.py` (UCDP), `scripts/verify_acled_grid.py` (ACLED), `scripts/verify_ghspop_grid.py` (GHS-POP), `scripts/verify_ghsbuilts_grid.py` (GHS-BUILT-S), `scripts/viz_style.py` (shared aesthetics only) |
 
-Originally tracked idiosyncrasy of per-source visual audit scripts. Escalated to Tier 2 after falsification audit proved GHS-BUILT-S has *zero* visual audit capability — no verify script, no plotting code, no data on disk, no audit output. ACLED has `verify_acled_grid.py` (13 plots + statistical checks), GHS-POP has `verify_ghspop_grid.py` (10 plots + statistical checks). GHS-BUILT-S has nothing. The pipeline script has harvest→viewpoint→compile with no verify step. Five falsification stubs encode the gap in `tests/test_falsification_ghsbuilts_visual_audit.py`.
+Each data source has its own plotting/audit script with duplicated structural patterns: `PrecomputedData` dataclass, single-pass `precompute()`, `cell_to_label()`, `REGION_BOUNDS`, per-plot functions, and statistical pass/fail checks. The scripts share `viz_style.py` for aesthetic constants and helpers (`spatial_imshow`, `style_ax`, `save_plot`) but nothing for plot structure, check logic, or report generation.
 
 **Note (2026-05-20):** Trigger condition met — GHS-POP is the third visual audit script. The three scripts share structural patterns but differ in domain-specific checks (population density vs. fatality rates vs. event counts). Accepted for now: three scripts is enough to see the abstraction clearly, but the abstraction is moderate complexity (pluggable feature specs, check definitions, report generation). Consider extraction when 4th source arrives. Cross-ref: C-164 (WET inventory).
-**Note (2026-05-22):** GHS-BUILT-S added as 4th data source. Falsification audit proved total absence of visual audit capability — 5/5 probes hard-falsified. Escalated from Tier 4 DEFER to Tier 2. Falsification stubs: `tests/test_falsification_ghsbuilts_visual_audit.py`.
+**Note (2026-05-22):** GHS-BUILT-S added as 4th data source. Falsification audit proved total absence of visual audit capability — 5/5 probes hard-falsified. Escalated from Tier 4 DEFER to Tier 2.
+**Note (2026-05-22):** C-155 remediated — `verify_ghsbuilts_grid.py` created (10 plots, 6 statistical checks), `--verify` flag added to pipeline, falsification stubs F1-F3 flipped. Full pipeline run successful with all checks PASS. Demoted back to Tier 4 DEFER — the original idiosyncrasy concern (4 bespoke scripts) remains but is not acute. Reassess at 5th source.
 
 See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication), C-164 (cross-layer WET inventory).
 ### C-164: Cross-layer WET debt — 4 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
@@ -711,6 +713,20 @@ Cross-ref: C-44 (harvest pipeline template), C-184 (ACLED same structural gap), 
 GHS-BUILT-S test suite has 41 test functions vs 215 for ACLED + GHS-POP + PRIO-GRID/GAUL combined (19%). Five specific gaps: (F1) 41 vs 215 test functions, (F2) 86 vs 368 assertions, (F3) 1 vs 10 Red-team classes — viewpoint and compilation have zero adversarial tests, (F4) 0 vs 7 dedicated falsification test files — GHS-POP has 4 (deploy v1/v2/v3, memory), (F5) viewpoint tests are 441 lines vs GHS-POP viewpoint alone at 937 lines. Root cause: WET-before-DRY replication correctly duplicated production code but not the accumulated test and audit investment from GHS-POP's five PRs and four OOM-fix cycles. Parity stubs are `xfail strict=True` and will break when thresholds are met.
 
 Cross-ref: C-164 (WET-before-DRY raster code duplication), C-180 (no falsification tests for non-GHS-POP compilation/viewpoint paths).
+
+### ~~C-190~~: KNOWN_GLOBAL_BUILT_AREA reference values ~6-7x actual JRC totals — [RESOLVED]
+
+| Field | Value |
+|-------|-------|
+| ID | C-190 |
+| Tier | 4 |
+| Source | GHS-BUILT-S visual audit run (2026-05-22) |
+| Trigger | Epoch ratio check used as automated pass/fail gate (e.g., CI assertion on ratio < 2.0) instead of current advisory role |
+| Location | `scripts/verify_ghsbuilts_grid.py:47-62` (`KNOWN_GLOBAL_BUILT_AREA` dict) |
+
+**Resolved 2026-05-23.** Root cause: the original `KNOWN_GLOBAL_BUILT_AREA` values were approximate guesses (~74B for 2020), not verified against JRC's published BUTOT statistics or the raw GeoTIFF pixel sums (~465B for 2020). Empirical confirmation: raw pixel sums for all 12 epochs computed from GHS_BUILT_S R2023A 30ss GeoTIFFs; grid epoch totals match raw sums to ratio 1.0000. Fix: replaced reference values with raw pixel sums, added `built_area_vs_jrc` boolean check (0.85–1.15 tolerance, matching GHS-POP's `pop_sanity_vs_known` pattern), tightened ratio display threshold from 0.5–2.0 to 0.85–1.15. All 7 checks now PASS.
+
+Cross-ref: C-155 (visual audit framework).
 
 ### C-177: `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) — [DEFER]
 

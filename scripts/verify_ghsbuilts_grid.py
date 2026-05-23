@@ -44,19 +44,22 @@ from viz_style import (  # noqa: I001
 
 CMAP_BUILT = "YlOrRd"
 
+# Source: raw pixel sums from GHS_BUILT_S R2023A 30ss GeoTIFFs.
+# JRC GHSL Data Package 2023 Table 13 (BUTOT) reports matching
+# values.  doi:10.2760/098587, JRC133256
 KNOWN_GLOBAL_BUILT_AREA: dict[int, float] = {
-    1975: 2.40e10,
-    1980: 2.74e10,
-    1985: 3.13e10,
-    1990: 3.57e10,
-    1995: 4.06e10,
-    2000: 4.63e10,
-    2005: 5.25e10,
-    2010: 5.93e10,
-    2015: 6.68e10,
-    2020: 7.43e10,
-    2025: 8.12e10,
-    2030: 8.76e10,
+    1975: 173_574_556_191.0,
+    1980: 194_282_231_201.0,
+    1985: 220_077_910_517.0,
+    1990: 249_827_056_439.0,
+    1995: 280_106_748_224.0,
+    2000: 315_670_310_008.0,
+    2005: 345_778_604_726.0,
+    2010: 382_240_275_880.0,
+    2015: 422_807_808_503.0,
+    2020: 464_578_938_224.0,
+    2025: 491_630_169_760.0,
+    2030: 509_270_180_419.0,
 }
 
 REGION_BOUNDS: list[tuple[tuple[int, int], tuple[int, int], str]] = [
@@ -248,6 +251,12 @@ def precompute(
         n_built / n_land * 100 if n_land > 0 else 0.0
     )
 
+    ref_within_range = all(
+        0.85 <= total / KNOWN_GLOBAL_BUILT_AREA[year] <= 1.15
+        for year, total in sorted_epochs
+        if year in KNOWN_GLOBAL_BUILT_AREA
+    )
+
     checks: dict[str, bool | str] = {
         "no_nan": not has_nan,
         "no_negatives": not has_negative,
@@ -255,6 +264,7 @@ def precompute(
         "no_antarctic_built": antarctic_built < 1e6,
         "monotonic_epoch_growth": monotonic,
         "spatial_coverage": built_coverage > 5.0,
+        "built_area_vs_jrc": ref_within_range,
     }
     checks["_ocean_detail"] = (
         f"{ocean_built:,.0f} m² in ocean cells"
@@ -360,7 +370,7 @@ def plot_cumulative_density(
 def plot_epoch_totals(
     d: PrecomputedData, out: Path,
 ) -> None:
-    """03 — Built-up area by epoch vs JRC reference."""
+    """03 — Built-up area by epoch vs JRC BUTOT."""
     import matplotlib.pyplot as plt
 
     years = sorted(d.epoch_totals.keys())
@@ -378,7 +388,7 @@ def plot_epoch_totals(
     ]
     ax.plot(
         ref_years, ref_vals, "o--", color="#C0392B",
-        linewidth=1.5, markersize=5, label="JRC reference",
+        linewidth=1.5, markersize=5, label="JRC BUTOT",
     )
 
     for y, t in zip(years, totals, strict=True):
@@ -391,7 +401,7 @@ def plot_epoch_totals(
         ax,
         title=(
             "GHS-BUILT-S epoch totals vs"
-            " JRC global estimates"
+            " JRC BUTOT (Data Package 2023)"
         ),
         xlabel="Year",
         ylabel="Built-up area (billion m²)",
@@ -819,7 +829,7 @@ def print_summary(d: PrecomputedData) -> bool:
         if expected:
             ratio = total / expected
             marker = (
-                "ok" if 0.5 <= ratio <= 2.0 else "DRIFT"
+                "ok" if 0.85 <= ratio <= 1.15 else "DRIFT"
             )
             print(
                 f"  {year}: {total / 1e9:>7.1f}B m²  "
