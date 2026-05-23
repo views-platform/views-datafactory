@@ -278,6 +278,31 @@ def test_latlon_to_pgid_vectorised() -> None:
     np.testing.assert_array_equal(pgids, [1, 259_200])
 
 
+def test_latlon_to_pgid_rejects_lat_above_90() -> None:
+    with pytest.raises(ValueError, match="Latitude out of range"):
+        latlon_to_pgid(91.0, 0.0)
+
+
+def test_latlon_to_pgid_rejects_lat_below_neg90() -> None:
+    with pytest.raises(ValueError, match="Latitude out of range"):
+        latlon_to_pgid(-91.0, 0.0)
+
+
+def test_latlon_to_pgid_rejects_lon_above_180() -> None:
+    with pytest.raises(ValueError, match="Longitude out of range"):
+        latlon_to_pgid(0.0, 181.0)
+
+
+def test_latlon_to_pgid_rejects_lon_below_neg180() -> None:
+    with pytest.raises(ValueError, match="Longitude out of range"):
+        latlon_to_pgid(0.0, -181.0)
+
+
+def test_latlon_to_pgid_boundary_valid() -> None:
+    pgid = latlon_to_pgid(89.75, 179.75)
+    assert int(pgid) == 259_200
+
+
 def test_roundtrip_pgid_latlon() -> None:
     """All 259,200 cells should round-trip through pgid->latlon->pgid."""
     original, _, _ = generate_grid()
@@ -329,7 +354,7 @@ def test_generate_time_steps_default_length() -> None:
     from datafactory_priogrid.temporal_generator import generate_time_steps
 
     steps = generate_time_steps()
-    assert len(steps) == 432
+    assert len(steps) == 456
 
 
 def test_generate_time_steps_dtype() -> None:
@@ -391,7 +416,7 @@ def test_spatiotemporal_default_shape() -> None:
     from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 
     grid = SpatioTemporalGrid()
-    assert grid.shape == (259_200, 432)
+    assert grid.shape == (259_200, 456)
 
 
 def test_spatiotemporal_delegates_n_cells() -> None:
@@ -426,7 +451,7 @@ def test_spatiotemporal_custom_config() -> None:
     from datafactory_priogrid.spatiotemporal import SpatioTemporalGrid
 
     grid = SpatioTemporalGrid(grid_config=GridConfig(resolution=90.0))
-    assert grid.shape == (8, 432)
+    assert grid.shape == (8, 456)
 
 
 # ---------------------------------------------------------------------------

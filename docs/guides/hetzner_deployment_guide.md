@@ -148,9 +148,10 @@ bash scripts/refresh_pipeline.sh
 This takes 25-45 minutes (harvesting calls external APIs and downloads
 large raster files). Watch the output — each step prints PASS or FAIL.
 
-**Note:** The pipeline includes ACLED (8 features) and GHS-POP
-population data (1 feature). Pre-flight checks (`scripts/preflight.py`)
-validate all credentials before any step runs.
+**Note:** The pipeline includes ACLED (8 features), GHS-POP
+population data (1 feature), and GHS-BUILT-S built-up surface data
+(1 feature). Pre-flight checks (`scripts/preflight.py`) validate all
+credentials before any step runs.
 
 **ACLED API courtesy:** The ACLED harvester fetches data year-by-year.
 On monthly cron runs only the current year is fetched (~80 pages).
@@ -167,6 +168,13 @@ The viewpoint step (~5 minutes) aggregates 30-arcsecond pixels to
 PRIO-GRID cells and interpolates to monthly. No consolidation layer
 (single release R2023A, ADR-029). Ensure at least 8 GB free disk
 space before first run.
+
+**GHS-BUILT-S (built-up surface):** Downloads 12 GeoTIFF epochs from
+the EU JRC (open access, no credentials). First run downloads ~2 GB of
+raster data (~3 minutes). Subsequent runs cache — existing files are
+skipped. The viewpoint step (~5 minutes) aggregates 30-arcsecond pixels
+to PRIO-GRID cells and interpolates to monthly. No consolidation layer
+(single release R2023A, ADR-034). Same disk requirements as GHS-POP.
 
 ### 2.2 Verify the output
 

@@ -171,6 +171,7 @@ def _fetch_epoch(
     try:
         resp = request_with_retry(url, timeout=config.timeout)
     except _requests.RequestException:
+        logger.error("Download failed for epoch %d: %s", epoch, url)
         append_ledger_entry(config.ledger_path, {
             "dataset": DATASET_ID,
             "version": version,
@@ -191,6 +192,7 @@ def _fetch_epoch(
     try:
         zf = zipfile.ZipFile(io.BytesIO(content))
     except zipfile.BadZipFile:
+        logger.error("Bad ZIP file for epoch %d: %s", epoch, url)
         append_ledger_entry(config.ledger_path, {
             "dataset": DATASET_ID,
             "version": version,

@@ -113,8 +113,25 @@ def latlon_to_pgid(
     rows = np.floor((lat - config.south) / config.resolution).astype(np.int32)
     cols = np.floor((lon - config.west) / config.resolution).astype(np.int32)
 
-    # Clamp to valid range
-    rows = np.clip(rows, 0, config.nrow - 1)
-    cols = np.clip(cols, 0, config.ncol - 1)
+    if np.any((rows < 0) | (rows >= config.nrow)):
+        bad = lat[(rows < 0) | (rows >= config.nrow)]
+        err_msg = (
+            f"Latitude out of range "
+            f"[{config.south}, "
+            f"{config.south + config.nrow * config.resolution}]: "
+            f"{bad.ravel()[:5]}"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+    if np.any((cols < 0) | (cols >= config.ncol)):
+        bad = lon[(cols < 0) | (cols >= config.ncol)]
+        err_msg = (
+            f"Longitude out of range "
+            f"[{config.west}, "
+            f"{config.west + config.ncol * config.resolution}]: "
+            f"{bad.ravel()[:5]}"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
 
     return (rows * config.ncol + cols + 1).astype(np.int32)
