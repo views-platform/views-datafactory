@@ -145,7 +145,7 @@ GHS-BUILT (Built-Up Surface) is the next JRC GHSL source. Based on GHS-POP exper
 
 4. **Float32 from the start.** Apply the float32 cast at read time from day one.
 
-5. **Source registry entry first.** Add `SourceEntry(name="GHS-BUILT", features=("ghsbuilt_builtup_area",), ...)` in the first commit.
+5. **Source registry entry first.** Add `SourceEntry(name="GHS-BUILT-S", features=("ghsbuilts_built_area",), ...)` in the first commit.
 
 6. **Temporal range: use `--end-year`.** Match the convention. Don't rely on `TemporalConfig` defaults.
 

@@ -82,9 +82,9 @@ class TestPipelineSources:
         dupes = [f for f in set(all_feats) if all_feats.count(f) > 1]
         assert not dupes, f"duplicate features: {dupes}"
 
-    def test_feature_count_is_52(self) -> None:
-        """6 UCDP + 8 ACLED + 1 GHS-POP + 34 static + 3 admin = 52."""
-        assert len(get_all_features()) == 52
+    def test_feature_count_is_53(self) -> None:
+        """6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S + 34 static + 3 admin = 53."""
+        assert len(get_all_features()) == 53
 
     def test_ucdp_features_first(self) -> None:
         feats = get_all_features()

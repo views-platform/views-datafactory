@@ -127,6 +127,16 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         ),
     ),
     SourceEntry(
+        name="GHS-BUILT-S",
+        features=(
+            "ghsbuilts_built_area",
+        ),
+        slo_hours=None,
+        ledger_path=Path(
+            "ghsbuilts/ingestion_ledger.jsonl"
+        ),
+    ),
+    SourceEntry(
         name="PRIO-GRID Static",
         features=(
             "agri_gc", "aquaveg_gc", "barren_gc",
@@ -202,6 +212,13 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         ),
     ),
     SourceEntry(
+        name="GHS-BUILT-S Viewpoint",
+        slo_hours=None,
+        ledger_path=Path(
+            "viewpoint/ghsbuilts_v1_ledger.jsonl"
+        ),
+    ),
+    SourceEntry(
         name="Compilation",
         slo_hours=744,
         ledger_path=Path(
@@ -220,6 +237,13 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         slo_hours=None,
         ledger_path=Path(
             "compilation/ghspop_ledger.jsonl"
+        ),
+    ),
+    SourceEntry(
+        name="GHS-BUILT-S Compilation",
+        slo_hours=None,
+        ledger_path=Path(
+            "compilation/ghsbuilts_ledger.jsonl"
         ),
     ),
 )

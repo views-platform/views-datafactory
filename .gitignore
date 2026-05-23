@@ -39,6 +39,7 @@ Thumbs.db
 provenance/
 reports/audit/
 reports/audit_acled/
+reports/audit_ghsbuilts/
 reports/audit_ghspop/
 reports/presentation/
 

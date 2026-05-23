@@ -78,6 +78,27 @@ Inference is permitted **only within a component's internal logic**, never acros
 
 ---
 
+## Corollary: Every Declaration Has Exactly One Owner
+
+Every declared fact in this system must have exactly one authoritative artifact — determined by **who changes it** and **how often**.
+
+Facts that share a change frequency and audience belong together (Martin's Common Closure Principle applied to documentation artifacts). Facts with different change frequencies must not share an artifact, because they create coupling between things that evolve independently (Common Reuse Principle).
+
+Concretely:
+
+| Fact | Owner artifact | Why there |
+|------|---------------|-----------|
+| Upstream provider URL, license, citation | Catalog card (`docs/sources/`) | Changes when the provider changes — rarely |
+| Why we selected this source, what SLO we chose | Source selection ADR (`docs/ADRs/`) | Changes when we revisit the decision — rarely, different audience |
+| Operational parameters: env vars, features, SLO value | `SourceEntry` in source registry | Changes when we redeploy — infrequently |
+| Last harvest time, content digest, version | Provenance ledger (JSONL) | Changes every pipeline run — frequently |
+
+If a fact appears in two artifacts, one of them is a **pointer**, not a copy. The pointer directs readers to the authoritative source; it never duplicates the value. Duplication across change frequencies creates exactly the silent semantic drift this ADR exists to prevent.
+
+This corollary applies beyond data sources: any declaration (configuration value, contract guarantee, architectural constraint) should live in the artifact whose change frequency matches the fact's volatility and whose audience matches the fact's consumers.
+
+---
+
 ## Examples of Forbidden Behavior
 
 - Inferring grid resolution from the shape of a compiled npy array instead of reading `GridConfig.resolution`

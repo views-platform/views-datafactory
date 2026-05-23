@@ -5,16 +5,18 @@ Usage:
     uv run python scripts/assemble_grid.py
     uv run python scripts/assemble_grid.py --acled-grid data/compiled/acled
     uv run python scripts/assemble_grid.py --ghspop-grid data/compiled/ghspop
+    uv run python scripts/assemble_grid.py --ghsbuilts-grid data/compiled/ghsbuilts
     uv run python scripts/assemble_grid.py --admin-dir data/gaul_admin
 
 Combines the compiled UCDP conflict grid, ACLED conflict grid,
-GHS-POP population grid, PRIO-GRID static features, and GAUL admin
-boundary codes into a single array. ACLED and GHS-POP are temporally
-aligned to the UCDP timeline and zero-filled outside their coverage
-range. Static and admin features are broadcast across all time steps.
+GHS-POP population grid, GHS-BUILT-S built-up surface grid, PRIO-GRID
+static features, and GAUL admin boundary codes into a single array.
+ACLED, GHS-POP, and GHS-BUILT-S are temporally aligned to the UCDP
+timeline and zero-filled outside their coverage range. Static and admin
+features are broadcast across all time steps.
 
 Output: grid.npy [T, H, W, F]
-        F = UCDP + ACLED + GHS-POP + static + admin.
+        F = UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin.
 
 Admin channels (gaul0_code, gaul1_code, gaul2_code) are categorical
 integers stored as float32. Downstream models should treat them as
@@ -46,6 +48,7 @@ class AssemblyConfig:
     ucdp_grid_dir: Path = Path("data/compiled")
     acled_grid_dir: Path | None = None
     ghspop_grid_dir: Path | None = None
+    ghsbuilts_grid_dir: Path | None = None
     static_dir: Path = Path("data/raw/priogrid_static")
     admin_dir: Path = Path("data/raw/gaul_admin")
     output_dir: Path = Path("data/assembled")
@@ -125,6 +128,15 @@ def main() -> int:
         help="Compiled GHS-POP grid directory (omit to skip GHS-POP)",
     )
     parser.add_argument(
+        "--ghsbuilts-grid",
+        type=Path,
+        default=None,
+        help=(
+            "Compiled GHS-BUILT-S grid directory "
+            "(omit to skip GHS-BUILT-S)"
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=defaults.output_dir,
@@ -136,6 +148,7 @@ def main() -> int:
         ucdp_grid_dir=args.ucdp_grid,
         acled_grid_dir=args.acled_grid,
         ghspop_grid_dir=args.ghspop_grid,
+        ghsbuilts_grid_dir=args.ghsbuilts_grid,
         static_dir=args.static_dir,
         admin_dir=args.admin_dir,
         output_dir=args.output_dir,
@@ -179,6 +192,14 @@ def main() -> int:
         )
         return 1
 
+    has_ghsbuilts = config.ghsbuilts_grid_dir is not None
+    if has_ghsbuilts and not config.ghsbuilts_grid_dir.exists():
+        print(
+            f"FAIL: --ghsbuilts-grid "
+            f"{config.ghsbuilts_grid_dir} not found"
+        )
+        return 1
+
     print("=" * 60)
     print("GRID ASSEMBLY — All Data Sources")
     print(f"UCDP grid:   {config.ucdp_grid_dir}")
@@ -186,6 +207,8 @@ def main() -> int:
           f"{config.acled_grid_dir if has_acled else '(skipped)'}")
     print(f"GHS-POP grid: "
           f"{config.ghspop_grid_dir if has_ghspop else '(skipped)'}")
+    print(f"GHS-BUILT-S grid: "
+          f"{config.ghsbuilts_grid_dir if has_ghsbuilts else '(skipped)'}")
     print(f"Static dir:  {config.static_dir}")
     print(f"Admin dir:   {config.admin_dir}"
           f"{'' if has_admin else ' (skipped)'}")
@@ -339,6 +362,83 @@ def main() -> int:
                 f"{ghspop_end_idx}–{n_t - 1}"
             )
 
+    # ── GHS-BUILT-S channels (temporal, same alignment pattern) ──
+    ghsbuilts_features: list[str] = []
+    ghsbuilts_grid = None
+    ghsbuilts_offset: int = 0
+    n_ghsbuilts: int = 0
+
+    if has_ghsbuilts:
+        ghsbuilts_grid_path = (
+            config.ghsbuilts_grid_dir / "grid.npy"
+        )
+        ghsbuilts_feat_path = (
+            config.ghsbuilts_grid_dir / "feature_names.json"
+        )
+        ghsbuilts_time_path = (
+            config.ghsbuilts_grid_dir / "time_steps.npy"
+        )
+
+        for p in (
+            ghsbuilts_grid_path, ghsbuilts_feat_path,
+            ghsbuilts_time_path,
+        ):
+            if not p.exists():
+                print(f"FAIL: {p} not found")
+                return 1
+
+        ghsbuilts_grid = np.load(
+            ghsbuilts_grid_path, mmap_mode="r",
+        )
+        ghsbuilts_features = json.loads(
+            ghsbuilts_feat_path.read_text()
+        )
+        ghsbuilts_time_steps = np.load(ghsbuilts_time_path)
+
+        DEFAULT_GRID_CONFIG.assert_grid_shape(ghsbuilts_grid)
+
+        ghsbuilts_start_dt = ghsbuilts_time_steps[0]
+        matches = np.where(
+            time_steps == ghsbuilts_start_dt
+        )[0]
+        if len(matches) != 1:
+            print(
+                f"FAIL: GHS-BUILT-S start "
+                f"{ghsbuilts_start_dt} not found in UCDP "
+                f"timeline (or ambiguous)"
+            )
+            return 1
+        ghsbuilts_offset = int(matches[0])
+        n_ghsbuilts_t = ghsbuilts_grid.shape[0]
+        ghsbuilts_end_idx = ghsbuilts_offset + n_ghsbuilts_t
+
+        if ghsbuilts_end_idx > n_t:
+            print(
+                f"FAIL: GHS-BUILT-S extends beyond UCDP "
+                f"timeline (offset {ghsbuilts_offset} + "
+                f"{n_ghsbuilts_t} > {n_t})"
+            )
+            return 1
+
+        n_ghsbuilts = len(ghsbuilts_features)
+        print(
+            f"GHS-BUILT-S grid: [T={n_ghsbuilts_t}, "
+            f"H={ghsbuilts_grid.shape[1]}, "
+            f"W={ghsbuilts_grid.shape[2]}, "
+            f"C={n_ghsbuilts}]"
+        )
+        print(f"GHS-BUILT-S features: {ghsbuilts_features}")
+        print(
+            f"GHS-BUILT-S temporal alignment: indices "
+            f"{ghsbuilts_offset}–{ghsbuilts_end_idx - 1} "
+            f"in assembled grid"
+        )
+        if ghsbuilts_offset > 0 or ghsbuilts_end_idx < n_t:
+            print(
+                f"  Zero-fill: 0–{ghsbuilts_offset - 1}, "
+                f"{ghsbuilts_end_idx}–{n_t - 1}"
+            )
+
     # Build gid → (row, col) lookup from pgids array
     gid_to_rowcol: dict[int, tuple[int, int]] = {}
     for r in range(n_h):
@@ -417,10 +517,13 @@ def main() -> int:
 
     n_static = len(static_names)
     n_admin = len(admin_names)
-    n_total = n_ucdp + n_acled + n_ghspop + n_static + n_admin
+    n_total = (
+        n_ucdp + n_acled + n_ghspop + n_ghsbuilts
+        + n_static + n_admin
+    )
     all_features = (
         ucdp_features + acled_features + ghspop_features
-        + static_names + admin_names
+        + ghsbuilts_features + static_names + admin_names
     )
 
     print(
@@ -488,8 +591,21 @@ def main() -> int:
             ] = ghspop_grid
             del ghspop_grid
 
+        # Copy GHS-BUILT-S channels (temporal slice, rest stays zero)
+        if ghsbuilts_grid is not None:
+            ghsbuilts_end = (
+                ghsbuilts_offset + ghsbuilts_grid.shape[0]
+            )
+            ch_ghsbuilts = n_ucdp + n_acled + n_ghspop
+            assembled[
+                ghsbuilts_offset:ghsbuilts_end,
+                :, :,
+                ch_ghsbuilts:ch_ghsbuilts + n_ghsbuilts,
+            ] = ghsbuilts_grid
+            del ghsbuilts_grid
+
         # Fill static channels (broadcast in-place)
-        ch_static = n_ucdp + n_acled + n_ghspop
+        ch_static = n_ucdp + n_acled + n_ghspop + n_ghsbuilts
         for i, spatial in enumerate(static_spatial):
             assembled[:, :, :, ch_static + i] = spatial
 
@@ -544,6 +660,12 @@ def main() -> int:
     if has_ghspop:
         ghspop_digest = compute_file_digest(
             config.ghspop_grid_dir / "grid.npy"
+        )
+
+    ghsbuilts_digest: str | None = None
+    if has_ghsbuilts:
+        ghsbuilts_digest = compute_file_digest(
+            config.ghsbuilts_grid_dir / "grid.npy"
         )
 
     # Data boundary: last month with observed UCDP data
@@ -608,6 +730,33 @@ def main() -> int:
             )
         del ghspop_grid_ro
 
+    # GHS-BUILT-S data boundary
+    last_valid_ghsbuilts_month_id: int | None = None
+    if has_ghsbuilts:
+        ghsbuilts_grid_ro = np.load(
+            config.ghsbuilts_grid_dir / "grid.npy",
+            mmap_mode="r",
+        )
+        ghsbuilts_ts = np.load(
+            config.ghsbuilts_grid_dir / "time_steps.npy",
+        )
+        ghsbuilts_has_data = (
+            ghsbuilts_grid_ro.sum(axis=(1, 2, 3)) > 0
+        )
+        ghsbuilts_valid = np.where(ghsbuilts_has_data)[0]
+        if len(ghsbuilts_valid) > 0:
+            ghsbuilts_last = int(ghsbuilts_valid[-1])
+            ghsbuilts_last_dt = ghsbuilts_ts[ghsbuilts_last]
+            last_valid_ghsbuilts_month_id = int(
+                to_views_month_id(ghsbuilts_last_dt)
+            )
+            print(
+                f"Last valid GHS-BUILT-S month: "
+                f"{last_valid_ghsbuilts_month_id} "
+                f"({ghsbuilts_last_dt})"
+            )
+        del ghsbuilts_grid_ro
+
     provenance = {
         "sources": {
             "ucdp_grid": str(grid_path),
@@ -630,6 +779,15 @@ def main() -> int:
             "ghspop_temporal_offset": (
                 ghspop_offset if has_ghspop else None
             ),
+            "ghsbuilts_grid": (
+                str(config.ghsbuilts_grid_dir / "grid.npy")
+                if has_ghsbuilts else None
+            ),
+            "ghsbuilts_digest": ghsbuilts_digest,
+            "ghsbuilts_features": ghsbuilts_features or None,
+            "ghsbuilts_temporal_offset": (
+                ghsbuilts_offset if has_ghsbuilts else None
+            ),
             "static_dir": str(config.static_dir),
             "static_variables": static_names,
             "admin_dir": str(config.admin_dir),
@@ -649,6 +807,10 @@ def main() -> int:
     if last_valid_ghspop_month_id is not None:
         provenance["last_valid_ghspop_month_id"] = (
             last_valid_ghspop_month_id
+        )
+    if last_valid_ghsbuilts_month_id is not None:
+        provenance["last_valid_ghsbuilts_month_id"] = (
+            last_valid_ghsbuilts_month_id
         )
     (config.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)

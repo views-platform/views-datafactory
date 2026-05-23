@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-21)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21
-**Status:** 188 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44): 118 resolved, 62 open/deferred (18 resolved awaiting archive move, 2 with fired triggers accepted at v1.0), 6 accepted by design. 29 disagreements: 22 resolved, 7 open.
+**Date:** 2026-03-17 (updated 2026-05-23)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23
+**Status:** 194 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44): 103 resolved, 66 open concerns (8 Tier 2, 17 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 7 open disagreements. 84 resolved concerns as full entries + 19 early-archive reference rows + 22 resolved disagreements in archive. 29 disagreement IDs total: 22 resolved, 7 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -69,6 +69,10 @@
 | C-186 | 3 | Shapefile harvester lacks outcome vocabulary; ADR-032 overstates compliance | New harvester trusts ADR-032 claim that all harvesters record failed entries | Harvest correctness |
 | ~~C-187~~ | ~~4~~ | ~~Digest-field assumption in reverse scan shadows valid entries~~ | Resolved 2026-05-21 | Provenance correctness |
 | ~~C-188~~ | ~~3~~ | ~~GAUL admin failure path writes no ledger entry~~ | Resolved 2026-05-21 | Harvest correctness |
+| C-189 | 3 | GHS-BUILT-S test coverage parity gap — 19% of combined other sources | Production incident on GHS-BUILT-S path that existing GHS-POP/ACLED tests would have caught | Test coverage |
+| ~~C-190~~ | ~~4~~ | ~~KNOWN_GLOBAL_BUILT_AREA reference values ~6-7x actual JRC totals~~ | Resolved 2026-05-23 | Visual audit |
+| ~~C-191~~ | ~~2~~ | ~~`refresh_pipeline.sh` has no GHS-BUILT-S steps — feature dead on arrival in production~~ | Resolved 2026-05-23 | Operations |
+| ~~C-192~~ | ~~3~~ | ~~Operational integration consistently trails implementation — 3rd recurrence~~ | Resolved 2026-05-23 | Workflow process |
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
 | D-24 | — | Hardware upgrade vs software optimization for 8 GB ceiling | Open | ADR-031 compliance |
 | D-25 | — | Dead function retention — `_aggregate_to_prio_grid` after v1.2.18 | Open | ADR-031 compliance |
@@ -86,8 +90,8 @@
 | ~~C-152~~ | ~~3~~ | ~~ACLED profiles and `list_acled_profiles()` untested~~ | Resolved 2026-05-02 | ACLED test coverage |
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
-| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | **Trigger fired** (GHS-POP is 3rd script). Reassess at 4th source | Visual audit |
-| C-168 | 3 | TemporalConfig defaults to end_year=2024 — footgun for new sources | Next pipeline script uses bare TemporalConfig() without --end-year | ADR-003 compliance |
+| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script | Visual audit |
+| ~~C-168~~ | ~~3~~ | ~~TemporalConfig defaults to end_year=2024 — footgun for new sources~~ | Resolved 2026-05-23 | ADR-003 compliance |
 | C-169 | 4 | 2 CI tests fail due to missing infrastructure (netrc, sibling repo) | Real regression hidden by permanent UNSTABLE status | Test infra |
 | ~~C-170~~ | ~~1~~ | ~~GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
 | ~~C-171~~ | ~~1~~ | ~~Pregridded compilation `.to_pylist()` OOM (~6 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
@@ -96,7 +100,7 @@
 | ~~C-167~~ | ~~4~~ | ~~reports/audit_ghspop/ not in .gitignore~~ | Resolved 2026-05-20 | GHS-POP hygiene |
 | C-164 | 3 | Cross-layer WET debt: 3 sources replicate patterns across all 4 layers | 4th source (V-Dem or WDI) requires copying 6+ structural patterns | WET-before-DRY |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
-| C-174 | 3 | `latlon_to_pgid` silently clamps out-of-bounds coordinates | Source provides coordinates outside [-90,90]×[-180,180] | Compilation correctness |
+| ~~C-174~~ | ~~3~~ | ~~`latlon_to_pgid` silently clamps out-of-bounds coordinates~~ | Resolved 2026-05-23 | Compilation correctness |
 | C-175 | 3 | Aggregation missing-field coalesced to zero, not NaN | Source removes or renames a field used in `FeatureSpec` | Compilation correctness |
 | C-176 | 4 | `datafactory_synthetic` is a dead module with zero exports | Synthetic generation needed for a consumer | Code cleanup |
 | C-159 | 4 | ACLED snapshot archiving and revision comparison paths untested | Archiving logic implicated in data integrity incident | ACLED test coverage |
@@ -111,6 +115,8 @@
 | ~~C-122~~ | ~~3~~ | ~~Consumer model has no runtime data fetch from Hetzner~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-123~~ | ~~4~~ | ~~`africa_me_legacy` region file not distributed~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
+| ~~C-193~~ | ~~4~~ | ~~Deployment guide GHS-BUILT-S download size overstated (~5 GB vs ~2.1 GB)~~ | Resolved 2026-05-23 | Documentation |
+| ~~C-194~~ | ~~4~~ | ~~Raster harvesters lack `logger.error` before bare `raise` — ADR-008~~ | Resolved 2026-05-23 | ADR-008 compliance |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -126,14 +132,14 @@ Items that should be resolved together:
 | **Server hardening** | C-88, C-121, C-173 (C-84, C-85, C-86, C-87 resolved) | Before production deployment |
 | **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
-| **Compilation correctness** | C-174, C-175 | Source with unvalidated coordinates or renamed fields |
+| **Compilation correctness** | ~~C-174~~, C-175 | Source with unvalidated coordinates or renamed fields (C-174 resolved) |
 | **UCDP schema defense** | C-36, C-37, C-45, C-175 | UCDP API change |
 | **Test infrastructure** | C-29, C-78, C-79, C-146, C-169 | Test suite growth (C-60 resolved) |
 | **Code cleanup** | ~~C-31~~, C-93, C-176 | Next refactor opportunity (C-80, C-112, C-31 resolved) |
 | ~~**Consumer integration**~~ | ~~C-122, C-123, C-124~~ | ~~Resolved~~ |
 | ~~**Query correctness**~~ | ~~C-127~~ | Resolved 2026-04-27: warning on fallback, export already writes feature_order |
-| **ADR-003 compliance** | ~~C-128~~, C-129, C-168 | Before next assembly/compilation change (C-128 resolved) |
-| **Operational monitoring** | C-131, C-132, C-136, C-147 | Before relying on Hetzner pipeline without manual checks |
+| **ADR-003 compliance** | ~~C-128~~, C-129, ~~C-168~~ | Before next assembly/compilation change (C-128, C-168 resolved) |
+| **Operational monitoring** | C-131, C-132, C-136, C-147, ~~C-191~~ | Before relying on Hetzner pipeline without manual checks (C-191 resolved) |
 | **Scaling headroom** | C-144, C-145 | Before consolidated store exceeds ~5M rows |
 | **Data integrity** | C-137, C-138, C-139, C-149 | Before relying on served data for model training |
 | **Data boundary** | C-130, C-133, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-134 resolved) |
@@ -144,55 +150,20 @@ Items that should be resolved together:
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
+| ~~**Workflow process**~~ | ~~C-192~~ | Resolved 2026-05-23 |
 | ~~**Documentation drift**~~ | ~~C-157, C-158~~ | Resolved 2026-05-07: 19 docs updated, 2 CICs created |
 
 ---
 
 ## Tier 1 — Fix Immediately
 
-### ~~C-165: GHS-POP viewpoint OOM — 22 GB peak on 8 GB server~~ — RESOLVED
-**Resolved 2026-05-20.** Multi-phase fix across v1.2.15–v1.2.18: (a) strip-based aggregation replaced full-globe array allocation (v1.2.16); (b) removed float64→float32 whole-array conversion, deferred to per-strip conversion (v1.2.17); (c) `del` Python lists after Arrow creation, `maxworkers=1` on tifffile, unconditional strip aggregation (v1.2.18, see C-170/C-171/C-172). Peak RSS reduced from 22.1 GB to ~1.5 GB for viewpoint output, ~7.4 GB during GeoTIFF load (irreducible). Falsification test `test_align_to_globe_does_not_upcast_input` now passes.
-**Source:** Falsification audit (2026-05-19), probe F2. Cross-ref: C-170 (list accumulation), C-171 (compilation), C-172 (latent branch), C-173 (no swap).
-
-### ~~C-170: GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ — RESOLVED
-**Resolved 2026-05-20.** `build_ghspop_v1` accumulated ~60M Python objects in three lists (`pgid_rows`, `month_id_rows`, `pop_count_rows`) that coexisted with the Arrow table during `pa.table()` creation. Peak: 7.4–8.3 GiB on a swapless 8 GiB server. Fixed by adding `del pgid_rows, month_id_rows, pop_count_rows` after Arrow table creation. Additionally, `page.asarray(maxworkers=1)` reduces tifffile decompression buffering by ~400 MB, and the `needs_align` branching was removed so `build_ghspop_v1` always uses `_aggregate_with_alignment` (eliminating the latent OOM in `_aggregate_to_prio_grid`'s `data.copy()`). Falsification tests `test_lists_deleted_before_digest`, `test_read_geotiff_limits_decompression_threads`, `test_build_always_uses_strip_aggregation` now pass.
-**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-165 (original OOM), C-171 (compilation variant), C-172 (latent branch OOM).
-
-### ~~C-171: Pregridded compilation `.to_pylist()` OOM (~6 GB Python objects)~~ — RESOLVED
-**Resolved 2026-05-20.** `compile_pregridded` called `.to_pylist()` three times on Arrow columns, inflating ~60M rows into ~6 GB of Python objects alongside the Arrow table (~1 GB) and grid array (~0.5 GB). Peak: ~7.7 GiB. Fixed by replacing `.to_pylist()` with `.to_numpy()` and adding `del table` after extraction. Null guard updated from `val is not None` to `not np.isnan(val)` for numpy compatibility. Falsification test `test_compilation_avoids_to_pylist` now passes.
-**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-144 (same pattern in `grid_compilation.py`, still deferred), C-170 (viewpoint variant).
-
-### ~~C-172: Latent OOM in `_aggregate_to_prio_grid` dead branch~~ — RESOLVED
-**Resolved 2026-05-20.** `build_ghspop_v1` had a `needs_align` branch that called `_aggregate_to_prio_grid` when raster dimensions were divisible by 60. That function does `data.copy()` — doubling a 6.88 GiB float64 array to 13.76 GiB peak. The only protection was JRC's accidental non-divisible-by-60 raster dimensions (21384×43202). Fixed by removing the branching and always using `_aggregate_with_alignment` (which handles both aligned and unaligned data via offset computation). `_aggregate_to_prio_grid` and `_align_to_globe` retained as module-level functions (tested directly in 7 existing tests). Falsification test `test_build_always_uses_strip_aggregation` now passes.
-**Source:** Falsification audit + 8-expert code review (2026-05-20). Cross-ref: C-163 (dimension truncation, resolved), C-170 (main memory fix).
-
-### ~~C-162: GHS-POP PGID mapping has no direct correctness test~~ — RESOLVED
-**Resolved 2026-05-19.** Added `test_pgid_mapping_correctness` (4 distinct populations in 2x2 grid, asserts specific pgid→value mapping including row-flip), `test_month_id_correctness` (verifies Jan/Feb/Mar 2000 → month_ids 241/242/243), and `test_no_duplicate_pgid_month_id` (uniqueness constraint on output). Test count: 21 → 29.
-**Source:** GHS-POP viewpoint test review (2026-05-19). Cross-ref: C-149 (GAUL unmapped cells).
-
 ---
 
 ## Tier 2 — Fix Before Sharing Server Access
 
-### ~~C-166: GHS-POP absent from PIPELINE_SOURCES — verify_remote.py blind~~ — RESOLVED
-**Resolved 2026-05-20.** Added three `SourceEntry` entries to `PIPELINE_SOURCES`: `"GHS-POP"` (harvest, `features=("ghspop_pop_count",)`, `slo_hours=None`, ledger at `ghspop/ingestion_ledger.jsonl`), `"GHS-POP Viewpoint"` (ledger at `viewpoint/ghspop_v1_ledger.jsonl`), `"GHS-POP Compilation"` (ledger at `compilation/ghspop_ledger.jsonl`). `get_all_features()` now returns 52 features (was 51). Falsification tests `test_ghspop_feature_in_registry` and `test_ghspop_source_entry_exists` now pass. Feature count test updated from 51 to 52.
-**Source:** Falsification audit (2026-05-19), probe F1. Cross-ref: C-138 (post-deploy verification), C-132 (health check gap).
-
-### ~~C-163: `_aggregate_to_prio_grid` silently truncates non-divisible raster dimensions~~ — RESOLVED
-**Resolved 2026-05-19.** Added dimension validation (`nrow % 60 != 0 or ncol % 60 != 0` → `ValueError`) to `_aggregate_to_prio_grid`. Added `test_non_divisible_dimensions_raises` to verify the guard. Also added: `test_no_args_raises`, `test_unknown_epoch_raises`, `test_all_zero_raster_produces_empty_output`, `test_source_dir_shortcut`.
-**Source:** GHS-POP viewpoint test review (2026-05-19). Cross-ref: C-162 (PGID mapping correctness).
-
-### ~~C-182: `last_digest_for_version` returns digest from failed ledger entries~~ — RESOLVED
-**Resolved 2026-05-21.** `last_digest_for_version` now skips entries where `outcome` is present and not `"success"`. Entries without an `outcome` field are accepted for backward compatibility with pre-outcome ledger entries. Added 3 tests: `test_skips_failed_entries`, `test_returns_none_when_only_failed`, `test_accepts_entries_without_outcome`.
-**Source:** Expert code review of harvest caching (2026-05-21). Cross-ref: C-184 (ACLED no file integrity check), C-185 (GHS-POP no digest comparison), C-46 (ledger write idempotency).
-
 ### C-88: SSH not restricted to PRIO/Uppsala IPs — [DEFER]
 SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
-
-### ~~C-128: Scripts infer grid shape from arrays without config validation~~ — RESOLVED
-**Resolved 2026-04-27.** Swapped validation/unpacking order in `assemble_grid.py` and `export_dataframe.py` so `assert_grid_shape()` runs before `.shape` unpacking, matching `compile_grid.py` which was already correct. Added 3 structural regression tests in `test_scripts.py::TestGridValidationOrder`.
-**Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (forbidden inference patterns).
 
 ### C-130: Zero-filled future months indistinguishable from observed zeros — [RESOLVING]
 The assembled grid is pre-allocated through `--end-year 2026` (456 months) but UCDP data only covers through the most recent release (~Feb/Mar 2026 as of April 2026). Months beyond the last UCDP update contain zeros in all `ged_*` features. `load_dataset()` returns these zero-filled months without any signal that they are padding, not observations. A model training on months 121–560 would learn that conflict drops to zero after the data boundary — silent data corruption.
@@ -230,14 +201,6 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 **Location:** `src/datafactory_adapters/grid_to_country_month.py:72-76` (land_mask filter), `scripts/assemble_grid.py:177-179` (gaul0_code = -1 fill), `src/datafactory_harvester/sources/gaul_admin.py:358-359` (unmatched centroids skipped).
 **Source:** Pipeline verification audit 2026-04-30. Cross-ref: C-125 (CM aggregation implementation), C-139 (aggregate total checks).
 
-### ~~C-150: Zero Red team tests for ACLED pipeline~~ — RESOLVED
-**Resolved 2026-05-02.** Added `TestFetchAcledRed` (5 tests), `TestConsolidateAcledRed` (4 tests), `TestBuildAcledV1Red` (4 tests) covering: token endpoint garbage, missing `expires_in` fallback, non-list API data, missing required fields, frozen mutation, malformed filenames, corrupted Parquet, schema drift, malformed event dates, total filter elimination, missing store columns.
-**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
-
-### ~~C-127: Zarr backend returns features in different order than npy backend~~ — RESOLVED
-**Resolved 2026-04-27.** `_load_grid_from_zarr()` now emits `UserWarning` when falling back to `sorted(data_vars)` due to missing `feature_order` attr. `export_zarr.py` already writes `feature_order` (since 2026-04-21). Together these close the silent divergence: new exports are correct, old stores warn. Added 2 tests in `test_query.py::TestZarrFeatureOrderFallback`.
-**Source:** Verification examples suite (M13), 2026-04-21. Cross-ref: C-117 (zarr spatial subsetting).
-
 ### C-137: No round-trip integrity check after zarr export — [RESOLVING]
 `export_zarr.py` writes the assembled grid to a zarr store but never reads it back to verify the data survived the write. A truncated write, chunking bug, or partial store would produce a zarr store with wrong values and no error signal. This is the exact failure mode that caused the 46% fatality gap on the Hetzner server: the served zarr store had missing pre-2014 data, but the export step reported success.
 
@@ -264,10 +227,6 @@ The health check (`check_health.py`) validates metadata freshness (export timest
 **Location:** `tests/test_consumer_parity.py:127-145` (`assert_consumer_parity` feature checks).
 **Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-137 (export integrity).
 
-### ~~C-140: v1.2.6/v1.2.7 incident fixes have zero test coverage~~ — RESOLVED
-**Resolved 2026-04-26.** Added 7 tests: `TestTotalCountAssertionBeige` (4 tests: tolerance pass, truncation raises, exact boundary, max_pages skip) and `TestRateLimitBackoffRed` (3 tests: HTTP 400 retry with backoff, exhaustion raises, non-400 bypass). Also added `TestValidateEnvelopeRed` (3 tests) and `TestUcdpAnnualRegistration` (1 test).
-**Source:** Test review 2026-04-26. Cross-ref: C-137, C-138, C-139 (data integrity).
-
 ---
 
 ## Tier 3 — Improve Quality
@@ -288,18 +247,6 @@ The calibration/validation/forecasting partition boundaries (121/444, 445/492, 4
 **Location:** `scripts/generate_consumer_data.py:56`, `examples/ex_partitions.py:21-101`, `tests/test_consumer_data.py:162,169`, `tests/test_consumer_parity.py:57`, downstream `bright_starship/configs/config_partitions.py`.
 **Resolution:** Define a `PARTITIONS` frozen dict or dataclass in a shared location within `src/` and have all consumers import from it.
 **Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (single source of truth).
-
-### ~~C-134: `get_last_valid_month_id()` silently returns None on all errors~~ — RESOLVED
-**Resolved 2026-04-27.** Replaced broad `except Exception` with specific `except (URLError, HTTPError, TimeoutError)` that logs at ERROR and re-raises. `json.loads` moved outside the try-except so `JSONDecodeError` propagates naturally. `None` now only returned when the zarr store legitimately lacks the attribute. Added 4 tests: `test_raises_on_network_error`, `test_raises_on_auth_failure`, `test_raises_on_json_parse_error`, `test_logs_error_on_network_failure`.
-**Source:** Tech-debt-cleanup audit (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
-
-### ~~C-141: UCDP config class validation partially untested~~ — RESOLVED
-**Resolved 2026-04-26.** Added 8 Beige tests across three config classes: `UcdpAnnualConfig` (page_delay, timeout), `UcdpCandidateConfig` (page_size, max_retries, timeout), `UcdpDot9Config` (page_size, max_retries, timeout). All CIC-guaranteed fail-loud branches now tested.
-**Source:** Test review 2026-04-26. Cross-ref: C-31, C-07.
-
-### ~~C-142: datafactory_query consumer entry point has zero Red/Beige tests~~ — RESOLVED
-**Resolved 2026-04-26.** Added `TestLoadDatasetBeige` (2 tests: single-feature request, explicit-matches-default) and `TestLoadDatasetRed` (5 tests: corrupted grid, mismatched feature count, mismatched pgids shape, NaN-filled grid, zero time steps).
-**Source:** Test review 2026-04-26. Cross-ref: C-127, C-130.
 
 ### C-21: No characterization tests for migration source — [DEFER]
 The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
@@ -352,53 +299,31 @@ Every other layer exposes its core logic as an importable function: `consolidate
 
 See also C-29 (no end-to-end integration test).
 
-### ~~C-151: No CICs for ACLED config classes~~ — RESOLVED
-**Resolved 2026-05-02.** Created `docs/CICs/AcledConfig.md`, `docs/CICs/AcledConsolidationConfig.md`, `docs/CICs/AcledViewpointConfig.md` following the 11-section template. Frozen-enforcement tests added for all three configs.
-**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-07 (frozen dataclass pattern repeated), C-150 (zero Red tests).
-
-### ~~C-152: ACLED profiles and `list_acled_profiles()` untested~~ — RESOLVED
-**Resolved 2026-05-02.** Added `TestAcledProfilesGreen` (4 tests: `load_acled_violence_only`, `load_acled_all_events`, `load_with_override`, `list_acled_profiles`) and `TestAcledProfilesRed` (1 test: `unknown_acled_profile_raises`) in `tests/test_acled_viewpoint.py`.
-**Source:** ACLED integration test review (2026-05-02). Cross-ref: C-150 (ACLED test gaps).
-
-### ~~C-157: Systematic ACLED documentation drift across ADRs, CICs, and guides — [RESOLVED 2026-05-07]~~
-
-| Field | Value |
-|-------|-------|
-| ID | C-157 |
-| Tier | 3 |
-| Source | base documentation review (2026-05-07) |
-| Trigger | New team member (Dylan, Sonaj) reads stale documentation and builds on wrong assumptions about feature counts, pipeline steps, or ACLED integration status |
-| Location | ADR-028 (critical: says compiler doesn't exist), ADR-009, ADR-021 (high: wrong counts), ADR-003/011/012/018/022 (medium), consumer_data_guide.md, zarr_consumer_guide.md (consumer-facing), plus 7 low-severity items |
-
-ACLED integration completed across harvester, consolidation, viewpoint, compilation, and assembly — but ~15 documents still reference ACLED as hypothetical or future work. Three concrete harms: (1) ADR-028 Implementation Notes say "ACLED compiler does not exist yet" while it runs in production as pipeline step 5; a developer could re-implement it. (2) Consumer-facing guides (consumer_data_guide.md, zarr_consumer_guide.md) say "43 features" — consumers write code expecting 43 and get 51. (3) zarr_consumer_guide.md has `petroleum_y` typo (correct name: `petroleum_s`) which would cause `KeyError` for consumers. Additional drift: ADR-009 says "seven packages" (now 10), ADR-022 says "7 pipeline steps" (now 9), ADR-018 omits ACLED from SLO tables.
-
-Cross-ref: C-158 (missing CICs).
-
-### C-168: TemporalConfig defaults to end_year=2024 — footgun for new pipeline sources — [DEFER]
+### ~~C-168~~: TemporalConfig defaults to end_year=2024 — footgun for new pipeline sources
 
 | Field | Value |
 |-------|-------|
 | ID | C-168 |
 | Tier | 3 |
 | Source | PR #53 review, GHS-POP post-mortem (2026-05-20) |
-| Trigger | Next pipeline script (e.g., V-Dem, WDI, GHS-BUILT) uses bare `TemporalConfig()` without explicit `--end-year`, producing 432 months instead of 456 |
-| Location | `src/datafactory_priogrid/temporal_generator.py` (`TemporalConfig` default `end_year=2024`), `scripts/run_ghspop_pipeline.py` (fixed), `scripts/compile_grid.py`, `scripts/compile_acled.py` |
+| Trigger | Resolved 2026-05-23 |
+| Location | `src/datafactory_priogrid/temporal_config.py:29` |
 
-`TemporalConfig()` defaults to `end_year=2024`. Pipeline scripts that don't pass `--end-year 2026` produce shorter temporal ranges (432 months) than sources using `--end-year 2026` (456 months). Assembly zero-fills the trailing 24 months — subtly wrong because population data should extrapolate, not drop to zero. This already bit us during GHS-POP implementation: `run_ghspop_pipeline.py` initially used bare `TemporalConfig()` while `compile_grid.py` and `run_acled_pipeline.py` used `--end-year 2026`. Caught by falsification round 2 (2026-05-20), fixed by adding `--end-year` argument. The default remains `2024` — each new source must remember to override it. Post-mortem recommendation: make `end_year` a required argument with no default, so each caller must be explicit (ADR-003 compliance: declarations over inference).
+**Resolved 2026-05-23.** Fix: Updated `TemporalConfig` default from `end_year=2024` to `end_year=2026`. This matches what all 5 pipeline scripts already use explicitly. `DEFAULT_TEMPORAL_CONFIG` now produces 456 months (1989-01 to 2026-12). Making `end_year` required (no default) was considered but rejected — it would break `DEFAULT_TEMPORAL_CONFIG = TemporalConfig()` in `temporal_generator.py` and every caller relying on defaults. Tests updated: 3 tests in `test_grid.py` adjusted from 432 to 456 months.
 
 Cross-ref: C-130 (zero-filled months indistinguishable from observations), C-129 (partition boundaries no single source of truth), C-156 (ACLED temporal range mismatch).
 
-### C-174: `latlon_to_pgid` silently clamps out-of-bounds coordinates — [DEFER]
+### ~~C-174~~: `latlon_to_pgid` silently clamps out-of-bounds coordinates
 
 | Field | Value |
 |-------|-------|
 | ID | C-174 |
 | Tier | 3 |
 | Source | repo-assimilation (2026-05-20) |
-| Trigger | Source provides event coordinates outside [-90,90]×[-180,180] — e.g., geocoding error yields lat=91° or lon=200° |
-| Location | `src/datafactory_priogrid/cell_generator.py:113-118` (`np.clip` clamping), `src/datafactory_compilation/grid_compilation.py:117-128` (pgid bounds check after clamping) |
+| Trigger | Resolved 2026-05-23 |
+| Location | `src/datafactory_priogrid/cell_generator.py:112-135` |
 
-`latlon_to_pgid` uses `np.clip(rows, 0, nrow-1)` and `np.clip(cols, 0, ncol-1)` to clamp out-of-bounds coordinates to the grid edge rather than raising. This means a lat=91° event is silently placed in the northernmost row of cells (the Arctic). The downstream bounds check in `grid_compilation.py:126` (`if pgid < 1 or pgid > n_cells`) is dead code for clamped inputs — it can never trigger because clamping already guarantees a valid pgid. Current sources (UCDP, ACLED, GHS-POP) provide pre-validated coordinates, so the risk is hypothetical today. A new source with less-validated geocoding could silently misplace events. Not Tier 1 because: (a) no current path produces OOB coordinates, (b) the misplacement is bounded to edge cells. Tier 3 because: if triggered, corruption is silent and multi-cell.
+**Resolved 2026-05-23.** Fix: Replaced `np.clip` silent clamping with explicit `ValueError` + `logger.error` (ADR-008 compliance). Out-of-bounds latitudes or longitudes now raise immediately with the offending values in the error message (up to 5 shown). The downstream bounds check in `grid_compilation.py:126` is no longer dead code — invalid coordinates are caught at the source. 5 boundary tests added to `test_grid.py`: lat above 90, lat below -90, lon above 180, lon below -180, valid boundary point (89.75, 179.75).
 
 See also C-130 (zero-fill ambiguity — same class of silent data misrepresentation).
 
@@ -454,10 +379,6 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 `pa.concat_tables(promote_options="default")` in `ucdp.py:439-441` silently adds columns when UCDP adds fields. Removed fields leave nulls in new records. No schema registry. Kleppmann (Ch.4 pp.112-127) treats schema evolution as essential for long-lived data: backward compatibility (new code reads old data) and forward compatibility (old code reads new data) must both be maintained. Our `promote_options="default"` handles column additions (backward compat) but not removals or renames. Ch.4 p.125 recommends a schema versioning database; Ch.4 p.131 notes archival storage should re-encode using the latest schema. **Trigger: UCDP removes a field or renames a column.**
 **Source:** Kleppmann (expert review 6). DDIA Ch.4 pp.112-127, 131.
 
-### ~~C-31: Candidate source depends on annual source~~ — RESOLVED
-**Resolved 2026-04-27.** Extracted `_ucdp_common.py` with `ENVELOPE_KEYS`, `UCDP_GED_API_BASE`, and `validate_envelope()`. Candidate and .9 now import shared symbols from `_ucdp_common` instead of `ucdp_annual`. Discovery functions call `validate_envelope()` and use `data["TotalCount"]` instead of `.get("TotalCount", 0)`. Network try-except narrowed to only `requests.RequestException` so envelope validation errors propagate (ADR-008). Added 2 envelope rejection tests.
-**Source:** Martin (expert review 5), falsification audit DoD005, magic-values audit 2026-04-21.
-
 ### C-44: Harvest pipeline template is implicit — [DEFER]
 All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
 **Note (2026-04-04):** Trigger condition met — 5 sources exist (ucdp_annual, ucdp_candidate, ucdp_dot9, priogrid_static, gaul_admin). Accepted at v1.0 scope: all 5 harvesters work correctly, implicit template hasn't caused bugs. Reassess before V-Dem (6th source).
@@ -465,6 +386,7 @@ All five harvesters follow config->fetch->validate->compare->archive->store->pro
 **Note (2026-05-18):** 7th source added (GHS-POP). Pattern replicated from GAUL harvester. Trigger condition met — consider template extraction at next refactor opportunity.
 **Note (2026-05-19):** Full cross-layer WET inventory completed — see C-164 for patterns spanning all 4 layers, not just harvest. This concern covers the harvest template; C-164 covers the broader cross-layer picture.
 **Note (2026-05-21):** C-183 merged here. Expert code review of harvest caching found that the three caching/idempotence implementations (UCDP two-tier, ACLED single-tier, GHS-POP single-tier) share the same two-key cache pattern (file exists + ledger digest) but diverge on change detection, force-refresh semantics, and outcome vocabulary. No shared contract exists — each reinvents the pattern independently. This is the caching-specific instance of the general harvest template gap. See ADR-032 (harvest idempotence) for the formalized pattern.
+**Note (2026-05-22):** 8th source added (GHS-BUILT-S). Harvest pattern replicated without issues. Cross-ref C-164.
 **Source:** GoF (expert review 6)
 
 ### C-46: No ledger write idempotency — [DEFER]
@@ -508,11 +430,6 @@ Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and fi
 `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
 **Source:** GoF, Hickey
 
-
-### ~~C-143: request_with_retry has no Red tests~~ — RESOLVED
-**Resolved 2026-04-26.** Added `TestRequestWithRetryRed` (2 tests: `requests.Timeout` retried, `HTTPError` with `response=None` retried not treated as 4xx).
-**Source:** Test review 2026-04-26. Cross-ref: C-70, C-72.
-
 ### C-115: Summary detection threshold (>= vs >) is architectural — [DEFER]
 The summary event detection formula uses `best >= span` (not strict `best > span`). This threshold is documented in ADR-023 as an architectural invariant matching VIEWSER's current GED_loader0 behavior. An older VIEWSER notebook (GED_loader2) used strict `>`. If UCDP changes their summary event definition or VIEWSER reverts to strict `>`, this invariant would need updating. **Trigger: UCDP changes summary event definition or VIEWSER changes detection threshold.**
 **Source:** Parity investigation 2026-04-08, notebook archaeology (GED_loader{0,1,2}.ipynb).
@@ -536,11 +453,6 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 ### C-97: Basic auth + Caddy scalability ceiling at ~30-50 users — [DEFER]
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Source:** Falsification audit 2026-04-01 (F2)
-
-
-### ~~C-125: No country-month (cm) aggregation — 48/70 models cannot migrate~~ — [RESOLVED]
-Resolved 2026-04-21. `load_dataset(output_format="country_month")` now aggregates grid cells by country per month using `gaul0_code` as the grouping key. Adapter: `grid_to_country_month()` in `datafactory_adapters`. Active conflict features (ged_sb/ns/os_best) summed per (month_id, country_id). WDI/V-DEM/topic features remain out of scope (C-126 covers the transform gap).
-**Source:** Falsification audit 2026-04-20 (F3). Cross-ref: S1 in `test_falsification_viewser_replacement.py`.
 
 ### C-135: No runtime type validation for zarr `.zattrs` values — [DEFER]
 `ds.attrs.get("last_valid_month_id")` in `dataset.py` is type-annotated as `int | None` but no runtime check validates the type. `health.py` applies `int(last_valid)` which would raise `ValueError` on a non-numeric string but silently truncate a float. The attrs are written by our own `export_zarr.py` (which produces correct types), so the only risk vector is manual server-side editing of `.zattrs`. **Trigger: manual edit of `.zattrs` on Hetzner server sets a zarr attribute to an unexpected type.**
@@ -609,50 +521,34 @@ The `ACLED_FEATURES` tuple in `tests/test_acled_compilation.py` is a copy-paste 
 
 See also C-29 (no integration test), C-74 (strategy vocabulary).
 
-### ~~C-158: No CICs for SourceEntry or AssemblyConfig — [RESOLVED 2026-05-07]~~
-
-| Field | Value |
-|-------|-------|
-| ID | C-158 |
-| Tier | 4 |
-| Source | base documentation review (2026-05-07), CIC audit |
-| Trigger | Developer modifies SourceEntry fields or AssemblyConfig validation without understanding the contract — e.g., removing a `__post_init__` check that 5 consumers depend on |
-| Location | `src/datafactory_provenance/source_registry.py:28` (SourceEntry), `scripts/assemble_grid.py:36` (AssemblyConfig) |
-
-Two frozen dataclasses with `__post_init__` validation lack CICs. `SourceEntry` is the backbone of the source registry — health checks, pre-flight validation, assembly, and remote verification all import from it. `AssemblyConfig` governs grid assembly with validated defaults. Both follow the ADR-009 boundary contract pattern. Analogous to resolved C-151 (ACLED config CICs) but for different classes. Also noted: `SpatioTemporalGrid` CIC has medium drift — documents `pgids`/`lats`/`lons` as 1-D arrays but they are actually 2-D `[H, W]`.
-
-Cross-ref: C-157 (documentation drift), C-151 (resolved, ACLED CICs).
-
 ### C-155: No shared visual audit framework — per-source scripts are idiosyncratic — [DEFER]
 
 | Field | Value |
 |-------|-------|
 | ID | C-155 |
 | Tier | 4 |
-| Source | ACLED grid verification (2026-05-06) |
-| Trigger | **Trigger fired (2026-05-20):** GHS-POP added `verify_ghspop_grid.py` as the third bespoke visual audit script. Reassess at 4th source. |
-| Location | `scripts/visualize_audit.py` (UCDP), `scripts/verify_acled_grid.py` (ACLED), `scripts/verify_ghspop_grid.py` (GHS-POP), `scripts/viz_style.py` (shared aesthetics only) |
+| Source | ACLED grid verification (2026-05-06), GHS-BUILT-S visual audit falsification (2026-05-22) |
+| Trigger | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script — extraction cost then exceeds duplication cost |
+| Location | `scripts/visualize_audit.py` (UCDP), `scripts/verify_acled_grid.py` (ACLED), `scripts/verify_ghspop_grid.py` (GHS-POP), `scripts/verify_ghsbuilts_grid.py` (GHS-BUILT-S), `scripts/viz_style.py` (shared aesthetics only) |
 
 Each data source has its own plotting/audit script with duplicated structural patterns: `PrecomputedData` dataclass, single-pass `precompute()`, `cell_to_label()`, `REGION_BOUNDS`, per-plot functions, and statistical pass/fail checks. The scripts share `viz_style.py` for aesthetic constants and helpers (`spatial_imshow`, `style_ax`, `save_plot`) but nothing for plot structure, check logic, or report generation.
 
 **Note (2026-05-20):** Trigger condition met — GHS-POP is the third visual audit script. The three scripts share structural patterns but differ in domain-specific checks (population density vs. fatality rates vs. event counts). Accepted for now: three scripts is enough to see the abstraction clearly, but the abstraction is moderate complexity (pluggable feature specs, check definitions, report generation). Consider extraction when 4th source arrives. Cross-ref: C-164 (WET inventory).
+**Note (2026-05-22):** GHS-BUILT-S added as 4th data source. Falsification audit proved total absence of visual audit capability — 5/5 probes hard-falsified. Escalated from Tier 4 DEFER to Tier 2.
+**Note (2026-05-22):** C-155 remediated — `verify_ghsbuilts_grid.py` created (10 plots, 6 statistical checks), `--verify` flag added to pipeline, falsification stubs F1-F3 flipped. Full pipeline run successful with all checks PASS. Demoted back to Tier 4 DEFER — the original idiosyncrasy concern (4 bespoke scripts) remains but is not acute. Reassess at 5th source.
 
 See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication), C-164 (cross-layer WET inventory).
-### ~~C-161: GHS-POP harvester failure-path provenance partially untested~~ — RESOLVED
-**Resolved 2026-05-18.** Added 3 tests and strengthened 2 existing tests: `test_corrupt_zip_raises_and_records_ledger` (verifies both exception and failure ledger entry), `test_zip_with_no_tif_raises` (valid ZIP with no .tif), `test_rejects_negative_timeout`, `test_empty_epochs_accepted`. Strengthened `test_download_single_epoch` (content round-trip: `read_bytes() == b"fake geotiff data"`), `test_provenance_recorded` (digest correctness: computed digest matches ledger entry), `test_defaults` (asserts `ledger_path` default). Test count: 15 → 18.
-**Source:** GHS-POP harvester test review (2026-05-18). Cross-ref: C-44 (harvest pipeline template).
-
-### C-164: Cross-layer WET debt — 3 sources replicate patterns across all 4 layers — [DEFER]
+### C-164: Cross-layer WET debt — 4 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
 
 | Field | Value |
 |-------|-------|
 | ID | C-164 |
 | Tier | 3 |
 | Source | WET-before-DRY audit (2026-05-19), GHS-POP Phase 4 completion |
-| Trigger | 4th data source (V-Dem or WDI) requires copying 6+ structural patterns across layers |
+| Trigger | **Fired 2026-05-22:** 4th data source (GHS-BUILT-S) copied all 6 cross-layer patterns. Reassess before 5th source (V-Dem or WDI). |
 | Location | All `src/datafactory_*` packages — see inventory below |
 
-With 3 sources implemented (UCDP, ACLED, GHS-POP), the codebase has accumulated intentional WET patterns across all four layers. The WET-before-DRY strategy (ADR: write 3 times before abstracting) has succeeded — concrete patterns are now clear. A 4th source would force copying all of these again.
+With 4 sources implemented (UCDP, ACLED, GHS-POP, GHS-BUILT-S), the codebase has accumulated intentional WET patterns across all four layers. The WET-before-DRY strategy (ADR: write 3 times before abstracting) has succeeded — concrete patterns are now clear. The 4th source (GHS-BUILT-S, v1.2.20) copied all patterns again, confirming the abstraction boundaries.
 
 **Inventory of cross-layer WET patterns:**
 
@@ -677,11 +573,9 @@ With 3 sources implemented (UCDP, ACLED, GHS-POP), the codebase has accumulated 
 
 Cross-ref: C-44 (harvest pipeline template), C-07 (frozen dataclass pattern), C-155 (visual audit framework), C-06 (provenance composability).
 
-**Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19).
+**Note (2026-05-22):** Trigger fired — GHS-BUILT-S (8th source, 4th raster) copied all 6 patterns. `ghsbuilts_v1.py` duplicates `_read_geotiff`, `_aggregate_with_alignment`, `_interpolate_temporal` from `ghspop_v1.py`. `_VIEWS_EPOCH_YEAR` now duplicated in 3 files. Accepted for v1.2.20; extract shared raster utilities before 5th source (V-Dem or WDI).
 
-### ~~C-167: reports/audit_ghspop/ not in .gitignore~~ — RESOLVED
-**Resolved 2026-05-20.** Added `reports/audit_ghspop/` to `.gitignore` alongside `reports/audit_acled/`.
-**Source:** Falsification audit (2026-05-19), probe F5. Cross-ref: C-155 (visual audit framework).
+**Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19), updated GHS-BUILT-S (2026-05-22).
 
 ### C-169: 2 CI tests fail due to missing infrastructure — permanent UNSTABLE — [DEFER]
 
@@ -811,24 +705,63 @@ The shapefile harvester (`shapefile_harvester.py`) predates the outcome vocabula
 
 Cross-ref: C-44 (harvest pipeline template), C-184 (ACLED same structural gap), C-185 (GHS-POP same gap), ADR-032.
 
-### ~~C-187: Digest-field assumption in reverse scan shadows valid entries~~ — RESOLVED
-
-**Resolved 2026-05-21.** Both `last_digest` and `last_digest_for_version` now skip entries where `entry.get(digest_field)` is `None`, continuing the reverse scan to find a valid entry. Added digest-field guard: `digest = entry.get(digest_field); if digest is not None: return digest`. Falsification tests in `test_falsification_pr59_merge_r2.py` now pass.
-**Source:** Falsification audit round 2 of PR #59 (2026-05-21). Cross-ref: C-182 (outcome filtering fix), C-46 (ledger write idempotency).
-
-### ~~C-188: GAUL admin failure path writes no ledger entry~~ — RESOLVED
+### C-189: GHS-BUILT-S test coverage parity gap — 19% of combined other sources
 
 | Field | Value |
 |-------|-------|
-| ID | C-188 |
+| ID | C-189 |
 | Tier | 3 |
-| Source | Expert code review of provenance/shapefile (2026-05-21) |
-| Trigger | GAUL admin variable write fails in production; operator queries ledger for failure history and finds no record |
-| Location | `src/datafactory_harvester/sources/gaul_admin.py:550-558` |
+| Source | Falsification audit — coverage parity (2026-05-22) |
+| Trigger | GHS-BUILT-S encounters a production incident on Hetzner that would have been caught by Red-team or falsification tests present for GHS-POP but absent for GHS-BUILT-S |
+| Location | `tests/test_ghsbuilts_harvester.py`, `tests/test_ghsbuilts_viewpoint.py`, `tests/test_ghsbuilts_compilation.py`; parity stubs in `tests/test_falsification_ghsbuilts_coverage_parity.py` |
 
-**Resolved (v1.2.18):** Added `append_ledger_entry` call with `"outcome": "failed"` inside the existing except block. GAUL admin failures are now recorded in the provenance ledger with dataset, version, outcome, and error message. Test: `test_gaul_admin.py::TestGaulAdminFailureLedger::test_write_variable_failure_records_ledger_entry`.
+GHS-BUILT-S test suite has 41 test functions vs 215 for ACLED + GHS-POP + PRIO-GRID/GAUL combined (19%). Five specific gaps: (F1) 41 vs 215 test functions, (F2) 86 vs 368 assertions, (F3) 1 vs 10 Red-team classes — viewpoint and compilation have zero adversarial tests, (F4) 0 vs 7 dedicated falsification test files — GHS-POP has 4 (deploy v1/v2/v3, memory), (F5) viewpoint tests are 441 lines vs GHS-POP viewpoint alone at 937 lines. Root cause: WET-before-DRY replication correctly duplicated production code but not the accumulated test and audit investment from GHS-POP's five PRs and four OOM-fix cycles. Parity stubs are `xfail strict=True` and will break when thresholds are met.
 
-Cross-ref: C-186 (shapefile harvester same gap, deferred), C-44 (harvest pipeline template), ADR-032.
+Cross-ref: C-164 (WET-before-DRY raster code duplication), C-180 (no falsification tests for non-GHS-POP compilation/viewpoint paths).
+
+### ~~C-190~~: KNOWN_GLOBAL_BUILT_AREA reference values ~6-7x actual JRC totals — [RESOLVED]
+
+| Field | Value |
+|-------|-------|
+| ID | C-190 |
+| Tier | 4 |
+| Source | GHS-BUILT-S visual audit run (2026-05-22) |
+| Trigger | Epoch ratio check used as automated pass/fail gate (e.g., CI assertion on ratio < 2.0) instead of current advisory role |
+| Location | `scripts/verify_ghsbuilts_grid.py:47-62` (`KNOWN_GLOBAL_BUILT_AREA` dict) |
+
+**Resolved 2026-05-23.** Root cause: the original `KNOWN_GLOBAL_BUILT_AREA` values were approximate guesses (~74B for 2020), not verified against JRC's published BUTOT statistics or the raw GeoTIFF pixel sums (~465B for 2020). Empirical confirmation: raw pixel sums for all 12 epochs computed from GHS_BUILT_S R2023A 30ss GeoTIFFs; grid epoch totals match raw sums to ratio 1.0000. Fix: replaced reference values with raw pixel sums, added `built_area_vs_jrc` boolean check (0.85–1.15 tolerance, matching GHS-POP's `pop_sanity_vs_known` pattern), tightened ratio display threshold from 0.5–2.0 to 0.85–1.15. All 7 checks now PASS.
+
+Cross-ref: C-155 (visual audit framework).
+
+### ~~C-191~~: `refresh_pipeline.sh` has no GHS-BUILT-S steps — feature dead on arrival in production
+
+| Field | Value |
+|-------|-------|
+| ID | C-191 |
+| Tier | 2 |
+| Source | Falsification audit — merge-readiness (2026-05-23) |
+| Trigger | Resolved 2026-05-23 |
+| Location | `scripts/refresh_pipeline.sh`, `scripts/harvest_ghsbuilts.py` (created), `docs/guides/hetzner_deployment_guide.md` |
+
+**Resolved 2026-05-23.** Fix: Created `scripts/harvest_ghsbuilts.py` (thin harvest script matching `harvest_ghspop.py` pattern). Added GHS-BUILT-S to `refresh_pipeline.sh`: harvest step (Step 1), compile step (new Step 7: `run_ghsbuilts_pipeline.py --skip-to viewpoint`), `--ghsbuilts-grid` flag to assembly (Step 8). Renumbered all steps from 10 to 11. Updated header comments. Added GHS-BUILT-S paragraph to `hetzner_deployment_guide.md` covering ~2 GB download, ~3 min harvest, ~5 min viewpoint, no credentials, ADR-034 (no consolidation). Falsification stubs in `tests/test_falsification_ghsbuilts_merge_ready.py` all pass. Automated enforcement via `tests/test_operational_integration.py` (C-192 fix) prevents recurrence.
+
+See also C-147 (no pipeline orchestrator), C-192 (recurring workflow gap, resolved).
+
+### ~~C-192~~: Operational integration consistently trails implementation — 3rd recurrence
+
+| Field | Value |
+|-------|-------|
+| ID | C-192 |
+| Tier | 3 |
+| Source | Falsification audit — merge-readiness pattern analysis (2026-05-23), user observation |
+| Trigger | Resolved 2026-05-23 |
+| Location | `tests/test_operational_integration.py` (created), `scripts/refresh_pipeline.sh`, `docs/guides/hetzner_deployment_guide.md` |
+
+**Resolved 2026-05-23.** Recurring bug class: operational integration trailed code implementation three times (GHS-POP CIC drift, GHS-POP deployment guide, GHS-BUILT-S refresh_pipeline.sh + deployment guide). The post-mortem checklist (`reports/pre_deploy_post_mortem.md:176-188`) was not consulted during GHS-BUILT-S — items 9-10 missed again.
+
+Fix: Created `tests/test_operational_integration.py` — a generic enforcement test that reads `PIPELINE_SOURCES` from the source registry and verifies every grid-producing source appears in both `refresh_pipeline.sh` and `hetzner_deployment_guide.md`. This converts post-mortem checklist items 9-10 into automated tests. When the 5th source (V-Dem or WDI) is added to `PIPELINE_SOURCES`, the test fails immediately if operational integration is missing. The enforcement is registry-driven — no manual updates to the test are needed.
+
+See also C-44 (harvest pipeline template), C-147 (no pipeline orchestrator), C-157 (ACLED documentation drift, resolved), C-191 (specific GHS-BUILT-S instance, resolved).
 
 ### C-177: `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) — [DEFER]
 
@@ -927,6 +860,34 @@ Ousterhout and Hickey argue for merging into a single function with optional `ve
 Nygard and Martin argue for full outcome-vocabulary compliance now (add try/except, record `"failed"` entries, use `"outcome": "success"/"unchanged"`). Feathers and Beck argue the current code works correctly via backward compat and the retrofit should happen organically when the shapefile harvester is next touched or when V-Dem is added. Hickey notes `"changed": True/False` is accidental complexity but not dangerous. **No resolution yet — the shapefile harvester is rarely touched (one-time artifact).**
 
 **Source:** Expert code review of provenance/shapefile (2026-05-21). Cross-ref: C-186 (shapefile lacks outcome vocabulary), C-44 (harvest pipeline template).
+
+### ~~C-193~~: Deployment guide GHS-BUILT-S download size overstated (~5 GB vs ~2.1 GB)
+
+| Field | Value |
+|-------|-------|
+| ID | C-193 |
+| Tier | 4 |
+| Source | Falsification audit round 2 — merge-readiness (2026-05-23) |
+| Trigger | Resolved 2026-05-23 |
+| Location | `docs/guides/hetzner_deployment_guide.md:173` |
+
+**Resolved 2026-05-23.** Fix: Changed "~5 GB" to "~2 GB" and "~6 minutes" to "~3 minutes" in the GHS-BUILT-S deployment guide paragraph. Original values were copied from the GHS-POP paragraph without adjustment for GHS-BUILT-S's smaller rasters (~178 MB vs ~350 MB per epoch, 12 × 178 MB ≈ 2.1 GB).
+
+Cross-ref: C-192 (resolved — recurring operational integration gap).
+
+### ~~C-194~~: Raster harvesters (GHS-POP, GHS-BUILT-S) lack `logger.error` before bare `raise` — ADR-008
+
+| Field | Value |
+|-------|-------|
+| ID | C-194 |
+| Tier | 4 |
+| Source | Falsification audit round 2 — merge-readiness (2026-05-23) |
+| Trigger | Resolved 2026-05-23 |
+| Location | `src/datafactory_harvester/sources/ghsbuilts.py:185,205`, `src/datafactory_harvester/sources/ghspop.py:181,201` |
+
+**Resolved 2026-05-23.** Fix: Added `logger.error("Download failed for epoch %d: %s", epoch, url)` before bare `raise` in `except RequestException` blocks, and `logger.error("Bad ZIP file for epoch %d: %s", epoch, url)` before bare `raise` in `except BadZipFile` blocks — in both `ghsbuilts.py` and `ghspop.py`. The `__post_init__` validation raises are left as-is (config validation in frozen dataclass constructors — no operational context to log).
+
+Cross-ref: C-186 (shapefile harvester lacks outcome vocabulary).
 
 ---
 
