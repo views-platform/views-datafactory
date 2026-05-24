@@ -571,7 +571,7 @@ Cross-ref: C-157 (documentation drift), C-151 (resolved, ACLED CICs).
 
 Cross-ref: C-186 (shapefile harvester same gap, deferred), C-44 (harvest pipeline template), ADR-032.
 
-### ~~C-178~~: `compute_content_digest(path.read_bytes())` loads entire output into memory — RESOLVED
+### C-178: ~~`compute_content_digest(path.read_bytes())` loads entire output into memory~~ RESOLVED
 
 | Field | Value |
 |-------|-------|

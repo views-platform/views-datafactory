@@ -10,7 +10,7 @@
 
 ## Context
 
-ADR-002 defined a 3-layer topology: provenance (Layer 0), independent sources + grid (Layer 1), compilation (Layer 2). This served the system well through its first six definitions of done.
+ADR-002 defined a 3-layer topology: foundation (Layer 0), independent sources + grid (Layer 1), compilation (Layer 2). This served the system well through its first six definitions of done.
 
 Investigation of real UCDP data revealed that compilation conflates two fundamentally different concerns:
 
@@ -95,7 +95,7 @@ The filesystem is the decoupling boundary between every layer. Adding a new sour
 
 | Layer | Changes when... | Expected frequency |
 |-------|----------------|-------------------|
-| Layer 0 (Provenance) | Digest algorithm or ledger schema changes | Rarely (years) |
+| Layer 0 (Foundation) | Digest algorithm, ledger schema, source registry, or platform constants change | Rarely (years) |
 | Layer 1 (Sources) | Upstream API schema changes or new source added | Occasionally (months) |
 | Layer 2 (Consolidation) | New source type requires new consolidation logic | Occasionally (months) |
 | Layer 3 (Viewpoint) | Research produces new survivorship rules, uncertainty models, temporal distribution methods | Frequently (weeks/sprints) |
