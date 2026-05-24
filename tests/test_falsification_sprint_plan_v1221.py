@@ -14,7 +14,6 @@ from pathlib import Path
 
 import pytest
 
-
 # ── F-1: Provenance scope drift ──
 
 

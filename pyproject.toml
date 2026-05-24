@@ -41,7 +41,6 @@ packages = [
     "src/datafactory_compilation",
     "src/datafactory_consolidation",
     "src/datafactory_viewpoint",
-    "src/datafactory_synthetic",
     "src/datafactory_adapters",
     "src/datafactory_query",
 ]

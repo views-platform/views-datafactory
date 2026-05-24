@@ -40,9 +40,7 @@ class TestS4LoadSourceGridScope:
             elif isinstance(node, ast.ImportFrom):
                 for alias in node.names:
                     module_level_names.add(alias.asname or alias.name)
-            elif isinstance(node, ast.FunctionDef):
-                module_level_names.add(node.name)
-            elif isinstance(node, ast.ClassDef):
+            elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                 module_level_names.add(node.name)
             elif isinstance(node, ast.Assign):
                 for target in node.targets:

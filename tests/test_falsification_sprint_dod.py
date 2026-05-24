@@ -19,7 +19,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 PLAN_PATH = Path(
     "reports/sprint_plan_maintenance_v1221.md"
 )

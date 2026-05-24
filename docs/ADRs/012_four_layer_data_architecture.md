@@ -43,26 +43,26 @@ This is a **graph**, not a pipeline. Not all data flows through all layers. Synt
 Layer 0 (Foundation):     datafactory_provenance    datafactory_http
                                ^                        ^
                                |                        |
-Layer 1 (Sources):        datafactory_priogrid    datafactory_harvester    datafactory_synthetic
-                               |                        |                        |
-                               |        ┌───────────────┘                        |
-                               |        |  (filesystem: raw snapshots)           |
-                               |        v                                        |
-Layer 2 (Consolidation):  datafactory_consolidation                             |
-                               |                                                 |
-                               |  (filesystem: consolidated event store)         |
-                               v                                                 |
-Layer 3 (Viewpoint):      datafactory_viewpoint                                 |
-                               |                                                 |
-                               |  (filesystem: materialized viewpoint)           |
-                               v                                                 v
+Layer 1 (Sources):        datafactory_priogrid    datafactory_harvester
+                               |                        |
+                               |        ┌───────────────┘
+                               |        |  (filesystem: raw snapshots)
+                               |        v
+Layer 2 (Consolidation):  datafactory_consolidation
+                               |
+                               |  (filesystem: consolidated event store)
+                               v
+Layer 3 (Viewpoint):      datafactory_viewpoint
+                               |
+                               |  (filesystem: materialized viewpoint)
+                               v
 Layer 4 (Compilation):    datafactory_compilation ──imports──> datafactory_priogrid
-                               |                                                 |
-                               v                                                 v
-                           Consumer nodes ←──────────────────────────────────────┘
+                               |
+                               v
+                           Consumer nodes
 ```
 
-Synthetic data follows an independent path: it produces npy output directly and is consumed without passing through consolidation, viewpoint, or compilation. This is the graph nature of the architecture — not all paths traverse all layers.
+Not all data traverses all layers — this is the graph nature of the architecture. GHS-POP and GHS-BUILT-S skip consolidation (single release, nothing to merge; ADR-029, ADR-034).
 
 `datafactory_adapters` sits alongside the graph, not inside it. It converts compiled grid output into consumer formats (DataFrame, FeatureFrame) and imports nothing from `datafactory_*`. It is designed for eventual extraction to `views-pipeline-core`.
 
@@ -74,7 +74,6 @@ Synthetic data follows an independent path: it produces npy output directly and 
 | `datafactory_http` | nothing | nothing |
 | `datafactory_priogrid` | provenance, http | nothing |
 | `datafactory_harvester` | provenance, http | nothing |
-| `datafactory_synthetic` | provenance | nothing |
 | `datafactory_consolidation` | provenance | harvester |
 | `datafactory_viewpoint` | provenance | consolidation |
 | `datafactory_compilation` | provenance, priogrid | viewpoint |
@@ -86,8 +85,7 @@ Synthetic data follows an independent path: it produces npy output directly and 
 - **Layer 1 → Layer 2:** The harvester writes raw Parquet snapshots to `data/`. The consolidator reads these files and writes a consolidated event store.
 - **Layer 2 → Layer 3:** The viewpoint builder reads the consolidated store and writes a materialized view (one row per event or event-month).
 - **Layer 3 → Layer 4:** The compiler reads the viewpoint output and places events onto the grid, producing npy output with sidecar coordinate arrays.
-- **Layer 1 (synthetic) → Consumer:** Synthetic data produces npy directly. It does not pass through consolidation, viewpoint, or compilation.
-- **Consumer nodes** (external repos) read Layer 4 output from `data/compiled/` or synthetic output directly.
+- **Consumer nodes** (external repos) read Layer 4 output from `data/compiled/`.
 
 The filesystem is the decoupling boundary between every layer. Adding a new source never requires changing the consolidator. Changing viewpoint rules never requires changing the consolidator or the compiler.
 
@@ -154,7 +152,9 @@ Independence is enforced by the filesystem: each `datafactory_*` package is a se
 - Adding a new data source requires only Layer 1 + Layer 2 changes
 - Changing viewpoint rules requires only Layer 3 changes
 - Each layer can be tested, versioned, and audited independently
-- The graph nature allows synthetic data to reach consumers without traversing all layers
+- The graph nature allows data sources to skip layers (e.g., GHS-POP and GHS-BUILT-S skip consolidation)
+
+> **Note (v1.2.21):** The synthetic module was removed (dead code, zero exports). Synthetic data generation is deferred to a future design.
 
 ### Negative
 
