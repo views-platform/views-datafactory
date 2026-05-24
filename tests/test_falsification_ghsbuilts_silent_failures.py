@@ -49,11 +49,11 @@ class TestF1OffsetBounds:
 
 
 class TestF2EmptyInterpolation:
-    """_interpolate_temporal must handle empty epoch dict."""
+    """interpolate_temporal must handle empty epoch dict."""
 
     def test_empty_epochs_returns_zeros(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(

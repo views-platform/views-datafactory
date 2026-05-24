@@ -269,8 +269,8 @@ class TestTemporalInterpolationGreen:
     """Temporal interpolation strategies."""
 
     def test_step_holds_value(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -287,8 +287,8 @@ class TestTemporalInterpolationGreen:
         assert result[60] == 200.0
 
     def test_linear_interpolates(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -303,8 +303,8 @@ class TestTemporalInterpolationGreen:
         assert 55.0 < result[0] < 65.0
 
     def test_before_first_epoch_is_zero(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -319,8 +319,8 @@ class TestTemporalInterpolationGreen:
         assert result[0] == 0.0
 
     def test_linear_monotonic_increase(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -338,8 +338,8 @@ class TestTemporalInterpolationGreen:
             )
 
     def test_after_last_epoch_is_flat(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -355,8 +355,8 @@ class TestTemporalInterpolationGreen:
         assert result[-12] == 300.0
 
     def test_step_changes_only_at_epochs(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -374,8 +374,8 @@ class TestTemporalInterpolationGreen:
         assert result[61] == 200.0
 
     def test_many_epochs_linear_smooth(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         epochs = {
@@ -461,12 +461,12 @@ class TestBuildGhsBuiltSV1Green:
     def test_read_geotiff_limits_decompression_threads(
         self,
     ) -> None:
-        """Verify maxworkers=1 in _read_geotiff — OOM lesson."""
+        """Verify maxworkers=1 in read_geotiff — OOM lesson."""
         import inspect
 
-        from datafactory_viewpoint.builders import ghsbuilts_v1
+        from datafactory_viewpoint import raster_io
 
-        source = inspect.getsource(ghsbuilts_v1._read_geotiff)
+        source = inspect.getsource(raster_io.read_geotiff)
         assert "maxworkers=1" in source
 
     def test_output_schema_types(self, tmp_path: Path) -> None:
@@ -805,8 +805,8 @@ class TestTemporalInterpolationRed:
     """Adversarial inputs to temporal interpolation."""
 
     def test_empty_epoch_values_returns_zeros(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -822,8 +822,8 @@ class TestTemporalInterpolationRed:
         assert all(v == 0.0 for v in result)
 
     def test_single_epoch_linear_flat_after(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -841,8 +841,8 @@ class TestTemporalInterpolationRed:
             assert v == 500.0
 
     def test_single_epoch_step_flat_after(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         result = _interpolate_temporal(
@@ -860,8 +860,8 @@ class TestTemporalInterpolationRed:
             assert v == 500.0
 
     def test_invalid_strategy_raises(self) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         with pytest.raises(ValueError, match="Unknown"):
@@ -908,9 +908,7 @@ class TestBuildGhsBuiltSV1Red:
     def test_geotiff_missing_tags_raises(
         self, tmp_path: Path,
     ) -> None:
-        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
-            _read_geotiff,
-        )
+        from datafactory_viewpoint.raster_io import read_geotiff
 
         p = 60
         data = np.ones((p, p), dtype=np.uint32)
@@ -921,7 +919,7 @@ class TestBuildGhsBuiltSV1Red:
         )
 
         with pytest.raises(ValueError, match="geotransform"):
-            _read_geotiff(path)
+            read_geotiff(path)
 
     def test_no_args_raises(self) -> None:
         from datafactory_viewpoint.builders.ghsbuilts_v1 import (

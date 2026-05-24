@@ -222,8 +222,8 @@ class TestTemporalInterpolationGreen:
 
     def test_step_function_basic(self) -> None:
         """Values hold until next epoch."""
-        from datafactory_viewpoint.builders.ghspop_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         epoch_values = {2000: 100.0, 2005: 200.0}
@@ -248,8 +248,8 @@ class TestTemporalInterpolationGreen:
 
     def test_step_function_single_epoch(self) -> None:
         """Single epoch fills entire range."""
-        from datafactory_viewpoint.builders.ghspop_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         epoch_values = {2020: 500.0}
@@ -273,8 +273,8 @@ class TestTemporalInterpolationGreen:
 
     def test_step_function_length(self) -> None:
         """Output length matches month count."""
-        from datafactory_viewpoint.builders.ghspop_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         epoch_values = {2000: 100.0}
@@ -290,8 +290,8 @@ class TestTemporalInterpolationGreen:
 
     def test_linear_basic(self) -> None:
         """Linear interpolation between two epochs."""
-        from datafactory_viewpoint.builders.ghspop_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         epoch_values = {2000: 100.0, 2010: 200.0}
@@ -315,8 +315,8 @@ class TestTemporalInterpolationGreen:
 
     def test_linear_holds_before_first_epoch(self) -> None:
         """Months before the first epoch are 0."""
-        from datafactory_viewpoint.builders.ghspop_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         epoch_values = {2005: 300.0, 2010: 400.0}
@@ -333,8 +333,8 @@ class TestTemporalInterpolationGreen:
 
     def test_linear_holds_after_last_epoch(self) -> None:
         """Months after the last epoch hold the last value."""
-        from datafactory_viewpoint.builders.ghspop_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         epoch_values = {2000: 100.0, 2005: 200.0}
@@ -353,8 +353,8 @@ class TestTemporalInterpolationGreen:
 
     def test_linear_single_epoch(self) -> None:
         """Single epoch: 0 before, flat from epoch onward."""
-        from datafactory_viewpoint.builders.ghspop_v1 import (
-            _interpolate_temporal,
+        from datafactory_viewpoint.temporal import (
+            interpolate_temporal as _interpolate_temporal,
         )
 
         epoch_values = {2005: 500.0}
