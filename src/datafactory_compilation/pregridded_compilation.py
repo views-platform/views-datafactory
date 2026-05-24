@@ -14,7 +14,6 @@ Ref: ADR-024 (grid invariants), ADR-029 (GHS-POP source).
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,6 +22,7 @@ from typing import ClassVar
 import numpy as np
 import pyarrow.parquet as pq
 
+from datafactory_compilation.output import write_compilation_output
 from datafactory_priogrid.cell_generator import generate_grid
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG, GridConfig
 from datafactory_priogrid.temporal_config import TemporalConfig
@@ -30,13 +30,7 @@ from datafactory_priogrid.temporal_generator import (
     DEFAULT_TEMPORAL_CONFIG,
     generate_time_steps,
 )
-from datafactory_provenance import (
-    DIGEST_SCHEME,
-    LEDGER_VERSION,
-    VIEWS_EPOCH_YEAR,
-    append_ledger_entry,
-    compute_file_digest,
-)
+from datafactory_provenance import VIEWS_EPOCH_YEAR, compute_file_digest
 
 logger = logging.getLogger(__name__)
 
@@ -238,49 +232,26 @@ def compile_pregridded(config: PregriddedCompilationConfig) -> Path:
     pgids_2d = pgids_flat.reshape(nrow, ncol)
     time_steps = generate_time_steps(config.temporal_config)
 
-    output_dir = config.output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    grid_path = output_dir / "grid.npy"
-    np.save(grid_path, grid_array)
-    np.save(output_dir / "pgids.npy", pgids_2d)
-    np.save(output_dir / "time_steps.npy", time_steps)
-    (output_dir / "feature_names.json").write_text(
-        json.dumps(feature_names)
+    write_compilation_output(
+        grid_array=grid_array,
+        pgids_2d=pgids_2d,
+        time_steps=time_steps,
+        feature_names=feature_names,
+        output_dir=config.output_dir,
+        ledger_path=config.ledger_path,
+        dataset_id=DATASET_ID,
+        source_path=config.source_path,
+        source_digest=source_digest,
+        n_placed=n_placed,
+        n_skipped_spatial=n_skipped_spatial,
+        n_skipped_temporal=n_skipped_temporal,
     )
-
-    output_digest = compute_file_digest(grid_path)
-
-    provenance = {
-        "source_path": str(config.source_path),
-        "source_digest": source_digest,
-        "grid_shape": list(grid_array.shape),
-        "feature_names": feature_names,
-        "output_digest": output_digest,
-    }
-    provenance_path = output_dir / "provenance.json"
-    provenance_path.write_text(json.dumps(provenance, indent=2))
-
-    append_ledger_entry(config.ledger_path, {
-        "dataset": DATASET_ID,
-        "source_path": str(config.source_path),
-        "source_digest": source_digest,
-        "grid_shape": list(grid_array.shape),
-        "feature_names": feature_names,
-        "output_dir": str(output_dir),
-        "output_digest": output_digest,
-        "n_placed": n_placed,
-        "n_skipped_spatial": n_skipped_spatial,
-        "n_skipped_temporal": n_skipped_temporal,
-        "ledger_version": LEDGER_VERSION,
-        "digest_algorithm": DIGEST_SCHEME,
-    })
 
     logger.info(
         "Compiled pre-gridded: shape=%s, features=%s, output=%s",
         grid_array.shape,
         feature_names,
-        output_dir,
+        config.output_dir,
     )
 
-    return output_dir
+    return config.output_dir

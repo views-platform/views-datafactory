@@ -7,7 +7,6 @@ sidecar coordinate files and provenance.
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from collections import defaultdict
@@ -19,14 +18,10 @@ import pyarrow.parquet as pq
 
 from datafactory_compilation.aggregation import get_strategy
 from datafactory_compilation.compilation_config import CompilationConfig
+from datafactory_compilation.output import write_compilation_output
 from datafactory_priogrid.cell_generator import generate_grid
 from datafactory_priogrid.temporal_generator import generate_time_steps
-from datafactory_provenance import (
-    DIGEST_SCHEME,
-    LEDGER_VERSION,
-    append_ledger_entry,
-    compute_file_digest,
-)
+from datafactory_provenance import compute_file_digest
 
 logger = logging.getLogger(__name__)
 
@@ -266,47 +261,23 @@ def compile_grid(config: CompilationConfig) -> Path:
     time_steps = generate_time_steps(config.temporal_config)
 
     # Write output
-    output_dir = config.output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    grid_path = output_dir / "grid.npy"
-    np.save(grid_path, grid_array)
-    np.save(output_dir / "pgids.npy", pgids_2d)
-    np.save(output_dir / "time_steps.npy", time_steps)
-    (output_dir / "feature_names.json").write_text(json.dumps(feature_names))
-
-    # Compute output digest (chunked to avoid doubling memory)
-    output_digest = compute_file_digest(grid_path)
-
-    # Write provenance JSON
-    provenance = {
-        "source_path": str(config.source_path),
-        "source_digest": source_digest,
-        "grid_shape": list(grid_array.shape),
-        "feature_names": feature_names,
-        "output_digest": output_digest,
-    }
-    provenance_path = output_dir / "provenance.json"
-    provenance_path.write_text(json.dumps(provenance, indent=2))
-
-    # Append to compilation ledger
-    append_ledger_entry(config.ledger_path, {
-        "dataset": DATASET_ID,
-        "source_path": str(config.source_path),
-        "source_digest": source_digest,
-        "grid_shape": list(grid_array.shape),
-        "feature_names": feature_names,
-        "output_dir": str(output_dir),
-        "output_digest": output_digest,
-        "ledger_version": LEDGER_VERSION,
-        "digest_algorithm": DIGEST_SCHEME,
-    })
+    write_compilation_output(
+        grid_array=grid_array,
+        pgids_2d=pgids_2d,
+        time_steps=time_steps,
+        feature_names=feature_names,
+        output_dir=config.output_dir,
+        ledger_path=config.ledger_path,
+        dataset_id=DATASET_ID,
+        source_path=config.source_path,
+        source_digest=source_digest,
+    )
 
     logger.info(
         "Compiled grid: shape=%s, features=%s, output=%s",
         grid_array.shape,
         feature_names,
-        output_dir,
+        config.output_dir,
     )
 
-    return output_dir
+    return config.output_dir
