@@ -19,13 +19,12 @@ Data ingestion framework with pluggable sources. Follows the pattern: config -> 
 - Event-to-grid compilation (datafactory_compilation)
 - Data transformation or aggregation (stored raw)
 - Consumer-specific formatting (no knowledge of downstream models)
-- Synthetic data generation (datafactory_synthetic)
 - Audit report generation (planned, not yet implemented)
 
 ## Dependency Rules
 
 **May import:** `datafactory_provenance`, requests, pyarrow
-**Must never import:** `datafactory_priogrid`, `datafactory_compilation`, `datafactory_synthetic`, or any consumer
+**Must never import:** `datafactory_priogrid`, `datafactory_compilation`, or any consumer
 
 ## Package Structure
 

@@ -600,3 +600,19 @@ Ousterhout and Hickey argue for merging into a single function with optional `ve
 **Resolved 2026-05-24:** Keep two functions (current state). C-182 bug fixed in both. The shared `_find_latest_valid_entry` helper (GoF recommendation) is a nice-to-have for the next provenance refactor, not a risk.
 
 **Source:** Expert code review of provenance/shapefile (2026-05-21). Cross-ref: C-187 (digest-field assumption), C-182 (original desync bug).
+
+### ~~C-169: 2 CI tests fail due to missing infrastructure — permanent UNSTABLE~~ RESOLVED
+
+Two tests consistently failed in CI: `test_remote_zarr_has_last_valid_month_id` (requires `.netrc` for server auth) and `test_at_least_one_model_found` (requires `../views-models/` sibling repo). Both passed locally but made CI permanently UNSTABLE, hiding real regressions.
+
+**Resolved 2026-05-25 (v1.2.21 Task 2):** Added `@pytest.mark.skipif` guards for both infra-dependent tests. CI signal restored — `uv run pytest` now passes with 0 FAILED, 0 ERROR.
+
+**Source:** PR #53 review (2026-05-20). Cross-ref: C-96 (fsspec netrc), C-29 (no e2e integration test).
+
+### ~~C-176: `datafactory_synthetic` is a dead module with zero exports~~ RESOLVED
+
+`datafactory_synthetic` was declared in `pyproject.toml` as a wheel package, tested for `__all__` existence, and subject to import enforcement — but exported nothing and was imported by nothing. C-03 (protocol proliferation) subsumed into this entry since the module had no implementation.
+
+**Resolved 2026-05-25 (v1.2.21 Task 9):** Entire `src/datafactory_synthetic/` directory deleted. Removed from `pyproject.toml` packages list, `test_package_structure.py`, `test_import_enforcement.py`, 5 ADRs, 7 ARCHITECTURE.md files, and README.md.
+
+**Source:** repo-assimilation (2026-05-20). Cross-ref: C-03 (subsumed).

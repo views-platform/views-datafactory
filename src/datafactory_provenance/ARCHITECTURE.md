@@ -19,7 +19,6 @@ Provenance tracking — content digests and JSONL ledger operations. Every `data
 - Consolidation logic (datafactory_consolidation)
 - Viewpoint building (datafactory_viewpoint)
 - Compilation logic (datafactory_compilation)
-- Synthetic data generation (datafactory_synthetic)
 - Domain-specific configuration (each package owns its own config)
 - I/O beyond provenance ledger append and digest computation
 

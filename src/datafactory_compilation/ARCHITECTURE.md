@@ -16,14 +16,13 @@ Compilation edge -- reads viewpoint output (Parquet) and grid definition, produc
 **Does NOT own:**
 - Data fetching or API interaction (datafactory_harvester)
 - Grid definition or coordinate generation (datafactory_priogrid, but imports its configs)
-- Synthetic data generation (datafactory_synthetic)
 - Source-specific parsing logic (reads generic Parquet columns declared in config)
 - Consumer-specific post-processing (consumers read compiled output as files)
 
 ## Dependency Rules
 
 **May import:** `datafactory_provenance`, `datafactory_priogrid` (for GridConfig, TemporalConfig, coordinate arrays), numpy, pyarrow
-**Must never import:** `datafactory_harvester`, `datafactory_consolidation`, `datafactory_viewpoint`, `datafactory_synthetic`, or any consumer
+**Must never import:** `datafactory_harvester`, `datafactory_consolidation`, `datafactory_viewpoint`, or any consumer
 **Data coupling:** Reads viewpoint output as FILES on disk. The filesystem is the decoupling boundary (ADR-012).
 
 ## Package Structure
