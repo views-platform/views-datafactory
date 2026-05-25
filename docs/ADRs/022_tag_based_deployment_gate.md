@@ -28,7 +28,7 @@ The pipeline script (`refresh_pipeline.sh`) reads a **deploy tag** from a file o
 
 ```
 ~/.views-deploy-tag  ──→  git fetch --tags  ──→  git checkout <tag>  ──→  run pipeline
-     (operator)              (automatic)           (detached HEAD)        (9 steps)
+     (operator)              (automatic)           (detached HEAD)        (11 steps)
 ```
 
 1. The operator writes a tag name (e.g., `v1.1.0`) to `~/.views-deploy-tag`.
@@ -155,7 +155,7 @@ Full operational procedures are in `docs/guides/hetzner_deployment_guide.md`, se
 - ADR-011 (Fail Loud, No Stale Data Serving) — justifies fail-loud on misconfiguration
 - ADR-018 (Operational Resilience Policy) — operator-mediated bounded staleness
 - `scripts/refresh_pipeline.sh` lines 76-98 — implementation
-- `reports/technical_risk_register_resolved.md` C-98 — risk that motivated this ADR
+- `reports/archive/technical_risk_register_resolved.md` C-98 — risk that motivated this ADR
 - `docs/guides/hetzner_deployment_guide.md` — operational procedures
 - `docs/guides/data_serving_guide.md` section 9 — conceptual explanation
 - Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:

@@ -41,7 +41,7 @@ Multiple top-level packages under `src/` with `datafactory_` prefix:
 2. **Provenance all the way through** — every node writes JSONL ledger entries (mission-critical)
 3. **Config-driven, fail-loud** — frozen dataclasses with `__post_init__` validation
 4. **`__init__.py` always defines `__all__`** — public API is explicit
-5. **npy now, zarr-ready contracts** — dimension order: (cells, time, features)
+5. **npy now, zarr-ready contracts** — dimension order: [T, H, W, C] (time, height, width, channels)
 6. **No scope creep** — build only what's asked for; don't bolt on convenience features
 
 ## Strategic Documents

@@ -92,5 +92,5 @@ These costs are accepted intentionally.
 ## References
 
 - `src/datafactory_priogrid/grid_config.py` -- the implementation
-- `reports/technical_risk_register_resolved.md` -- expert review identified GridConfig overload
+- `reports/archive/technical_risk_register_resolved.md` -- expert review identified GridConfig overload
 - `docs/CICs/GridConfig.md` -- intent contract for the slimmed config

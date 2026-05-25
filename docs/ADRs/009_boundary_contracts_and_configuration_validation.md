@@ -50,7 +50,7 @@ Every boundary between components must define:
 
 ### Domain-Specific Boundaries
 
-**GridConfig boundary:** `__post_init__` validates resolution > 0, west < east, south < north, resolution evenly divides extent. Violations raise immediately. (Implemented in `datafactory_priogrid/config.py`.)
+**GridConfig boundary:** `__post_init__` validates resolution > 0, west < east, south < north, resolution evenly divides extent. Violations raise immediately. (Implemented in `datafactory_priogrid/grid_config.py`.)
 
 **UcdpAnnualConfig boundary (implemented):** `__post_init__` validates end_year >= start_year, page_size >= 1, max_retries >= 1, version non-empty. (Implemented in `datafactory_harvester/sources/ucdp_annual.py`.)
 

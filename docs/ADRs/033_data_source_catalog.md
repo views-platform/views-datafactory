@@ -9,7 +9,7 @@
 
 ## Context
 
-The data factory now integrates 5 external data sources (UCDP annual/candidate/.9, ACLED, GHS-POP) plus 2 spatial infrastructure sources (PRIO-GRID static, GAUL admin). Each source was documented through its selection ADR (ADR-028, ADR-029) and its config CIC, but there is no single place where a reader — a new team member, a reviewer, a grant evaluator — can look up "what data does this system consume, where does it come from, and what do we do with it?"
+The data factory now integrates 6 external data sources (UCDP annual/candidate/.9, ACLED, GHS-POP, GHS-BUILT-S) plus 2 spatial infrastructure sources (PRIO-GRID static, GAUL admin). Each source was documented through its selection ADR (ADR-028, ADR-029) and its config CIC, but there is no single place where a reader — a new team member, a reviewer, a grant evaluator — can look up "what data does this system consume, where does it come from, and what do we do with it?"
 
 Source metadata is currently scattered across three artifacts:
 

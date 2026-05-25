@@ -108,6 +108,27 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-027** -- Harvest Count Verification
   Harvest success requires count verification against the API's declared total. Dual-threshold assertions for APIs with fixed-count inconsistencies. Rate-limit recovery at the pagination layer.
 
+- **ADR-028** -- ACLED Consolidation and Viewpoint
+  Consolidation and viewpoint strategies for ACLED event data.
+
+- **ADR-029** -- GHS-POP as First Population Source
+  GHS-POP raster ingestion. Skips consolidation (single release); harvester → compilation direct path.
+
+- **ADR-030** -- Raster Tooling
+  Shared raster utilities for GHS-POP and other raster sources.
+
+- **ADR-031** -- Resource Ownership and Data Representation
+  Ownership semantics and data representation rules for factory resources.
+
+- **ADR-032** -- Harvest Idempotence
+  Harvests are idempotent: re-running does not re-fetch existing data.
+
+- **ADR-033** -- Data Source Catalog
+  Central catalog of all data sources with metadata and integration status.
+
+- **ADR-034** -- GHS-BUILT-S as Built-Up Surface Source
+  GHS-BUILT-S raster ingestion. Skips consolidation (single release); harvester → compilation direct path.
+
 These must comply with the constitutional ADRs above.
 
 ---

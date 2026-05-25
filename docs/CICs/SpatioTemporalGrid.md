@@ -37,7 +37,7 @@ This is the index that compiled grids and ExperimentFrames align to.
 ## 4. Inputs and Assumptions
 
 - `grid_config`: a valid `GridConfig` (default: standard PRIO-GRID)
-- `temporal_config`: a valid `TemporalConfig` (default: 1989-2024)
+- `temporal_config`: a valid `TemporalConfig` (default: 1989-2026)
 
 Both configs are validated at their own construction time. SpatioTemporalGrid does not re-validate them.
 
@@ -45,13 +45,13 @@ Both configs are validated at their own construction time. SpatioTemporalGrid do
 
 ## 5. Outputs and Side Effects
 
-- `pgids`: 2-D `[H, W]` int32 array of cell IDs where H=nrow, W=ncol from GridConfig (e.g., `[360, 720]` for standard PRIO-GRID). Lazily generated, cached.
-- `lats`, `lons`: 2-D `[H, W]` float64 arrays of centroids (same shape as `pgids`). Lazily generated, cached.
+- `pgids`: 1-D int32 array of cell IDs, length `n_cells` (e.g., 259,200 for standard PRIO-GRID). Lazily generated, cached.
+- `lats`, `lons`: 1-D float64 arrays of cell centroid coordinates, length `n_cells`. Lazily generated, cached.
 - `time_steps`: 1-D datetime64[M] array (lazily generated, cached)
 - `shape`: tuple `(n_cells, n_steps)`
 - No side effects beyond caching.
 
-**Caching mechanism:** The spatial arrays (`pgids`, `lats`, `lons`) are produced by `generate_grid()` which returns 2-D arrays of shape `[360, 720]`. These are cached together via `functools.cached_property` on `_spatial_arrays`. The public attributes `pgids`, `lats`, and `lons` are `@property` accessors that delegate to `_spatial_arrays`, so all three are computed and cached on first access to any one of them.
+**Caching mechanism:** The spatial arrays (`pgids`, `lats`, `lons`) are produced by `generate_grid()` which returns three 1-D arrays of length `n_cells`. These are cached together via `functools.cached_property` on `_spatial_arrays`. The public attributes `pgids`, `lats`, and `lons` are `@property` accessors that delegate to `_spatial_arrays`, so all three are computed and cached on first access to any one of them.
 
 ---
 
@@ -75,8 +75,8 @@ Both configs are validated at their own construction time. SpatioTemporalGrid do
 ## 8. Examples of Correct Usage
 
 ```python
-grid = SpatioTemporalGrid()  # Standard: 259,200 cells x 432 months
-grid.shape  # (259200, 432)
+grid = SpatioTemporalGrid()  # Standard: 259,200 cells x 456 months
+grid.shape  # (259200, 456)
 grid.pgids  # lazily generated on first access
 ```
 

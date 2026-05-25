@@ -76,6 +76,7 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on empty `version`
 - `ValueError` on empty `epochs`
 - `ValueError` on any epoch not in `KNOWN_EPOCHS`
+- `ValueError` on `temporal_interpolation` not in `VALID_TEMPORAL_INTERPOLATIONS`
 - `AttributeError` on any attempt to mutate fields (frozen)
 
 All failures are immediate and loud. No silent fallbacks.

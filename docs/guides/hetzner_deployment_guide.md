@@ -413,7 +413,7 @@ This runs 10 checks against the remote server:
 | 4. Metadata | `.zmetadata` returns valid JSON |
 | 5. Dataset attributes | CRS, resolution, source, feature count |
 | 6. Dimensions | 456 months, 360 lat, 720 lon |
-| 7. Variables | 6 UCDP + 8 ACLED + 34 static + 3 admin = 51 |
+| 7. Variables | 6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S + 34 static + 3 admin = 53 |
 | 8. Data access | xarray opens store, loads 1 chunk |
 | 9. Data sanity | ged_sb_best has plausible non-zero values |
 | 10. Parquet | dataframe.parquet downloadable |
@@ -905,7 +905,7 @@ After completing all steps, verify the migration:
 ```bash
 # 1. Pipeline runs as views-deploy
 su - views-deploy -c "cd views-datafactory && uv run pytest"
-# Expected: all tests pass (currently ~820)
+# Expected: all tests pass (currently ~1157)
 
 # 2. Cron is in views-deploy's crontab
 crontab -u views-deploy -l | grep refresh_pipeline
