@@ -21,7 +21,7 @@
 | Authentication | OAuth2 (username + API key → bearer token). Credential sharing prohibited by EULA. |
 | Features produced | `acled_battles`, `acled_explosions`, `acled_violence_against_civilians`, `acled_protests`, `acled_riots`, `acled_strategic_developments`, `acled_fatalities`, `acled_count` |
 | Grid layers | Harvest → Consolidation → Viewpoint → Compilation → Assembly |
-| Selection ADR | [ADR-030](../ADRs/030_acled_as_second_conflict_source.md) |
+| Selection ADR | [ADR-028](../ADRs/028_acled_consolidation_and_viewpoint.md) |
 | Provenance ledger | `provenance/acled/ingestion_ledger.jsonl` |
 
 ## Description
