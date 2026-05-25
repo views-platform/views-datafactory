@@ -4,7 +4,6 @@ The topology rules (docs/ADRs/012_four_layer_data_architecture.md):
 - datafactory_provenance imports nothing from datafactory_*
 - datafactory_priogrid imports only from datafactory_provenance
 - datafactory_harvester imports only from datafactory_provenance
-- datafactory_synthetic imports only from datafactory_provenance
 - datafactory_consolidation imports only from datafactory_provenance
 - datafactory_viewpoint imports only from datafactory_provenance
 - datafactory_compilation imports from datafactory_provenance + datafactory_priogrid
@@ -21,7 +20,6 @@ ALLOWED_INTERNAL_IMPORTS: dict[str, set[str]] = {
     "datafactory_http": set(),
     "datafactory_priogrid": {"datafactory_provenance", "datafactory_http"},
     "datafactory_harvester": {"datafactory_provenance", "datafactory_http"},
-    "datafactory_synthetic": {"datafactory_provenance"},
     "datafactory_consolidation": {"datafactory_provenance"},
     "datafactory_viewpoint": {"datafactory_provenance"},
     "datafactory_compilation": {"datafactory_provenance", "datafactory_priogrid"},

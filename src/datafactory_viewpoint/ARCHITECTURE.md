@@ -25,7 +25,7 @@ Opinionated, versioned, rebuildable materialized views over consolidated event s
 
 **May import:** `datafactory_provenance`
 **Reads filesystem output of:** `datafactory_consolidation` (consolidated event store)
-**Must never import:** `datafactory_priogrid`, `datafactory_harvester`, `datafactory_consolidation`, `datafactory_compilation`, `datafactory_synthetic`, or any consumer
+**Must never import:** `datafactory_priogrid`, `datafactory_harvester`, `datafactory_consolidation`, `datafactory_compilation`, or any consumer
 
 ## Package Structure
 

@@ -20,15 +20,20 @@ from pathlib import Path
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
-import tifffile
 
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
+    VIEWS_EPOCH_YEAR,
     append_ledger_entry,
     compute_file_digest,
 )
 from datafactory_viewpoint.builders import register_builder
+from datafactory_viewpoint.raster_io import read_geotiff
+from datafactory_viewpoint.temporal import (
+    VALID_TEMPORAL_INTERPOLATIONS,
+    interpolate_temporal,
+)
 from datafactory_viewpoint.viewpoint_result import ViewpointResult
 
 logger = logging.getLogger(__name__)
@@ -41,11 +46,6 @@ KNOWN_EPOCHS = (
 )
 
 PIXELS_PER_CELL = 60
-
-VALID_TEMPORAL_INTERPOLATIONS = ("step", "linear")
-
-_VIEWS_EPOCH_YEAR = 1980
-
 
 # ---- Config ----
 
@@ -120,44 +120,6 @@ PRIO_NROW = 360
 PRIO_NCOL = 720
 GLOBE_PIXEL_ROWS = PRIO_NROW * PIXELS_PER_CELL  # 21600
 GLOBE_PIXEL_COLS = PRIO_NCOL * PIXELS_PER_CELL  # 43200
-
-
-def _read_geotiff(
-    path: Path,
-) -> tuple[np.ndarray, float, float, float, float]:
-    """Read GeoTIFF and extract geotransform from TIFF tags.
-
-    Returns native dtype (uint32 for JRC GHS-BUILT-S). No in-memory
-    dtype conversion — strip-based aggregation handles any input dtype.
-
-    Returns:
-        (data, tiepoint_x, tiepoint_y, pixel_scale_x, pixel_scale_y)
-        where tiepoint is the top-left geographic coordinate.
-    """
-    with tifffile.TiffFile(str(path)) as tif:
-        page = tif.pages.first
-        data = page.asarray(maxworkers=1)
-
-        scale_tag = page.tags.get("ModelPixelScaleTag")
-        tie_tag = page.tags.get("ModelTiepointTag")
-
-        if scale_tag is None or tie_tag is None:
-            msg = (
-                f"GeoTIFF {path} missing geotransform tags "
-                "(ModelPixelScaleTag, ModelTiepointTag)"
-            )
-            logger.error(msg)
-            raise ValueError(msg)
-
-        scale = scale_tag.value
-        tie = tie_tag.value
-
-        pixel_scale_x = float(scale[0])
-        pixel_scale_y = float(scale[1])
-        tiepoint_x = float(tie[3])
-        tiepoint_y = float(tie[4])
-
-    return data, tiepoint_x, tiepoint_y, pixel_scale_x, pixel_scale_y
 
 
 # ---- Spatial aggregation ----
@@ -238,115 +200,6 @@ def _aggregate_with_alignment(
     return result
 
 
-# ---- Temporal interpolation ----
-
-
-def _interpolate_temporal(
-    epoch_values: dict[int, float],
-    *,
-    strategy: str,
-    start_year: int,
-    start_month: int,
-    end_year: int,
-    end_month: int,
-) -> list[float]:
-    """Interpolate epoch values to monthly time steps.
-
-    Strategies:
-        step — hold last known epoch value until the next epoch.
-        linear — linearly interpolate between adjacent epochs;
-                 hold flat before the first and after the last.
-
-    Args:
-        epoch_values: Mapping of epoch year -> aggregated value.
-        strategy: One of VALID_TEMPORAL_INTERPOLATIONS.
-        start_year, start_month: First output month.
-        end_year, end_month: Last output month (inclusive).
-
-    Returns:
-        List of float values, one per month.
-    """
-    n_months = (
-        (end_year - start_year) * 12
-        + (end_month - start_month)
-        + 1
-    )
-
-    sorted_epochs = sorted(epoch_values.keys())
-
-    if strategy == "step":
-        return _interp_step(
-            n_months, sorted_epochs, epoch_values,
-            start_year, start_month,
-        )
-    if strategy == "linear":
-        return _interp_linear(
-            n_months, sorted_epochs, epoch_values,
-            start_year, start_month,
-        )
-    msg = (
-        f"Unknown interpolation strategy '{strategy}'. "
-        f"Valid: {VALID_TEMPORAL_INTERPOLATIONS}"
-    )
-    raise ValueError(msg)
-
-
-def _interp_step(
-    n_months: int,
-    sorted_epochs: list[int],
-    epoch_values: dict[int, float],
-    start_year: int,
-    start_month: int,
-) -> list[float]:
-    result: list[float] = []
-    for i in range(n_months):
-        year = start_year + (start_month - 1 + i) // 12
-        value = 0.0
-        for ep in sorted_epochs:
-            if ep <= year:
-                value = epoch_values[ep]
-            else:
-                break
-        result.append(value)
-    return result
-
-
-def _interp_linear(
-    n_months: int,
-    sorted_epochs: list[int],
-    epoch_values: dict[int, float],
-    start_year: int,
-    start_month: int,
-) -> list[float]:
-    result: list[float] = []
-    for i in range(n_months):
-        year = start_year + (start_month - 1 + i) // 12
-        month = (start_month - 1 + i) % 12 + 1
-        t = year + (month - 1) / 12.0
-
-        if not sorted_epochs or t < sorted_epochs[0]:
-            result.append(0.0)
-            continue
-
-        if t >= sorted_epochs[-1]:
-            result.append(epoch_values[sorted_epochs[-1]])
-            continue
-
-        for j in range(len(sorted_epochs) - 1):
-            ep_lo = sorted_epochs[j]
-            ep_hi = sorted_epochs[j + 1]
-            if ep_lo <= t < ep_hi:
-                frac = (t - ep_lo) / (ep_hi - ep_lo)
-                val = (
-                    epoch_values[ep_lo] * (1 - frac)
-                    + epoch_values[ep_hi] * frac
-                )
-                result.append(val)
-                break
-
-    return result
-
-
 # ---- Builder ----
 
 
@@ -395,7 +248,7 @@ def build_ghsbuilts_v1(
             raise FileNotFoundError(err_msg)
 
         logger.info("Reading epoch %d from %s", epoch, tif_path)
-        raw, tie_x, tie_y, sc_x, sc_y = _read_geotiff(tif_path)
+        raw, tie_x, tie_y, sc_x, sc_y = read_geotiff(tif_path)
 
         row_off = round((90.0 - tie_y) / sc_y)
         col_off = round((tie_x - (-180.0)) / sc_x)
@@ -423,7 +276,7 @@ def build_ghsbuilts_v1(
                 for ep, grid in epoch_grids.items()
             }
 
-            monthly = _interpolate_temporal(
+            monthly = interpolate_temporal(
                 epoch_values,
                 strategy=config.temporal_interpolation,
                 start_year=config.start_year,
@@ -445,7 +298,7 @@ def build_ghsbuilts_v1(
                     config.start_month - 1 + i
                 ) // 12
                 month = (config.start_month - 1 + i) % 12 + 1
-                mid = (year - _VIEWS_EPOCH_YEAR) * 12 + month
+                mid = (year - VIEWS_EPOCH_YEAR) * 12 + month
 
                 pgid_rows.append(pgid)
                 month_id_rows.append(mid)

@@ -24,7 +24,7 @@ Lossless consolidation of raw source snapshots into version-aware event stores. 
 
 **May import:** `datafactory_provenance`
 **Reads filesystem output of:** `datafactory_harvester` (Parquet snapshots in `data/`)
-**Must never import:** `datafactory_priogrid`, `datafactory_harvester`, `datafactory_viewpoint`, `datafactory_compilation`, `datafactory_synthetic`, or any consumer
+**Must never import:** `datafactory_priogrid`, `datafactory_harvester`, `datafactory_viewpoint`, `datafactory_compilation`, or any consumer
 
 ## Package Structure
 

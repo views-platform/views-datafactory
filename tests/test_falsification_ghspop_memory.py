@@ -17,13 +17,13 @@ class TestF1TifffileDecompressionPeak:
     leaves near-zero headroom on 8 GiB server."""
 
     def test_read_geotiff_limits_decompression_threads(self) -> None:
-        """_read_geotiff should pass maxworkers=1 to page.asarray()
+        """read_geotiff should pass maxworkers=1 to page.asarray()
         to avoid ThreadPoolExecutor double-buffering (~400 MB saving)."""
         import ast
         from pathlib import Path
 
         src = Path(
-            "src/datafactory_viewpoint/builders/ghspop_v1.py"
+            "src/datafactory_viewpoint/raster_io.py"
         ).read_text()
         tree = ast.parse(src)
 

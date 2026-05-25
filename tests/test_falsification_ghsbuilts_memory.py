@@ -13,15 +13,15 @@ import inspect
 
 
 class TestF1DecompressionSafety:
-    """_read_geotiff must not expose maxworkers as a parameter."""
+    """read_geotiff must not expose maxworkers as a parameter."""
 
     def test_read_geotiff_no_maxworkers_param(self) -> None:
-        from datafactory_viewpoint.builders import ghsbuilts_v1
+        from datafactory_viewpoint import raster_io
 
-        sig = inspect.signature(ghsbuilts_v1._read_geotiff)
+        sig = inspect.signature(raster_io.read_geotiff)
         param_names = list(sig.parameters.keys())
         assert "maxworkers" not in param_names, (
-            "_read_geotiff accepts maxworkers as a parameter — "
+            "read_geotiff accepts maxworkers as a parameter — "
             "callers could override the safety limit"
         )
 

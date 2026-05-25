@@ -35,6 +35,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
+import numpy as np
+
+from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
+
 
 @dataclass(frozen=True)
 class AssemblyConfig:
@@ -86,6 +90,63 @@ class AssemblyConfig:
                 f"got {self.disk_space_margin}"
             )
             raise ValueError(msg)
+
+
+def _load_source_grid(
+    name: str,
+    grid_dir: Path,
+    time_steps: np.ndarray,
+    n_t: int,
+) -> tuple[np.ndarray, list[str], int] | None:
+    """Load, validate, and align a compiled source grid."""
+    grid_path = grid_dir / "grid.npy"
+    feat_path = grid_dir / "feature_names.json"
+    time_path = grid_dir / "time_steps.npy"
+    for p in (grid_path, feat_path, time_path):
+        if not p.exists():
+            print(f"FAIL: {p} not found")
+            return None
+
+    grid = np.load(grid_path, mmap_mode="r")
+    features = json.loads(feat_path.read_text())
+    source_time_steps = np.load(time_path)
+    DEFAULT_GRID_CONFIG.assert_grid_shape(grid)
+
+    start_dt = source_time_steps[0]
+    matches = np.where(time_steps == start_dt)[0]
+    if len(matches) != 1:
+        print(
+            f"FAIL: {name} start {start_dt} not found "
+            f"in UCDP timeline (or ambiguous)"
+        )
+        return None
+    offset = int(matches[0])
+    n_source_t = grid.shape[0]
+    end_idx = offset + n_source_t
+    if end_idx > n_t:
+        print(
+            f"FAIL: {name} extends beyond UCDP timeline "
+            f"(offset {offset} + {n_source_t} > {n_t})"
+        )
+        return None
+
+    n_features = len(features)
+    print(
+        f"{name} grid: [T={n_source_t}, "
+        f"H={grid.shape[1]}, W={grid.shape[2]}, "
+        f"C={n_features}]"
+    )
+    print(f"{name} features: {features}")
+    print(
+        f"{name} temporal alignment: indices "
+        f"{offset}-{end_idx - 1} in assembled grid"
+    )
+    if offset > 0 or end_idx < n_t:
+        print(
+            f"  Zero-fill: 0-{offset - 1}, "
+            f"{end_idx}-{n_t - 1}"
+        )
+    return grid, features, offset
 
 
 def main() -> int:
@@ -216,10 +277,7 @@ def main() -> int:
     print("=" * 60)
     print()
 
-    import numpy as np
     import pyarrow.parquet as pq
-
-    from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
 
     t0 = time.monotonic()
 
@@ -237,207 +295,43 @@ def main() -> int:
     )
     print(f"UCDP features: {ucdp_features}")
 
-    # ── ACLED channels (temporal, zero-fill outside range) ──
-    acled_features: list[str] = []
-    acled_grid = None
-    acled_offset: int = 0
-    n_acled: int = 0
-
     if has_acled:
-        acled_grid_path = config.acled_grid_dir / "grid.npy"
-        acled_feat_path = config.acled_grid_dir / "feature_names.json"
-        acled_time_path = config.acled_grid_dir / "time_steps.npy"
-
-        for p in (acled_grid_path, acled_feat_path, acled_time_path):
-            if not p.exists():
-                print(f"FAIL: {p} not found")
-                return 1
-
-        acled_grid = np.load(acled_grid_path, mmap_mode="r")
-        acled_features = json.loads(acled_feat_path.read_text())
-        acled_time_steps = np.load(acled_time_path)
-
-        DEFAULT_GRID_CONFIG.assert_grid_shape(acled_grid)
-
-        acled_start_dt = acled_time_steps[0]
-        matches = np.where(time_steps == acled_start_dt)[0]
-        if len(matches) != 1:
-            print(
-                f"FAIL: ACLED start {acled_start_dt} not found "
-                f"in UCDP timeline (or ambiguous)"
-            )
-            return 1
-        acled_offset = int(matches[0])
-        n_acled_t = acled_grid.shape[0]
-        acled_end_idx = acled_offset + n_acled_t
-
-        if acled_end_idx > n_t:
-            print(
-                f"FAIL: ACLED extends beyond UCDP timeline "
-                f"(offset {acled_offset} + {n_acled_t} > {n_t})"
-            )
-            return 1
-
-        n_acled = len(acled_features)
-        print(
-            f"ACLED grid: [T={n_acled_t}, "
-            f"H={acled_grid.shape[1]}, "
-            f"W={acled_grid.shape[2]}, C={n_acled}]"
+        acled_result = _load_source_grid(
+            "ACLED", config.acled_grid_dir, time_steps, n_t,
         )
-        print(f"ACLED features: {acled_features}")
-        print(
-            f"ACLED temporal alignment: indices "
-            f"{acled_offset}–{acled_end_idx - 1} "
-            f"in assembled grid"
-        )
-        if acled_offset > 0 or acled_end_idx < n_t:
-            print(
-                f"  Zero-fill: 0–{acled_offset - 1}, "
-                f"{acled_end_idx}–{n_t - 1}"
-            )
-
-    # ── GHS-POP channels (temporal, same alignment as ACLED) ──
-    ghspop_features: list[str] = []
-    ghspop_grid = None
-    ghspop_offset: int = 0
-    n_ghspop: int = 0
+        if acled_result is None:
+            return 1
+        acled_grid, acled_features, acled_offset = acled_result
+    else:
+        acled_grid, acled_features, acled_offset = None, [], 0
+    n_acled = len(acled_features)
 
     if has_ghspop:
-        ghspop_grid_path = config.ghspop_grid_dir / "grid.npy"
-        ghspop_feat_path = (
-            config.ghspop_grid_dir / "feature_names.json"
+        ghspop_result = _load_source_grid(
+            "GHS-POP", config.ghspop_grid_dir, time_steps, n_t,
         )
-        ghspop_time_path = (
-            config.ghspop_grid_dir / "time_steps.npy"
-        )
-
-        for p in (
-            ghspop_grid_path, ghspop_feat_path, ghspop_time_path,
-        ):
-            if not p.exists():
-                print(f"FAIL: {p} not found")
-                return 1
-
-        ghspop_grid = np.load(ghspop_grid_path, mmap_mode="r")
-        ghspop_features = json.loads(ghspop_feat_path.read_text())
-        ghspop_time_steps = np.load(ghspop_time_path)
-
-        DEFAULT_GRID_CONFIG.assert_grid_shape(ghspop_grid)
-
-        ghspop_start_dt = ghspop_time_steps[0]
-        matches = np.where(time_steps == ghspop_start_dt)[0]
-        if len(matches) != 1:
-            print(
-                f"FAIL: GHS-POP start {ghspop_start_dt} not "
-                f"found in UCDP timeline (or ambiguous)"
-            )
+        if ghspop_result is None:
             return 1
-        ghspop_offset = int(matches[0])
-        n_ghspop_t = ghspop_grid.shape[0]
-        ghspop_end_idx = ghspop_offset + n_ghspop_t
-
-        if ghspop_end_idx > n_t:
-            print(
-                f"FAIL: GHS-POP extends beyond UCDP timeline "
-                f"(offset {ghspop_offset} + "
-                f"{n_ghspop_t} > {n_t})"
-            )
-            return 1
-
-        n_ghspop = len(ghspop_features)
-        print(
-            f"GHS-POP grid: [T={n_ghspop_t}, "
-            f"H={ghspop_grid.shape[1]}, "
-            f"W={ghspop_grid.shape[2]}, C={n_ghspop}]"
-        )
-        print(f"GHS-POP features: {ghspop_features}")
-        print(
-            f"GHS-POP temporal alignment: indices "
-            f"{ghspop_offset}–{ghspop_end_idx - 1} "
-            f"in assembled grid"
-        )
-        if ghspop_offset > 0 or ghspop_end_idx < n_t:
-            print(
-                f"  Zero-fill: 0–{ghspop_offset - 1}, "
-                f"{ghspop_end_idx}–{n_t - 1}"
-            )
-
-    # ── GHS-BUILT-S channels (temporal, same alignment pattern) ──
-    ghsbuilts_features: list[str] = []
-    ghsbuilts_grid = None
-    ghsbuilts_offset: int = 0
-    n_ghsbuilts: int = 0
+        ghspop_grid, ghspop_features, ghspop_offset = ghspop_result
+    else:
+        ghspop_grid, ghspop_features, ghspop_offset = None, [], 0
+    n_ghspop = len(ghspop_features)
 
     if has_ghsbuilts:
-        ghsbuilts_grid_path = (
-            config.ghsbuilts_grid_dir / "grid.npy"
+        ghsbuilts_result = _load_source_grid(
+            "GHS-BUILT-S", config.ghsbuilts_grid_dir,
+            time_steps, n_t,
         )
-        ghsbuilts_feat_path = (
-            config.ghsbuilts_grid_dir / "feature_names.json"
-        )
-        ghsbuilts_time_path = (
-            config.ghsbuilts_grid_dir / "time_steps.npy"
-        )
-
-        for p in (
-            ghsbuilts_grid_path, ghsbuilts_feat_path,
-            ghsbuilts_time_path,
-        ):
-            if not p.exists():
-                print(f"FAIL: {p} not found")
-                return 1
-
-        ghsbuilts_grid = np.load(
-            ghsbuilts_grid_path, mmap_mode="r",
-        )
-        ghsbuilts_features = json.loads(
-            ghsbuilts_feat_path.read_text()
-        )
-        ghsbuilts_time_steps = np.load(ghsbuilts_time_path)
-
-        DEFAULT_GRID_CONFIG.assert_grid_shape(ghsbuilts_grid)
-
-        ghsbuilts_start_dt = ghsbuilts_time_steps[0]
-        matches = np.where(
-            time_steps == ghsbuilts_start_dt
-        )[0]
-        if len(matches) != 1:
-            print(
-                f"FAIL: GHS-BUILT-S start "
-                f"{ghsbuilts_start_dt} not found in UCDP "
-                f"timeline (or ambiguous)"
-            )
+        if ghsbuilts_result is None:
             return 1
-        ghsbuilts_offset = int(matches[0])
-        n_ghsbuilts_t = ghsbuilts_grid.shape[0]
-        ghsbuilts_end_idx = ghsbuilts_offset + n_ghsbuilts_t
-
-        if ghsbuilts_end_idx > n_t:
-            print(
-                f"FAIL: GHS-BUILT-S extends beyond UCDP "
-                f"timeline (offset {ghsbuilts_offset} + "
-                f"{n_ghsbuilts_t} > {n_t})"
-            )
-            return 1
-
-        n_ghsbuilts = len(ghsbuilts_features)
-        print(
-            f"GHS-BUILT-S grid: [T={n_ghsbuilts_t}, "
-            f"H={ghsbuilts_grid.shape[1]}, "
-            f"W={ghsbuilts_grid.shape[2]}, "
-            f"C={n_ghsbuilts}]"
+        ghsbuilts_grid, ghsbuilts_features, ghsbuilts_offset = (
+            ghsbuilts_result
         )
-        print(f"GHS-BUILT-S features: {ghsbuilts_features}")
-        print(
-            f"GHS-BUILT-S temporal alignment: indices "
-            f"{ghsbuilts_offset}–{ghsbuilts_end_idx - 1} "
-            f"in assembled grid"
+    else:
+        ghsbuilts_grid, ghsbuilts_features, ghsbuilts_offset = (
+            None, [], 0,
         )
-        if ghsbuilts_offset > 0 or ghsbuilts_end_idx < n_t:
-            print(
-                f"  Zero-fill: 0–{ghsbuilts_offset - 1}, "
-                f"{ghsbuilts_end_idx}–{n_t - 1}"
-            )
+    n_ghsbuilts = len(ghsbuilts_features)
 
     # Build gid → (row, col) lookup from pgids array
     gid_to_rowcol: dict[int, tuple[int, int]] = {}
@@ -649,31 +543,25 @@ def main() -> int:
         config.output_dir / "grid.npy"
     )
     ucdp_digest = compute_file_digest(grid_path)
+    acled_digest = (
+        compute_file_digest(config.acled_grid_dir / "grid.npy")
+        if has_acled else None
+    )
+    ghspop_digest = (
+        compute_file_digest(config.ghspop_grid_dir / "grid.npy")
+        if has_ghspop else None
+    )
+    ghsbuilts_digest = (
+        compute_file_digest(config.ghsbuilts_grid_dir / "grid.npy")
+        if has_ghsbuilts else None
+    )
 
-    acled_digest: str | None = None
-    if has_acled:
-        acled_digest = compute_file_digest(
-            config.acled_grid_dir / "grid.npy"
-        )
+    # Data boundaries
+    from datafactory_priogrid import to_views_month_id
 
-    ghspop_digest: str | None = None
-    if has_ghspop:
-        ghspop_digest = compute_file_digest(
-            config.ghspop_grid_dir / "grid.npy"
-        )
-
-    ghsbuilts_digest: str | None = None
-    if has_ghsbuilts:
-        ghsbuilts_digest = compute_file_digest(
-            config.ghsbuilts_grid_dir / "grid.npy"
-        )
-
-    # Data boundary: last month with observed UCDP data
     ucdp_grid_ro = np.load(grid_path, mmap_mode="r")
     has_data = ucdp_grid_ro.sum(axis=(1, 2, 3)) > 0
     valid_steps = np.where(has_data)[0]
-    from datafactory_priogrid import to_views_month_id
-
     last_valid_month_id: int | None = None
     if len(valid_steps) > 0:
         last_idx = int(valid_steps[-1])

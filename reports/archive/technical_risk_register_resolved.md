@@ -570,3 +570,49 @@ Cross-ref: C-157 (documentation drift), C-151 (resolved, ACLED CICs).
 **Resolved (v1.2.18):** Added `append_ledger_entry` call with `"outcome": "failed"` inside the existing except block. GAUL admin failures are now recorded in the provenance ledger with dataset, version, outcome, and error message. Test: `test_gaul_admin.py::TestGaulAdminFailureLedger::test_write_variable_failure_records_ledger_entry`.
 
 Cross-ref: C-186 (shapefile harvester same gap, deferred), C-44 (harvest pipeline template), ADR-032.
+
+### C-178: ~~`compute_content_digest(path.read_bytes())` loads entire output into memory~~ RESOLVED
+
+| Field | Value |
+|-------|-------|
+| ID | C-178 |
+| Tier | 3 |
+| Source | ADR-031 compliance review (2026-05-21) |
+| Trigger | Resolved 2026-05-21 |
+| Location | `src/datafactory_viewpoint/builders/ghspop_v1.py:578`, `ucdp_v1.py:325`, `acled_v1.py:183` |
+
+Three viewpoint builders compute the output file digest by calling `compute_content_digest(config.output_path.read_bytes())`, which reads the entire output Parquet into a Python `bytes` object. `compute_file_digest()` already exists in `datafactory_provenance` and reads the file in 8 KiB chunks — zero peak memory overhead. The `.read_bytes()` pattern is a P2 violation (holding an unnecessary copy) and a latent P3 violation (Python `bytes` + the file's OS page cache). **Fixed 2026-05-21:** All three call sites updated to use `compute_file_digest(path)`.
+
+Cross-ref: C-145 (viewpoint full store load), C-144 (compilation to_pydict).
+
+### ~~D-25: Dead function retention — `_aggregate_to_prio_grid` after v1.2.18~~ — RESOLVED
+
+Feathers argues retaining `_aggregate_to_prio_grid` (no longer called from the builder) creates a maintenance hazard: tests exercise a dead path, and a future developer might re-activate it without noticing the P3 violation. Beck argues the function is tested, documented with a warning, and deletion would break 7 passing tests — the risk of re-activation is lower than the risk of deleting tested code.
+
+**Resolved 2026-05-24:** Retain with docstring warning (current state). Re-evaluate at next refactor cycle when `_aggregate_with_alignment` tests fully replace the old function's test coverage. Tier recalibrated to 4 (C-177).
+
+**Source:** ADR-031 compliance review (2026-05-21). Cross-ref: C-177.
+
+### ~~D-28: One function vs two for digest lookup (`last_digest` + `last_digest_for_version`)~~ — RESOLVED
+
+Ousterhout and Hickey argue for merging into a single function with optional `version` parameter — eliminates the desynchronization bug class (C-182 was fixed in one function, missed in the other until falsification F5). GoF recommends a shared `_find_latest_valid_entry` helper with both public functions as thin wrappers — preserves the API while centralizing logic. Martin values the explicit naming. Feathers cautions that changing 15+ call sites is a refactor that should be done separately from a bug fix.
+
+**Resolved 2026-05-24:** Keep two functions (current state). C-182 bug fixed in both. The shared `_find_latest_valid_entry` helper (GoF recommendation) is a nice-to-have for the next provenance refactor, not a risk.
+
+**Source:** Expert code review of provenance/shapefile (2026-05-21). Cross-ref: C-187 (digest-field assumption), C-182 (original desync bug).
+
+### ~~C-169: 2 CI tests fail due to missing infrastructure — permanent UNSTABLE~~ RESOLVED
+
+Two tests consistently failed in CI: `test_remote_zarr_has_last_valid_month_id` (requires `.netrc` for server auth) and `test_at_least_one_model_found` (requires `../views-models/` sibling repo). Both passed locally but made CI permanently UNSTABLE, hiding real regressions.
+
+**Resolved 2026-05-25 (v1.2.21 Task 2):** Added `@pytest.mark.skipif` guards for both infra-dependent tests. CI signal restored — `uv run pytest` now passes with 0 FAILED, 0 ERROR.
+
+**Source:** PR #53 review (2026-05-20). Cross-ref: C-96 (fsspec netrc), C-29 (no e2e integration test).
+
+### ~~C-176: `datafactory_synthetic` is a dead module with zero exports~~ RESOLVED
+
+`datafactory_synthetic` was declared in `pyproject.toml` as a wheel package, tested for `__all__` existence, and subject to import enforcement — but exported nothing and was imported by nothing. C-03 (protocol proliferation) subsumed into this entry since the module had no implementation.
+
+**Resolved 2026-05-25 (v1.2.21 Task 9):** Entire `src/datafactory_synthetic/` directory deleted. Removed from `pyproject.toml` packages list, `test_package_structure.py`, `test_import_enforcement.py`, 5 ADRs, 7 ARCHITECTURE.md files, and README.md.
+
+**Source:** repo-assimilation (2026-05-20). Cross-ref: C-03 (subsumed).
