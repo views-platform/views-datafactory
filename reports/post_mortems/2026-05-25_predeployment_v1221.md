@@ -5,7 +5,7 @@
 **Scope:** WET-before-DRY debt extraction, CI signal restoration, dead code deletion, risk register curation — maintenance sprint before 5th data source
 **Commits:** 14 non-merge (c706cbe..8a08069), 2026-05-24 to 2026-05-25
 **PRs:** #63 (maintenance sprint → development), #64 (development → main)
-**Tags:** v1.2.21 (pending)
+**Tags:** v1.2.21
 **Previous post-mortems:** [v1.2.20 deployment](2026-05-24_deployment_v1220.md), [GHS-BUILT-S pre-deploy](../pre_deploy_post_mortem_ghsbuilts.md)
 
 ---

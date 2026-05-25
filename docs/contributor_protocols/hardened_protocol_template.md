@@ -57,14 +57,13 @@ Every Pull Request must include tests covering the following three perspectives:
 
 ### Red Team (Adversarial)
 * **Goal:** Expose failure modes by deliberately trying to make the system produce wrong data silently.
-* **Examples:** Malformed API responses, duplicate event IDs in source data, NaN injection in coordinate arrays, degenerate covariance parameters in synthetic generation.
+* **Examples:** Malformed API responses, duplicate event IDs in source data, NaN injection in coordinate arrays.
 
 ---
 
 ## 4. Operational Invariants
 
 - **Content-Addressed Provenance:** Every compiled output has a SHA-256 digest. Every provenance entry links input digests + config to output digest. Rebuild fidelity: deleting outputs and rebuilding from raw data + provenance produces bit-identical results.
-- **Entropy Locking:** All stochastic operations (synthetic generation) must use explicit seeds passed via configuration. No global random state.
 - **Append-Only Ledgers:** Provenance JSONL files are append-only and git-tracked. Entries are never modified or deleted.
 
 ---

@@ -91,7 +91,7 @@ Built-up surface captures the *physical footprint* of urbanisation — complemen
 ### Negative
 
 - ~2.1 GB additional download (12 epochs at ~178 MB each)
-- One additional feature in the assembled grid increases memory proportionally (~1/53 of current grid)
+- One additional feature in the assembled grid increases memory proportionally (~1/52 of the pre-existing grid)
 - Temporal sparsity — same 12 epochs as GHS-POP, same interpolation caveats
 
 These costs are minimal and accepted.

@@ -12,7 +12,7 @@
 The assembled grid is a 19 GB float32 npy file. Consumers must download
 the entire file to access any subset — there is no way to fetch "just
 Ethiopia 2020-2024" without loading all 456 months, 259,200 cells, and
-51 features.
+53 features.
 
 The CLAUDE.md contract ("npy now, zarr-ready") anticipated this moment:
 the dimension order `[T, H, W, C]` and sidecar coordinate files were

@@ -70,6 +70,13 @@ Contracts must be clear enough that:
 - `AcledConsolidationConfig.md` -- immutable ACLED consolidation configuration (source dir, ledger paths)
 - `AcledViewpointConfig.md` -- immutable ACLED viewpoint configuration (event type filter, version)
 - `RemoteConfig.md` -- immutable remote server configuration (address, URL paths, scheme)
+- `GhsPopConfig.md` -- immutable GHS-POP harvest configuration (epochs, resolution, download URLs)
+- `GhsPopViewpointConfig.md` -- immutable GHS-POP viewpoint configuration (spatial aggregation, temporal interpolation)
+- `GhsBuiltSConfig.md` -- immutable GHS-BUILT-S harvest configuration (epochs, resolution, download URLs)
+- `GhsBuiltSViewpointConfig.md` -- immutable GHS-BUILT-S viewpoint configuration (spatial aggregation, temporal interpolation)
+- `AssemblyConfig.md` -- immutable assembly configuration (compiled grid paths, output directory)
+- `PregriddedCompilationConfig.md` -- immutable pre-gridded compilation configuration (GHS-POP, GHS-BUILT-S)
+- `SourceEntry.md` -- immutable source registry entry (name, features, provenance paths)
 - `grid_to_country_month.md` -- grid-to-country-month aggregation function contract
 
 ---

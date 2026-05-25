@@ -1,8 +1,8 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-05-25)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24
-**Status:** 195 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 107 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 5 open disagreements. 87 resolved concerns as full entries + 19 early-archive reference rows + 24 resolved disagreements in archive. 29 disagreement IDs total: 24 resolved, 5 open.
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25
+**Status:** 202 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 114 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 5 open disagreements. 94 resolved concerns as full entries + 19 early-archive reference rows + 24 resolved disagreements in archive. 29 disagreement IDs total: 24 resolved, 5 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -92,6 +92,13 @@
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script | Visual audit |
 | C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | 5th source adds another 5-8 falsification files, pushing total past 40 | Test hygiene |
+| ~~C-196~~ | ~~4~~ | ~~7 of 8 ARCHITECTURE.md files have stale module lists~~ | Resolved 2026-05-25 | Documentation drift |
+| ~~C-197~~ | ~~4~~ | ~~docs/CICs/README.md lists 21 active contracts but 28 exist~~ | Resolved 2026-05-25 | Documentation drift |
+| ~~C-198~~ | ~~4~~ | ~~docs/sources/README.md references 4 catalog cards that don't exist~~ | Resolved 2026-05-25 | Documentation drift |
+| ~~C-199~~ | ~~3~~ | ~~ADR-026 ACLED credential env vars contradict code~~ | Resolved 2026-05-25 | ADR drift |
+| ~~C-200~~ | ~~3~~ | ~~Grid dimension order wrong in ADR-005 and CLAUDE.md~~ | Resolved 2026-05-25 | ADR drift |
+| ~~C-201~~ | ~~4~~ | ~~4 CICs with contract drift post-v1.2.21~~ | Resolved 2026-05-25 | CIC drift |
+| ~~C-202~~ | ~~4~~ | ~~Operational docs stale — logging standard, deployment guide, hardened protocol, ADR counts~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-168~~ | ~~3~~ | ~~TemporalConfig defaults to end_year=2024 — footgun for new sources~~ | Resolved 2026-05-23 | ADR-003 compliance |
 | ~~C-169~~ | ~~4~~ | ~~2 CI tests fail due to missing infrastructure (netrc, sibling repo)~~ | Resolved 2026-05-25 | Test infra |
 | ~~C-170~~ | ~~1~~ | ~~GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
@@ -940,6 +947,78 @@ Cross-ref: C-186 (shapefile harvester lacks outcome vocabulary).
 Falsification audits produce `test_falsification_*.py` files containing failing test stubs that flip green after fixes. Over 10+ audit rounds (GHS-POP memory, coverage parity, visual audit, merge-readiness ×2, deployment ×2, plus earlier UCDP/ACLED audits), 37 files have accumulated. Many test stubs target concerns that are now resolved (C-190, C-191, C-193, C-194) — their stubs pass but serve no ongoing purpose beyond documentation that the fix exists. The test files are not consolidated by concern or source: `test_falsification_ghsbuilts_coverage_parity.py`, `test_falsification_ghsbuilts_merge_ready.py`, `test_falsification_ghsbuilts_deploy_v2.py` all test overlapping aspects of GHS-BUILT-S readiness. Curation options: (a) archive resolved stubs into a `tests/archive/` directory, (b) consolidate per-source stubs into one file per source, (c) tag resolved stubs with `@pytest.mark.resolved` and skip in CI. Tier 4 because: (a) all tests pass, (b) no correctness impact, (c) single-developer scope, (d) the accumulation is a navigation and maintenance burden, not a risk.
 
 Cross-ref: C-189 (GHS-BUILT-S coverage parity gap), C-180 (no falsification for non-GHS-POP paths), C-164 (WET-before-DRY broader inventory).
+
+### ~~C-196~~: 7 of 8 ARCHITECTURE.md files have stale module lists (18 files undocumented) — RESOLVED
+
+Resolved 2026-05-25. Updated 5 ARCHITECTURE.md files (viewpoint, consolidation, compilation, harvester + intent contracts section). Removed stale synthetic reference from compilation ARCHITECTURE.md. All 14 falsification test stubs pass. Moved to resolved archive.
+
+### ~~C-197~~: docs/CICs/README.md lists 21 active contracts but 28 exist (7 missing) — RESOLVED
+
+Resolved 2026-05-25. Added 7 missing CIC entries to docs/CICs/README.md: GhsPopConfig, GhsBuiltSConfig, GhsPopViewpointConfig, GhsBuiltSViewpointConfig, AssemblyConfig, PregriddedCompilationConfig, SourceEntry. Index now lists all 28 active contracts. Moved to resolved archive.
+
+### ~~C-198~~: docs/sources/README.md references 4 catalog cards that don't exist — RESOLVED
+
+Resolved 2026-05-25. Created 4 missing catalog cards: ucdp.md, acled.md, priogrid_static.md, gaul_admin.md. All follow the ADR-033 schema established by ghspop.md and ghsbuilts.md. Moved to resolved archive.
+
+### ~~C-199~~: ADR-026 ACLED credential env vars contradict code — RESOLVED
+
+| Field | Value |
+|-------|-------|
+| ID | C-199 |
+| Tier | 3 |
+| Source | review-base-docs (2026-05-25) |
+| Trigger | New contributor reads ADR-026 lines 18/66 and sets `ACLED_ACCESS_KEY`/`ACLED_EMAIL` instead of actual `ACLED_USERNAME`/`ACLED_PASSWORD` |
+| Location | `docs/ADRs/026_credential_management.md` lines 18, 66, 99 |
+
+ADR-026 contains contradictory ACLED credential env var names. Lines 18 and 66 say `ACLED_ACCESS_KEY`/`ACLED_EMAIL` (early design). Line 99 says `ACLED_USERNAME`/`ACLED_PASSWORD` (actual). Code uses `ACLED_USERNAME`/`ACLED_PASSWORD`. Fail-loud catches the wrong vars (missing env var error), but a contributor wastes time debugging.
+
+Resolved 2026-05-25. Corrected all `ACLED_ACCESS_KEY`/`ACLED_EMAIL` → `ACLED_USERNAME`/`ACLED_PASSWORD` in ADR-026.
+
+### ~~C-200~~: Grid dimension order wrong in ADR-005 and CLAUDE.md — RESOLVED
+
+| Field | Value |
+|-------|-------|
+| ID | C-200 |
+| Tier | 3 |
+| Source | review-base-docs (2026-05-25) |
+| Trigger | Developer reads ADR-005 or CLAUDE.md and writes code assuming 3D `(n_cells, n_steps, n_features)` shape instead of actual 4D `[T, H, W, C]` |
+| Location | `docs/ADRs/005_testing_as_mandatory_critical_infrastructure.md` line 101, `CLAUDE.md` line 44 |
+
+ADR-005 line 101 claims compiled grid shape is `(n_cells, n_steps, n_features)` (3D). CLAUDE.md line 44 claims `(cells, time, features)`. Actual shape is `[T, H, W, C]` = `(time, height=360, width=720, channels)` (4D), correctly documented in ADR-024. Code at `grid_compilation.py` confirms 4D. A developer following ADR-005 or CLAUDE.md would index arrays wrong.
+
+Cross-ref: ADR-024 (correct), C-128 (resolved — related grid shape issue in scripts).
+
+Resolved 2026-05-25. Updated ADR-005 and CLAUDE.md to match ADR-024's `[T, H, W, C]`.
+
+### ~~C-201~~: 4 CICs with contract drift post-v1.2.21 — RESOLVED
+
+| Field | Value |
+|-------|-------|
+| ID | C-201 |
+| Tier | 4 |
+| Source | review-base-docs (2026-05-25) |
+| Trigger | Developer reads CIC and writes code based on wrong contract (swapped args, missing field, wrong shapes) |
+| Location | `docs/CICs/AssemblyConfig.md`, `docs/CICs/SpatioTemporalGrid.md`, `docs/CICs/ComparisonResult.md`, `docs/CICs/GhsPopViewpointConfig.md` |
+
+Four CICs have contract drift: (1) AssemblyConfig missing `ghsbuilts_grid_dir` field added in GHS-BUILT-S sprint; (2) SpatioTemporalGrid documents arrays as 2-D `[H, W]` but they're 1-D, and temporal defaults show 432 months instead of 456; (3) ComparisonResult example has `compare_snapshots` arguments swapped (code: `old_path, new_events`, CIC: `new_events, prev_path`); (4) GhsPopViewpointConfig section 6 missing `ValueError` on invalid `temporal_interpolation`.
+
+Resolved 2026-05-25. Updated all 4 CICs to match current code.
+
+### ~~C-202~~: Operational docs stale — logging standard, deployment guide, hardened protocol, ADR counts — RESOLVED
+
+| Field | Value |
+|-------|-------|
+| ID | C-202 |
+| Tier | 4 |
+| Source | review-base-docs (2026-05-25) |
+| Trigger | 7th data source integration — every new source increases the count drift across docs |
+| Location | `docs/standards/logging_and_observability_standard.md`, `docs/guides/hetzner_deployment_guide.md`, `docs/contributor_protocols/hardened_protocol_template.md`, ADRs 009/010/011/012/018/020/021/022/033/034, `docs/ADRs/README.md` |
+
+Pattern of cumulative documentation staleness: (1) logging standard has 3 wrong ledger paths, 8 missing ledgers, 1 vestigial synthetic entry; (2) deployment guide says 51 features (actual 53) and ~820 tests (actual ~1157); (3) hardened protocol has vestigial synthetic generation references; (4) 5 ADRs reference `reports/technical_risk_register_resolved.md` (moved to `reports/archive/`); (5) ADR-011 says "0/9" (should be "0/11"); (6) ADR-021 says "51 features" (should be 53); (7) ADR-022 diagram says "(9 steps)"; (8) ADR-033 says "5 data sources" (should be 6); (9) ADR-012 uses synthetic as path example; (10) ADR-018 SLO table missing GHS-POP/GHS-BUILT-S; (11) ADR-009 wrong file path; (12) ADR-034 minor math; (13) ADR README missing 7 entries.
+
+Cross-ref: C-196, C-197, C-198 (same documentation drift pattern, resolved earlier same day).
+
+Resolved 2026-05-25. Updated all 13 locations in a single commit.
 
 ---
 

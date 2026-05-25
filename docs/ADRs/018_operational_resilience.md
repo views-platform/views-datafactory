@@ -102,6 +102,8 @@ The "default: 7 days" staleness threshold above is a global fallback. In practic
 | Source | SLO | Rationale |
 |--------|-----|-----------|
 | PRIO-GRID Static / Shapefile | `None` (static) | Dataset is immutable — age alone never indicates staleness |
+| GHS-POP | `None` (epoch) | Static 5-year epoch data, single release (R2023A); no regular update cadence |
+| GHS-BUILT-S | `None` (epoch) | Static 5-year epoch data, single release (R2023A); no regular update cadence |
 | UCDP Annual | 8760h (1 year) | Yearly release cycle |
 | UCDP Candidate / .9 | 744h (~31 days) | Monthly release cycle |
 | ACLED | 744h (~31 days) | Monthly release |
@@ -133,7 +135,7 @@ All timeouts are per-request (connect + read). Retries use exponential backoff w
 
 - ADR-008 (Observability and Explicit Failure)
 - ADR-011 (Fail Loud, No Stale Data Serving)
-- `reports/technical_risk_register_resolved.md` D-03
+- `reports/archive/technical_risk_register_resolved.md` D-03
 - Expert review 6: Nygard perspective on operational resilience
 - Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
   - Ch.1 pp.13-14: SLAs vs SLOs — percentile-based performance targets, not averages

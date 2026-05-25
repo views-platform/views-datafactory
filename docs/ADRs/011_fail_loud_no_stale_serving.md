@@ -42,7 +42,7 @@ The system **crashes and fails loud**. No stale data is served. When a harvest o
 
 ## Pre-flight Checks
 
-Pre-flight validation is a concrete enforcement mechanism for fail-loud. `scripts/preflight.py` runs as step 0/9 of the pipeline (before any harvest or compilation begins). It calls `validate_preflight()` from `datafactory_provenance.source_registry`, which verifies that all declared sources have valid configuration, required environment variables are set, and SLO parameters are sane. If any check fails, the pipeline exits non-zero before any data work begins.
+Pre-flight validation is a concrete enforcement mechanism for fail-loud. `scripts/preflight.py` runs as step 0/11 of the pipeline (before any harvest or compilation begins). It calls `validate_preflight()` from `datafactory_provenance.source_registry`, which verifies that all declared sources have valid configuration, required environment variables are set, and SLO parameters are sane. If any check fails, the pipeline exits non-zero before any data work begins.
 
 ---
 
@@ -79,7 +79,7 @@ These trade-offs are accepted intentionally for the pre-production phase.
 
 - ADR-003 (Authority of Declarations — fail-loud invariant)
 - ADR-008 (Observability and Explicit Failure)
-- `reports/technical_risk_register_resolved.md` C-15, D-03
+- `reports/archive/technical_risk_register_resolved.md` C-15, D-03
 - Kleppmann & Riccomini, *Designing Data-Intensive Applications*, 2nd ed., O'Reilly 2026:
   - Ch.2 pp.43-44: Fault vs failure distinction; crash-stop fault model
   - Ch.2 pp.46-47: Software faults — systematic, correlated, lie dormant until triggered

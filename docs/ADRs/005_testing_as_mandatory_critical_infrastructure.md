@@ -98,7 +98,7 @@ Examples in this project:
 - Bit-identical compilation: same inputs + same config = identical npy output + identical SHA-256 digest
 - Provenance ledger entries contain all required fields (timestamp, source digests, config snapshot, output digest)
 - Content digest computation is deterministic and order-independent
-- Compiled grid output shape is always (n_cells, n_steps, n_features)
+- Compiled grid output shape is always [T, H, W, C] (time, height=360, width=720, channels/features)
 - Coordinate sidecar arrays match the dimensions of the data array
 
 Green team tests are expected to pass continuously and form the backbone of CI.
