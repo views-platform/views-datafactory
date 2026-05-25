@@ -43,6 +43,7 @@ docs/sources/
 ├── acled.md               # ACLED ✓
 ├── ghspop.md              # GHS-POP R2023A ✓
 ├── ghsbuilts.md           # GHS-BUILT-S R2023A ✓
+├── vdem.md                # V-Dem v16 ✓
 ├── priogrid_static.md     # PRIO-GRID static variables ✓
 └── gaul_admin.md          # GAUL admin boundaries ✓
 ```

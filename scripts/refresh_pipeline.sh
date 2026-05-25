@@ -6,16 +6,17 @@
 #
 # This script runs the entire data pipeline end-to-end:
 #   0.  Pre-flight checks (credentials, disk space)
-#   1.  Harvest raw data from UCDP, PRIO-GRID, GAUL, ACLED, GHS-POP, GHS-BUILT-S
+#   1.  Harvest raw data from UCDP, PRIO-GRID, GAUL, ACLED, GHS-POP, GHS-BUILT-S, V-Dem
 #   2.  Consolidate UCDP sources into event store
 #   3.  Build viewpoint (survivorship + distribution + filtering)
 #   4.  Compile UCDP grid
 #   5.  Compile ACLED grid (consolidate + viewpoint + compile)
 #   6.  Compile GHS-POP grid (viewpoint + compile, no consolidation)
 #   7.  Compile GHS-BUILT-S grid (viewpoint + compile, no consolidation)
-#   8.  Assemble all features (UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin)
-#   9.  Export to consumer formats (zarr, parquet)
-#  10.  Run health check
+#   8.  Compile V-Dem grid (viewpoint + compile, no consolidation)
+#   9.  Assemble all features (UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin)
+#  10.  Export to consumer formats (zarr, parquet)
+#  11.  Run health check
 #
 # Deployment gate:
 #   Before running any steps, the script reads ~/.views-deploy-tag
@@ -118,13 +119,13 @@ echo "========================================"
 echo
 
 # Step 0: Pre-flight checks (credentials, disk space)
-CURRENT_STEP="0/11: Pre-flight checks"
+CURRENT_STEP="0/12: Pre-flight checks"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/preflight.py
 echo
 
 # Step 1: Harvest
-CURRENT_STEP="1/11: Harvest raw data"
+CURRENT_STEP="1/12: Harvest raw data"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/harvest_ucdp.py
 uv run python scripts/harvest_priogrid.py
@@ -133,62 +134,70 @@ uv run python scripts/harvest_gaul.py
 uv run python scripts/harvest_acled.py
 uv run python scripts/harvest_ghspop.py
 uv run python scripts/harvest_ghsbuilts.py
+uv run python scripts/harvest_vdem.py
 echo
 
 # Step 2: Consolidate
-CURRENT_STEP="2/11: Consolidate UCDP sources"
+CURRENT_STEP="2/12: Consolidate UCDP sources"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/consolidate_ucdp.py
 echo
 
 # Step 3: Build viewpoint
-CURRENT_STEP="3/11: Build viewpoint"
+CURRENT_STEP="3/12: Build viewpoint"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/build_viewpoint.py
 echo
 
 # Step 4: Compile UCDP grid
-CURRENT_STEP="4/11: Compile UCDP to PRIO-GRID"
+CURRENT_STEP="4/12: Compile UCDP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/compile_grid.py
 echo
 
 # Step 5: Compile ACLED grid
-CURRENT_STEP="5/11: Compile ACLED to PRIO-GRID"
+CURRENT_STEP="5/12: Compile ACLED to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_acled_pipeline.py --skip-to consolidate
 echo
 
 # Step 6: Compile GHS-POP grid (no consolidation — ADR-029)
-CURRENT_STEP="6/11: Compile GHS-POP to PRIO-GRID"
+CURRENT_STEP="6/12: Compile GHS-POP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_ghspop_pipeline.py --skip-to viewpoint
 echo
 
 # Step 7: Compile GHS-BUILT-S grid (no consolidation — ADR-034)
-CURRENT_STEP="7/11: Compile GHS-BUILT-S to PRIO-GRID"
+CURRENT_STEP="7/12: Compile GHS-BUILT-S to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_ghsbuilts_pipeline.py --skip-to viewpoint
 echo
 
-# Step 8: Assemble
-CURRENT_STEP="8/11: Assemble all features"
+# Step 8: Compile V-Dem grid (no consolidation — ADR-035)
+CURRENT_STEP="8/12: Compile V-Dem to PRIO-GRID"
+echo "── $CURRENT_STEP ──"
+uv run python scripts/run_vdem_pipeline.py --skip-to viewpoint
+echo
+
+# Step 9: Assemble
+CURRENT_STEP="9/12: Assemble all features"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/assemble_grid.py \
     --acled-grid data/compiled/acled \
     --ghspop-grid data/compiled/ghspop \
-    --ghsbuilts-grid data/compiled/ghsbuilts
+    --ghsbuilts-grid data/compiled/ghsbuilts \
+    --vdem-grid data/compiled/vdem
 echo
 
-# Step 9: Export
-CURRENT_STEP="9/11: Export consumer formats"
+# Step 10: Export
+CURRENT_STEP="10/12: Export consumer formats"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/export_zarr.py
 uv run python scripts/export_dataframe.py
 echo
 
-# Step 10: Health check
-CURRENT_STEP="10/11: Health check"
+# Step 11: Health check
+CURRENT_STEP="11/12: Health check"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/check_health.py
 echo

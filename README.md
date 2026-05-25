@@ -34,7 +34,7 @@ The system is designed as a **graph of independent nodes**, not a linear pipelin
 
 ### Key Capabilities
 
-- **Auditable data harvesting** — UCDP (annual, candidate, .9), ACLED, GHS-POP, GHS-BUILT-S, PRIO-GRID static, and GAUL admin boundaries, all with schema validation, drift detection, and JSONL provenance ledgers
+- **Auditable data harvesting** — UCDP (annual, candidate, .9), ACLED, GHS-POP, GHS-BUILT-S, V-Dem, PRIO-GRID static, and GAUL admin boundaries, all with schema validation, drift detection, and JSONL provenance ledgers
 - **PRIO-GRID spatial backbone** — pure-numpy generation of the standard 259,200-cell global grid at 0.5° resolution, validated cell-by-cell against the official PRIO reference shapefile
 - **Temporal backbone** with VIEWS month_id adapters (epoch: January 1980)
 - **Vintage-aware consolidation** — lossless, append-only, bitemporal event store from all three UCDP sources with content-digest deduplication
@@ -78,14 +78,15 @@ PRIO-GRID ──────→ datafactory_priogrid ─┐     │
 PRIO-GRID API ──→ datafactory_harvester ──→ data/raw/priogrid_static/
 FAO GAUL API ───→ datafactory_harvester ──→ data/raw/gaul_admin/
 JRC GHSL ───────→ datafactory_harvester ──→ data/raw/ghspop/ + ghsbuilts/
-                    (GHS-POP, GHS-BUILT-S skip consolidation — single releases)
+V-Dem ──────────→ datafactory_harvester ──→ data/raw/vdem/
+                    (GHS-POP, GHS-BUILT-S, V-Dem skip consolidation — single releases)
                                         │     │
                                   datafactory_compilation ──→ data/compiled/grid.npy [T,H,W,C]
                                               │
                                          ─ ─ ─ ─ ─ ─ ─ ─  filesystem boundary
                                               │
                                   assemble_grid.py ──→ data/assembled/grid.npy [T,H,W,F]
-                                     (compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin)
+                                     (compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin)
                                               │
                                          ─ ─ ─ ─ ─ ─ ─ ─  filesystem boundary
                                               │
@@ -103,7 +104,7 @@ JRC GHSL ───────→ datafactory_harvester ──→ data/raw/ghspo
 
 ```
 
-Not all paths traverse all layers. GHS-POP and GHS-BUILT-S skip consolidation (single releases; ADR-029, ADR-034).
+Not all paths traverse all layers. GHS-POP, GHS-BUILT-S, and V-Dem skip consolidation (single releases; ADR-029, ADR-034, ADR-035).
 
 ---
 
@@ -133,7 +134,7 @@ Consumer-facing (no datafactory_* imports):
   datafactory_adapters          Grid → DataFrame, Grid → FeatureFrame
 
 Assembly (script, not package — combines compiled sources):
-  scripts/assemble_grid.py      Compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin → [T,H,W,F]
+  scripts/assemble_grid.py      Compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin → [T,H,W,F]
 
 Consumer entry point (imports priogrid + adapters, reads assembled files):
   datafactory_query             load_dataset() — region/time/feature subsetting, npy or zarr
@@ -199,7 +200,7 @@ Output: `{calibration,validation,forecasting}_viewser_df.parquet` with MultiInde
 | `datafactory_provenance` | 0 | Content digests, JSONL ledgers, file locking, rotation | Done |
 | `datafactory_http` | 0 | HTTP request utilities: retry with exponential backoff | Done |
 | `datafactory_priogrid` | 1 | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done |
-| `datafactory_harvester` | 1 | Data harvesting: UCDP (annual/candidate/.9), ACLED, GHS-POP, GHS-BUILT-S, PRIO-GRID static, GAUL admin | Done |
+| `datafactory_harvester` | 1 | Data harvesting: UCDP (annual/candidate/.9), ACLED, GHS-POP, GHS-BUILT-S, V-Dem, PRIO-GRID static, GAUL admin | Done |
 | `datafactory_consolidation` | 2 | Lossless, vintage-aware consolidation of UCDP and ACLED sources | Done |
 | `datafactory_viewpoint` | 3 | Opinionated views: survivorship, temporal distribution, profiles | Done |
 | `datafactory_compilation` | 4 | Viewpoint output → grid npy with coordinate sidecars | Done |
@@ -241,6 +242,7 @@ views-datafactory/
 │   │       ├── acled.py                                  ACLED event data (year-by-year)
 │   │       ├── ghspop.py                                 GHS-POP R2023A (JRC GHSL raster)
 │   │       ├── ghsbuilts.py                              GHS-BUILT-S R2023A (JRC GHSL raster)
+│   │       ├── vdem.py                                   V-Dem v16 democracy indicators
 │   │       ├── priogrid_static.py                        PRIO-GRID static covariates
 │   │       └── gaul_admin.py                             GAUL 2024 admin boundaries
 │   ├── datafactory_consolidation/                    # Layer 2 — lossless event stores
@@ -258,7 +260,8 @@ views-datafactory/
 │   │   └── builders/
 │   │       ├── ucdp_v1.py                                UCDP viewpoint builder
 │   │       ├── ghspop_v1.py                              GHS-POP viewpoint builder
-│   │       └── ghsbuilts_v1.py                           GHS-BUILT-S viewpoint builder
+│   │       ├── ghsbuilts_v1.py                           GHS-BUILT-S viewpoint builder
+│   │       └── vdem_v1.py                                V-Dem viewpoint builder
 │   ├── datafactory_compilation/                      # Layer 4 — grid compilation
 │   │   ├── compilation_config.py                       CompilationConfig
 │   │   ├── grid_compilation.py                         compile_grid (event sources)
@@ -289,7 +292,10 @@ views-datafactory/
 │   ├── run_acled_pipeline.py                           ACLED end-to-end pipeline
 │   ├── run_ghspop_pipeline.py                          GHS-POP end-to-end pipeline
 │   ├── run_ghsbuilts_pipeline.py                       GHS-BUILT-S end-to-end pipeline
-│   ├── assemble_grid.py                                UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin
+│   ├── harvest_vdem.py                                  V-Dem CSV harvest
+│   ├── compile_vdem.py                                  V-Dem grid compilation
+│   ├── run_vdem_pipeline.py                             V-Dem end-to-end pipeline
+│   ├── assemble_grid.py                                UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin
 │   ├── generate_consumer_data.py                      Factory → VIEWSER parquet for training
 │   ├── export_dataframe.py                             Grid → DataFrame export
 │   ├── export_zarr.py                                  Grid → zarr store (HTTP-servable)
@@ -299,7 +305,7 @@ views-datafactory/
 │   ├── visualize_audit.py                              Data audit visualization
 │   └── ...                                             verify_parity, verify_remote, etc.
 ├── docs/                                             # ADRs, CICs, protocols, standards
-│   ├── ADRs/                                           10 constitutional + 25 project-specific
+│   ├── ADRs/                                           10 constitutional + 26 project-specific
 │   ├── CICs/                                           28 active class intent contracts
 │   ├── contributor_protocols/                          carbon, silicon, hardened
 │   └── standards/                                      logging & observability
@@ -349,6 +355,7 @@ uv run python scripts/compile_grid.py              # UCDP → grid.npy
 uv run python scripts/compile_acled.py             # ACLED → grid.npy
 uv run python scripts/run_ghspop_pipeline.py       # GHS-POP viewpoint + compile
 uv run python scripts/run_ghsbuilts_pipeline.py    # GHS-BUILT-S viewpoint + compile
+uv run python scripts/run_vdem_pipeline.py         # V-Dem viewpoint + compile
 uv run python scripts/assemble_grid.py             # all compiled sources → assembled grid
 uv run python scripts/generate_consumer_data.py    # factory → VIEWSER training parquets
 
@@ -450,3 +457,4 @@ Built as part of the [VIEWS](https://viewsforecasting.org/) (Violence & Impacts 
 Data sources:
 - **[UCDP/GED](https://ucdp.uu.se/)** — Uppsala Conflict Data Program / Georeferenced Event Dataset
 - **[PRIO-GRID](https://grid.prio.org/)** — Peace Research Institute Oslo global grid structure
+- **[V-Dem](https://v-dem.net/)** — Varieties of Democracy Institute, University of Gothenburg
