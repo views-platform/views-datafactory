@@ -25,7 +25,7 @@ Consumer-facing query layer -- the primary entry point for training scripts and 
 
 **May import:** `datafactory_priogrid` (for GridConfig defaults), `datafactory_adapters` (for FeatureFrame, grid_to_dataframe, grid_to_feature_frame)
 **Reads filesystem output of:** `scripts/assemble_grid.py` (assembled grid at `data/assembled/` or zarr store)
-**Must never import:** `datafactory_harvester`, `datafactory_consolidation`, `datafactory_viewpoint`, `datafactory_compilation`, `datafactory_synthetic`
+**Must never import:** `datafactory_harvester`, `datafactory_consolidation`, `datafactory_viewpoint`, `datafactory_compilation`
 
 ## Package Structure
 

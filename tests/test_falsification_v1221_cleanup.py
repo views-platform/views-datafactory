@@ -1,0 +1,129 @@
+"""Falsification stubs: v1.2.21 cleanup completeness audit.
+
+Source: /falsify audit 2026-05-25
+Claim: Sprint v1.2.21 cleanup is done and successfully so.
+Verdict: FALSIFIED (1 hard, 2 soft).
+
+F-1 (hard): Post-sprint register updates not done — C-164, C-176,
+    C-169 remain open despite the work being complete.
+F-2 (soft): README.md still describes deleted datafactory_synthetic.
+F-3 (soft): 7 ARCHITECTURE.md files reference deleted module.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+
+class TestF1PostSprintRegisterUpdates:
+    """The sprint plan's 'Register Updates After Sprint' section
+    requires: update C-164 with resolved patterns, mark C-176 as
+    resolved, mark C-169 as resolved, header count → 63."""
+
+    def test_c176_marked_resolved(self) -> None:
+        """C-176 (dead synthetic module) should be resolved after
+        Task 9 deleted the module."""
+        register = Path(
+            "reports/technical_risk_register.md"
+        ).read_text()
+        c176_lines = [
+            line for line in register.splitlines()
+            if "C-176" in line and "###" in line
+        ]
+        assert c176_lines, "C-176 not found in register"
+        assert "~~" in c176_lines[0], (
+            "C-176 is not struck through — sprint plan says "
+            "'Mark C-176 as resolved (module deleted)' but "
+            "the entry is still open"
+        )
+
+    def test_c169_marked_resolved(self) -> None:
+        """C-169 (CI signal) should be resolved after Task 2
+        added skipif guards."""
+        register = Path(
+            "reports/technical_risk_register.md"
+        ).read_text()
+        c169_lines = [
+            line for line in register.splitlines()
+            if "C-169" in line and "###" in line
+        ]
+        assert c169_lines, "C-169 not found in register"
+        assert "~~" in c169_lines[0], (
+            "C-169 is not struck through — sprint plan says "
+            "'Mark C-169 as resolved (CI signal restored)' "
+            "but the entry is still open"
+        )
+
+    def test_c164_has_resolution_notes(self) -> None:
+        """C-164 should mention resolved patterns from v1.2.21."""
+        register = Path(
+            "reports/technical_risk_register.md"
+        ).read_text()
+        c164_start = register.index("### C-164:")
+        next_heading = register.index("\n### ", c164_start + 1)
+        c164_text = register[c164_start:next_heading]
+        assert "raster_io" in c164_text or "tagging" in c164_text, (
+            "C-164 has no resolution notes for v1.2.21 — "
+            "sprint plan says to update with: Pattern #2 "
+            "resolved (tagging), Pattern #4 resolved (output), "
+            "Pattern #5 resolved (VIEWS_EPOCH_YEAR), raster I/O "
+            "resolved, temporal interpolation resolved"
+        )
+
+    def test_register_header_count(self) -> None:
+        """Header should say 63 open concerns after C-176 and
+        C-169 are resolved."""
+        register = Path(
+            "reports/technical_risk_register.md"
+        ).read_text()
+        match = re.search(
+            r"(\d+) open concerns", register[:2000],
+        )
+        assert match, "Could not find 'N open concerns' in header"
+        count = int(match.group(1))
+        assert count == 63, (
+            f"Register header says {count} open concerns — "
+            f"should be 63 after resolving C-176 and C-169 "
+            f"(65 from Task 1, minus 2 resolved in Tasks 2/9)"
+        )
+
+
+class TestF2ReadmeSyntheticReferences:
+    """README.md describes the architecture including
+    datafactory_synthetic, which was deleted in Task 9."""
+
+    def test_readme_no_synthetic_reference(self) -> None:
+        readme = Path("README.md").read_text()
+        lines_with_ref = [
+            i + 1
+            for i, line in enumerate(readme.splitlines())
+            if "datafactory_synthetic" in line
+        ]
+        assert not lines_with_ref, (
+            f"README.md references deleted datafactory_synthetic "
+            f"on line(s) {lines_with_ref}. The module was "
+            f"deleted in v1.2.21 Task 9 but README was not "
+            f"updated."
+        )
+
+
+class TestF3ArchitectureMdSyntheticReferences:
+    """Per-package ARCHITECTURE.md files still list
+    datafactory_synthetic in dependency rules."""
+
+    def test_no_architecture_md_synthetic_refs(self) -> None:
+        src = Path("src")
+        arch_files = sorted(src.glob("*/ARCHITECTURE.md"))
+        hits: list[str] = []
+        for af in arch_files:
+            text = af.read_text()
+            for i, line in enumerate(text.splitlines(), 1):
+                if "datafactory_synthetic" in line:
+                    hits.append(f"{af}:{i}")
+        assert not hits, (
+            f"ARCHITECTURE.md files reference deleted "
+            f"datafactory_synthetic: {hits}. These were not "
+            f"included in Task 9 step 4 (only ADRs were "
+            f"updated) but should be cleaned."
+        )

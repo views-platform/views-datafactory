@@ -1,7 +1,7 @@
 [project]
 name = "views-datafactory"
-version = "1.2.20"
-description = "Data factory for the VIEWS conflict forecasting platform — harvesting, grid construction, compilation, and synthetic generation."
+version = "1.2.21"
+description = "Data factory for the VIEWS conflict forecasting platform — provenance, harvesting, consolidation, viewpoint construction, compilation, and assembly."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -41,7 +41,6 @@ packages = [
     "src/datafactory_compilation",
     "src/datafactory_consolidation",
     "src/datafactory_viewpoint",
-    "src/datafactory_synthetic",
     "src/datafactory_adapters",
     "src/datafactory_query",
 ]

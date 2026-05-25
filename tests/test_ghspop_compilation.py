@@ -19,7 +19,7 @@ import pytest
 
 from datafactory_priogrid.grid_config import GridConfig
 from datafactory_priogrid.temporal_config import TemporalConfig
-from datafactory_priogrid.temporal_generator import VIEWS_EPOCH_YEAR
+from datafactory_provenance.constants import VIEWS_EPOCH_YEAR
 
 # Tiny grid: 2×4 = 8 cells at 90° resolution, 3 months
 TINY_GRID = GridConfig(resolution=90.0)

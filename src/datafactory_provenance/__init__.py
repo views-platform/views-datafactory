@@ -4,6 +4,7 @@ Every datafactory_* operation that produces output records provenance here.
 No outbound imports to other datafactory_* packages.
 """
 
+from datafactory_provenance.constants import VIEWS_EPOCH_YEAR
 from datafactory_provenance.digests_and_ledgers import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -39,6 +40,7 @@ __all__ = [
     "Registry",
     "SOURCE_SLO",
     "SourceEntry",
+    "VIEWS_EPOCH_YEAR",
     "append_ledger_entry",
     "check_export_freshness",
     "compute_content_digest",

@@ -26,7 +26,7 @@ PRIO-GRID spatial backbone and temporal backbone. Defines the shared coordinate 
 ## Dependency Rules
 
 **May import:** `datafactory_provenance`, numpy, pyshp (shapefile reader only)
-**Must never import:** `datafactory_harvester`, `datafactory_compilation`, `datafactory_synthetic`, or any consumer
+**Must never import:** `datafactory_harvester`, `datafactory_compilation`, or any consumer
 
 ## Key Concepts
 

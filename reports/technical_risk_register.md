@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-23)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23
-**Status:** 194 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44): 103 resolved, 66 open concerns (8 Tier 2, 17 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 7 open disagreements. 84 resolved concerns as full entries + 19 early-archive reference rows + 22 resolved disagreements in archive. 29 disagreement IDs total: 22 resolved, 7 open.
+**Date:** 2026-03-17 (updated 2026-05-25)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24
+**Status:** 195 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 107 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 5 open disagreements. 87 resolved concerns as full entries + 19 early-archive reference rows + 24 resolved disagreements in archive. 29 disagreement IDs total: 24 resolved, 5 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -13,24 +13,24 @@
 
 | ID | Tier | Title | Trigger | Package |
 |----|------|-------|---------|---------|
-| C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before production deployment | Server hardening |
+| C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before granting additional SSH users | Server hardening |
 | C-121 | 4 | Phase 6.4 documented but unexecuted (lessons from C-87) | Before executing Phase 6.4 | Server hardening |
-| C-21 | 3 | No characterization tests for migration | Next migration batch planned | — |
+| C-21 | 4 | No characterization tests for migration | No migration planned | — |
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
 | C-45 | 4 | No Parquet schema evolution strategy | UCDP removes/renames a field | UCDP schema |
 | ~~C-31~~ | ~~4~~ | ~~Candidate source depends on annual source (incl. C-28)~~ | Resolved 2026-04-27 | Code cleanup |
-| C-44 | 4 | Harvest pipeline template is implicit — trigger fired, accepted at v1.0 | 5 sources exist | V-Dem readiness |
+| C-44 | 4 | Harvest pipeline template is implicit — trigger fired, accepted at v1.0 | Before V-Dem (9th source) | V-Dem readiness |
 | C-46 | 4 | No ledger write idempotency | External systems consume ledger | — |
 | C-32 | — | Source registry returns `Any` | Accepted by design | — |
-| C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Server in production | Test infra |
+| C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | 2nd deployment target set up | Test infra |
 | C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment | UCDP resilience |
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
-| C-74 | 4 | CompilationConfig leaks strategy vocabulary | User confusion observed | — |
-| C-75 | 4 | FeatureFrame shallow abstraction | Recurring misuse patterns | — |
+| C-74 | 4 | CompilationConfig leaks strategy vocabulary | New developer needs IDE discoverability | — |
+| C-75 | 4 | FeatureFrame shallow abstraction | Consumer constructs wrong shape | — |
 | C-78 | 4 | `_place_events` hard to test in isolation | Compilation tests exceed 5s | Test infra |
 | C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
-| C-03 | 4 | Protocol proliferation in synthetic module | 2nd implementation needed | — |
+| ~~C-03~~ | ~~4~~ | ~~Protocol proliferation in synthetic module~~ | Subsumed into C-176 | — |
 | C-93 | 4 | `_count_outcomes` mixes raw counts with derived computation | When harvest reporting is refactored | Code cleanup |
 | C-96 | 4 | fsspec does not auto-read `~/.netrc` | If fsspec adds netrc support | — |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
@@ -58,8 +58,8 @@
 | ~~C-143~~ | ~~4~~ | ~~request_with_retry has no Red tests~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-125~~ | ~~3~~ | ~~No cm aggregation — 48/70 models cannot migrate~~ | Resolved 2026-04-21 | Migration scope |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
-| C-177 | 3 | `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) | Function is re-activated for a new data source | ADR-031 compliance |
-| C-178 | 3 | `compute_content_digest(path.read_bytes())` loads entire output into memory | Viewpoint output exceeds ~1 GB | ADR-031 compliance |
+| C-177 | 4 | `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) | Function is re-activated for a new data source | ADR-031 compliance |
+| ~~C-178~~ | ~~3~~ | ~~`compute_content_digest(path.read_bytes())` loads entire output into memory~~ | Resolved 2026-05-21 | ADR-031 compliance |
 | C-179 | 4 | Consolidation dedup uses `.to_pylist()` + Python set (ADR-031 P1) | Consolidated store exceeds ~5M rows on 8 GB machine | ADR-031 compliance |
 | C-180 | 4 | No falsification tests for non-GHS-POP compilation/viewpoint paths | Memory regression introduced in UCDP or ACLED path | Test coverage |
 | C-181 | 4 | UCDP candidate/dot9 discovery probes API even when all versions cached | UCDP rate-limits or blocks IP after repeated full-range probes | Harvest efficiency |
@@ -75,10 +75,10 @@
 | ~~C-192~~ | ~~3~~ | ~~Operational integration consistently trails implementation — 3rd recurrence~~ | Resolved 2026-05-23 | Workflow process |
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
 | D-24 | — | Hardware upgrade vs software optimization for 8 GB ceiling | Open | ADR-031 compliance |
-| D-25 | — | Dead function retention — `_aggregate_to_prio_grid` after v1.2.18 | Open | ADR-031 compliance |
+| ~~D-25~~ | ~~—~~ | ~~Dead function retention — `_aggregate_to_prio_grid` after v1.2.18~~ | Resolved 2026-05-24 | ADR-031 compliance |
 | D-26 | — | Discovery probing cost vs cache staleness (UCDP candidate/dot9) | Open | Harvest caching |
 | D-27 | — | Two-tier cache (UCDP) vs single-tier cache (ACLED/GHS-POP) | Open | Harvest caching |
-| D-28 | — | One function vs two for digest lookup (`last_digest` + `last_digest_for_version`) | Open | Provenance API |
+| ~~D-28~~ | ~~—~~ | ~~One function vs two for digest lookup (`last_digest` + `last_digest_for_version`)~~ | Resolved 2026-05-24 | Provenance API |
 | D-29 | — | Shapefile harvester retrofit depth — full outcome compliance vs organic | Open | Harvest correctness |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
@@ -91,8 +91,9 @@
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script | Visual audit |
+| C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | 5th source adds another 5-8 falsification files, pushing total past 40 | Test hygiene |
 | ~~C-168~~ | ~~3~~ | ~~TemporalConfig defaults to end_year=2024 — footgun for new sources~~ | Resolved 2026-05-23 | ADR-003 compliance |
-| C-169 | 4 | 2 CI tests fail due to missing infrastructure (netrc, sibling repo) | Real regression hidden by permanent UNSTABLE status | Test infra |
+| ~~C-169~~ | ~~4~~ | ~~2 CI tests fail due to missing infrastructure (netrc, sibling repo)~~ | Resolved 2026-05-25 | Test infra |
 | ~~C-170~~ | ~~1~~ | ~~GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
 | ~~C-171~~ | ~~1~~ | ~~Pregridded compilation `.to_pylist()` OOM (~6 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
 | ~~C-172~~ | ~~3~~ | ~~Latent OOM in `_aggregate_to_prio_grid` dead branch~~ | Resolved 2026-05-20 | GHS-POP memory |
@@ -102,7 +103,7 @@
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
 | ~~C-174~~ | ~~3~~ | ~~`latlon_to_pgid` silently clamps out-of-bounds coordinates~~ | Resolved 2026-05-23 | Compilation correctness |
 | C-175 | 3 | Aggregation missing-field coalesced to zero, not NaN | Source removes or renames a field used in `FeatureSpec` | Compilation correctness |
-| C-176 | 4 | `datafactory_synthetic` is a dead module with zero exports | Synthetic generation needed for a consumer | Code cleanup |
+| ~~C-176~~ | ~~4~~ | ~~`datafactory_synthetic` is a dead module with zero exports~~ | Resolved 2026-05-25 | Code cleanup |
 | C-159 | 4 | ACLED snapshot archiving and revision comparison paths untested | Archiving logic implicated in data integrity incident | ACLED test coverage |
 | C-160 | 4 | ACLED `fetch_paginated` string-data corruption has no guard | ACLED API returns non-list `data` field | ACLED data integrity |
 | ~~C-161~~ | ~~4~~ | ~~GHS-POP harvester failure-path provenance partially untested~~ | Resolved 2026-05-18 | GHS-POP test coverage |
@@ -146,7 +147,7 @@ Items that should be resolved together:
 | ~~**GHS-POP deployment**~~ | ~~C-165, C-166, C-167~~ | Resolved 2026-05-20 |
 | ~~**GHS-POP memory**~~ | ~~C-170, C-171, C-172~~ | Resolved 2026-05-20 |
 | **Harvest correctness** | ~~C-182~~, C-184, C-185, C-186, ~~C-188~~ | Before relying on harvest caching for correctness |
-| **WET-before-DRY refactor** | C-44, C-07, C-155, C-164 | Before 4th source (V-Dem or WDI) |
+| **WET-before-DRY refactor** | C-44, C-07, C-155, C-164, C-195 | Before 5th source (V-Dem or WDI) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
@@ -162,7 +163,7 @@ Items that should be resolved together:
 ## Tier 2 — Fix Before Sharing Server Access
 
 ### C-88: SSH not restricted to PRIO/Uppsala IPs — [DEFER]
-SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: configure before production deployment.** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
+SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: before granting additional SSH users, or when PRIO IT provides VPN CIDR ranges for firewall rules (trigger rewritten during review-rr 2026-05-24).** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
 **Source:** PRIO IT security guidance, server setup 2026-03-28
 
 ### C-130: Zero-filled future months indistinguishable from observed zeros — [RESOLVING]
@@ -248,11 +249,6 @@ The calibration/validation/forecasting partition boundaries (121/444, 445/492, 4
 **Resolution:** Define a `PARTITIONS` frozen dict or dataclass in a shared location within `src/` and have all consumers import from it.
 **Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (single source of truth).
 
-### C-21: No characterization tests for migration source — [DEFER]
-The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when next migration batch is planned.**
-**Source:** Feathers
-**Update 2026-04-21:** Partially addressed by M13 (verification examples suite). 15 `examples/ex_*.py` scripts verify consumer-facing API contracts end-to-end. Not full characterization tests, but covers the consumer surface model developers depend on.
-
 ### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
 14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
 **Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
@@ -297,7 +293,11 @@ See also C-79 (Parquet I/O in tests), C-179 (consolidation dedup to_pylist).
 
 Every other layer exposes its core logic as an importable function: `consolidate_ucdp()`, `build_ucdp_v1()`, `compile_grid()`, `load_dataset()`. Assembly is the exception — its spatial join, static feature broadcast, and admin boundary merge logic lives entirely in `assemble_grid.py`'s `main()`. `test_assemble.py` tests sub-components (spatial join helper, GID lookup) but cannot import and test the orchestration function directly. Extracting an `assemble_grid()` function into `datafactory_compilation` or a new `datafactory_assembly` package would make the logic importable and directly testable.
 
-See also C-29 (no end-to-end integration test).
+**Note (2026-05-24, repo-assimilation v1.2.20):** At 4 sources / 831 lines, the script grows linearly per source (~100-150 lines per source for loading, slicing, and stacking). At source #8-10, `assemble_grid.py` will exceed 1,200 lines of procedural code with no importable interface. The linear growth compounds the testability concern: each new source adds code paths that cannot be unit-tested in isolation.
+
+**Note (2026-05-24, tech-debt-cleanup investigation):** The linear growth mechanism is now identified: lines 240-441 contain 3 source load-validate-align blocks (ACLED 59 lines, GHS-POP 66 lines, GHS-BUILT-S 77 lines = 202 lines total) that are **structurally identical** with only variable-name substitution. Each block: load grid.npy + feature_names.json + time_steps.npy → assert existence → assert_grid_shape → find temporal offset → validate bounds → print diagnostics. A parameterized `_load_source_grid(name, grid_dir, time_steps)` function (~40 lines) would replace all 3 blocks and handle the 5th source without new code. Extraction is safe (no memory or behavioral change — same np.load with mmap_mode="r"), but the function must remain in the script until C-146's testability concern is also addressed (extraction to importable package).
+
+See also C-29 (no end-to-end integration test), C-164 (cross-layer WET debt).
 
 ### ~~C-168~~: TemporalConfig defaults to end_year=2024 — footgun for new pipeline sources
 
@@ -363,6 +363,12 @@ See also C-130 (zero-filled future months), C-133 (zero-padding warning bypass).
 
 ## Tier 4 — Accept or Defer
 
+### C-21: No characterization tests for migration source — [DEFER]
+The metric lab code being migrated has its own tests, but this repo has no "golden output" tests that capture expected behavior of migrated code. Migration without characterization tests risks silent behavioral divergence. **Trigger: when views-metric-lab plans to migrate a model that depends on viewser-transformed features (currently no migration planned) (trigger rewritten during review-rr 2026-05-24).**
+**Source:** Feathers
+**Update 2026-04-21:** Partially addressed by M13 (verification examples suite). 15 `examples/ex_*.py` scripts verify consumer-facing API contracts end-to-end. Not full characterization tests, but covers the consumer surface model developers depend on.
+Tier recalibrated from 3 to 4 during review-rr (2026-05-24). No migration imminent. Partially addressed by verification examples.
+
 ### C-121: Phase 6.4 (SSH IP restriction) is documented but unexecuted — [DEFER]
 Phase 6.4 of `hetzner_deployment_guide.md` documents SSH IP restriction via Hetzner Cloud Firewall or ufw, but has never been executed end-to-end. C-87 surfaced the same pattern: Phase 6.3 was documented in March but only executed today (2026-04-10), revealing a missing `passwd` step that locked the new user out of `sudo`. The fix took 30 minutes; the bug was in the documentation since v1.0. **Lesson: untested documentation is broken documentation.** Phase 6.4 should be audited and ideally dry-run before the first real execution. **Trigger: before executing Phase 6.4 (which itself is blocked on PRIO IT CIDRs).** Resolution: walk through Phase 6.4 line-by-line, verify each command, add missing edge cases, then execute on the server.
 **Source:** Lessons from C-87 incident, 2026-04-10
@@ -380,7 +386,7 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 **Source:** Kleppmann (expert review 6). DDIA Ch.4 pp.112-127, 131.
 
 ### C-44: Harvest pipeline template is implicit — [DEFER]
-All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: extract `HarvestPipeline` when a 4th source is added.**
+All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: before V-Dem (9th source) — extract shared harvest template to reduce copy-paste per source (trigger rewritten during review-rr 2026-05-24).**
 **Note (2026-04-04):** Trigger condition met — 5 sources exist (ucdp_annual, ucdp_candidate, ucdp_dot9, priogrid_static, gaul_admin). Accepted at v1.0 scope: all 5 harvesters work correctly, implicit template hasn't caused bugs. Reassess before V-Dem (6th source).
 **Note (2026-05-02):** 6th source added (ACLED). Pattern was replicated from existing harvesters without issues. Template extraction deferred to V-Dem (7th source) or next refactor.
 **Note (2026-05-18):** 7th source added (GHS-POP). Pattern replicated from GAUL harvester. Trigger condition met — consider template extraction at next refactor opportunity.
@@ -394,7 +400,7 @@ All five harvesters follow config->fetch->validate->compare->archive->store->pro
 **Source:** Kleppmann (expert review 6). DDIA Ch.7 p.231, Ch.12 pp.516-518.
 
 ### C-29: No end-to-end integration test — [DEFER]
-Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: add before production deployment.**
+Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: when pipeline validation needs independent orchestration, or 2nd deployment target is set up (trigger rewritten during review-rr 2026-05-24).**
 **Note (2026-04-04):** Trigger condition met — server in production at 204.168.219.108. Accepted at v1.0 scope: integration test covers the critical harvest→compile path, `verify_remote.py` validates the deployed output (10/10 checks). Reassess before V-Dem.
 **Update (2026-04-26):** Test review identified specific gap: no harvest→consolidation integration test. `test_integration.py` tests the full pipeline but with synthetic events. No test verifies that actual UCDP Parquet output (column names, types, date format) is consumed correctly by `consolidate_ucdp()`. The stale-zarr incident showed that harvester changes (page_size, assertion thresholds) can produce subtly different output that breaks downstream.
 **Update (2026-05-05):** ACLED compilation test review identified same gap for ACLED pipeline: no integration test connecting harvest→consolidate→viewpoint→compile. No test verifies viewpoint→compilation Parquet schema compatibility (that viewpoint output columns match what `compile_grid` expects via `date_field`, `lat_field`, `lon_field`, and filter fields). ACLED pipeline has the same structural risk as UCDP.
@@ -410,12 +416,12 @@ Rate-limit responses get the same retry treatment as server errors. No `Retry-Af
 **Location:** `src/datafactory_http/retry.py` (4xx fail-fast logic), `src/datafactory_harvester/sources/acled.py:fetch_paginated()`.
 
 ### C-74: CompilationConfig leaks strategy vocabulary — [DEFER]
-Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and filter dict syntax. No IDE discoverability. **Trigger: consider enum-based strategy names if user confusion is observed.**
+Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and filter dict syntax. No IDE discoverability. **Trigger: when a new developer writes a CompilationConfig and the strategy string enum is needed for IDE discoverability (trigger rewritten during review-rr 2026-05-24).**
 **Note (2026-04-08):** Renamed from `sum_best`/`max_best` to `sum_field`/`max_field` to reflect configurable `value_field`. Old names registered as backward-compatible aliases.
 **Source:** Ousterhout (expert review #4)
 
 ### C-75: FeatureFrame is shallow — adds validation but little abstraction — [DEFER]
-8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; monitor if callers misuse. **Trigger: deepen if recurring misuse patterns emerge.**
+8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; monitor if callers misuse. **Trigger: when a consumer constructs FeatureFrame with wrong shape and the error message is insufficient to diagnose (trigger rewritten during review-rr 2026-05-24).**
 **Source:** Ousterhout (expert review #4)
 
 ### C-78: `_place_events` hard to test in isolation — [DEFER]
@@ -426,8 +432,8 @@ Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and fi
 `compile_grid()` and `consolidate_ucdp()` always read from disk. No seam to inject mock reader. Tests create actual Parquet files. **Trigger: add `read_table_fn` parameter when test suite exceeds 30 seconds.**
 **Source:** Feathers (expert review #4)
 
-### C-03: Protocol proliferation risk in synthetic module — [DEFER]
-`src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: defer Protocols until a second implementation is needed.**
+### ~~C-03~~: Protocol proliferation risk in synthetic module — [DEFER]
+Subsumed into C-176 — module is dead (zero exports). `src/datafactory_synthetic/ARCHITECTURE.md` plans 3 Protocols before any concrete implementation. Premature abstraction. **Trigger: moot — module has no implementation.**
 **Source:** GoF, Hickey
 
 ### C-115: Summary detection threshold (>= vs >) is architectural — [DEFER]
@@ -537,7 +543,9 @@ Each data source has its own plotting/audit script with duplicated structural pa
 **Note (2026-05-22):** GHS-BUILT-S added as 4th data source. Falsification audit proved total absence of visual audit capability — 5/5 probes hard-falsified. Escalated from Tier 4 DEFER to Tier 2.
 **Note (2026-05-22):** C-155 remediated — `verify_ghsbuilts_grid.py` created (10 plots, 6 statistical checks), `--verify` flag added to pipeline, falsification stubs F1-F3 flipped. Full pipeline run successful with all checks PASS. Demoted back to Tier 4 DEFER — the original idiosyncrasy concern (4 bespoke scripts) remains but is not acute. Reassess at 5th source.
 
-See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication), C-164 (cross-layer WET inventory).
+**Note (2026-05-24, repo-assimilation v1.2.20):** Quantified: 4 verification scripts total 2,804 lines (UCDP 1,015, GHS-POP 811, GHS-BUILT-S 978, ACLED not counted separately). ~60% structural overlap across scripts (`PrecomputedData` dataclass, `precompute()`, `cell_to_label()`, `REGION_BOUNDS`, per-plot functions, statistical pass/fail checks). At source #5, the extraction cost (~2 days) will be less than the duplication cost (~1 day per copy + ongoing maintenance).
+
+See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication), C-164 (cross-layer WET inventory), C-195 (falsification test accumulation).
 ### C-164: Cross-layer WET debt — 4 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
 
 | Field | Value |
@@ -564,20 +572,54 @@ With 4 sources implemented (UCDP, ACLED, GHS-POP, GHS-BUILT-S), the codebase has
 
 6. **Provenance recording** (~48 call sites): `append_ledger_entry()` called with structurally similar dicts across all layers. Common fields: dataset, outcome, ledger_version, digest_algorithm. Source-specific fields vary. Abstraction: trivial-moderate (builder pattern for ledger dicts). See also C-06.
 
-**Recommended abstraction order** (by ROI when 4th source arrives):
+7. **Pipeline runner scripts** (3 files): `run_ucdp_pipeline.py`, `run_ghspop_pipeline.py`, `run_ghsbuilts_pipeline.py` replicate the same orchestration pattern (~846 lines combined): argparse setup, `--skip-to` logic, sequential step execution with log headers. Core logic varies (which steps to run, source-specific paths). Abstraction: moderate (shared runner with pluggable step definitions).
+
+8. **Harvest script wrappers** (7 files): `harvest_ucdp.py`, `harvest_acled.py`, `harvest_ghspop.py`, `harvest_ghsbuilts.py`, `harvest_priogrid.py`, `harvest_gaul.py`, `harvest_candidates.py` are thin ~150-line wrappers (~1,035 lines combined) that parse args and call the harvester function. Structurally identical. Abstraction: trivial (shared `harvest_main()` wrapper with source config).
+
+**Recommended abstraction order** (by ROI when 5th source arrives):
 1. `_VIEWS_EPOCH_YEAR` constant dedup (trivial, 5 min)
 2. Compilation output writer extraction (moderate, prevents most duplication)
-3. Harvester config validators (trivial, prevents 5→6+ duplication)
-4. Consolidation shared helpers (moderate, 3 near-identical functions)
-5. Viewpoint builder base class (moderate, highest design risk)
+3. Harvest script wrappers (trivial, 7 near-identical files)
+4. Harvester config validators (trivial, prevents 5→6+ duplication)
+5. Pipeline runner shared infrastructure (moderate, 3 files with shared arg/step pattern)
+6. Consolidation shared helpers (moderate, 3 near-identical functions)
+7. Viewpoint builder base class (moderate, highest design risk)
 
 Cross-ref: C-44 (harvest pipeline template), C-07 (frozen dataclass pattern), C-155 (visual audit framework), C-06 (provenance composability).
 
 **Note (2026-05-22):** Trigger fired — GHS-BUILT-S (8th source, 4th raster) copied all 6 patterns. `ghsbuilts_v1.py` duplicates `_read_geotiff`, `_aggregate_with_alignment`, `_interpolate_temporal` from `ghspop_v1.py`. `_VIEWS_EPOCH_YEAR` now duplicated in 3 files. Accepted for v1.2.20; extract shared raster utilities before 5th source (V-Dem or WDI).
 
-**Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19), updated GHS-BUILT-S (2026-05-22).
+**Note (2026-05-24, tech-debt-cleanup investigation):** Quantified each pattern for extraction planning:
 
-### C-169: 2 CI tests fail due to missing infrastructure — permanent UNSTABLE — [DEFER]
+| # | Pattern | Identical lines | Files | Extraction risk | Notes |
+|---|---------|----------------|-------|----------------|-------|
+| 1 | Harvester config validators | 36 (12×3 UCDP) | 5 | Safe | `page_size`, `max_retries`, `timeout` checks |
+| 2 | `_tag_table()` | 34 | 2 | Safe | 100% copy-paste; zero domain variance |
+| 3 | Viewpoint scaffolding | 35 | 4 | Moderate | Config-or-shortcut + provenance; tightly coupled to config classes |
+| 4 | Compilation output writer | 30 | 2 | Safe | Only diff: pregridded adds 3 diagnostic fields to ledger dict |
+| 5 | `_VIEWS_EPOCH_YEAR` | 2 | 3 (ghspop_v1, ghsbuilts_v1, pregridded imports correctly) | Safe | Trivial: replace private copies with import |
+| 6 | Provenance recording | ~48 call sites | all layers | Moderate | Deferred — C-06 tracks this |
+| 7 | Pipeline runners `--skip-to` | 80-120 | 3 | Moderate | Step index handling, timing, fallback validation |
+| 8 | Harvest script wrappers | 200-250 | 7 | Moderate | argparse + timing + banner boilerplate |
+
+Raster-specific functions confirmed identical copy-paste between `ghspop_v1.py` and `ghsbuilts_v1.py`:
+- `_read_geotiff()`: 39 lines identical (pure I/O, no domain coupling)
+- `_interpolate_temporal()` + `_interp_step()` + `_interp_linear()`: 103 lines identical (pure data transformation)
+- `_aggregate_with_alignment()`: 74 lines each, **NOT identical** — ghspop has nodata masking (float32, `strip[(strip == nodata) | (strip < 0.0)] = 0.0`), ghsbuilts has no masking (uint32, no nodata sentinel). Domain-justified divergence — **do not extract**.
+
+**Total confirmed-safe extraction candidates: ~340 lines across patterns 1-5 + raster functions. Total deferred: ~530 lines across patterns 3, 6-8 (moderate risk or larger refactor scope).**
+
+**v1.2.21 extractions completed (2026-05-25):**
+- Pattern #2 resolved: `_tag_table()` extracted to `datafactory_consolidation/tagging.py` (Task 6)
+- Pattern #4 resolved: compilation output writer extracted to `datafactory_compilation/output.py` (Task 7)
+- Pattern #5 resolved: `VIEWS_EPOCH_YEAR` moved to `datafactory_provenance/constants.py` (Task 3)
+- Raster I/O resolved: `_read_geotiff()` extracted to `datafactory_viewpoint/raster_io.py` (Task 4)
+- Temporal interpolation resolved: `_interpolate_temporal()`, `_interp_step()`, `_interp_linear()`, `VALID_TEMPORAL_INTERPOLATIONS` extracted to `datafactory_viewpoint/temporal.py` (Task 5)
+- Remaining: patterns 1 (harvester config validators), 3 (viewpoint scaffolding), 6 (provenance recording), 7 (pipeline runners), 8 (harvest wrappers) deferred to next cycle.
+
+**Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19), updated GHS-BUILT-S (2026-05-22), tech-debt-cleanup investigation (2026-05-24), v1.2.21 maintenance sprint (2026-05-25).
+
+### ~~C-169: 2 CI tests fail due to missing infrastructure — permanent UNSTABLE~~ RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -588,6 +630,8 @@ Cross-ref: C-44 (harvest pipeline template), C-07 (frozen dataclass pattern), C-
 | Location | `tests/test_query.py::test_remote_zarr_has_last_valid_month_id` (requires `.netrc` for server auth), `tests/test_consumer_data.py::test_at_least_one_model_found` (requires `../views-models/` sibling repo) |
 
 Two tests consistently fail in CI because they require infrastructure the CI runner doesn't have: (1) `test_remote_zarr_has_last_valid_month_id` gets HTTP 401 because CI has no `.netrc` with server credentials; (2) `test_at_least_one_model_found` gets `FileNotFoundError` because CI has no `../views-models/` checkout. Both pass locally on the development machine. The permanent failures make `mergeStateStatus: UNSTABLE` the baseline, so real regressions are invisible in the CI signal. Resolution options: (a) mark these tests with `@pytest.mark.skipif` when CI environment detected, (b) mock the external dependencies, (c) move them to a separate `tests/integration/` directory excluded from CI.
+
+**Resolved 2026-05-25 (v1.2.21 Task 2):** Added `@pytest.mark.skipif` guards for both infra-dependent tests. CI signal restored — `uv run pytest` now passes with 0 FAILED, 0 ERROR.
 
 Cross-ref: C-96 (fsspec netrc), C-29 (no e2e integration test).
 
@@ -623,7 +667,7 @@ Cross-ref: C-184 (ACLED same weakness), D-27 (two-tier vs single-tier cache), C-
 `file_lock()` in `digests_and_ledgers.py` uses `fcntl.flock` which is advisory and may not work on network filesystems (NFS, CIFS). Currently deployed on local SSD on the Hetzner server. A migration to shared/network storage would silently break concurrency protection for ledger writes. Kleppmann (Ch.7 pp.234-236) describes read-committed isolation via locks — our fcntl.flock achieves this at the file level on local disk. Ch.8 pp.301-303 introduces fencing tokens as a safety mechanism when locks can be stale: a monotonically increasing token ensures an expired lock holder cannot perform writes. This pattern would be needed if we migrate to network storage. **Trigger: verify lock behavior before migrating to network-attached storage or multi-server deployment.**
 **Source:** Repo assimilation 2026-04-04 (Phase 5, invariant 10). DDIA Ch.7 pp.234-236, Ch.8 pp.301-303.
 
-### C-176: `datafactory_synthetic` is a dead module with zero exports — [DEFER]
+### ~~C-176: `datafactory_synthetic` is a dead module with zero exports~~ RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -635,7 +679,9 @@ Cross-ref: C-184 (ACLED same weakness), D-27 (two-tier vs single-tier cache), C-
 
 `datafactory_synthetic` is declared in `pyproject.toml` as a wheel package, tested for `__all__` existence in `test_package_structure.py`, and subject to import enforcement in `test_import_enforcement.py` — but exports nothing and is imported by nothing. The `ARCHITECTURE.md` inside the package plans 3 Protocols before any implementation (see C-03). The module occupies a slot in the dependency DAG and test infrastructure while providing zero functionality. Tier 4 because: no correctness or reliability impact; single-developer scope.
 
-See also C-03 (protocol proliferation in synthetic module).
+**Resolved 2026-05-25 (v1.2.21 Task 9):** Entire `src/datafactory_synthetic/` directory deleted. Removed from `pyproject.toml` packages list, `test_package_structure.py`, `test_import_enforcement.py`, 5 ADRs, 7 ARCHITECTURE.md files, and README.md. `uv sync` confirmed clean uninstall.
+
+See also C-03 (protocol proliferation — moot since module has no implementation; C-03 subsumed into this entry).
 
 ---
 
@@ -768,28 +814,16 @@ See also C-44 (harvest pipeline template), C-147 (no pipeline orchestrator), C-1
 | Field | Value |
 |-------|-------|
 | ID | C-177 |
-| Tier | 3 |
+| Tier | 4 |
 | Source | ADR-031 compliance review (2026-05-21) |
 | Trigger | When `_aggregate_to_prio_grid` is re-activated for a new data source or the function is called outside the builder's strip-based path |
 | Location | `src/datafactory_viewpoint/builders/ghspop_v1.py:263` (`clean = data.copy()`) |
 
 `_aggregate_to_prio_grid` creates a full copy of the input array (`clean = data.copy()`) to replace nodata with 0.0. For a 43200x86400 float32 array (~14 GiB), this doubles peak memory — a direct ADR-031 P3 violation ("never hold source and copy simultaneously at scale"). The function is no longer called from `build_ghspop_v1` (v1.2.18 switched to unconditional `_aggregate_with_alignment`), but it is retained because 7 tests exercise it directly. A docstring warning has been added (v1.2.18). If the function is ever re-activated, it must be rewritten to use in-place nodata replacement.
 
+Tier recalibrated from 3 to 4 during review-rr (2026-05-24). Dead function, single developer, docstring warning. D-25 tracks the design question.
+
 Cross-ref: C-170 (GHS-POP list accumulation OOM, resolved), C-173 (no swap on Hetzner).
-
-### C-178: `compute_content_digest(path.read_bytes())` loads entire output into memory — ~~[DEFER]~~ FIX APPLIED
-
-| Field | Value |
-|-------|-------|
-| ID | C-178 |
-| Tier | 3 |
-| Source | ADR-031 compliance review (2026-05-21) |
-| Trigger | When viewpoint output exceeds ~1 GB (GHS-POP output is currently ~240 MB, but UCDP grows with time) |
-| Location | `src/datafactory_viewpoint/builders/ghspop_v1.py:578`, `ucdp_v1.py:325`, `acled_v1.py:183` |
-
-Three viewpoint builders compute the output file digest by calling `compute_content_digest(config.output_path.read_bytes())`, which reads the entire output Parquet into a Python `bytes` object. `compute_file_digest()` already exists in `datafactory_provenance` and reads the file in 8 KiB chunks — zero peak memory overhead. The `.read_bytes()` pattern is a P2 violation (holding an unnecessary copy) and a latent P3 violation (Python `bytes` + the file's OS page cache). **Fixed 2026-05-21:** All three call sites updated to use `compute_file_digest(path)`.
-
-Cross-ref: C-145 (viewpoint full store load), C-144 (compilation to_pydict).
 
 ### C-179: Consolidation dedup uses `.to_pylist()` + Python set (ADR-031 P1) — [DEFER]
 
@@ -831,9 +865,11 @@ Nygard/Kleppmann argue the 8 GB server is the wrong constraint to optimize for �
 
 **Source:** ADR-031 compliance review (2026-05-21). Cross-ref: C-173 (no swap), C-177 (_aggregate_to_prio_grid copy).
 
-### D-25: Dead function retention — `_aggregate_to_prio_grid` after v1.2.18
+### ~~D-25~~: Dead function retention — `_aggregate_to_prio_grid` after v1.2.18
 
 Feathers argues retaining `_aggregate_to_prio_grid` (no longer called from the builder) creates a maintenance hazard: tests exercise a dead path, and a future developer might re-activate it without noticing the P3 violation. Beck argues the function is tested, documented with a warning, and deletion would break 7 passing tests — the risk of re-activation is lower than the risk of deleting tested code. **Resolution: retain with docstring warning, track as C-177. Delete only when the test suite is restructured to test alignment via `_aggregate_with_alignment` instead.**
+
+**Resolved 2026-05-24:** Retain with docstring warning (current state). Re-evaluate at next refactor cycle when `_aggregate_with_alignment` tests fully replace the old function's test coverage. Tier recalibrated to 4 (C-177).
 
 **Source:** ADR-031 compliance review (2026-05-21). Cross-ref: C-177.
 
@@ -849,15 +885,17 @@ Martin argues all harvesters should use two-tier caching (file exists + digest m
 
 **Source:** Expert code review of harvest caching (2026-05-21). Cross-ref: C-184, C-185, C-44.
 
-### D-28: One function vs two for digest lookup (`last_digest` + `last_digest_for_version`)
+### ~~D-28~~: One function vs two for digest lookup (`last_digest` + `last_digest_for_version`)
 
-Ousterhout and Hickey argue for merging into a single function with optional `version` parameter — eliminates the desynchronization bug class (C-182 was fixed in one function, missed in the other until falsification F5). GoF recommends a shared `_find_latest_valid_entry` helper with both public functions as thin wrappers — preserves the API while centralizing logic. Martin values the explicit naming. Feathers cautions that changing 15+ call sites is a refactor that should be done separately from a bug fix. Beck: "make it work first, then make it right." **No resolution yet — defer to next refactoring cycle.**
+Ousterhout and Hickey argue for merging into a single function with optional `version` parameter — eliminates the desynchronization bug class (C-182 was fixed in one function, missed in the other until falsification F5). GoF recommends a shared `_find_latest_valid_entry` helper with both public functions as thin wrappers — preserves the API while centralizing logic. Martin values the explicit naming. Feathers cautions that changing 15+ call sites is a refactor that should be done separately from a bug fix. Beck: "make it work first, then make it right."
+
+**Resolved 2026-05-24:** Keep two functions (current state). C-182 bug fixed in both. The shared `_find_latest_valid_entry` helper (GoF recommendation) is a nice-to-have for the next provenance refactor, not a risk.
 
 **Source:** Expert code review of provenance/shapefile (2026-05-21). Cross-ref: C-187 (digest-field assumption), C-182 (original desync bug).
 
 ### D-29: Shapefile harvester retrofit depth — full outcome compliance vs organic
 
-Nygard and Martin argue for full outcome-vocabulary compliance now (add try/except, record `"failed"` entries, use `"outcome": "success"/"unchanged"`). Feathers and Beck argue the current code works correctly via backward compat and the retrofit should happen organically when the shapefile harvester is next touched or when V-Dem is added. Hickey notes `"changed": True/False` is accidental complexity but not dangerous. **No resolution yet — the shapefile harvester is rarely touched (one-time artifact).**
+Nygard and Martin argue for full outcome-vocabulary compliance now (add try/except, record `"failed"` entries, use `"outcome": "success"/"unchanged"`). Feathers and Beck argue the current code works correctly via backward compat and the retrofit should happen organically when the shapefile harvester is next touched or when V-Dem is added. Hickey notes `"changed": True/False` is accidental complexity but not dangerous. **Trigger: when shapefile harvester is next touched for a bug fix, or when V-Dem requires shapefile-like ingestion (trigger rewritten during review-rr 2026-05-24). No resolution yet — the shapefile harvester is rarely touched (one-time artifact).**
 
 **Source:** Expert code review of provenance/shapefile (2026-05-21). Cross-ref: C-186 (shapefile lacks outcome vocabulary), C-44 (harvest pipeline template).
 
@@ -888,6 +926,20 @@ Cross-ref: C-192 (resolved — recurring operational integration gap).
 **Resolved 2026-05-23.** Fix: Added `logger.error("Download failed for epoch %d: %s", epoch, url)` before bare `raise` in `except RequestException` blocks, and `logger.error("Bad ZIP file for epoch %d: %s", epoch, url)` before bare `raise` in `except BadZipFile` blocks — in both `ghsbuilts.py` and `ghspop.py`. The `__post_init__` validation raises are left as-is (config validation in frozen dataclass constructors — no operational context to log).
 
 Cross-ref: C-186 (shapefile harvester lacks outcome vocabulary).
+
+### C-195: 37 falsification test files accumulated without curation (3,129 lines) — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-195 |
+| Tier | 4 |
+| Source | repo-assimilation v1.2.20 (2026-05-24) |
+| Trigger | 5th data source adds another 5-8 falsification files, pushing total past 40 files — test suite becomes hard to navigate and maintains stubs for long-resolved concerns |
+| Location | `tests/test_falsification_*.py` (37 files, 3,129 lines, 129 test functions) |
+
+Falsification audits produce `test_falsification_*.py` files containing failing test stubs that flip green after fixes. Over 10+ audit rounds (GHS-POP memory, coverage parity, visual audit, merge-readiness ×2, deployment ×2, plus earlier UCDP/ACLED audits), 37 files have accumulated. Many test stubs target concerns that are now resolved (C-190, C-191, C-193, C-194) — their stubs pass but serve no ongoing purpose beyond documentation that the fix exists. The test files are not consolidated by concern or source: `test_falsification_ghsbuilts_coverage_parity.py`, `test_falsification_ghsbuilts_merge_ready.py`, `test_falsification_ghsbuilts_deploy_v2.py` all test overlapping aspects of GHS-BUILT-S readiness. Curation options: (a) archive resolved stubs into a `tests/archive/` directory, (b) consolidate per-source stubs into one file per source, (c) tag resolved stubs with `@pytest.mark.resolved` and skip in CI. Tier 4 because: (a) all tests pass, (b) no correctness impact, (c) single-developer scope, (d) the accumulation is a navigation and maintenance burden, not a risk.
+
+Cross-ref: C-189 (GHS-BUILT-S coverage parity gap), C-180 (no falsification for non-GHS-POP paths), C-164 (WET-before-DRY broader inventory).
 
 ---
 

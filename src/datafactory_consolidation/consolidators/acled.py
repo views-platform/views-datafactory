@@ -29,6 +29,7 @@ from datafactory_consolidation.consolidation_result import (
 )
 from datafactory_consolidation.consolidators import register_consolidator
 from datafactory_consolidation.event_store import read_store, write_store
+from datafactory_consolidation.tagging import tag_table
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -124,41 +125,6 @@ def _get_harvest_metadata(
     return digest, timestamp
 
 
-def _tag_table(
-    table: pa.Table,
-    *,
-    source_type: str,
-    source_version: str,
-    ingested_at: str,
-    harvest_digest: str,
-    harvest_timestamp: str,
-) -> pa.Table:
-    """Add consolidation metadata columns to a PyArrow table."""
-    n = table.num_rows
-    return (
-        table.append_column(
-            "_source_type",
-            pa.array([source_type] * n, type=pa.string()),
-        )
-        .append_column(
-            "_source_version",
-            pa.array([source_version] * n, type=pa.string()),
-        )
-        .append_column(
-            "_ingested_at",
-            pa.array([ingested_at] * n, type=pa.string()),
-        )
-        .append_column(
-            "_harvest_digest",
-            pa.array([harvest_digest] * n, type=pa.string()),
-        )
-        .append_column(
-            "_harvest_timestamp",
-            pa.array([harvest_timestamp] * n, type=pa.string()),
-        )
-    )
-
-
 @dataclass(frozen=True)
 class AcledConsolidationConfig:
     """Configuration for ACLED consolidation."""
@@ -234,7 +200,7 @@ def consolidate_acled(
             logger.error(err_msg)
             raise ValueError(err_msg)
 
-        tagged = _tag_table(
+        tagged = tag_table(
             table,
             source_type="acled",
             source_version=version,

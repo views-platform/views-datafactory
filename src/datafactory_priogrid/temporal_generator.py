@@ -12,9 +12,6 @@ import numpy as np
 from datafactory_priogrid.temporal_config import TemporalConfig
 
 logger = logging.getLogger(__name__)
-
-# VIEWS epoch: month_id 1 = January 1980
-VIEWS_EPOCH_YEAR = 1980
 _VIEWS_EPOCH = np.datetime64("1980-01", "M")
 
 DEFAULT_TEMPORAL_CONFIG = TemporalConfig()

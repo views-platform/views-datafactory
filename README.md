@@ -99,10 +99,9 @@ FAO GAUL API ───→ datafactory_harvester ──→ data/raw/gaul_admin/
                                   │   hydranet)           │
                                   └───────────────────────┘
 
-                  datafactory_synthetic ─────────────────→ Synthetic grid.npy (skips all layers)
 ```
 
-Not all paths traverse all layers. Synthetic data produces npy directly and reaches consumers without passing through consolidation, viewpoint, or compilation.
+Not all paths traverse all layers. GHS-POP and GHS-BUILT-S skip consolidation (single releases; ADR-029, ADR-034).
 
 ---
 
@@ -118,7 +117,6 @@ Layer 0 — Foundation (no internal imports):
 Layer 1 — Source nodes (import provenance + http):
   datafactory_priogrid          PRIO-GRID spatial + temporal backbone
   datafactory_harvester         Data ingestion with pluggable sources
-  datafactory_synthetic         Grid-native synthetic generation (stub)
 
 Layer 2 — Consolidation (imports provenance, reads harvester files):
   datafactory_consolidation     Lossless event store from raw snapshots
@@ -141,7 +139,7 @@ Consumer entry point (imports priogrid + adapters, reads assembled files):
 
 **Dependency rules (ADR-012):**
 - `datafactory_provenance` imports nothing internal
-- `datafactory_priogrid`, `datafactory_harvester`, `datafactory_synthetic` import only from `datafactory_provenance`
+- `datafactory_priogrid` and `datafactory_harvester` import only from `datafactory_provenance`
 - `datafactory_consolidation` imports only from `datafactory_provenance`; reads harvester output as **files**
 - `datafactory_viewpoint` imports only from `datafactory_provenance`; reads consolidation output as **files**
 - `datafactory_compilation` imports `datafactory_provenance` and `datafactory_priogrid`; reads viewpoint output as **files**
@@ -199,7 +197,7 @@ Output: `{calibration,validation,forecasting}_viewser_df.parquet` with MultiInde
 | `datafactory_provenance` | 0 | Content digests, JSONL ledgers, file locking, rotation | Done |
 | `datafactory_priogrid` | 1 | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done |
 | `datafactory_harvester` | 1 | Data harvesting: UCDP annual/candidate/.9, PRIO-GRID static, GAUL admin | Done |
-| `datafactory_synthetic` | 1 | Synthetic data generation with controlled covariance structure | Planned |
+
 | `datafactory_consolidation` | 2 | Lossless, vintage-aware consolidation of three UCDP sources | Done |
 | `datafactory_viewpoint` | 3 | Opinionated views: survivorship, temporal distribution, profiles | Done |
 | `datafactory_compilation` | 4 | Viewpoint output → grid npy with coordinate sidecars | Done |
@@ -238,7 +236,7 @@ views-datafactory/
 │   │       ├── ucdp_dot9.py                              UCDP/GED .9 Consolidated Monthly
 │   │       ├── priogrid_static.py                        PRIO-GRID static covariates
 │   │       └── gaul_admin.py                             GAUL 2024 admin boundaries
-│   ├── datafactory_synthetic/                        # Layer 1 — synthetic generation (stub)
+
 │   ├── datafactory_consolidation/                    # Layer 2 — lossless event stores
 │   │   ├── event_store.py                              Append-only Parquet store
 │   │   └── consolidators/
