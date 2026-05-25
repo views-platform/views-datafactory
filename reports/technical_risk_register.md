@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-05-25)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24
-**Status:** 195 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 107 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 5 open disagreements. 87 resolved concerns as full entries + 19 early-archive reference rows + 24 resolved disagreements in archive. 29 disagreement IDs total: 24 resolved, 5 open.
+**Status:** 198 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 110 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 5 open disagreements. 90 resolved concerns as full entries + 19 early-archive reference rows + 24 resolved disagreements in archive. 29 disagreement IDs total: 24 resolved, 5 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -92,6 +92,9 @@
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script | Visual audit |
 | C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | 5th source adds another 5-8 falsification files, pushing total past 40 | Test hygiene |
+| ~~C-196~~ | ~~4~~ | ~~7 of 8 ARCHITECTURE.md files have stale module lists~~ | Resolved 2026-05-25 | Documentation drift |
+| ~~C-197~~ | ~~4~~ | ~~docs/CICs/README.md lists 21 active contracts but 28 exist~~ | Resolved 2026-05-25 | Documentation drift |
+| ~~C-198~~ | ~~4~~ | ~~docs/sources/README.md references 4 catalog cards that don't exist~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-168~~ | ~~3~~ | ~~TemporalConfig defaults to end_year=2024 — footgun for new sources~~ | Resolved 2026-05-23 | ADR-003 compliance |
 | ~~C-169~~ | ~~4~~ | ~~2 CI tests fail due to missing infrastructure (netrc, sibling repo)~~ | Resolved 2026-05-25 | Test infra |
 | ~~C-170~~ | ~~1~~ | ~~GHS-POP viewpoint list accumulation OOM (~6.5 GB Python objects)~~ | Resolved 2026-05-20 | GHS-POP memory |
@@ -940,6 +943,18 @@ Cross-ref: C-186 (shapefile harvester lacks outcome vocabulary).
 Falsification audits produce `test_falsification_*.py` files containing failing test stubs that flip green after fixes. Over 10+ audit rounds (GHS-POP memory, coverage parity, visual audit, merge-readiness ×2, deployment ×2, plus earlier UCDP/ACLED audits), 37 files have accumulated. Many test stubs target concerns that are now resolved (C-190, C-191, C-193, C-194) — their stubs pass but serve no ongoing purpose beyond documentation that the fix exists. The test files are not consolidated by concern or source: `test_falsification_ghsbuilts_coverage_parity.py`, `test_falsification_ghsbuilts_merge_ready.py`, `test_falsification_ghsbuilts_deploy_v2.py` all test overlapping aspects of GHS-BUILT-S readiness. Curation options: (a) archive resolved stubs into a `tests/archive/` directory, (b) consolidate per-source stubs into one file per source, (c) tag resolved stubs with `@pytest.mark.resolved` and skip in CI. Tier 4 because: (a) all tests pass, (b) no correctness impact, (c) single-developer scope, (d) the accumulation is a navigation and maintenance burden, not a risk.
 
 Cross-ref: C-189 (GHS-BUILT-S coverage parity gap), C-180 (no falsification for non-GHS-POP paths), C-164 (WET-before-DRY broader inventory).
+
+### ~~C-196~~: 7 of 8 ARCHITECTURE.md files have stale module lists (18 files undocumented) — RESOLVED
+
+Resolved 2026-05-25. Updated 5 ARCHITECTURE.md files (viewpoint, consolidation, compilation, harvester + intent contracts section). Removed stale synthetic reference from compilation ARCHITECTURE.md. All 14 falsification test stubs pass. Moved to resolved archive.
+
+### ~~C-197~~: docs/CICs/README.md lists 21 active contracts but 28 exist (7 missing) — RESOLVED
+
+Resolved 2026-05-25. Added 7 missing CIC entries to docs/CICs/README.md: GhsPopConfig, GhsBuiltSConfig, GhsPopViewpointConfig, GhsBuiltSViewpointConfig, AssemblyConfig, PregriddedCompilationConfig, SourceEntry. Index now lists all 28 active contracts. Moved to resolved archive.
+
+### ~~C-198~~: docs/sources/README.md references 4 catalog cards that don't exist — RESOLVED
+
+Resolved 2026-05-25. Created 4 missing catalog cards: ucdp.md, acled.md, priogrid_static.md, gaul_admin.md. All follow the ADR-033 schema established by ghspop.md and ghsbuilts.md. Moved to resolved archive.
 
 ---
 

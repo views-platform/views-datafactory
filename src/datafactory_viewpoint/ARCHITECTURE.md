@@ -38,9 +38,14 @@ datafactory_viewpoint/
     survivorship.py                # Strategy registry: annual_wins, dot9_wins
     temporal_distribution.py       # Strategy registry: even_split, ceil_split
     profiles.py                    # Named presets: production_parity, etc.
+    raster_io.py                   # GeoTIFF raster I/O: read, reproject, aggregate to PRIO-GRID
+    temporal.py                    # Temporal interpolation for epoch-based raster sources
     builders/
         __init__.py                # Registry: register_builder, build_viewpoint
         ucdp_v1.py                 # UCDP viewpoint builder (survivorship + distribution + filters)
+        acled_v1.py                # ACLED viewpoint builder (event type filter + aggregation)
+        ghspop_v1.py               # GHS-POP viewpoint builder (raster spatial agg + temporal interp)
+        ghsbuilts_v1.py            # GHS-BUILT-S viewpoint builder (raster spatial agg + temporal interp)
 ```
 
 ## Key Concepts

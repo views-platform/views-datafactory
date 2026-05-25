@@ -34,9 +34,11 @@ datafactory_consolidation/
     ARCHITECTURE.md                # This file
     consolidation_result.py        # Frozen result dataclass
     event_store.py                 # Read/write consolidated Parquet store
+    tagging.py                     # Event source type tagging utilities
     consolidators/
         __init__.py                # Registry: register_consolidator, consolidate_source
         ucdp.py                    # UCDP consolidator: annual + candidate + .9
+        acled.py                   # ACLED consolidator: weekly event snapshots
 ```
 
 ## Key Concepts

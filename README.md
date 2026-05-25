@@ -400,7 +400,7 @@ The `reports/` directory contains living documents that define the project's dir
 
 - **[R&D Roadmap](reports/rd_roadmap11.md)** — Research questions, hypotheses, data agenda, milestones. Focuses on what must be *discovered*.
 - **[Product Development Plan](reports/product_development_plan11.md)** — Users, requirements, architecture, release plan. Focuses on what must be *built*.
-- **[Technical Risk Register](reports/technical_risk_register.md)** — 170 concerns tracked, 107 resolved, 63 open with trigger conditions (ADR-020).
+- **[Technical Risk Register](reports/technical_risk_register.md)** — 198 concerns tracked, 110 resolved, 63 open with trigger conditions (ADR-020).
 - **[.9 Investigation](reports/dot9_investigation/)** — Empirical findings on UCDP .9 data stream characteristics.
 
 ---
