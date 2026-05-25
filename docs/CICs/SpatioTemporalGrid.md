@@ -68,7 +68,7 @@ Both configs are validated at their own construction time. SpatioTemporalGrid do
 - Composes `GridConfig` and `TemporalConfig` as peers (neither is subordinate)
 - Calls `generate_grid` and `generate_time_steps` for lazy coordinate generation
 - May be consumed by any downstream module that needs the index
-- Must not depend on harvester, compiler, or synthetic modules
+- Must not depend on harvester or compiler modules
 
 ---
 

@@ -110,7 +110,7 @@ Independence is enforced by the filesystem: each `datafactory_*` is a separate t
 ### Positive
 
 - Adding a new source never changes existing sources or the compiler
-- Adding a new output format never changes the harvester or synthetic generator
+- Adding a new output format never changes existing harvesters
 - Each package can be tested in isolation
 - The graph architecture scales to multiple sources and multiple consumers
 

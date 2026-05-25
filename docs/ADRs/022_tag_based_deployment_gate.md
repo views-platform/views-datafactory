@@ -35,7 +35,7 @@ The pipeline script (`refresh_pipeline.sh`) reads a **deploy tag** from a file o
 2. When the pipeline script runs (via cron or manually), it reads this file.
 3. The script fetches tags from GitHub, verifies the tag exists, and checks it out.
 4. Git enters **detached HEAD** state — HEAD points directly at the tagged commit, not at any branch. This is the intended state: the server is frozen on a known release.
-5. The 9 pipeline steps (0: pre-flight, 1: harvest, 2: consolidate, 3: viewpoint, 4: compile UCDP, 5: compile ACLED, 6: assemble, 7: export, 8: health check) run against that exact code.
+5. The 11 pipeline steps (0: pre-flight, 1: harvest, 2: consolidate, 3: viewpoint, 4: compile UCDP, 5: compile ACLED, 6: compile GHS-POP, 7: compile GHS-BUILT-S, 8: assemble, 9: export, 10: health check) run against that exact code.
 6. If the file is missing, empty, or the tag doesn't exist, the script exits non-zero immediately (fail-loud per ADR-011).
 
 ### What is detached HEAD?

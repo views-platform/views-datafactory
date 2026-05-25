@@ -84,7 +84,7 @@ from datafactory_provenance.source_registry import (
 )
 
 # Registry-driven feature list
-features = get_all_features()  # 52 features in canonical order
+features = get_all_features()  # 53 features in canonical order
 
 # Pre-flight credential check
 results = validate_preflight()
@@ -119,7 +119,7 @@ SOURCE_SLO = {"UCDP Annual": 8760, ...}  # Use get_source_slo() instead
 
 ## 10. Test Alignment
 
-- **Green:** Valid construction, frozen enforcement, None slo allowed, feature count is 52, canonical feature order (UCDP first, GHS-POP after ACLED, admin last)
+- **Green:** Valid construction, frozen enforcement, None slo allowed, feature count is 53, canonical feature order (UCDP first, GHS-POP after ACLED, GHS-BUILT-S after GHS-POP, admin last)
 - **Beige:** Empty name/var/feature rejection, non-positive slo rejection, no duplicate names or features in registry
 - **Red:** `validate_preflight` with missing/empty env vars produces FAIL results
 

@@ -4,7 +4,7 @@
 
 # views-datafactory
 
-**Data factory for the VIEWS conflict forecasting platform — harvesting, consolidation, viewpoint building, grid compilation, and synthetic generation.**
+**Data factory for the VIEWS conflict forecasting platform — harvesting, consolidation, viewpoint building, grid compilation, and query.**
 
 Part of the [VIEWS Platform](https://github.com/views-platform) ecosystem.
 
@@ -30,18 +30,17 @@ Part of the [VIEWS Platform](https://github.com/views-platform) ecosystem.
 
 views-datafactory provides the data foundation for conflict forecasting in the VIEWS platform. It handles the full lifecycle of spatiotemporal conflict data — from raw ingestion through to compiled grid arrays ready for model consumption.
 
-The system is designed as a **graph of independent nodes**, not a linear pipeline. Source nodes (harvesters, synthetic generators) produce data independently. Compilation edges transform source data into consumer-specific formats. Consumer nodes read compiled outputs. This architecture ensures that adding a new data source or output format never requires changing existing components.
+The system is designed as a **graph of independent nodes**, not a linear pipeline. Source nodes (harvesters) produce data independently. Compilation edges transform source data into consumer-specific formats. Consumer nodes read compiled outputs. This architecture ensures that adding a new data source or output format never requires changing existing components.
 
 ### Key Capabilities
 
-- **Auditable data harvesting** — three UCDP data streams (annual, candidate monthly, .9 consolidated) plus PRIO-GRID static covariates, all with schema validation, drift detection, and JSONL provenance ledgers
+- **Auditable data harvesting** — UCDP (annual, candidate, .9), ACLED, GHS-POP, GHS-BUILT-S, PRIO-GRID static, and GAUL admin boundaries, all with schema validation, drift detection, and JSONL provenance ledgers
 - **PRIO-GRID spatial backbone** — pure-numpy generation of the standard 259,200-cell global grid at 0.5° resolution, validated cell-by-cell against the official PRIO reference shapefile
 - **Temporal backbone** with VIEWS month_id adapters (epoch: January 1980)
 - **Vintage-aware consolidation** — lossless, append-only, bitemporal event store from all three UCDP sources with content-digest deduplication
 - **Configurable viewpoints** — survivorship strategies (annual_wins, dot9_wins), temporal distribution (even_split, ceil_split), production filtering via named profiles
 - **Deterministic compilation** of viewpoint output onto the spatiotemporal grid as npy arrays
 - **Consumer adapters** — grid-to-DataFrame and grid-to-FeatureFrame conversions for downstream consumers
-- **Synthetic data generation** with controllable spatiotemporal covariance structure (planned)
 - **End-to-end provenance** — every value in a compiled grid is traceable back to the specific source records and compilation config that produced it
 
 ---
@@ -63,7 +62,8 @@ views-datafactory is the upstream data provider for the VIEWS forecasting pipeli
 
 ```
 UCDP/GED API ──→ datafactory_harvester ──→ data/raw/ucdp_*/*.parquet
-                    (annual, candidate, .9)
+ACLED API ──────→ datafactory_harvester ──→ data/raw/acled/*.parquet
+                    (event sources)
                                          ─ ─ ─ ─ ─ ─ ─ ─  filesystem boundary
                                               │
                                   datafactory_consolidation ──→ data/consolidated/*.parquet
@@ -77,13 +77,15 @@ UCDP/GED API ──→ datafactory_harvester ──→ data/raw/ucdp_*/*.parquet
 PRIO-GRID ──────→ datafactory_priogrid ─┐     │
 PRIO-GRID API ──→ datafactory_harvester ──→ data/raw/priogrid_static/
 FAO GAUL API ───→ datafactory_harvester ──→ data/raw/gaul_admin/
+JRC GHSL ───────→ datafactory_harvester ──→ data/raw/ghspop/ + ghsbuilts/
+                    (GHS-POP, GHS-BUILT-S skip consolidation — single releases)
                                         │     │
                                   datafactory_compilation ──→ data/compiled/grid.npy [T,H,W,C]
                                               │
                                          ─ ─ ─ ─ ─ ─ ─ ─  filesystem boundary
                                               │
                                   assemble_grid.py ──→ data/assembled/grid.npy [T,H,W,F]
-                                     (compiled UCDP + static + admin)
+                                     (compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin)
                                               │
                                          ─ ─ ─ ─ ─ ─ ─ ─  filesystem boundary
                                               │
@@ -131,7 +133,7 @@ Consumer-facing (no datafactory_* imports):
   datafactory_adapters          Grid → DataFrame, Grid → FeatureFrame
 
 Assembly (script, not package — combines compiled sources):
-  scripts/assemble_grid.py      Compiled UCDP + static + admin → [T,H,W,F]
+  scripts/assemble_grid.py      Compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin → [T,H,W,F]
 
 Consumer entry point (imports priogrid + adapters, reads assembled files):
   datafactory_query             load_dataset() — region/time/feature subsetting, npy or zarr
@@ -139,7 +141,7 @@ Consumer entry point (imports priogrid + adapters, reads assembled files):
 
 **Dependency rules (ADR-012):**
 - `datafactory_provenance` imports nothing internal
-- `datafactory_priogrid` and `datafactory_harvester` import only from `datafactory_provenance`
+- `datafactory_priogrid` and `datafactory_harvester` import only from `datafactory_provenance` (and `datafactory_http` for network operations)
 - `datafactory_consolidation` imports only from `datafactory_provenance`; reads harvester output as **files**
 - `datafactory_viewpoint` imports only from `datafactory_provenance`; reads consolidation output as **files**
 - `datafactory_compilation` imports `datafactory_provenance` and `datafactory_priogrid`; reads viewpoint output as **files**
@@ -195,10 +197,10 @@ Output: `{calibration,validation,forecasting}_viewser_df.parquet` with MultiInde
 | Package | Layer | Purpose | Status |
 |---------|-------|---------|--------|
 | `datafactory_provenance` | 0 | Content digests, JSONL ledgers, file locking, rotation | Done |
+| `datafactory_http` | 0 | HTTP request utilities: retry with exponential backoff | Done |
 | `datafactory_priogrid` | 1 | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done |
-| `datafactory_harvester` | 1 | Data harvesting: UCDP annual/candidate/.9, PRIO-GRID static, GAUL admin | Done |
-
-| `datafactory_consolidation` | 2 | Lossless, vintage-aware consolidation of three UCDP sources | Done |
+| `datafactory_harvester` | 1 | Data harvesting: UCDP (annual/candidate/.9), ACLED, GHS-POP, GHS-BUILT-S, PRIO-GRID static, GAUL admin | Done |
+| `datafactory_consolidation` | 2 | Lossless, vintage-aware consolidation of UCDP and ACLED sources | Done |
 | `datafactory_viewpoint` | 3 | Opinionated views: survivorship, temporal distribution, profiles | Done |
 | `datafactory_compilation` | 4 | Viewpoint output → grid npy with coordinate sidecars | Done |
 | `datafactory_adapters` | — | Consumer-facing: grid → DataFrame, grid → FeatureFrame | Done |
@@ -215,7 +217,9 @@ views-datafactory/
 ├── .github/workflows/ci.yml                          # CI: ruff + mypy + pytest
 ├── src/
 │   ├── datafactory_provenance/                       # Layer 0 — digests + ledgers
-│   │   └── digests_and_ledgers.py
+│   │   ├── digests_and_ledgers.py
+│   │   ├── constants.py                                VIEWS_EPOCH_YEAR (shared constant)
+│   │   └── source_registry.py                          SourceEntry, PIPELINE_SOURCES
 │   ├── datafactory_http/                             # Layer 0 — HTTP retry utilities
 │   │   └── retry.py                                    request_with_retry (shared)
 │   ├── datafactory_priogrid/                         # Layer 1 — PRIO-GRID backbone
@@ -234,22 +238,32 @@ views-datafactory/
 │   │       ├── ucdp_annual.py                            UCDP/GED Annual source
 │   │       ├── ucdp_candidate.py                         UCDP/GED Candidate Monthly source
 │   │       ├── ucdp_dot9.py                              UCDP/GED .9 Consolidated Monthly
+│   │       ├── acled.py                                  ACLED event data (year-by-year)
+│   │       ├── ghspop.py                                 GHS-POP R2023A (JRC GHSL raster)
+│   │       ├── ghsbuilts.py                              GHS-BUILT-S R2023A (JRC GHSL raster)
 │   │       ├── priogrid_static.py                        PRIO-GRID static covariates
 │   │       └── gaul_admin.py                             GAUL 2024 admin boundaries
-
 │   ├── datafactory_consolidation/                    # Layer 2 — lossless event stores
 │   │   ├── event_store.py                              Append-only Parquet store
+│   │   ├── tagging.py                                  tag_table (shared metadata tagging)
 │   │   └── consolidators/
-│   │       └── ucdp.py                                   Three-source UCDP consolidation
+│   │       ├── ucdp.py                                   Three-source UCDP consolidation
+│   │       └── acled.py                                  ACLED event consolidation
 │   ├── datafactory_viewpoint/                        # Layer 3 — opinionated views
 │   │   ├── survivorship.py                             Strategy registry (annual_wins, dot9_wins)
 │   │   ├── temporal_distribution.py                    Strategy registry (even_split, ceil_split)
 │   │   ├── profiles.py                                 Named presets (production_parity)
+│   │   ├── raster_io.py                                read_geotiff (shared GeoTIFF reader)
+│   │   ├── temporal.py                                 interpolate_temporal (shared interpolation)
 │   │   └── builders/
-│   │       └── ucdp_v1.py                                UCDP viewpoint builder
+│   │       ├── ucdp_v1.py                                UCDP viewpoint builder
+│   │       ├── ghspop_v1.py                              GHS-POP viewpoint builder
+│   │       └── ghsbuilts_v1.py                           GHS-BUILT-S viewpoint builder
 │   ├── datafactory_compilation/                      # Layer 4 — grid compilation
 │   │   ├── compilation_config.py                       CompilationConfig
-│   │   ├── grid_compilation.py                         compile_grid (main function)
+│   │   ├── grid_compilation.py                         compile_grid (event sources)
+│   │   ├── pregridded_compilation.py                   compile_pregridded (raster sources)
+│   │   ├── output.py                                   write_compilation_output (shared writer)
 │   │   └── aggregation.py                              count, sum_field, max_field strategies
 │   ├── datafactory_adapters/                         # Consumer-facing conversions
 │   │   ├── feature_frame.py                            FeatureFrame dataclass
@@ -259,29 +273,39 @@ views-datafactory/
 │       ├── dataset.py                                  load_dataset (npy + zarr backends)
 │       ├── regions.py                                  Region name → PRIO-GRID cell set
 │       └── temporal.py                                 Flexible time range parsing
-├── tests/                                            # 381 tests
+├── tests/                                            # 1094 tests
 ├── scripts/                                          # Operational scripts
-│   ├── harvest_ucdp.py                                 Full harvest pipeline
-│   ├── consolidate_ucdp.py                             Three-source consolidation
+│   ├── harvest_ucdp.py                                 UCDP harvest (annual + candidate + .9)
+│   ├── harvest_acled.py                                ACLED event harvest (year-by-year)
+│   ├── harvest_ghspop.py                               GHS-POP raster harvest (12 epochs)
+│   ├── harvest_ghsbuilts.py                            GHS-BUILT-S raster harvest (12 epochs)
+│   ├── harvest_priogrid.py                             PRIO-GRID static covariates
+│   ├── harvest_shapefile.py                            PRIO-GRID shapefile download
+│   ├── harvest_gaul.py                                 GAUL admin boundary harvest + spatial join
+│   ├── consolidate_ucdp.py                             Three-source UCDP consolidation
 │   ├── build_viewpoint.py                              Viewpoint from profile
-│   ├── compile_grid.py                                 Grid compilation
-│   ├── harvest_shapefile.py                              PRIO-GRID shapefile download
-│   ├── harvest_gaul.py                                  GAUL admin boundary harvest + spatial join
-│   ├── assemble_grid.py                                UCDP + static + admin assembly
+│   ├── compile_grid.py                                 Event source grid compilation
+│   ├── compile_acled.py                                ACLED grid compilation
+│   ├── run_acled_pipeline.py                           ACLED end-to-end pipeline
+│   ├── run_ghspop_pipeline.py                          GHS-POP end-to-end pipeline
+│   ├── run_ghsbuilts_pipeline.py                       GHS-BUILT-S end-to-end pipeline
+│   ├── assemble_grid.py                                UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin
 │   ├── generate_consumer_data.py                      Factory → VIEWSER parquet for training
 │   ├── export_dataframe.py                             Grid → DataFrame export
 │   ├── export_zarr.py                                  Grid → zarr store (HTTP-servable)
-│   ├── visualize_audit.py                              15-plot data audit visualization
+│   ├── preflight.py                                    Pre-pipeline disk + env checks
 │   ├── check_health.py                                 System health check
-│   └── ...                                             harvest_priogrid, verify_parity, etc.
+│   ├── refresh_pipeline.sh                             Full pipeline orchestrator (11 steps)
+│   ├── visualize_audit.py                              Data audit visualization
+│   └── ...                                             verify_parity, verify_remote, etc.
 ├── docs/                                             # ADRs, CICs, protocols, standards
-│   ├── ADRs/                                           10 constitutional + 12 project-specific
-│   ├── CICs/                                           16 active class intent contracts
+│   ├── ADRs/                                           10 constitutional + 25 project-specific
+│   ├── CICs/                                           28 active class intent contracts
 │   ├── contributor_protocols/                          carbon, silicon, hardened
 │   └── standards/                                      logging & observability
 ├── reports/                                          # Strategic documents + audit outputs
-│   ├── rd_roadmap01.md                                 R&D roadmap (v01)
-│   ├── product_development_plan01.md                   Product development plan (v01)
+│   ├── rd_roadmap11.md                                 R&D roadmap (v11)
+│   ├── product_development_plan11.md                   Product development plan (v11)
 │   ├── technical_risk_register.md                      Technical risk register (ADR-020)
 │   └── dot9_investigation/                             .9 data stream research findings
 ├── provenance/                                       # JSONL ledgers (gitignored)
@@ -311,12 +335,21 @@ uv run pytest -v
 ## Quick Start
 
 ```bash
-# Full pipeline: harvest → consolidate → viewpoint → compile → assemble → consumer
+# Full pipeline (automated): runs all 11 steps end-to-end
+bash scripts/refresh_pipeline.sh
+
+# Or run individual steps:
 uv run python scripts/harvest_ucdp.py              # fetch all UCDP sources
-uv run python scripts/consolidate_ucdp.py          # three-source consolidation
+uv run python scripts/harvest_acled.py             # fetch ACLED events
+uv run python scripts/harvest_ghspop.py            # fetch GHS-POP rasters
+uv run python scripts/harvest_ghsbuilts.py         # fetch GHS-BUILT-S rasters
+uv run python scripts/consolidate_ucdp.py          # three-source UCDP consolidation
 uv run python scripts/build_viewpoint.py           # apply production_parity profile
-uv run python scripts/compile_grid.py              # place onto PRIO-GRID → grid.npy
-uv run python scripts/assemble_grid.py             # compiled UCDP + static + admin → assembled
+uv run python scripts/compile_grid.py              # UCDP → grid.npy
+uv run python scripts/compile_acled.py             # ACLED → grid.npy
+uv run python scripts/run_ghspop_pipeline.py       # GHS-POP viewpoint + compile
+uv run python scripts/run_ghsbuilts_pipeline.py    # GHS-BUILT-S viewpoint + compile
+uv run python scripts/assemble_grid.py             # all compiled sources → assembled grid
 uv run python scripts/generate_consumer_data.py    # factory → VIEWSER training parquets
 
 # Visualize the assembled grid
@@ -365,9 +398,9 @@ ff = FeatureFrame.from_grid(data, pgids, time_steps, feature_names)
 
 The `reports/` directory contains living documents that define the project's direction:
 
-- **[R&D Roadmap](reports/rd_roadmap06.md)** — Research questions, hypotheses, data agenda, milestones. Focuses on what must be *discovered*.
-- **[Product Development Plan](reports/product_development_plan05.md)** — Users, requirements, architecture, release plan. Focuses on what must be *built*.
-- **[Technical Risk Register](reports/technical_risk_register.md)** — 64 concerns tracked, 38 resolved, 26 deferred with trigger conditions (ADR-020).
+- **[R&D Roadmap](reports/rd_roadmap11.md)** — Research questions, hypotheses, data agenda, milestones. Focuses on what must be *discovered*.
+- **[Product Development Plan](reports/product_development_plan11.md)** — Users, requirements, architecture, release plan. Focuses on what must be *built*.
+- **[Technical Risk Register](reports/technical_risk_register.md)** — 170 concerns tracked, 107 resolved, 63 open with trigger conditions (ADR-020).
 - **[.9 Investigation](reports/dot9_investigation/)** — Empirical findings on UCDP .9 data stream characteristics.
 
 ---

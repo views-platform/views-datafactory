@@ -11,7 +11,7 @@
 
 views-datafactory is the data foundation for the VIEWS conflict forecasting platform. Its architecture is a **graph of independent nodes** connected by typed edges:
 
-- **Source nodes** produce raw data independently (harvesters fetch from external APIs; synthetic generators create controlled data).
+- **Source nodes** produce raw data independently (harvesters fetch from external APIs).
 - **Compilation edges** transform source data into consumer-specific formats (grid npy now, panel parquet and others later).
 - **Consumer nodes** (the metric lab, views-hydranet, other VIEWS repos) read compiled outputs.
 
@@ -42,7 +42,7 @@ Anything that does not clearly belong to one of these categories is considered *
 
 | Category | Purpose | Authority | Stability | Must Not Contain |
 |----------|---------|-----------|-----------|-----------------|
-| **Source Nodes** (harvester, synthetic) | Produce raw data independently from external sources or generation algorithms | High -- own the raw data contract | Evolving (new sources expected) | Compilation logic, consumer awareness, grid placement, knowledge of other sources |
+| **Source Nodes** (harvester) | Produce raw data independently from external sources | High -- own the raw data contract | Evolving (new sources expected) | Compilation logic, consumer awareness, grid placement, knowledge of other sources |
 | **The Grid** (spatial backbone + temporal backbone) | Define the shared coordinate system (PRIO-GRID 259,200 cells at 0.5 deg, monthly 1989-2024) that all compiled data aligns to | Authoritative -- the single source of truth for spatial/temporal coordinates | Stable (resolution and coordinate scheme are load-bearing) | Data values, source-specific logic, compilation, consumer formatting |
 | **Compilation Edges** (compiler) | Transform source data into consumer-specific formats by placing events onto the grid | Medium -- derived from sources + grid | Evolving (new formats, aggregation strategies expected) | Data fetching, source-specific API logic, model evaluation, consumer-specific post-processing |
 | **Configurations** (frozen dataclasses) | Explicit, validated, immutable parameter sets that govern every operation | Authoritative -- the declared intent for each operation | Stable pattern, evolving instances | Runtime state, mutable fields, inferred defaults, implicit fallbacks |
@@ -71,9 +71,9 @@ Stability is a design constraint, not a preference.
 The following are **not allowed** as first-class concepts:
 
 - **Implicit or inferred semantics:** inferring grid resolution from array shape rather than from GridConfig; inferring UCDP version from a file path rather than from HarvesterConfig
-- **Hybrid objects:** a class that both fetches data AND compiles it onto the grid; a class that both generates synthetic data AND evaluates its fidelity
+- **Hybrid objects:** a class that both fetches data AND compiles it onto the grid; a class that both generates data AND evaluates its fidelity
 - **Pipeline assumptions:** any object that assumes source A runs before source B, or that compilation happens immediately after harvesting
-- **Consumer-aware sources:** a harvester that formats its output for a specific downstream model; a synthetic generator that knows about the metric lab's ExperimentFrame
+- **Consumer-aware sources:** a harvester that formats its output for a specific downstream model; a source that knows about the metric lab's ExperimentFrame
 - **Silent fallbacks:** a harvester that returns empty data when the API fails instead of raising; a compiler that fills missing cells with zeros without recording it in provenance
 - **"Convenience" abstractions** that hide meaning: wrapper functions that obscure which source or config is being used
 

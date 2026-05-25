@@ -25,7 +25,7 @@ These ADRs define system philosophy and governance:
   Defines what concepts exist: Source Nodes, The Grid, Compilation Edges, Configurations, Provenance Records.
 
 - **ADR-002** -- Topology and Dependency Rules
-  Defines the DAG: core (L0) -> grid/harvester/synthetic (L1) -> compiler (L2). Filesystem-mediated data flow.
+  Defines the DAG: core (L0) -> grid/harvester (L1) -> consolidation (L2) -> viewpoint (L3) -> compilation (L4). Filesystem-mediated data flow.
 
 - **ADR-003** -- Authority of Declarations Over Inference
   Defines where semantic authority lives. Fail-loud on ambiguity.
@@ -61,7 +61,7 @@ These ADRs form the architectural constitution of the repository.
   System crashes on failure. No automatic fallback.
 
 - **ADR-012** -- Four-Layer Data Architecture
-  Graph topology: provenance (L0) → priogrid/harvester/synthetic (L1) → consolidation (L2) → viewpoint (L3) → compilation (L4). Supersedes ADR-002.
+  Graph topology: provenance/http (L0) → priogrid/harvester (L1) → consolidation (L2) → viewpoint (L3) → compilation (L4). Supersedes ADR-002.
 
 - **ADR-013** -- Consolidation Principles
   Lossless, append-only, bitemporal. No fields dropped.

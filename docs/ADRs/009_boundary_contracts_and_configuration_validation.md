@@ -16,7 +16,7 @@ Complex systems fail most often at boundaries:
 - between data producers and consumers,
 - between raw source data and compiled grid output.
 
-views-datafactory has ten packages across four layers (ADR-012), with data flowing through the filesystem between them. The ten packages are: provenance, http, priogrid, harvester, synthetic, consolidation, viewpoint, compilation, adapters, and query. The most critical boundaries are:
+views-datafactory has nine packages across four layers (ADR-012), with data flowing through the filesystem between them. The nine packages are: provenance, http, priogrid, harvester, consolidation, viewpoint, compilation, adapters, and query. The most critical boundaries are:
 
 1. **Configuration to runtime** -- frozen dataclasses with `__post_init__` validation must catch invalid parameters before any operation begins.
 2. **Harvester to filesystem** -- raw Parquet snapshots with content digests must be validated before storage.

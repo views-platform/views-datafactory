@@ -7,7 +7,7 @@ Data ingestion framework with pluggable sources. Follows the pattern: config -> 
 ## Responsibility Boundary
 
 **Owns:**
-- Data fetching from external APIs (UCDP/GED now, ACLED and others later)
+- Data fetching from external APIs (UCDP/GED, ACLED, GHS-POP, GHS-BUILT-S, PRIO-GRID static, GAUL admin)
 - Schema validation of fetched data (required fields, types, domain constraints)
 - Raw data storage as Parquet snapshots (verbatim, all fields preserved)
 - Snapshot comparison (new vs. previous: added, removed, revised events)

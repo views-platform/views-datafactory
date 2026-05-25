@@ -39,11 +39,12 @@ This repository maintains a **data source catalog** in `docs/sources/`, with one
 ```
 docs/sources/
 ├── README.md              # Index: one-line-per-source table + coverage summary
-├── ucdp.md                # UCDP (annual + candidate + .9 combined)
-├── acled.md               # ACLED
-├── ghspop.md              # GHS-POP R2023A
-├── priogrid_static.md     # PRIO-GRID static variables
-└── gaul_admin.md          # GAUL admin boundaries
+├── ucdp.md                # UCDP (annual + candidate + .9 combined) — planned
+├── acled.md               # ACLED — planned
+├── ghspop.md              # GHS-POP R2023A ✓
+├── ghsbuilts.md           # GHS-BUILT-S R2023A ✓
+├── priogrid_static.md     # PRIO-GRID static variables — planned
+└── gaul_admin.md          # GAUL admin boundaries — planned
 ```
 
 ### Catalog card schema
