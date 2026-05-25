@@ -21,7 +21,10 @@ git push origin vX.Y.Z
 # 2. SSH into the server (replace <your-user> with your username)
 ssh <your-user>@204.168.219.108
 
-# 3. Deploy and run
+# 3. Start tmux (pipeline runs 3-4 hours; SSH will drop without a multiplexer)
+tmux new -s deploy
+
+# 4. Deploy and run
 sudo -u views-deploy bash -c '
   source ~/.profile
   echo "vX.Y.Z" > ~/.views-deploy-tag
@@ -36,9 +39,19 @@ sudo -u views-deploy bash -c '
 
 Pre-flight checks will validate credentials and disk space before
 any work starts. Output streams to your terminal and logs to file.
+If SSH drops, reconnect and reattach: `tmux attach -t deploy`.
 See [How to deploy a new version](#how-to-deploy-a-new-version)
 for details, or [How to roll back](#how-to-roll-back) if something
 breaks.
+
+**Tip:** To prevent SSH idle disconnects, add to your local `~/.ssh/config`:
+```
+Host views-datafactory-00
+    HostName 204.168.219.108
+    User <your-user>
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+```
 
 Everything below is the full setup guide (one-time, ~1,200 lines).
 
@@ -400,7 +413,7 @@ This runs 10 checks against the remote server:
 | 4. Metadata | `.zmetadata` returns valid JSON |
 | 5. Dataset attributes | CRS, resolution, source, feature count |
 | 6. Dimensions | 456 months, 360 lat, 720 lon |
-| 7. Variables | 6 UCDP + 8 ACLED + 34 static + 3 admin = 51 |
+| 7. Variables | 6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S + 34 static + 3 admin = 53 |
 | 8. Data access | xarray opens store, loads 1 chunk |
 | 9. Data sanity | ged_sb_best has plausible non-zero values |
 | 10. Parquet | dataframe.parquet downloadable |
@@ -620,7 +633,7 @@ script. Before running any pipeline steps, it:
 2. Runs `git fetch --tags` to download any new tags from GitHub
 3. Checks that the tag exists
 4. Runs `git checkout v1.1.0` to switch to that exact version
-5. Then runs the 9 pipeline steps (pre-flight, harvest, consolidate, viewpoint, compile UCDP, compile ACLED, assemble, export, health check)
+5. Then runs the 11 pipeline steps (pre-flight, harvest, consolidate, viewpoint, compile UCDP, compile ACLED, compile GHS-POP, compile GHS-BUILT-S, assemble, export, health check)
 
 If the `.views-deploy-tag` file is missing, empty, or contains a tag
 that doesn't exist, the script prints `FATAL` and stops immediately.
@@ -892,7 +905,7 @@ After completing all steps, verify the migration:
 ```bash
 # 1. Pipeline runs as views-deploy
 su - views-deploy -c "cd views-datafactory && uv run pytest"
-# Expected: all tests pass (currently ~820)
+# Expected: all tests pass (currently ~1157)
 
 # 2. Cron is in views-deploy's crontab
 crontab -u views-deploy -l | grep refresh_pipeline

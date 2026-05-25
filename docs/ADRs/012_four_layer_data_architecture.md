@@ -33,7 +33,7 @@ This repository enforces a strict, directional dependency structure across four 
 > Layers are decoupled by the filesystem: data flows as files, not imports.
 > Opinions about data are introduced at the latest possible layer.
 
-This is a **graph**, not a pipeline. Not all data flows through all layers. Synthetic data, for example, produces npy directly and reaches consumers without traversing consolidation, viewpoint, or compilation. The layers are independent nodes in a DAG with multiple valid paths.
+This is a **graph**, not a pipeline. Not all data flows through all layers. GHS-POP and GHS-BUILT-S, for example, skip consolidation entirely because they are single-release datasets with nothing to merge (ADR-029, ADR-034). The layers are independent nodes in a DAG with multiple valid paths.
 
 ---
 

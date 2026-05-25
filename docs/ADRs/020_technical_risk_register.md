@@ -34,7 +34,7 @@ Maintain a **technical risk register** as a first-class governance artifact,
 split into two files:
 
 - `reports/technical_risk_register.md` — active concerns (open, deferred)
-- `reports/technical_risk_register_resolved.md` — resolved concerns and
+- `reports/archive/technical_risk_register_resolved.md` — resolved concerns and
   disagreements (historical archive)
 
 The register is the canonical location for tracking known imperfections,
@@ -151,6 +151,6 @@ Each concern has:
 ## References
 
 - `reports/technical_risk_register.md` — active concerns
-- `reports/technical_risk_register_resolved.md` — historical archive
+- `reports/archive/technical_risk_register_resolved.md` — historical archive
 - ADR-008: Observability and explicit failure (motivates fail-loud concerns)
 - ADR-005: Testing as mandatory infrastructure (motivates test gap concerns)

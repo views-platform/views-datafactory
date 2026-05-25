@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Compilation edge -- reads viewpoint output (Parquet) and grid definition, produces compiled npy arrays with shape `[T, H, W, C]` (time, height, width, channels) plus coordinate metadata and provenance. This is a Layer 4 package in the dependency DAG (ADR-012): it imports from provenance and priogrid, and reads viewpoint output as files. Synthetic data follows an independent path and does not pass through compilation.
+Compilation edge -- reads viewpoint output (Parquet) and grid definition, produces compiled npy arrays with shape `[T, H, W, C]` (time, height, width, channels) plus coordinate metadata and provenance. This is a Layer 4 package in the dependency DAG (ADR-012): it imports from provenance and priogrid, and reads viewpoint output as files.
 
 ## Responsibility Boundary
 
@@ -29,10 +29,12 @@ Compilation edge -- reads viewpoint output (Parquet) and grid definition, produc
 
 ```
 datafactory_compilation/
-    __init__.py        -- public API: CompilationConfig, compile_grid, get_strategy
-    compilation_config.py -- CompilationConfig (frozen, validated)
-    aggregation.py -- built-in aggregation functions (count, sum_field, max_field) + registry
-    grid_compilation.py -- compile_grid (main function), event placement, aggregation
+    __init__.py                 -- public API: CompilationConfig, compile_grid, get_strategy
+    compilation_config.py       -- CompilationConfig (frozen, validated)
+    aggregation.py              -- built-in aggregation functions (count, sum_field, max_field) + registry
+    grid_compilation.py         -- compile_grid (main function), event placement, aggregation
+    output.py                   -- compiled grid output writing (npy + sidecars + provenance)
+    pregridded_compilation.py   -- compilation for pre-gridded sources (GHS-POP, GHS-BUILT-S)
 ```
 
 ## Key Concepts

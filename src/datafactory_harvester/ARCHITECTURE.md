@@ -7,7 +7,7 @@ Data ingestion framework with pluggable sources. Follows the pattern: config -> 
 ## Responsibility Boundary
 
 **Owns:**
-- Data fetching from external APIs (UCDP/GED now, ACLED and others later)
+- Data fetching from external APIs (UCDP/GED, ACLED, GHS-POP, GHS-BUILT-S, PRIO-GRID static, GAUL admin)
 - Schema validation of fetched data (required fields, types, domain constraints)
 - Raw data storage as Parquet snapshots (verbatim, all fields preserved)
 - Snapshot comparison (new vs. previous: added, removed, revised events)
@@ -34,11 +34,16 @@ datafactory_harvester/
     event_validation.py -- ValidationResult, ComparisonResult, validate_events, compare_snapshots
     snapshot_storage.py -- save_event_snapshot, archive_snapshot
     sources/
-        __init__.py      -- source registry (register_source, fetch_source, list_sources)
-        ucdp_annual.py   -- UCDP/GED Annual: config, API client, schema, fetch orchestrator
-        ucdp_candidate.py -- UCDP/GED Candidate Monthly: version discovery, digest caching, multi-version fetch
-        ucdp_dot9.py     -- UCDP/GED .9 Consolidated Monthly: version discovery, digest caching, multi-version fetch
+        __init__.py        -- source registry (register_source, fetch_source, list_sources)
+        _ucdp_common.py   -- shared UCDP utilities (version discovery, digest caching)
+        ucdp_annual.py     -- UCDP/GED Annual: config, API client, schema, fetch orchestrator
+        ucdp_candidate.py  -- UCDP/GED Candidate Monthly: version discovery, digest caching, multi-version fetch
+        ucdp_dot9.py       -- UCDP/GED .9 Consolidated Monthly: version discovery, digest caching, multi-version fetch
         priogrid_static.py -- PRIO-GRID 2.0 static features: terrain, resources, land cover (64,818 land cells)
+        acled.py           -- ACLED event data: OAuth2 API, daily events, year-by-year pagination
+        ghspop.py          -- GHS-POP: JRC population rasters (GeoTIFF download, 12 epochs)
+        ghsbuilts.py       -- GHS-BUILT-S: JRC built-up surface rasters (GeoTIFF download, 12 epochs)
+        gaul_admin.py      -- GAUL 2024 admin boundaries: FAO shapefiles, spatial join to PRIO-GRID
 ```
 
 ## Key Concepts
@@ -90,7 +95,9 @@ CICs exist for:
 - `UcdpCandidateConfig` -- governs UCDP candidate monthly harvest parameters
 - `UcdpDot9Config` -- governs UCDP .9 consolidated monthly harvest parameters
 - `PriogridStaticConfig` -- governs PRIO-GRID static feature harvest parameters
-
-Priority candidates for future CICs:
+- `AcledConfig` -- governs ACLED event data harvest parameters
+- `GhsPopConfig` -- governs GHS-POP raster harvest parameters
+- `GhsBuiltSConfig` -- governs GHS-BUILT-S raster harvest parameters
+- `GaulAdminConfig` -- governs GAUL admin boundary harvest parameters
 - `ValidationResult` -- structured validation outcome
 - `ComparisonResult` -- structured revision detection outcome
