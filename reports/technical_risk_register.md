@@ -1,8 +1,8 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-05-25)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25
-**Status:** 202 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 114 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 5 open disagreements. 94 resolved concerns as full entries + 19 early-archive reference rows + 24 resolved disagreements in archive. 29 disagreement IDs total: 24 resolved, 5 open.
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26
+**Status:** 207 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 114 resolved, 68 open concerns (9 Tier 2, 17 Tier 3, 36 Tier 4, 6 deferred by design; 5 with fired triggers), 5 open disagreements. 94 resolved concerns as full entries + 19 early-archive reference rows + 24 resolved disagreements in archive. 29 disagreement IDs total: 24 resolved, 5 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -90,8 +90,13 @@
 | ~~C-152~~ | ~~3~~ | ~~ACLED profiles and `list_acled_profiles()` untested~~ | Resolved 2026-05-02 | ACLED test coverage |
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
-| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script | Visual audit |
+| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic — **trigger fired** (V-Dem is 5th source, no verify script) | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script | Visual audit |
 | C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | 5th source adds another 5-8 falsification files, pushing total past 40 | Test hygiene |
+| C-203 | 3 | V-Dem compilation tests severely undertested — 5 functions vs 16-18 for peers | Production incident on V-Dem compilation path that GHS-POP/GHS-BUILT-S tests would have caught | V-Dem test coverage |
+| C-204 | 3 | Zero falsification/deploy-readiness test files for V-Dem | V-Dem deployed to production without deploy-readiness verification | V-Dem test coverage |
+| C-205 | 2 | NaN handling in V-Dem variables entirely untested — silent propagation risk | V-Dem country with NaN democracy index silently propagates to grid, model trains on NaN | V-Dem data integrity |
+| C-206 | 3 | No CICs for VdemConfig or VdemViewpointConfig — peers have 2 each | New developer reads V-Dem config without contract guidance; ADR-006 compliance gap | V-Dem documentation |
+| C-207 | 4 | V-Dem `_parse_and_filter` failure path writes no ledger entry | CSV column-schema change causes harvester to crash without provenance record | V-Dem harvest correctness |
 | ~~C-196~~ | ~~4~~ | ~~7 of 8 ARCHITECTURE.md files have stale module lists~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-197~~ | ~~4~~ | ~~docs/CICs/README.md lists 21 active contracts but 28 exist~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-198~~ | ~~4~~ | ~~docs/sources/README.md references 4 catalog cards that don't exist~~ | Resolved 2026-05-25 | Documentation drift |
@@ -1019,6 +1024,76 @@ Pattern of cumulative documentation staleness: (1) logging standard has 3 wrong 
 Cross-ref: C-196, C-197, C-198 (same documentation drift pattern, resolved earlier same day).
 
 Resolved 2026-05-25. Updated all 13 locations in a single commit.
+
+### C-203: V-Dem compilation tests severely undertested — 5 functions vs 16-18 for peers
+
+| Field | Value |
+|-------|-------|
+| ID | C-203 |
+| Tier | 3 |
+| Source | falsification audit — V-Dem test coverage parity (2026-05-26) |
+| Trigger | Production incident on V-Dem compilation path that GHS-POP/GHS-BUILT-S tests would have caught |
+| Location | `tests/test_vdem_compilation.py` (5 test functions), cf. `tests/test_ghspop_compilation.py` (18), `tests/test_ghsbuilts_compilation.py` (16) |
+
+V-Dem compilation tests have 5 test functions vs 16-18 for GHS-POP and GHS-BUILT-S. Missing coverage: provenance sidecar generation, empty input rejection, missing column handling, multi-feature interaction, fill-value semantics, output shape validation. Soft falsifications included: no idempotence test, no year boundary edge cases, no output schema type verification, no duplicate (pgid, month_id) pair detection.
+
+Cross-ref: C-189 (GHS-BUILT-S had same gap at 19% parity — this is worse at 28-31%).
+
+### C-204: Zero falsification/deploy-readiness test files for V-Dem
+
+| Field | Value |
+|-------|-------|
+| ID | C-204 |
+| Tier | 3 |
+| Source | falsification audit — V-Dem test coverage parity (2026-05-26) |
+| Trigger | V-Dem deployed to production without deploy-readiness verification |
+| Location | `tests/` — no `test_falsification_vdem_*.py` files exist. Cf. GHS-BUILT-S (12 files), GHS-POP (4 files) |
+
+GHS-BUILT-S has 12 falsification test files, GHS-POP has 4, V-Dem has zero. No deploy-readiness gates, no data-integrity falsification tests, no coverage parity tests. Viewpoint-specific gaps subsumed: no idempotence test for viewpoint build, no year boundary edge case tests, no output schema type verification, no duplicate (pgid, month_id) pair test, no compilation provenance/sidecar coverage.
+
+Cross-ref: C-195 (falsification file accumulation — V-Dem is at the opposite extreme: zero files).
+
+### C-205: NaN handling in V-Dem variables entirely untested — silent propagation risk
+
+| Field | Value |
+|-------|-------|
+| ID | C-205 |
+| Tier | 2 |
+| Source | falsification audit — V-Dem test coverage parity (2026-05-26) |
+| Trigger | V-Dem country with NaN democracy index silently propagates to grid, model trains on NaN without error signal |
+| Location | `src/datafactory_viewpoint/builders/vdem_v1.py:259` (`float(var_arrays[var][i])` — NaN passes through silently), `tests/test_vdem_viewpoint.py` (no NaN test), `tests/test_vdem_compilation.py` (no NaN test) |
+
+V-Dem data contains missing values (countries with incomplete democracy scores). The viewpoint builder at line 259 converts values via `float()`, which preserves NaN silently — no guard, no warning, no count of NaN values in provenance. Neither viewpoint nor compilation tests verify NaN behavior. Peers (GHS-POP, GHS-BUILT-S) test domain-specific data risks. Tier 2 justified: silent data corruption risk (NaN propagates to model input without error signal), matching Tier 2 criteria.
+
+Cross-ref: C-175 (aggregation missing-field coalesced to zero — related silent-value-propagation pattern).
+
+### C-206: No CICs for VdemConfig or VdemViewpointConfig — peers have 2 each
+
+| Field | Value |
+|-------|-------|
+| ID | C-206 |
+| Tier | 3 |
+| Source | falsification audit — V-Dem ADR/guide compliance (2026-05-26) |
+| Trigger | New developer reads V-Dem config without contract guidance; writes code based on assumptions instead of documented guarantees |
+| Location | `docs/CICs/` — no `VdemConfig.md` or `VdemViewpointConfig.md`. Cf. `docs/CICs/GhsPopConfig.md`, `docs/CICs/GhsPopViewpointConfig.md`, `docs/CICs/GhsBuiltSConfig.md`, `docs/CICs/GhsBuiltSViewpointConfig.md` |
+
+The data source integration guide (Phase 5) requires CICs for config classes. ADR-006 mandates intent contracts for non-trivial classes. GHS-POP and GHS-BUILT-S each have 2 CICs (harvester config + viewpoint config). V-Dem has zero. Both `VdemConfig` and `VdemViewpointConfig` are frozen dataclasses with `__post_init__` validation, making them non-trivial. Same pattern as C-151 (ACLED CICs missing, resolved by creating them).
+
+Cross-ref: C-151 (ACLED CICs, resolved), C-158 (SourceEntry/AssemblyConfig CICs, resolved), C-192 (operational trailing implementation).
+
+### C-207: V-Dem `_parse_and_filter` failure path writes no ledger entry
+
+| Field | Value |
+|-------|-------|
+| ID | C-207 |
+| Tier | 4 |
+| Source | falsification audit — V-Dem ADR/guide compliance (2026-05-26) |
+| Trigger | V-Dem CSV schema changes (column renamed/removed), harvester crashes without recording failure in provenance ledger |
+| Location | `src/datafactory_harvester/sources/vdem.py:340-343` (`_parse_and_filter`), called from `fetch_vdem` line 206 (no try/except around this call) |
+
+When `_parse_and_filter` raises `ValueError` (CSV missing required columns), the exception propagates from `fetch_vdem` without recording a `"failed"` ledger entry. Compare: the same file's `_extract_csv_from_zip` (line 282-291) correctly records failure. The zero-rows check (line 208-219) also records failure. Only the column-missing parse path is uncovered. Tier 4 (not Tier 3) because: the exception still crashes the pipeline (fail-loud works), and the absence of a ledger entry means the next run will re-attempt (correct self-healing). The gap is observability, not correctness.
+
+Cross-ref: C-186 (shapefile harvester lacks outcome vocabulary — same pattern: missing failure ledger entry).
 
 ---
 
