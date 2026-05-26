@@ -129,6 +129,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-034** -- GHS-BUILT-S as Built-Up Surface Source
   GHS-BUILT-S raster ingestion. Skips consolidation (single release); harvester → compilation direct path.
 
+- **ADR-035** -- V-Dem as Democracy Indicator Source
+  V-Dem v16 integration. 22 democracy indicators, country-year to monthly grid via GAUL crosswalk. Skips consolidation (single release); harvester → viewpoint → compilation path.
+
 These must comply with the constitutional ADRs above.
 
 ---

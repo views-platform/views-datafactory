@@ -74,6 +74,8 @@ Contracts must be clear enough that:
 - `GhsPopViewpointConfig.md` -- immutable GHS-POP viewpoint configuration (spatial aggregation, temporal interpolation)
 - `GhsBuiltSConfig.md` -- immutable GHS-BUILT-S harvest configuration (epochs, resolution, download URLs)
 - `GhsBuiltSViewpointConfig.md` -- immutable GHS-BUILT-S viewpoint configuration (spatial aggregation, temporal interpolation)
+- `VdemConfig.md` -- immutable V-Dem harvest configuration (download URL, variables, version)
+- `VdemViewpointConfig.md` -- immutable V-Dem viewpoint configuration (crosswalk, temporal range, variables)
 - `AssemblyConfig.md` -- immutable assembly configuration (compiled grid paths, output directory)
 - `PregriddedCompilationConfig.md` -- immutable pre-gridded compilation configuration (GHS-POP, GHS-BUILT-S)
 - `SourceEntry.md` -- immutable source registry entry (name, features, provenance paths)

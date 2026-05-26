@@ -100,6 +100,7 @@ def main() -> int:
         ledger_path=Path(
             "provenance/compilation/vdem_ledger.jsonl",
         ),
+        fill_value=float("nan"),
     )
 
     t0 = time.monotonic()

@@ -174,7 +174,7 @@ result = load_dataset(
     region="land",                          # geographic filter
     start=None,                             # time range start (inclusive)
     end=None,                               # time range end (inclusive)
-    features=None,                          # feature subset (None = all 51)
+    features=None,                          # feature subset (None = all 75)
     output_format="feature_frame",          # "feature_frame" or "dataframe"
     data_dir=Path("data/assembled"),        # local path or zarr URL
     gaul_dir=Path("data/raw/gaul_admin"),   # GAUL admin data
@@ -307,10 +307,10 @@ The server at `http://204.168.219.108` serves two endpoints with **different fea
 
 | Endpoint | Features | Source | Use case |
 |----------|----------|--------|----------|
-| `/grid.zarr` | **51 features** (6 UCDP + 8 ACLED + 34 static + 3 GAUL) | `data/assembled/` | Full grid access, `load_dataset()`, research |
+| `/grid.zarr` | **75 features** (6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S + 22 V-Dem + 34 static + 3 GAUL) | `data/assembled/` | Full grid access, `load_dataset()`, research |
 | `/dataframe.parquet` | **6 features** (UCDP conflict only) | `data/compiled/` | Lightweight conflict-only download |
 
-This is intentional. The zarr store contains the full assembled grid (all data sources). The parquet export contains only the compiled UCDP conflict features (counts + best estimates for state-based, non-state, and one-sided violence). Use zarr for training and analysis; use parquet for quick conflict-data checks.
+This is intentional. The zarr store contains the full assembled grid (all 7 data sources). The parquet export contains only the compiled UCDP conflict features (counts + best estimates for state-based, non-state, and one-sided violence). Use zarr for training and analysis; use parquet for quick conflict-data checks.
 
 ---
 
@@ -333,7 +333,7 @@ See [ADR-025](../ADRs/025_country_identity_gaul.md) and C-149 in the risk regist
 
 ## Feature inventory
 
-The assembled grid contains 51 features across four groups:
+The assembled grid contains 75 features across seven groups:
 
 ### UCDP conflict events (6 features)
 
@@ -360,6 +360,51 @@ These are monthly counts and fatality estimates from UCDP/GED, filtered by the p
 | `acled_riots` | Riot events (count) |
 | `acled_strategic` | Strategic developments events (count) |
 | `acled_fatalities` | Total fatalities across all ACLED event types |
+
+### GHS-POP population (1 feature)
+
+| Feature | Description |
+|---------|-------------|
+| `ghspop_pop_count` | Population count per cell (GHS-POP, JRC/Copernicus) |
+
+Population grid from the EU Joint Research Centre Global Human Settlement Layer. 5-year epochs interpolated to monthly. NaN for ocean cells.
+
+### GHS-BUILT-S built-up surface (1 feature)
+
+| Feature | Description |
+|---------|-------------|
+| `ghsbuilts_built_area` | Built-up surface area per cell (GHS-BUILT-S, JRC/Copernicus) |
+
+Built-up surface area from the EU Joint Research Centre Global Human Settlement Layer. 5-year epochs interpolated to monthly. NaN for ocean cells.
+
+### V-Dem democracy indicators (22 features)
+
+| Feature | Description |
+|---------|-------------|
+| `vdem_v2xcl_dmove` | Freedom of domestic movement |
+| `vdem_v2xeg_eqdr` | Equal distribution of resources |
+| `vdem_v2xpe_exlsocgr` | Exclusion by social group |
+| `vdem_v2x_clphy` | Physical violence index |
+| `vdem_v2xcl_prpty` | Property rights |
+| `vdem_v2x_ex_military` | Military dimension of executive |
+| `vdem_v2x_ex_party` | Party dimension of executive |
+| `vdem_v2x_horacc` | Horizontal accountability |
+| `vdem_v2xnp_client` | Clientelism index |
+| `vdem_v2xpe_exlgender` | Exclusion by gender |
+| `vdem_v2x_cspart` | Civil society participation |
+| `vdem_v2x_frassoc_thick` | Freedom of association (thick) |
+| `vdem_v2x_libdem` | Liberal democracy index |
+| `vdem_v2x_neopat` | Neopatrimonialism index |
+| `vdem_v2x_partipdem` | Participatory democracy index |
+| `vdem_v2x_polyarchy` | Electoral democracy index |
+| `vdem_v2x_rule` | Rule of law index |
+| `vdem_v2xcs_ccsi` | Core civil society index |
+| `vdem_v2xdd_dd` | Direct popular vote index |
+| `vdem_v2xel_frefair` | Free and fair elections |
+| `vdem_v2xpe_exlpol` | Political exclusion |
+| `vdem_v2x_clpol` | Political civil liberties |
+
+V-Dem (Varieties of Democracy) v16 indicators. Country-year data mapped to PRIO-GRID cells via GAUL ISO3 crosswalk and expanded to monthly. NaN for countries/years not covered by V-Dem.
 
 ### PRIO-GRID static variables (34 features)
 

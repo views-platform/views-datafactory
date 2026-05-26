@@ -407,6 +407,46 @@ class TestFetchVdemRed:
         ):
             fetch_vdem(config)
 
+    def test_parse_filter_failure_writes_ledger(
+        self, tmp_path: Path,
+    ) -> None:
+        """C-207: _parse_and_filter failure must write a ledger entry."""
+        from datafactory_harvester.sources.vdem import (
+            VdemConfig,
+            fetch_vdem,
+        )
+
+        csv_missing_col = (
+            "country_text_id,year,v2x_libdem\n"
+            "NOR,2020,0.89\n"
+        )
+        zip_data = _make_vdem_zip(csv_missing_col)
+        mock_resp = MagicMock()
+        mock_resp.content = zip_data
+
+        config = VdemConfig(
+            variables=SAMPLE_VARIABLES,
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_harvester.sources.vdem"
+                ".request_with_retry",
+                return_value=mock_resp,
+            ),
+            pytest.raises(ValueError, match="missing"),
+        ):
+            fetch_vdem(config)
+
+        ledger = (tmp_path / "ledger.jsonl").read_text().strip()
+        assert ledger, "Ledger file is empty — no entry written"
+        entry = json.loads(ledger.splitlines()[-1])
+        assert entry["outcome"] == "failed", (
+            f"Expected outcome='failed', got {entry['outcome']!r}"
+        )
+
     def test_empty_csv_raises(self, tmp_path: Path) -> None:
         from datafactory_harvester.sources.vdem import (
             VdemConfig,

@@ -203,7 +203,18 @@ def fetch_vdem(
     csv_bytes = _extract_csv_from_zip(content, config)
 
     # Parse CSV and filter columns
-    table = _parse_and_filter(csv_bytes, config)
+    try:
+        table = _parse_and_filter(csv_bytes, config)
+    except ValueError as exc:
+        append_ledger_entry(config.ledger_path, {
+            "dataset": DATASET_ID,
+            "version": config.version,
+            "outcome": "failed",
+            "reason": str(exc),
+            "ledger_version": LEDGER_VERSION,
+            "digest_algorithm": DIGEST_SCHEME,
+        })
+        raise
 
     if table.num_rows == 0:
         msg = "V-Dem CSV produced zero rows after filtering"

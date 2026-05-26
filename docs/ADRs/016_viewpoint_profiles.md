@@ -103,3 +103,16 @@ The profile registry follows the same pattern established by:
 - `datafactory_viewpoint/temporal_distribution.py` — strategy registry
 
 This consistency is intentional. The same OCP pattern scales across the entire architecture.
+
+---
+
+## Implementation Notes: Per-Source Registries
+
+The profile registry is implemented as per-source dictionaries rather than a single unified registry:
+
+- **`PROFILES`** (UCDP): Maps profile names to `ViewpointConfig` instances. Strategies include `survivorship` and `temporal_distribution`.
+- **`ACLED_PROFILES`** (ACLED): Maps profile names to `AcledViewpointConfig` instances. Uses `source_distribution_map` instead of `survivorship`/`temporal_distribution` — ACLED events are single-day atomic records (no multi-day spanning), so the UCDP strategy vocabulary does not apply.
+
+This per-source approach exists because ACLED viewpoints use `source_distribution_map` which has no UCDP analogue; a unified registry would require conditional fields or a strategy protocol abstraction that adds complexity without benefit at the current source count (2 event sources with profiles).
+
+Future sources (V-Dem, WDI) that skip consolidation and viewpoint profiling entirely (single-release data processed directly via `PregriddedCompilationConfig`) do not need profile registries at all.
