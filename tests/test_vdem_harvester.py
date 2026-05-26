@@ -446,6 +446,10 @@ class TestFetchVdemRed:
         assert entry["outcome"] == "failed", (
             f"Expected outcome='failed', got {entry['outcome']!r}"
         )
+        assert "missing" in entry["reason"].lower(), (
+            f"Ledger reason should contain specific error, "
+            f"got {entry['reason']!r}"
+        )
 
     def test_empty_csv_raises(self, tmp_path: Path) -> None:
         from datafactory_harvester.sources.vdem import (

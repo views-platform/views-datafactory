@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-05-26)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26
-**Status:** 211 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 123 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 4 open disagreements. 103 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
+**Status:** 212 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 124 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 4 open disagreements. 104 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -101,6 +101,7 @@
 | ~~C-209~~ | ~~3~~ | ~~ADR-009 grid shape contract stale — claims 3D, actual is 4D `[T,H,W,C]`~~ | Resolved 2026-05-26 | ADR drift |
 | ~~C-210~~ | ~~3~~ | ~~ADR-016 profile registry pattern divergence — unified described, per-source implemented~~ | Resolved 2026-05-26 | ADR drift |
 | ~~C-211~~ | ~~4~~ | ~~Consumer data guide feature inventory stale at 51 — missing 3 sources~~ | Resolved 2026-05-26 | Documentation drift |
+| ~~C-212~~ | ~~4~~ | ~~V-Dem harvester failure test asserts outcome but not reason content~~ | Resolved 2026-05-26 | V-Dem test coverage |
 | ~~C-196~~ | ~~4~~ | ~~7 of 8 ARCHITECTURE.md files have stale module lists~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-197~~ | ~~4~~ | ~~docs/CICs/README.md lists 21 active contracts but 28 exist~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-198~~ | ~~4~~ | ~~docs/sources/README.md references 4 catalog cards that don't exist~~ | Resolved 2026-05-25 | Documentation drift |
@@ -168,7 +169,7 @@ Items that should be resolved together:
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 | ~~**Workflow process**~~ | ~~C-192~~ | Resolved 2026-05-23 |
-| ~~**V-Dem test & doc gaps**~~ | ~~C-203, C-204, C-205, C-206, C-207, C-208~~ | Resolved 2026-05-26: 20 compilation tests, 7 deploy-readiness tests, 2 CICs, 6 doc indices updated, NaN fix, harvester failure ledger |
+| ~~**V-Dem test & doc gaps**~~ | ~~C-203, C-204, C-205, C-206, C-207, C-208, C-209, C-210, C-211~~ | Resolved 2026-05-26: 20 compilation tests, 7 deploy-readiness tests, 2 CICs, 6 doc indices updated, NaN fix, harvester failure ledger, ADR-009/016 drift fixed, consumer guide 51→75 |
 | ~~**Documentation drift**~~ | ~~C-157, C-158~~ | Resolved 2026-05-07: 19 docs updated, 2 CICs created |
 
 ---
@@ -1175,6 +1176,22 @@ Cross-ref: C-206 (V-Dem CICs missing), C-196–C-202 (same class, resolved), C-1
 The consumer data guide lists four feature groups totaling 51 features (6 UCDP + 8 ACLED + 34 PRIO-GRID static + 3 GAUL admin). Three sources are missing: GHS-POP (1 feature, integrated v1.2.15), GHS-BUILT-S (1 feature, integrated v1.2.20), and V-Dem (22 features, integrated v1.2.21). Actual total is 75. The "51" count appears at least three times: feature inventory header, server endpoints table, and `load_dataset()` reference. This is broader than C-208 (which tracks V-Dem-specific index drift) — the consumer guide has been stale since the GHS-POP integration. Tier 4 because: the guide is informational (consumers can inspect `feature_names.json` at runtime), no correctness impact, single-developer scope.
 
 Cross-ref: C-208 (V-Dem doc index drift — same class), C-202 (operational docs stale — resolved, but did not include consumer guide).
+
+---
+
+### ~~C-212~~: V-Dem harvester failure test asserts outcome but not reason content (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-212 |
+| Tier | 4 |
+| Source | falsification audit: sprint 1 resolution (2026-05-26) |
+| Trigger | Someone reverts `str(exc)` to a hardcoded string in `vdem.py:213` — the existing test still passes because it only checks `outcome == "failed"`, not the `reason` field |
+| Location | `tests/test_vdem_harvester.py:446` (asserts outcome only), `src/datafactory_harvester/sources/vdem.py:213` (production fix site) |
+
+The C-207 fix changed the ledger reason from a hardcoded `"CSV column schema mismatch"` to `str(exc)` to capture the specific missing column name. The production fix is correct (confirmed by `test_falsification_sprint1_resolved.py::TestF1LedgerReasonSpecificity`). However, the existing test `test_parse_filter_failure_writes_ledger` only asserts `entry["outcome"] == "failed"` without verifying the `reason` field content. A regression that reverts to a hardcoded string would not be caught. Tier 4: no correctness impact (the fix works), single-developer scope, test-quality observation.
+
+Cross-ref: C-207 (the original missing ledger entry — resolved).
 
 ---
 
