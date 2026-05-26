@@ -709,7 +709,7 @@ def main() -> int:
         vdem_ts = np.load(
             config.vdem_grid_dir / "time_steps.npy",
         )
-        vdem_has_data = vdem_grid_ro.sum(axis=(1, 2, 3)) > 0
+        vdem_has_data = np.nansum(vdem_grid_ro, axis=(1, 2, 3)) > 0
         vdem_valid = np.where(vdem_has_data)[0]
         if len(vdem_valid) > 0:
             vdem_last = int(vdem_valid[-1])

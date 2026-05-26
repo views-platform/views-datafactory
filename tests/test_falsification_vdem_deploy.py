@@ -74,7 +74,7 @@ class TestF4DeploymentGuide:
 
 
 class TestF5CompileScript:
-    """compile_vdem.py must set fill_value=NaN (C-205)."""
+    """Both compilation paths must set fill_value=NaN (C-205)."""
 
     def test_compile_script_uses_nan_fill(self) -> None:
         script = Path("scripts/compile_vdem.py").read_text()
@@ -85,6 +85,17 @@ class TestF5CompileScript:
         assert "nan" in script.lower(), (
             "compile_vdem.py fill_value is not NaN — "
             "V-Dem requires NaN fill (C-205)"
+        )
+
+    def test_pipeline_runner_uses_nan_fill(self) -> None:
+        script = Path("scripts/run_vdem_pipeline.py").read_text()
+        assert "fill_value" in script, (
+            "run_vdem_pipeline.py does not set fill_value — "
+            "production path uses 0.0 default (C-205)"
+        )
+        assert "nan" in script.lower(), (
+            "run_vdem_pipeline.py fill_value is not NaN — "
+            "production path would silently convert NaN→0.0"
         )
 
 

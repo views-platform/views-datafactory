@@ -390,19 +390,19 @@ Built-up surface area from the EU Joint Research Centre Global Human Settlement 
 | `vdem_v2x_ex_party` | Party dimension of executive |
 | `vdem_v2x_horacc` | Horizontal accountability |
 | `vdem_v2xnp_client` | Clientelism index |
-| `vdem_v2xpe_exlgender` | Exclusion by gender |
-| `vdem_v2x_cspart` | Civil society participation |
-| `vdem_v2x_frassoc_thick` | Freedom of association (thick) |
-| `vdem_v2x_libdem` | Liberal democracy index |
-| `vdem_v2x_neopat` | Neopatrimonialism index |
-| `vdem_v2x_partipdem` | Participatory democracy index |
-| `vdem_v2x_polyarchy` | Electoral democracy index |
-| `vdem_v2x_rule` | Rule of law index |
-| `vdem_v2xcs_ccsi` | Core civil society index |
-| `vdem_v2xdd_dd` | Direct popular vote index |
-| `vdem_v2xel_frefair` | Free and fair elections |
+| `vdem_v2xnp_regcorr` | Regime corruption |
+| `vdem_v2xpe_exlgeo` | Exclusion by urban-rural location |
+| `vdem_v2x_veracc` | Vertical accountability |
 | `vdem_v2xpe_exlpol` | Political exclusion |
-| `vdem_v2x_clpol` | Political civil liberties |
+| `vdem_v2x_diagacc` | Diagonal accountability |
+| `vdem_v2x_divparctrl` | Divided party control |
+| `vdem_v2xeg_eqprotec` | Equal protection index |
+| `vdem_v2x_genpp` | Gender equality in power |
+| `vdem_v2xpe_exlgender` | Exclusion by gender |
+| `vdem_v2x_hosabort` | Head of state removal by legislature |
+| `vdem_v2x_libdem` | Liberal democracy index |
+| `vdem_v2xcl_rol` | Rule of law |
+| `vdem_v2x_accountability` | Accountability index |
 
 V-Dem (Varieties of Democracy) v16 indicators. Country-year data mapped to PRIO-GRID cells via GAUL ISO3 crosswalk and expanded to monthly. NaN for countries/years not covered by V-Dem.
 
