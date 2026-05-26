@@ -58,7 +58,7 @@ Every boundary between components must define:
 
 **CompilationConfig boundary (implemented):** `__post_init__` validates features non-empty. Source existence checked at compile time (FileNotFoundError). Feature list declared in config, never inferred from Parquet columns.
 
-**Compiled output contract (implemented):** Shape is always `(n_cells, n_steps, n_features)`. Coordinate arrays (`pgids.npy`, `time_steps.npy`, `feature_names.json`) shipped alongside `grid.npy`. Provenance JSON links source digest to output digest. Dimension order fixed: cells, time, features.
+**Compiled output contract (implemented):** Shape is always `(n_steps, nrow, ncol, n_features)` — dimension order `[T, H, W, C]` (time, height, width, channels). Coordinate arrays (`pgids.npy`, `time_steps.npy`, `feature_names.json`) shipped alongside `grid.npy`. Provenance JSON links source digest to output digest. See ADR-024 for the full 4D grid invariant specification.
 
 **SourceEntry boundary (implemented):** `SourceEntry` frozen dataclass in `datafactory_provenance.source_registry` validates name non-empty, env vars non-empty, features non-empty, and `slo_hours` positive.
 

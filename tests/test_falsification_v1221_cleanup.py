@@ -72,20 +72,27 @@ class TestF1PostSprintRegisterUpdates:
         )
 
     def test_register_header_count(self) -> None:
-        """Header should say 63 open concerns after C-176 and
-        C-169 are resolved."""
+        """Header open-concern count must match actual open
+        entries in the summary table."""
         register = Path(
             "reports/technical_risk_register.md"
         ).read_text()
         match = re.search(
             r"(\d+) open concerns", register[:2000],
         )
-        assert match, "Could not find 'N open concerns' in header"
-        count = int(match.group(1))
-        assert count == 63, (
-            f"Register header says {count} open concerns — "
-            f"should be 63 after resolving C-176 and C-169 "
-            f"(65 from Task 1, minus 2 resolved in Tasks 2/9)"
+        assert match, (
+            "Could not find 'N open concerns' in header"
+        )
+        header_count = int(match.group(1))
+        open_rows = [
+            line for line in register.splitlines()
+            if line.startswith("| C-")
+            and "~~" not in line
+            and "| — |" not in line.split("|")[2]
+        ]
+        assert header_count == len(open_rows), (
+            f"Header says {header_count} open concerns "
+            f"but table has {len(open_rows)} open rows"
         )
 
 

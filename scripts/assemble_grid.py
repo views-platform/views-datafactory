@@ -9,14 +9,15 @@ Usage:
     uv run python scripts/assemble_grid.py --admin-dir data/gaul_admin
 
 Combines the compiled UCDP conflict grid, ACLED conflict grid,
-GHS-POP population grid, GHS-BUILT-S built-up surface grid, PRIO-GRID
-static features, and GAUL admin boundary codes into a single array.
-ACLED, GHS-POP, and GHS-BUILT-S are temporally aligned to the UCDP
-timeline and zero-filled outside their coverage range. Static and admin
-features are broadcast across all time steps.
+GHS-POP population grid, GHS-BUILT-S built-up surface grid, V-Dem
+democracy indicators, PRIO-GRID static features, and GAUL admin
+boundary codes into a single array. ACLED, GHS-POP, GHS-BUILT-S,
+and V-Dem are temporally aligned to the UCDP timeline and zero-filled
+outside their coverage range. Static and admin features are broadcast
+across all time steps.
 
 Output: grid.npy [T, H, W, F]
-        F = UCDP + ACLED + GHS-POP + GHS-BUILT-S + static + admin.
+        F = UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin.
 
 Admin channels (gaul0_code, gaul1_code, gaul2_code) are categorical
 integers stored as float32. Downstream models should treat them as
@@ -53,6 +54,7 @@ class AssemblyConfig:
     acled_grid_dir: Path | None = None
     ghspop_grid_dir: Path | None = None
     ghsbuilts_grid_dir: Path | None = None
+    vdem_grid_dir: Path | None = None
     static_dir: Path = Path("data/raw/priogrid_static")
     admin_dir: Path = Path("data/raw/gaul_admin")
     output_dir: Path = Path("data/assembled")
@@ -198,6 +200,15 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--vdem-grid",
+        type=Path,
+        default=None,
+        help=(
+            "Compiled V-Dem grid directory "
+            "(omit to skip V-Dem)"
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=defaults.output_dir,
@@ -210,6 +221,7 @@ def main() -> int:
         acled_grid_dir=args.acled_grid,
         ghspop_grid_dir=args.ghspop_grid,
         ghsbuilts_grid_dir=args.ghsbuilts_grid,
+        vdem_grid_dir=args.vdem_grid,
         static_dir=args.static_dir,
         admin_dir=args.admin_dir,
         output_dir=args.output_dir,
@@ -261,6 +273,14 @@ def main() -> int:
         )
         return 1
 
+    has_vdem = config.vdem_grid_dir is not None
+    if has_vdem and not config.vdem_grid_dir.exists():
+        print(
+            f"FAIL: --vdem-grid "
+            f"{config.vdem_grid_dir} not found"
+        )
+        return 1
+
     print("=" * 60)
     print("GRID ASSEMBLY — All Data Sources")
     print(f"UCDP grid:   {config.ucdp_grid_dir}")
@@ -270,6 +290,8 @@ def main() -> int:
           f"{config.ghspop_grid_dir if has_ghspop else '(skipped)'}")
     print(f"GHS-BUILT-S grid: "
           f"{config.ghsbuilts_grid_dir if has_ghsbuilts else '(skipped)'}")
+    print(f"V-Dem grid:  "
+          f"{config.vdem_grid_dir if has_vdem else '(skipped)'}")
     print(f"Static dir:  {config.static_dir}")
     print(f"Admin dir:   {config.admin_dir}"
           f"{'' if has_admin else ' (skipped)'}")
@@ -332,6 +354,18 @@ def main() -> int:
             None, [], 0,
         )
     n_ghsbuilts = len(ghsbuilts_features)
+
+    if has_vdem:
+        vdem_result = _load_source_grid(
+            "V-Dem", config.vdem_grid_dir,
+            time_steps, n_t,
+        )
+        if vdem_result is None:
+            return 1
+        vdem_grid, vdem_features, vdem_offset = vdem_result
+    else:
+        vdem_grid, vdem_features, vdem_offset = None, [], 0
+    n_vdem = len(vdem_features)
 
     # Build gid → (row, col) lookup from pgids array
     gid_to_rowcol: dict[int, tuple[int, int]] = {}
@@ -413,11 +447,12 @@ def main() -> int:
     n_admin = len(admin_names)
     n_total = (
         n_ucdp + n_acled + n_ghspop + n_ghsbuilts
-        + n_static + n_admin
+        + n_vdem + n_static + n_admin
     )
     all_features = (
         ucdp_features + acled_features + ghspop_features
-        + ghsbuilts_features + static_names + admin_names
+        + ghsbuilts_features + vdem_features
+        + static_names + admin_names
     )
 
     print(
@@ -498,8 +533,23 @@ def main() -> int:
             ] = ghsbuilts_grid
             del ghsbuilts_grid
 
+        # Copy V-Dem channels (temporal slice, rest stays zero)
+        if vdem_grid is not None:
+            vdem_end = vdem_offset + vdem_grid.shape[0]
+            ch_vdem = (
+                n_ucdp + n_acled + n_ghspop + n_ghsbuilts
+            )
+            assembled[
+                vdem_offset:vdem_end,
+                :, :,
+                ch_vdem:ch_vdem + n_vdem,
+            ] = vdem_grid
+            del vdem_grid
+
         # Fill static channels (broadcast in-place)
-        ch_static = n_ucdp + n_acled + n_ghspop + n_ghsbuilts
+        ch_static = (
+            n_ucdp + n_acled + n_ghspop + n_ghsbuilts + n_vdem
+        )
         for i, spatial in enumerate(static_spatial):
             assembled[:, :, :, ch_static + i] = spatial
 
@@ -554,6 +604,10 @@ def main() -> int:
     ghsbuilts_digest = (
         compute_file_digest(config.ghsbuilts_grid_dir / "grid.npy")
         if has_ghsbuilts else None
+    )
+    vdem_digest = (
+        compute_file_digest(config.vdem_grid_dir / "grid.npy")
+        if has_vdem else None
     )
 
     # Data boundaries
@@ -645,6 +699,31 @@ def main() -> int:
             )
         del ghsbuilts_grid_ro
 
+    # V-Dem data boundary
+    last_valid_vdem_month_id: int | None = None
+    if has_vdem:
+        vdem_grid_ro = np.load(
+            config.vdem_grid_dir / "grid.npy",
+            mmap_mode="r",
+        )
+        vdem_ts = np.load(
+            config.vdem_grid_dir / "time_steps.npy",
+        )
+        vdem_has_data = np.nansum(vdem_grid_ro, axis=(1, 2, 3)) > 0
+        vdem_valid = np.where(vdem_has_data)[0]
+        if len(vdem_valid) > 0:
+            vdem_last = int(vdem_valid[-1])
+            vdem_last_dt = vdem_ts[vdem_last]
+            last_valid_vdem_month_id = int(
+                to_views_month_id(vdem_last_dt)
+            )
+            print(
+                f"Last valid V-Dem month: "
+                f"{last_valid_vdem_month_id} "
+                f"({vdem_last_dt})"
+            )
+        del vdem_grid_ro
+
     provenance = {
         "sources": {
             "ucdp_grid": str(grid_path),
@@ -676,6 +755,15 @@ def main() -> int:
             "ghsbuilts_temporal_offset": (
                 ghsbuilts_offset if has_ghsbuilts else None
             ),
+            "vdem_grid": (
+                str(config.vdem_grid_dir / "grid.npy")
+                if has_vdem else None
+            ),
+            "vdem_digest": vdem_digest,
+            "vdem_features": vdem_features or None,
+            "vdem_temporal_offset": (
+                vdem_offset if has_vdem else None
+            ),
             "static_dir": str(config.static_dir),
             "static_variables": static_names,
             "admin_dir": str(config.admin_dir),
@@ -699,6 +787,10 @@ def main() -> int:
     if last_valid_ghsbuilts_month_id is not None:
         provenance["last_valid_ghsbuilts_month_id"] = (
             last_valid_ghsbuilts_month_id
+        )
+    if last_valid_vdem_month_id is not None:
+        provenance["last_valid_vdem_month_id"] = (
+            last_valid_vdem_month_id
         )
     (config.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)

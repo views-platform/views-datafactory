@@ -35,6 +35,7 @@ Assembly is the final stage of the data graph — it combines compiled UCDP, com
 - `acled_grid_dir` defaults to None — assembly works without ACLED for local development
 - `ghspop_grid_dir` defaults to None — assembly works without GHS-POP for local development
 - `ghsbuilts_grid_dir` defaults to None — assembly works without GHS-BUILT-S for local development
+- `vdem_grid_dir` defaults to None — assembly works without V-Dem for local development
 
 ---
 
@@ -44,6 +45,7 @@ Assembly is the final stage of the data graph — it combines compiled UCDP, com
 - `acled_grid_dir`: Path to compiled ACLED grid directory, or None to skip ACLED
 - `ghspop_grid_dir`: Path to compiled GHS-POP grid directory, or None to skip GHS-POP
 - `ghsbuilts_grid_dir`: Path to compiled GHS-BUILT-S grid directory, or None to skip GHS-BUILT-S
+- `vdem_grid_dir`: Path to compiled V-Dem grid directory, or None to skip V-Dem
 - `static_dir`: Path to PRIO-GRID static features (default: `data/raw/priogrid_static`)
 - `admin_dir`: Path to GAUL admin boundaries (default: `data/raw/gaul_admin`)
 - `output_dir`: Path for assembled output (default: `data/assembled`)
@@ -80,7 +82,7 @@ All failures are immediate and loud. No silent fallbacks.
 - Defined in `scripts/assemble_grid.py` (script-level, not a library)
 - Used only by the `main()` function in the same file
 - Argparse populates fields from CLI arguments; the dataclass validates
-- `refresh_pipeline.sh` passes `--acled-grid data/compiled/acled --ghspop-grid data/compiled/ghspop --ghsbuilts-grid data/compiled/ghsbuilts` to assembly — if any directory doesn't exist, assembly fails loud
+- `refresh_pipeline.sh` passes `--acled-grid data/compiled/acled --ghspop-grid data/compiled/ghspop --ghsbuilts-grid data/compiled/ghsbuilts --vdem-grid data/compiled/vdem` to assembly — if any directory doesn't exist, assembly fails loud
 - Must not depend on any `datafactory_*` package (scripts are consumers, not library code)
 
 ---

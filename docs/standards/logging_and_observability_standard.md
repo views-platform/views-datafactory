@@ -57,6 +57,9 @@ In views-datafactory, the JSONL provenance ledgers (`provenance/`) are the prima
 - `provenance/viewpoint/ghsbuilts_v1_ledger.jsonl` -- GHS-BUILT-S viewpoint provenance (implemented)
 - `provenance/compilation/ghspop_ledger.jsonl` -- GHS-POP compilation provenance (implemented)
 - `provenance/compilation/ghsbuilts_ledger.jsonl` -- GHS-BUILT-S compilation provenance (implemented)
+- `provenance/vdem/ingestion_ledger.jsonl` -- V-Dem harvest provenance (implemented)
+- `provenance/viewpoint/vdem_v1_ledger.jsonl` -- V-Dem viewpoint provenance (implemented)
+- `provenance/compilation/vdem_ledger.jsonl` -- V-Dem compilation provenance (implemented)
 
 Each entry records: timestamp, operation type, input references + digests, config snapshot, output path + digest, validation results (including errors and warnings).
 
