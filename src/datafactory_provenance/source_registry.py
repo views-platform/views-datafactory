@@ -159,6 +159,37 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         ),
     ),
     SourceEntry(
+        name="V-Dem",
+        features=(
+            "vdem_v2xcl_dmove",
+            "vdem_v2xeg_eqdr",
+            "vdem_v2xpe_exlsocgr",
+            "vdem_v2x_clphy",
+            "vdem_v2xcl_prpty",
+            "vdem_v2x_ex_military",
+            "vdem_v2x_ex_party",
+            "vdem_v2x_horacc",
+            "vdem_v2xnp_client",
+            "vdem_v2xnp_regcorr",
+            "vdem_v2xpe_exlgeo",
+            "vdem_v2x_veracc",
+            "vdem_v2xpe_exlpol",
+            "vdem_v2x_diagacc",
+            "vdem_v2x_divparctrl",
+            "vdem_v2xeg_eqprotec",
+            "vdem_v2x_genpp",
+            "vdem_v2xpe_exlgender",
+            "vdem_v2x_hosabort",
+            "vdem_v2x_libdem",
+            "vdem_v2xcl_rol",
+            "vdem_v2x_accountability",
+        ),
+        slo_hours=None,
+        ledger_path=Path(
+            "vdem/ingestion_ledger.jsonl"
+        ),
+    ),
+    SourceEntry(
         name="PRIO-GRID Shapefile",
         slo_hours=None,
         ledger_path=Path(
@@ -219,6 +250,13 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         ),
     ),
     SourceEntry(
+        name="V-Dem Viewpoint",
+        slo_hours=None,
+        ledger_path=Path(
+            "viewpoint/vdem_v1_ledger.jsonl"
+        ),
+    ),
+    SourceEntry(
         name="Compilation",
         slo_hours=744,
         ledger_path=Path(
@@ -244,6 +282,13 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         slo_hours=None,
         ledger_path=Path(
             "compilation/ghsbuilts_ledger.jsonl"
+        ),
+    ),
+    SourceEntry(
+        name="V-Dem Compilation",
+        slo_hours=None,
+        ledger_path=Path(
+            "compilation/vdem_ledger.jsonl"
         ),
     ),
 )

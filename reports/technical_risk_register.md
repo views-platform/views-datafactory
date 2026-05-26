@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-25)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25
-**Status:** 202 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 114 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 5 open disagreements. 94 resolved concerns as full entries + 19 early-archive reference rows + 24 resolved disagreements in archive. 29 disagreement IDs total: 24 resolved, 5 open.
+**Date:** 2026-03-17 (updated 2026-05-26)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26
+**Status:** 212 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 124 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 4 open disagreements. 104 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -20,10 +20,10 @@
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
 | C-45 | 4 | No Parquet schema evolution strategy | UCDP removes/renames a field | UCDP schema |
 | ~~C-31~~ | ~~4~~ | ~~Candidate source depends on annual source (incl. C-28)~~ | Resolved 2026-04-27 | Code cleanup |
-| C-44 | 4 | Harvest pipeline template is implicit — trigger fired, accepted at v1.0 | Before V-Dem (9th source) | V-Dem readiness |
+| C-44 | 4 | Harvest pipeline template is implicit — trigger fired, accepted at v1.0 | Before 10th source or sprint planning | WET-before-DRY |
 | C-46 | 4 | No ledger write idempotency | External systems consume ledger | — |
 | C-32 | — | Source registry returns `Any` | Accepted by design | — |
-| C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | 2nd deployment target set up | Test infra |
+| C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Full-scale e2e with all 9+ sources, or 2nd deployment target | Test infra |
 | C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment | UCDP resilience |
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
 | C-74 | 4 | CompilationConfig leaks strategy vocabulary | New developer needs IDE discoverability | — |
@@ -77,7 +77,7 @@
 | D-24 | — | Hardware upgrade vs software optimization for 8 GB ceiling | Open | ADR-031 compliance |
 | ~~D-25~~ | ~~—~~ | ~~Dead function retention — `_aggregate_to_prio_grid` after v1.2.18~~ | Resolved 2026-05-24 | ADR-031 compliance |
 | D-26 | — | Discovery probing cost vs cache staleness (UCDP candidate/dot9) | Open | Harvest caching |
-| D-27 | — | Two-tier cache (UCDP) vs single-tier cache (ACLED/GHS-POP) | Open | Harvest caching |
+| ~~D-27~~ | ~~—~~ | ~~Two-tier cache (UCDP) vs single-tier cache (ACLED/GHS-POP)~~ | Resolved 2026-05-26 | Harvest caching |
 | ~~D-28~~ | ~~—~~ | ~~One function vs two for digest lookup (`last_digest` + `last_digest_for_version`)~~ | Resolved 2026-05-24 | Provenance API |
 | D-29 | — | Shapefile harvester retrofit depth — full outcome compliance vs organic | Open | Harvest correctness |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
@@ -90,8 +90,18 @@
 | ~~C-152~~ | ~~3~~ | ~~ACLED profiles and `list_acled_profiles()` untested~~ | Resolved 2026-05-02 | ACLED test coverage |
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
-| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script | Visual audit |
-| C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | 5th source adds another 5-8 falsification files, pushing total past 40 | Test hygiene |
+| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic — **trigger fired** (V-Dem is 5th pipeline source, no verify script) | 6th pipeline source or V-Dem production deploy without verify script | Visual audit |
+| C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | Next audit round adds files, or total exceeds 45 | Test hygiene |
+| ~~C-203~~ | ~~3~~ | ~~V-Dem compilation tests severely undertested — 5 functions vs 16-18 for peers~~ | Resolved 2026-05-26 | V-Dem test coverage |
+| ~~C-204~~ | ~~3~~ | ~~Zero falsification/deploy-readiness test files for V-Dem~~ | Resolved 2026-05-26 | V-Dem test coverage |
+| ~~C-205~~ | ~~2~~ | ~~NaN handling in V-Dem variables entirely untested — silent propagation risk~~ | Resolved 2026-05-26 | V-Dem data integrity |
+| ~~C-206~~ | ~~3~~ | ~~No CICs for VdemConfig or VdemViewpointConfig — peers have 2 each~~ | Resolved 2026-05-26 | V-Dem documentation |
+| ~~C-207~~ | ~~4~~ | ~~V-Dem `_parse_and_filter` failure path writes no ledger entry~~ | Resolved 2026-05-26 | V-Dem harvest correctness |
+| ~~C-208~~ | ~~4~~ | ~~V-Dem documentation index drift — 3 README indices + ADR-033 table not updated~~ | Resolved 2026-05-26 | V-Dem test & doc gaps |
+| ~~C-209~~ | ~~3~~ | ~~ADR-009 grid shape contract stale — claims 3D, actual is 4D `[T,H,W,C]`~~ | Resolved 2026-05-26 | ADR drift |
+| ~~C-210~~ | ~~3~~ | ~~ADR-016 profile registry pattern divergence — unified described, per-source implemented~~ | Resolved 2026-05-26 | ADR drift |
+| ~~C-211~~ | ~~4~~ | ~~Consumer data guide feature inventory stale at 51 — missing 3 sources~~ | Resolved 2026-05-26 | Documentation drift |
+| ~~C-212~~ | ~~4~~ | ~~V-Dem harvester failure test asserts outcome but not reason content~~ | Resolved 2026-05-26 | V-Dem test coverage |
 | ~~C-196~~ | ~~4~~ | ~~7 of 8 ARCHITECTURE.md files have stale module lists~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-197~~ | ~~4~~ | ~~docs/CICs/README.md lists 21 active contracts but 28 exist~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-198~~ | ~~4~~ | ~~docs/sources/README.md references 4 catalog cards that don't exist~~ | Resolved 2026-05-25 | Documentation drift |
@@ -106,7 +116,7 @@
 | ~~C-172~~ | ~~3~~ | ~~Latent OOM in `_aggregate_to_prio_grid` dead branch~~ | Resolved 2026-05-20 | GHS-POP memory |
 | C-173 | 3 | Hetzner CPX32 has no swap — OOM kills with zero safety net | Any transient memory spike above physical RAM on server | Server hardening |
 | ~~C-167~~ | ~~4~~ | ~~reports/audit_ghspop/ not in .gitignore~~ | Resolved 2026-05-20 | GHS-POP hygiene |
-| C-164 | 3 | Cross-layer WET debt: 3 sources replicate patterns across all 4 layers | 4th source (V-Dem or WDI) requires copying 6+ structural patterns | WET-before-DRY |
+| C-164 | 3 | Cross-layer WET debt: 5 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI or next refactor sprint | WET-before-DRY |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
 | ~~C-174~~ | ~~3~~ | ~~`latlon_to_pgid` silently clamps out-of-bounds coordinates~~ | Resolved 2026-05-23 | Compilation correctness |
 | C-175 | 3 | Aggregation missing-field coalesced to zero, not NaN | Source removes or renames a field used in `FeatureSpec` | Compilation correctness |
@@ -138,12 +148,12 @@ Items that should be resolved together:
 | Package | Items | Trigger |
 |---------|-------|---------|
 | **Server hardening** | C-88, C-121, C-173 (C-84, C-85, C-86, C-87 resolved) | Before production deployment |
-| **V-Dem readiness** | C-44 (C-91 resolved) | Before V-Dem integration |
+| ~~**V-Dem readiness**~~ | ~~C-44~~ (C-91 resolved) | Resolved 2026-05-26: V-Dem integration complete |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **Compilation correctness** | ~~C-174~~, C-175 | Source with unvalidated coordinates or renamed fields (C-174 resolved) |
 | **UCDP schema defense** | C-36, C-37, C-45, C-175 | UCDP API change |
-| **Test infrastructure** | C-29, C-78, C-79, C-146, C-169 | Test suite growth (C-60 resolved) |
-| **Code cleanup** | ~~C-31~~, C-93, C-176 | Next refactor opportunity (C-80, C-112, C-31 resolved) |
+| **Test infrastructure** | C-29, C-78, C-79, C-146 (C-60, C-169 resolved) | Test suite growth |
+| **Code cleanup** | C-93 (~~C-31~~, ~~C-176~~ resolved; C-80, C-112 resolved) | Next refactor opportunity |
 | ~~**Consumer integration**~~ | ~~C-122, C-123, C-124~~ | ~~Resolved~~ |
 | ~~**Query correctness**~~ | ~~C-127~~ | Resolved 2026-04-27: warning on fallback, export already writes feature_order |
 | **ADR-003 compliance** | ~~C-128~~, C-129, ~~C-168~~ | Before next assembly/compilation change (C-128, C-168 resolved) |
@@ -154,11 +164,12 @@ Items that should be resolved together:
 | ~~**GHS-POP deployment**~~ | ~~C-165, C-166, C-167~~ | Resolved 2026-05-20 |
 | ~~**GHS-POP memory**~~ | ~~C-170, C-171, C-172~~ | Resolved 2026-05-20 |
 | **Harvest correctness** | ~~C-182~~, C-184, C-185, C-186, ~~C-188~~ | Before relying on harvest caching for correctness |
-| **WET-before-DRY refactor** | C-44, C-07, C-155, C-164, C-195 | Before 5th source (V-Dem or WDI) |
+| **WET-before-DRY refactor** | C-44, C-07, C-155, C-164, C-195 | Before WDI or next refactor sprint (V-Dem added without extraction) |
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 | ~~**Workflow process**~~ | ~~C-192~~ | Resolved 2026-05-23 |
+| ~~**V-Dem test & doc gaps**~~ | ~~C-203, C-204, C-205, C-206, C-207, C-208, C-209, C-210, C-211~~ | Resolved 2026-05-26: 20 compilation tests, 7 deploy-readiness tests, 2 CICs, 6 doc indices updated, NaN fix, harvester failure ledger, ADR-009/016 drift fixed, consumer guide 51→75 |
 | ~~**Documentation drift**~~ | ~~C-157, C-158~~ | Resolved 2026-05-07: 19 docs updated, 2 CICs created |
 
 ---
@@ -368,6 +379,38 @@ See also C-130 (zero-filled future months), C-133 (zero-padding warning bypass).
 
 ---
 
+### ~~C-209~~: ADR-009 grid shape contract stale — claims 3D, actual is 4D `[T, H, W, C]` (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-209 |
+| Tier | 3 |
+| Source | review-base-docs (2026-05-26) |
+| Trigger | New developer reads ADR-009 section 5 ("Compiled output contract") and writes code assuming 3D arrays — code breaks at runtime against actual 4D `[T, H, W, C]` grid |
+| Location | `docs/ADRs/009_boundary_contracts_and_configuration_validation.md` (section 5, grid shape claim), `docs/ADRs/024_compilation_grid_invariants.md` (superseding 4D contract) |
+
+ADR-009 (constitutional) section 5 states the compiled grid shape is `(n_cells, n_steps, n_features)` — a 3D array with dimension order "cells, time, features." The actual grid format is `[T, H, W, C]` = `(n_steps, nrow, ncol, n_features)` — 4D. This was changed when ADR-024 (Compilation Grid Invariants) was introduced, but ADR-009 was never updated. ADR-009 also describes sidecar arrays (`pgids.npy`, `time_steps.npy`, `feature_names.json`) which are still accurate. The SourceEntry validation wording is also slightly misleading: says "env vars non-empty, features non-empty" but the code allows empty tuples for `required_env_vars` and `features` — only individual strings within tuples must be non-empty. Tier 3 because: constitutional ADR making a false structural claim about the core data format; any developer reading ADR-009 without also reading ADR-024 would write wrong code.
+
+Cross-ref: C-200 (grid dimension order in ADR-005/CLAUDE.md — resolved 2026-05-25, same class but different location).
+
+---
+
+### ~~C-210~~: ADR-016 profile registry pattern divergence — unified registry described, per-source registries implemented (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-210 |
+| Tier | 3 |
+| Source | review-base-docs (2026-05-26) |
+| Trigger | New viewpoint builder follows ADR-016's single-registry pattern but encounters the ACLED-specific parallel registry; or a third source adds yet another parallel registry |
+| Location | `docs/ADRs/016_viewpoint_profiles.md` (describes `_register` + `load_profile` + `list_profiles` as unified), `src/datafactory_viewpoint/profiles.py` (has both `PROFILES` / `ACLED_PROFILES` with separate `_register_acled` / `load_acled_profile` / `list_acled_profiles`) |
+
+ADR-016 describes a single unified profile registry: `_register(name, **strategy_choices)` → `load_profile(name, path)` → `list_profiles()`, with the claim "the same profile registry pattern applies whether the viewpoint is built from UCDP, ACLED, or any future source." The implementation has evolved into two parallel registries (`PROFILES` for UCDP, `ACLED_PROFILES` for ACLED) with completely separate function sets. This predates V-Dem integration and is an intentional design choice (ACLED has different strategy vocabulary than UCDP), but the ADR does not document or justify the divergence. Either the registries should be unified (e.g., namespaced as `"ucdp/production_parity"`) or the ADR should document the per-source approach. Tier 3 because: a developer adding a new source (WDI, V-Dem viewpoint profiles) would not know which pattern to follow.
+
+Cross-ref: D-29 (shapefile harvester retrofit depth — same class of "organic vs unified" design tension).
+
+---
+
 ## Tier 4 — Accept or Defer
 
 ### C-21: No characterization tests for migration source — [DEFER]
@@ -393,13 +436,14 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 **Source:** Kleppmann (expert review 6). DDIA Ch.4 pp.112-127, 131.
 
 ### C-44: Harvest pipeline template is implicit — [DEFER]
-All five harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: before V-Dem (9th source) — extract shared harvest template to reduce copy-paste per source (trigger rewritten during review-rr 2026-05-24).**
+All nine harvesters follow config->fetch->validate->compare->archive->store->provenance but no shared template enforces step order. A new source author must read existing sources to discover the pattern. **Trigger: before 10th source, or when harvest template extraction is prioritized in sprint planning (trigger rewritten during review-rr 2026-05-26).**
 **Note (2026-04-04):** Trigger condition met — 5 sources exist (ucdp_annual, ucdp_candidate, ucdp_dot9, priogrid_static, gaul_admin). Accepted at v1.0 scope: all 5 harvesters work correctly, implicit template hasn't caused bugs. Reassess before V-Dem (6th source).
 **Note (2026-05-02):** 6th source added (ACLED). Pattern was replicated from existing harvesters without issues. Template extraction deferred to V-Dem (7th source) or next refactor.
 **Note (2026-05-18):** 7th source added (GHS-POP). Pattern replicated from GAUL harvester. Trigger condition met — consider template extraction at next refactor opportunity.
 **Note (2026-05-19):** Full cross-layer WET inventory completed — see C-164 for patterns spanning all 4 layers, not just harvest. This concern covers the harvest template; C-164 covers the broader cross-layer picture.
 **Note (2026-05-21):** C-183 merged here. Expert code review of harvest caching found that the three caching/idempotence implementations (UCDP two-tier, ACLED single-tier, GHS-POP single-tier) share the same two-key cache pattern (file exists + ledger digest) but diverge on change detection, force-refresh semantics, and outcome vocabulary. No shared contract exists — each reinvents the pattern independently. This is the caching-specific instance of the general harvest template gap. See ADR-032 (harvest idempotence) for the formalized pattern.
 **Note (2026-05-22):** 8th source added (GHS-BUILT-S). Harvest pattern replicated without issues. Cross-ref C-164.
+**Note (2026-05-26):** 9th source added (V-Dem). Harvest pattern replicated from GHS-POP without issues. Template extraction deferred — pattern continues to work correctly. Cross-ref C-164.
 **Source:** GoF (expert review 6)
 
 ### C-46: No ledger write idempotency — [DEFER]
@@ -407,7 +451,7 @@ All five harvesters follow config->fetch->validate->compare->archive->store->pro
 **Source:** Kleppmann (expert review 6). DDIA Ch.7 p.231, Ch.12 pp.516-518.
 
 ### C-29: No end-to-end integration test — [DEFER]
-Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 3 sources untested. **Trigger: when pipeline validation needs independent orchestration, or 2nd deployment target is set up (trigger rewritten during review-rr 2026-05-24).**
+Partially addressed by `test_integration.py` (100 events, realistic pipeline). Full-scale end-to-end with all 9 sources untested. **Trigger: full-scale e2e test with all 9+ sources on a clean environment, or 2nd deployment target set up (trigger rewritten during review-rr 2026-05-26).**
 **Note (2026-04-04):** Trigger condition met — server in production at 204.168.219.108. Accepted at v1.0 scope: integration test covers the critical harvest→compile path, `verify_remote.py` validates the deployed output (10/10 checks). Reassess before V-Dem.
 **Update (2026-04-26):** Test review identified specific gap: no harvest→consolidation integration test. `test_integration.py` tests the full pipeline but with synthetic events. No test verifies that actual UCDP Parquet output (column names, types, date format) is consumed correctly by `consolidate_ucdp()`. The stale-zarr incident showed that harvester changes (page_size, assertion thresholds) can produce subtly different output that breaks downstream.
 **Update (2026-05-05):** ACLED compilation test review identified same gap for ACLED pipeline: no integration test connecting harvest→consolidate→viewpoint→compile. No test verifies viewpoint→compilation Parquet schema compatibility (that viewpoint output columns match what `compile_grid` expects via `date_field`, `lat_field`, `lon_field`, and filter fields). ACLED pipeline has the same structural risk as UCDP.
@@ -429,6 +473,7 @@ Callers must know magic strings (`"count"`, `"sum_field"`, `"max_field"`) and fi
 
 ### C-75: FeatureFrame is shallow — adds validation but little abstraction — [DEFER]
 8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; monitor if callers misuse. **Trigger: when a consumer constructs FeatureFrame with wrong shape and the error message is insufficient to diagnose (trigger rewritten during review-rr 2026-05-24).**
+**Note (2026-05-26, review-rr strategic):** Recommended for demotion to tech-debt backlog — observation from initial review, no incidents, shallow abstraction is acceptable for a data wrapper.
 **Source:** Ousterhout (expert review #4)
 
 ### C-78: `_place_events` hard to test in isolation — [DEFER]
@@ -457,10 +502,12 @@ The summary event detection formula uses `best >= span` (not strict `best > span
 
 ### C-93: `_count_outcomes` mixes raw counts with derived computation — [DEFER]
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories (`cached`, `success`, `unchanged`, `failed`, `not_served`) then adds a computed `"served"` key (`len(results) - not_served`). Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity. **Trigger: refactor when harvest reporting logic is next modified.**
+**Note (2026-05-26, review-rr strategic):** Recommended for demotion to tech-debt backlog — pure code quality, never triggered, single function.
 **Source:** PR #2 code review 2026-03-30
 
 ### C-96: fsspec does not auto-read `~/.netrc` — [DEFER]
 fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its aiohttp session. xarray consumers must pass auth explicitly via `storage_options={"client_kwargs": {"auth": (user, pass)}}`. The `verify_remote.py` script reads netrc programmatically via Python's `netrc` module, but the primary consumer path (xarray + fsspec + zarr) does not benefit from it automatically. Consumer guide should provide a helper pattern. **Trigger: simplify consumer guide if fsspec adds netrc/trust_env support.**
+**Note (2026-05-26, review-rr strategic):** Recommended for demotion to tech-debt backlog — external dependency behavior, out of our control, workaround documented.
 **Source:** Falsification audit 2026-04-01 (F3)
 
 ### C-97: Basic auth + Caddy scalability ceiling at ~30-50 users — [DEFER]
@@ -541,7 +588,7 @@ See also C-29 (no integration test), C-74 (strategy vocabulary).
 | ID | C-155 |
 | Tier | 4 |
 | Source | ACLED grid verification (2026-05-06), GHS-BUILT-S visual audit falsification (2026-05-22) |
-| Trigger | 5th data source (V-Dem or WDI) requires a 5th bespoke verify script — extraction cost then exceeds duplication cost |
+| Trigger | 6th pipeline source (WDI) requires a 6th bespoke verify script, or V-Dem deployed to production without verify script — **trigger fired** (V-Dem is 5th pipeline source, no verify script) |
 | Location | `scripts/visualize_audit.py` (UCDP), `scripts/verify_acled_grid.py` (ACLED), `scripts/verify_ghspop_grid.py` (GHS-POP), `scripts/verify_ghsbuilts_grid.py` (GHS-BUILT-S), `scripts/viz_style.py` (shared aesthetics only) |
 
 Each data source has its own plotting/audit script with duplicated structural patterns: `PrecomputedData` dataclass, single-pass `precompute()`, `cell_to_label()`, `REGION_BOUNDS`, per-plot functions, and statistical pass/fail checks. The scripts share `viz_style.py` for aesthetic constants and helpers (`spatial_imshow`, `style_ax`, `save_plot`) but nothing for plot structure, check logic, or report generation.
@@ -552,15 +599,17 @@ Each data source has its own plotting/audit script with duplicated structural pa
 
 **Note (2026-05-24, repo-assimilation v1.2.20):** Quantified: 4 verification scripts total 2,804 lines (UCDP 1,015, GHS-POP 811, GHS-BUILT-S 978, ACLED not counted separately). ~60% structural overlap across scripts (`PrecomputedData` dataclass, `precompute()`, `cell_to_label()`, `REGION_BOUNDS`, per-plot functions, statistical pass/fail checks). At source #5, the extraction cost (~2 days) will be less than the duplication cost (~1 day per copy + ongoing maintenance).
 
+**Note (2026-05-26, review-rr strategic):** V-Dem (5th pipeline source) added without verify script — trigger fired. V-Dem data is country-level democracy indicators (not spatial raster), so the existing raster-oriented verify framework doesn't directly apply. A V-Dem verify script would need different checks (ISO3 coverage, NaN rates, annual→monthly step-function verification). Cross-ref: C-204 (V-Dem has zero falsification files).
+
 See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication), C-164 (cross-layer WET inventory), C-195 (falsification test accumulation).
-### C-164: Cross-layer WET debt — 4 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
+### C-164: Cross-layer WET debt — 5 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
 
 | Field | Value |
 |-------|-------|
 | ID | C-164 |
 | Tier | 3 |
 | Source | WET-before-DRY audit (2026-05-19), GHS-POP Phase 4 completion |
-| Trigger | **Fired 2026-05-22:** 4th data source (GHS-BUILT-S) copied all 6 cross-layer patterns. Reassess before 5th source (V-Dem or WDI). |
+| Trigger | **Fired 2026-05-22 (GHS-BUILT-S), 2026-05-26 (V-Dem):** 5th pipeline source copied cross-layer patterns without extraction. Reassess before WDI integration or next refactor sprint. |
 | Location | All `src/datafactory_*` packages — see inventory below |
 
 With 4 sources implemented (UCDP, ACLED, GHS-POP, GHS-BUILT-S), the codebase has accumulated intentional WET patterns across all four layers. The WET-before-DRY strategy (ADR: write 3 times before abstracting) has succeeded — concrete patterns are now clear. The 4th source (GHS-BUILT-S, v1.2.20) copied all patterns again, confirming the abstraction boundaries.
@@ -623,6 +672,8 @@ Raster-specific functions confirmed identical copy-paste between `ghspop_v1.py` 
 - Raster I/O resolved: `_read_geotiff()` extracted to `datafactory_viewpoint/raster_io.py` (Task 4)
 - Temporal interpolation resolved: `_interpolate_temporal()`, `_interp_step()`, `_interp_linear()`, `VALID_TEMPORAL_INTERPOLATIONS` extracted to `datafactory_viewpoint/temporal.py` (Task 5)
 - Remaining: patterns 1 (harvester config validators), 3 (viewpoint scaffolding), 6 (provenance recording), 7 (pipeline runners), 8 (harvest wrappers) deferred to next cycle.
+
+**Note (2026-05-26, review-rr strategic):** V-Dem (9th source, 5th pipeline source) added — replicated harvest, viewpoint, compilation, pipeline runner, and harvest wrapper patterns. V-Dem viewpoint uses ISO3→pgid crosswalk (new pattern, not raster-based), so raster-specific extractions (patterns already done in v1.2.21) don't apply. Remaining unextracted patterns (1, 3, 7, 8) were each copied one more time. Total: 5 pipeline sources replicating 5 remaining patterns = 25 pattern copies.
 
 **Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19), updated GHS-BUILT-S (2026-05-22), tech-debt-cleanup investigation (2026-05-24), v1.2.21 maintenance sprint (2026-05-25).
 
@@ -886,9 +937,11 @@ Nygard argues the 98+ discovery probes per run are a reliability risk: if UCDP s
 
 **Source:** Expert code review of harvest caching (2026-05-21). Cross-ref: C-181 (discovery probing).
 
-### D-27: Two-tier cache (UCDP) vs single-tier cache (ACLED/GHS-POP)
+### ~~D-27~~: Two-tier cache (UCDP) vs single-tier cache (ACLED/GHS-POP) (Resolved 2026-05-26)
 
 Martin argues all harvesters should use two-tier caching (file exists + digest match + post-fetch digest comparison for change detection), creating a uniform contract enforced by a shared base. Hickey argues the distinction is correct: mutable sources (UCDP candidate, updated monthly) need change detection; immutable sources (GHS-POP epochs, ACLED historical years) don't — re-downloading 450 MB to confirm it hasn't changed is waste. The ADR should document both tiers as valid choices, with selection criteria based on source mutability. **Resolution: document in harvest idempotence ADR. Two-tier for mutable sources, single-tier for immutable sources, with source-declared mutability.**
+
+**Resolved 2026-05-26:** Resolution documented in entry. ADR-032 formalizes the harvest idempotence pattern. Two-tier for mutable sources, single-tier for immutable sources, selection criteria based on source-declared mutability.
 
 **Source:** Expert code review of harvest caching (2026-05-21). Cross-ref: C-184, C-185, C-44.
 
@@ -941,12 +994,14 @@ Cross-ref: C-186 (shapefile harvester lacks outcome vocabulary).
 | ID | C-195 |
 | Tier | 4 |
 | Source | repo-assimilation v1.2.20 (2026-05-24) |
-| Trigger | 5th data source adds another 5-8 falsification files, pushing total past 40 files — test suite becomes hard to navigate and maintains stubs for long-resolved concerns |
+| Trigger | Next audit round adds files, or total exceeds 45 — consolidation then reduces navigation cost (trigger rewritten during review-rr 2026-05-26) |
 | Location | `tests/test_falsification_*.py` (37 files, 3,129 lines, 129 test functions) |
 
 Falsification audits produce `test_falsification_*.py` files containing failing test stubs that flip green after fixes. Over 10+ audit rounds (GHS-POP memory, coverage parity, visual audit, merge-readiness ×2, deployment ×2, plus earlier UCDP/ACLED audits), 37 files have accumulated. Many test stubs target concerns that are now resolved (C-190, C-191, C-193, C-194) — their stubs pass but serve no ongoing purpose beyond documentation that the fix exists. The test files are not consolidated by concern or source: `test_falsification_ghsbuilts_coverage_parity.py`, `test_falsification_ghsbuilts_merge_ready.py`, `test_falsification_ghsbuilts_deploy_v2.py` all test overlapping aspects of GHS-BUILT-S readiness. Curation options: (a) archive resolved stubs into a `tests/archive/` directory, (b) consolidate per-source stubs into one file per source, (c) tag resolved stubs with `@pytest.mark.resolved` and skip in CI. Tier 4 because: (a) all tests pass, (b) no correctness impact, (c) single-developer scope, (d) the accumulation is a navigation and maintenance burden, not a risk.
 
-Cross-ref: C-189 (GHS-BUILT-S coverage parity gap), C-180 (no falsification for non-GHS-POP paths), C-164 (WET-before-DRY broader inventory).
+**Note (2026-05-26, review-rr strategic):** V-Dem added 0 falsification files (opposite extreme from GHS-BUILT-S at 12 files). The prediction "5th source adds 5-8 files" was wrong — C-204 tracks the V-Dem gap separately. File count remains at 37.
+
+Cross-ref: C-189 (GHS-BUILT-S coverage parity gap), C-180 (no falsification for non-GHS-POP paths), C-164 (WET-before-DRY broader inventory), C-204 (V-Dem zero falsification files).
 
 ### ~~C-196~~: 7 of 8 ARCHITECTURE.md files have stale module lists (18 files undocumented) — RESOLVED
 
@@ -1019,6 +1074,124 @@ Pattern of cumulative documentation staleness: (1) logging standard has 3 wrong 
 Cross-ref: C-196, C-197, C-198 (same documentation drift pattern, resolved earlier same day).
 
 Resolved 2026-05-25. Updated all 13 locations in a single commit.
+
+### ~~C-203~~: V-Dem compilation tests severely undertested — 5 functions vs 16-18 for peers (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-203 |
+| Tier | 3 |
+| Source | falsification audit — V-Dem test coverage parity (2026-05-26) |
+| Trigger | Production incident on V-Dem compilation path that GHS-POP/GHS-BUILT-S tests would have caught |
+| Location | `tests/test_vdem_compilation.py` (5 test functions), cf. `tests/test_ghspop_compilation.py` (18), `tests/test_ghsbuilts_compilation.py` (16) |
+
+V-Dem compilation tests have 5 test functions vs 16-18 for GHS-POP and GHS-BUILT-S. Missing coverage: provenance sidecar generation, empty input rejection, missing column handling, multi-feature interaction, fill-value semantics, output shape validation. Soft falsifications included: no idempotence test, no year boundary edge cases, no output schema type verification, no duplicate (pgid, month_id) pair detection.
+
+Cross-ref: C-189 (GHS-BUILT-S had same gap at 19% parity — this is worse at 28-31%).
+
+### ~~C-204~~: Zero falsification/deploy-readiness test files for V-Dem (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-204 |
+| Tier | 3 |
+| Source | falsification audit — V-Dem test coverage parity (2026-05-26) |
+| Trigger | V-Dem deployed to production without deploy-readiness verification |
+| Location | `tests/` — no `test_falsification_vdem_*.py` files exist. Cf. GHS-BUILT-S (12 files), GHS-POP (4 files) |
+
+GHS-BUILT-S has 12 falsification test files, GHS-POP has 4, V-Dem has zero. No deploy-readiness gates, no data-integrity falsification tests, no coverage parity tests. Viewpoint-specific gaps subsumed: no idempotence test for viewpoint build, no year boundary edge case tests, no output schema type verification, no duplicate (pgid, month_id) pair test, no compilation provenance/sidecar coverage.
+
+Cross-ref: C-195 (falsification file accumulation — V-Dem is at the opposite extreme: zero files).
+
+### ~~C-205~~: NaN handling in V-Dem variables entirely untested — silent propagation risk (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-205 |
+| Tier | 2 |
+| Source | falsification audit — V-Dem test coverage parity (2026-05-26) |
+| Trigger | V-Dem country with NaN democracy index silently propagates to grid, model trains on NaN without error signal |
+| Location | `src/datafactory_viewpoint/builders/vdem_v1.py:259` (`float(var_arrays[var][i])` — NaN passes through silently), `tests/test_vdem_viewpoint.py` (no NaN test), `tests/test_vdem_compilation.py` (no NaN test) |
+
+V-Dem data contains missing values (countries with incomplete democracy scores). The viewpoint builder at line 259 converts values via `float()`, which preserves NaN silently — no guard, no warning, no count of NaN values in provenance. Neither viewpoint nor compilation tests verify NaN behavior. Peers (GHS-POP, GHS-BUILT-S) test domain-specific data risks. Tier 2 justified: silent data corruption risk (NaN propagates to model input without error signal), matching Tier 2 criteria.
+
+Cross-ref: C-175 (aggregation missing-field coalesced to zero — related silent-value-propagation pattern).
+
+### ~~C-206~~: No CICs for VdemConfig or VdemViewpointConfig — peers have 2 each (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-206 |
+| Tier | 3 |
+| Source | falsification audit — V-Dem ADR/guide compliance (2026-05-26) |
+| Trigger | New developer reads V-Dem config without contract guidance; writes code based on assumptions instead of documented guarantees |
+| Location | `docs/CICs/` — no `VdemConfig.md` or `VdemViewpointConfig.md`. Cf. `docs/CICs/GhsPopConfig.md`, `docs/CICs/GhsPopViewpointConfig.md`, `docs/CICs/GhsBuiltSConfig.md`, `docs/CICs/GhsBuiltSViewpointConfig.md` |
+
+The data source integration guide (Phase 5) requires CICs for config classes. ADR-006 mandates intent contracts for non-trivial classes. GHS-POP and GHS-BUILT-S each have 2 CICs (harvester config + viewpoint config). V-Dem has zero. Both `VdemConfig` and `VdemViewpointConfig` are frozen dataclasses with `__post_init__` validation, making them non-trivial. Same pattern as C-151 (ACLED CICs missing, resolved by creating them).
+
+Cross-ref: C-151 (ACLED CICs, resolved), C-158 (SourceEntry/AssemblyConfig CICs, resolved), C-192 (operational trailing implementation).
+
+### ~~C-207~~: V-Dem `_parse_and_filter` failure path writes no ledger entry (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-207 |
+| Tier | 4 |
+| Source | falsification audit — V-Dem ADR/guide compliance (2026-05-26) |
+| Trigger | V-Dem CSV schema changes (column renamed/removed), harvester crashes without recording failure in provenance ledger |
+| Location | `src/datafactory_harvester/sources/vdem.py:340-343` (`_parse_and_filter`), called from `fetch_vdem` line 206 (no try/except around this call) |
+
+When `_parse_and_filter` raises `ValueError` (CSV missing required columns), the exception propagates from `fetch_vdem` without recording a `"failed"` ledger entry. Compare: the same file's `_extract_csv_from_zip` (line 282-291) correctly records failure. The zero-rows check (line 208-219) also records failure. Only the column-missing parse path is uncovered. Tier 4 (not Tier 3) because: the exception still crashes the pipeline (fail-loud works), and the absence of a ledger entry means the next run will re-attempt (correct self-healing). The gap is observability, not correctness.
+
+Cross-ref: C-186 (shapefile harvester lacks outcome vocabulary — same pattern: missing failure ledger entry).
+
+### ~~C-208~~: V-Dem documentation index drift — 3 README indices + ADR-033 table not updated (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-208 |
+| Tier | 4 |
+| Source | falsification audit — V-Dem integration completeness (2026-05-26) |
+| Trigger | New contributor reads `docs/sources/README.md` and believes only 6 sources / 53 features exist, or reads `docs/ADRs/README.md` and doesn't find ADR-035 |
+| Location | `docs/sources/README.md:8-16` (index table missing V-Dem row, feature count says 53 not 75), `docs/ADRs/README.md:129-130` (stops at ADR-034, ADR-035 not listed), `docs/ADRs/033_data_source_catalog.md:165-173` (illustrative table missing V-Dem and GHS-BUILT-S) |
+
+Three documentation index files were not updated during V-Dem integration: (1) `docs/sources/README.md` still lists 6 sources with "Total features: 53" — should be 7 sources / 75 features. (2) `docs/ADRs/README.md` ends at ADR-034 — ADR-035 exists on disk but is not indexed. (3) ADR-033's illustrative source table shows 5 sources (also missing GHS-BUILT-S). The actual artifacts (ADR-035, vdem.md catalog card) exist and are complete. Same bug class as C-196–C-202 (all resolved 2026-05-25 in v1.2.21) — documentation indices lag behind implementation. Tier 4 because: artifacts exist, only navigation is affected, single-developer scope.
+
+**Update 2026-05-26 (review-base-docs):** Three additional V-Dem documentation gaps found: (4) `docs/CICs/AssemblyConfig.md` missing `vdem_grid_dir: Path | None` field (sections 3, 4, 7). (5) `docs/standards/logging_and_observability_standard.md` Section 2.2 missing V-Dem provenance ledger paths (ingestion, viewpoint, compilation). (6) ADR-022 says "11 steps (0-10)" but pipeline now has 12 steps (0-11) after V-Dem compile added at step 8.
+
+Cross-ref: C-206 (V-Dem CICs missing), C-196–C-202 (same class, resolved), C-192 (operational integration trailing, resolved — automated tests cover scripts but not doc indices), C-209 (ADR-009 grid shape), C-211 (consumer guide stale).
+
+---
+
+### ~~C-211~~: Consumer data guide feature inventory stale at 51 — missing GHS-POP, GHS-BUILT-S, and V-Dem (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-211 |
+| Tier | 4 |
+| Source | review-base-docs (2026-05-26) |
+| Trigger | Consumer reads `docs/guides/consumer_data_guide.md` and writes code assuming 51 features; `load_dataset()` returns 75 features, code breaks on shape mismatch |
+| Location | `docs/guides/consumer_data_guide.md` (feature inventory section — says "51 features across four groups", server endpoints table says "51 features (6 UCDP + 8 ACLED + 34 static + 3 GAUL)") |
+
+The consumer data guide lists four feature groups totaling 51 features (6 UCDP + 8 ACLED + 34 PRIO-GRID static + 3 GAUL admin). Three sources are missing: GHS-POP (1 feature, integrated v1.2.15), GHS-BUILT-S (1 feature, integrated v1.2.20), and V-Dem (22 features, integrated v1.2.21). Actual total is 75. The "51" count appears at least three times: feature inventory header, server endpoints table, and `load_dataset()` reference. This is broader than C-208 (which tracks V-Dem-specific index drift) — the consumer guide has been stale since the GHS-POP integration. Tier 4 because: the guide is informational (consumers can inspect `feature_names.json` at runtime), no correctness impact, single-developer scope.
+
+Cross-ref: C-208 (V-Dem doc index drift — same class), C-202 (operational docs stale — resolved, but did not include consumer guide).
+
+---
+
+### ~~C-212~~: V-Dem harvester failure test asserts outcome but not reason content (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-212 |
+| Tier | 4 |
+| Source | falsification audit: sprint 1 resolution (2026-05-26) |
+| Trigger | Someone reverts `str(exc)` to a hardcoded string in `vdem.py:213` — the existing test still passes because it only checks `outcome == "failed"`, not the `reason` field |
+| Location | `tests/test_vdem_harvester.py:446` (asserts outcome only), `src/datafactory_harvester/sources/vdem.py:213` (production fix site) |
+
+The C-207 fix changed the ledger reason from a hardcoded `"CSV column schema mismatch"` to `str(exc)` to capture the specific missing column name. The production fix is correct (confirmed by `test_falsification_sprint1_resolved.py::TestF1LedgerReasonSpecificity`). However, the existing test `test_parse_filter_failure_writes_ledger` only asserts `entry["outcome"] == "failed"` without verifying the `reason` field content. A regression that reverts to a hardcoded string would not be caught. Tier 4: no correctness impact (the fix works), single-developer scope, test-quality observation.
+
+Cross-ref: C-207 (the original missing ledger entry — resolved).
 
 ---
 
