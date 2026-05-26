@@ -16,6 +16,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -227,14 +228,16 @@ def build_vdem_v1(
         raise ValueError(msg)
 
     # Expand country-year → (pgid, month_id, variables)
-    pgid_rows: list[int] = []
-    month_id_rows: list[int] = []
-    var_rows: dict[str, list[float]] = {
+    unmapped_countries: set[str] = set()
+    n_filtered = 0
+
+    pgid_chunks: list[np.ndarray] = []
+    month_chunks: list[np.ndarray] = []
+    var_chunks: dict[str, list[np.ndarray]] = {
         var: [] for var in config.variables
     }
 
-    unmapped_countries: set[str] = set()
-    n_filtered = 0
+    months_12 = np.arange(1, 13, dtype=np.int32)
 
     for i in range(n_input):
         iso3 = str(iso3_col[i])
@@ -249,15 +252,37 @@ def build_vdem_v1(
             unmapped_countries.add(iso3)
             continue
 
-        for month in range(1, 13):
-            mid = (year - VIEWS_EPOCH_YEAR) * 12 + month
+        pgid_arr = np.array(pgids, dtype=np.int32)
+        n_pgids = len(pgid_arr)
+        base_mid = (year - VIEWS_EPOCH_YEAR) * 12
 
-            for pgid in pgids:
-                pgid_rows.append(pgid)
-                month_id_rows.append(mid)
-                for var in config.variables:
-                    val = float(var_arrays[var][i])
-                    var_rows[var].append(val)
+        month_ids = np.repeat(months_12 + base_mid, n_pgids)
+        pgid_tiled = np.tile(pgid_arr, 12)
+
+        pgid_chunks.append(pgid_tiled)
+        month_chunks.append(month_ids)
+        for var in config.variables:
+            val = float(var_arrays[var][i])
+            var_chunks[var].append(
+                np.full(12 * n_pgids, val, dtype=np.float64),
+            )
+
+    empty_i32 = np.array([], dtype=np.int32)
+    empty_f64 = np.array([], dtype=np.float64)
+    pgid_rows = (
+        np.concatenate(pgid_chunks) if pgid_chunks
+        else empty_i32
+    )
+    month_id_rows = (
+        np.concatenate(month_chunks) if month_chunks
+        else empty_i32
+    )
+    var_rows: dict[str, np.ndarray] = {}
+    for var in config.variables:
+        chunks = var_chunks[var]
+        var_rows[var] = (
+            np.concatenate(chunks) if chunks else empty_f64
+        )
 
     if unmapped_countries:
         logger.warning(

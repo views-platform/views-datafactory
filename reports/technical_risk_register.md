@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-05-26)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26
-**Status:** 212 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 124 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 4 open disagreements. 104 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
+**Status:** 216 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 128 resolved, 63 open concerns (8 Tier 2, 14 Tier 3, 35 Tier 4, 6 deferred by design; 4 with fired triggers), 4 open disagreements. 108 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -102,6 +102,10 @@
 | ~~C-210~~ | ~~3~~ | ~~ADR-016 profile registry pattern divergence — unified described, per-source implemented~~ | Resolved 2026-05-26 | ADR drift |
 | ~~C-211~~ | ~~4~~ | ~~Consumer data guide feature inventory stale at 51 — missing 3 sources~~ | Resolved 2026-05-26 | Documentation drift |
 | ~~C-212~~ | ~~4~~ | ~~V-Dem harvester failure test asserts outcome but not reason content~~ | Resolved 2026-05-26 | V-Dem test coverage |
+| ~~C-213~~ | ~~1~~ | ~~`run_vdem_pipeline.py` missing `fill_value=NaN` — production path silently converts NaN→0.0~~ | Resolved 2026-05-26 | V-Dem data integrity |
+| ~~C-214~~ | ~~3~~ | ~~Consumer guide lists 10 wrong V-Dem feature names vs source registry~~ | Resolved 2026-05-26 | Documentation drift |
+| ~~C-215~~ | ~~2~~ | ~~Assembly V-Dem boundary detection uses `sum()` not `nansum()` — fails silently with NaN fill~~ | Resolved 2026-05-26 | V-Dem data integrity |
+| ~~C-216~~ | ~~4~~ | ~~V-Dem viewpoint builder uses triple-nested Python loop — slow for full dataset~~ | Resolved 2026-05-26 | V-Dem performance |
 | ~~C-196~~ | ~~4~~ | ~~7 of 8 ARCHITECTURE.md files have stale module lists~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-197~~ | ~~4~~ | ~~docs/CICs/README.md lists 21 active contracts but 28 exist~~ | Resolved 2026-05-25 | Documentation drift |
 | ~~C-198~~ | ~~4~~ | ~~docs/sources/README.md references 4 catalog cards that don't exist~~ | Resolved 2026-05-25 | Documentation drift |
@@ -1192,6 +1196,70 @@ Cross-ref: C-208 (V-Dem doc index drift — same class), C-202 (operational docs
 The C-207 fix changed the ledger reason from a hardcoded `"CSV column schema mismatch"` to `str(exc)` to capture the specific missing column name. The production fix is correct (confirmed by `test_falsification_sprint1_resolved.py::TestF1LedgerReasonSpecificity`). However, the existing test `test_parse_filter_failure_writes_ledger` only asserts `entry["outcome"] == "failed"` without verifying the `reason` field content. A regression that reverts to a hardcoded string would not be caught. Tier 4: no correctness impact (the fix works), single-developer scope, test-quality observation.
 
 Cross-ref: C-207 (the original missing ledger entry — resolved).
+
+---
+
+### ~~C-213~~: `run_vdem_pipeline.py` missing `fill_value=NaN` — production path silently converts NaN→0.0 (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-213 |
+| Tier | 1 |
+| Source | PR #68 review (2026-05-26) |
+| Trigger | V-Dem pipeline runs on Hetzner — all NaN cells become 0.0, indistinguishable from "extremely low democracy" |
+| Location | `scripts/run_vdem_pipeline.py:165-176` (production compilation path) |
+
+`compile_vdem.py` correctly sets `fill_value=float("nan")` (C-205 fix), but `run_vdem_pipeline.py` — the script actually called by `refresh_pipeline.sh` — constructed `PregriddedCompilationConfig` without it, inheriting the default `fill_value=0.0`. Democracy scores of 0.0 are meaningful values (extremely low democracy), so consumers cannot distinguish "no data" from "zero democracy index." This is silent data corruption: no error signal, wrong model inputs. Tier 1: silent corruption, no error signal. Caught in code review before production deployment.
+
+Cross-ref: C-205 (NaN tests — resolved), C-215 (assembly nansum — resolved).
+
+---
+
+### ~~C-214~~: Consumer guide lists 10 wrong V-Dem feature names vs source registry (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-214 |
+| Tier | 3 |
+| Source | PR #68 review (2026-05-26) |
+| Trigger | Consumer references guide to select V-Dem features for model training — 10 of 22 names don't exist in the grid |
+| Location | `docs/guides/consumer_data_guide.md` (V-Dem feature table, lines 384-405) |
+
+The consumer guide's V-Dem feature table listed 10 variables not in the source registry (`v2x_polyarchy`, `v2x_rule`, `v2xcs_ccsi`, etc.) and omitted 10 that are (`v2x_accountability`, `v2x_diagacc`, `v2x_veracc`, etc.). The authoritative source is `VDEM_VARIABLES` in `vdem.py` and the source registry in `source_registry.py`. Tier 3: multiple consumers affected, no runtime error but model feature selection would fail.
+
+Cross-ref: C-211 (consumer guide feature count — resolved).
+
+---
+
+### ~~C-215~~: Assembly V-Dem boundary detection uses `sum()` not `nansum()` — fails silently with NaN fill (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-215 |
+| Tier | 2 |
+| Source | PR #68 review (2026-05-26) |
+| Trigger | V-Dem grid compiled with `fill_value=NaN` is assembled — `last_valid_vdem_month_id` always None |
+| Location | `scripts/assemble_grid.py:712` |
+
+`vdem_grid_ro.sum(axis=(1, 2, 3)) > 0` returns NaN when the grid contains NaN fill values, because `np.sum` propagates NaN. `NaN > 0` evaluates to False, so all V-Dem months are reported as having no data. The `last_valid_vdem_month_id` attribute would always be None, making the zero-padding boundary unknown to consumers. Fixed by changing to `np.nansum`. Tier 2: structural fragility that would cause failures once C-213's fill_value fix was applied.
+
+Cross-ref: C-213 (fill_value missing — resolved), C-205 (NaN tests — resolved).
+
+---
+
+### ~~C-216~~: V-Dem viewpoint builder uses triple-nested Python loop — slow for full dataset (Resolved 2026-05-26)
+
+| Field | Value |
+|-------|-------|
+| ID | C-216 |
+| Tier | 4 |
+| Source | PR #68 review (2026-05-26) |
+| Trigger | Before running V-Dem viewpoint on full 1789–2024 dataset on constrained hardware (Hetzner CPX32) |
+| Location | `src/datafactory_viewpoint/builders/vdem_v1.py:239-260` |
+
+The viewpoint builder iterates with Python-level nested loops: for each input row, for each of 12 months, for each pgid in the country. With ~200 countries x 46 years x 12 months x avg ~1,300 pgids/country, this creates ~143M list appends. Could be vectorized with numpy broadcast (country values → pgid array, tile for 12 months). Tier 4: performance observation, single-developer scope, no correctness impact. The current approach is functionally correct and follows the WET-before-DRY convention (first viewpoint builder to use ISO3→pgid crosswalk).
+
+Cross-ref: C-164 (WET-before-DRY refactor inventory).
 
 ---
 
