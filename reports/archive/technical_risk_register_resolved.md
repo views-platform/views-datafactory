@@ -616,3 +616,59 @@ Two tests consistently failed in CI: `test_remote_zarr_has_last_valid_month_id` 
 **Resolved 2026-05-25 (v1.2.21 Task 9):** Entire `src/datafactory_synthetic/` directory deleted. Removed from `pyproject.toml` packages list, `test_package_structure.py`, `test_import_enforcement.py`, 5 ADRs, 7 ARCHITECTURE.md files, and README.md.
 
 **Source:** repo-assimilation (2026-05-20). Cross-ref: C-03 (subsumed).
+
+### ~~C-133: Zero-padding warning only fires for integer `end` parameter~~ RESOLVED
+
+Previously the `UserWarning` in `load_dataset()` only fired when `end` was an integer. String dates and `end=None` silently returned zero-filled months. Fix applied 2026-04-22: warning moved to after time slicing, fires for all calling patterns. Confirmed by falsification tests P4 and P6.
+
+**Resolved 2026-05-26.** Code fix complete. Hetzner deployment dependency tracked by C-130.
+
+**Source:** Falsification audit P4/P6 (2026-04-22). Cross-ref: C-130.
+
+### ~~C-137: No round-trip integrity check after zarr export~~ RESOLVED
+
+`export_zarr.py` writes the assembled grid to a zarr store but never reads it back to verify the data survived the write. This is the exact failure mode that caused the 46% fatality gap on the Hetzner server.
+
+**Resolved 2026-05-26.** Round-trip sum verification added to `export_zarr.py` on 2026-04-24. Each feature's zarr sum is compared against grid sum; exit code 1 on mismatch. Fix has been in production since v1.2.7.
+
+**Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-130, C-132.
+
+### ~~C-139: Consumer parity tests check per-cell rates but not aggregate totals~~ RESOLVED
+
+`test_consumer_parity.py` asserted per-cell mismatches below 0.1% but did not check global sums. Systematic undercounting (many cells at 0 instead of small nonzero) passed per-cell threshold while producing a 46% total gap.
+
+**Resolved 2026-05-26.** Global sum assertion added on 2026-04-24. For each feature column, asserts aggregate totals match within 0.1%.
+
+**Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-137.
+
+### ~~C-21: No characterization tests for migration source~~ DEMOTED
+
+No "golden output" tests capture expected behavior of migrated code from metric lab. Partially addressed by 15 `examples/ex_*.py` verification scripts covering the consumer API surface. Tier recalibrated 3→4 during review-rr 2026-05-24.
+
+**Demoted to tech-debt backlog 2026-05-26.** No migration planned. Partially addressed by verification examples.
+
+**Source:** Feathers (expert review). Cross-ref: verification examples suite (M13).
+
+### ~~C-75: FeatureFrame is shallow — adds validation but little abstraction~~ DEMOTED
+
+8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; no incidents in two months of monitoring.
+
+**Demoted to tech-debt backlog 2026-05-26.** Observation from initial 8-expert review. No incidents. Shallow abstraction is acceptable for a data wrapper.
+
+**Source:** Ousterhout (expert review #4).
+
+### ~~C-93: `_count_outcomes` mixes raw counts with derived computation~~ DEMOTED
+
+`harvest_ucdp.py:_count_outcomes()` counts raw outcome categories then adds a computed `"served"` key. Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity in a 15-line function.
+
+**Demoted to tech-debt backlog 2026-05-26.** Pure code quality observation. Never triggered. Single function.
+
+**Source:** PR #2 code review 2026-03-30.
+
+### ~~C-96: fsspec does not auto-read `~/.netrc`~~ DEMOTED
+
+fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its aiohttp session. Workaround documented in consumer guide.
+
+**Demoted to tech-debt backlog 2026-05-26.** External dependency behavior, out of our control, workaround documented.
+
+**Source:** Falsification audit 2026-04-01 (F3).
