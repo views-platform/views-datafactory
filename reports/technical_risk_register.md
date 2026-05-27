@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-26)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26
-**Status:** 221 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 140 resolved, 56 open concerns (6 Tier 2, 13 Tier 3, 31 Tier 4, 6 deferred by design; 3 with fired triggers), 4 open disagreements. 121 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
+**Date:** 2026-03-17 (updated 2026-05-27)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27
+**Status:** 221 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 143 resolved, 53 open concerns (5 Tier 2, 11 Tier 3, 31 Tier 4, 6 deferred by design; 3 with fired triggers), 4 open disagreements. 124 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -40,7 +40,7 @@
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
 | ~~C-128~~ | ~~2~~ | ~~Scripts infer grid shape without config validation (ADR-003 forbidden)~~ | Resolved 2026-04-27 | ADR-003 compliance |
 | ~~C-127~~ | ~~2~~ | ~~Zarr backend returns features in alphabetical order, npy preserves feature_names.json order~~ | Resolved 2026-04-27 | Query correctness |
-| C-129 | 3 | Partition boundaries (month IDs) have no single source of truth | VIEWS shifts partition boundaries | ADR-003 compliance |
+| ~~C-129~~ | ~~3~~ | ~~Partition boundaries (month IDs) have no single source of truth~~ | Resolved 2026-05-27 | ADR-003 compliance |
 | C-130 | 2 | Zero-filled future months indistinguishable from observed zeros | Model trains on months beyond last UCDP update | Data boundary |
 | C-131 | 2 | No external monitoring for cron job failure on Hetzner | Server reboots without cron re-enable or user deletion | Operational monitoring |
 | C-132 | 2 | Health check validates export timestamp, not data recency | UCDP API returns empty/stale data during pipeline run | Operational monitoring |
@@ -51,7 +51,7 @@
 | ~~C-137~~ | ~~2~~ | ~~No round-trip integrity check after zarr export~~ | Resolved 2026-05-26 | Data integrity |
 | C-138 | 2 | No post-deploy data correctness verification | Pipeline completes but served data doesn't match assembled grid | Data integrity |
 | ~~C-139~~ | ~~2~~ | ~~Consumer parity tests check per-cell rates but not aggregate totals~~ | Resolved 2026-05-26 | Data integrity |
-| C-149 | 2 | 603 unmapped GAUL cells silently excluded from CM aggregation | Consumer trains CM model without awareness of 4% fatality gap | Data integrity |
+| ~~C-149~~ | ~~2~~ | ~~603 unmapped GAUL cells silently excluded from CM aggregation~~ | Resolved 2026-05-27 | Data integrity |
 | ~~C-140~~ | ~~2~~ | ~~v1.2.6/v1.2.7 incident fixes have zero test coverage~~ | Resolved 2026-04-26 | Data integrity |
 | ~~C-141~~ | ~~3~~ | ~~UCDP config class validation partially untested~~ | Resolved 2026-04-26 | Test coverage |
 | ~~C-142~~ | ~~3~~ | ~~datafactory_query consumer entry point has zero Red/Beige tests~~ | Resolved 2026-04-26 | Test coverage |
@@ -123,7 +123,7 @@
 | C-164 | 3 | Cross-layer WET debt: 5 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI integration, or when 6th pipeline source is planned | WET-before-DRY |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
 | ~~C-174~~ | ~~3~~ | ~~`latlon_to_pgid` silently clamps out-of-bounds coordinates~~ | Resolved 2026-05-23 | Compilation correctness |
-| C-175 | 3 | Aggregation missing-field coalesced to zero, not NaN | Source removes or renames a field used in `FeatureSpec` | Compilation correctness |
+| ~~C-175~~ | ~~3~~ | ~~Aggregation missing-field coalesced to zero, not NaN~~ | Resolved 2026-05-27 | Compilation correctness |
 | ~~C-176~~ | ~~4~~ | ~~`datafactory_synthetic` is a dead module with zero exports~~ | Resolved 2026-05-25 | Code cleanup |
 | C-159 | 4 | ACLED snapshot archiving and revision comparison paths untested | Archiving logic implicated in data integrity incident | ACLED test coverage |
 | C-160 | 4 | ACLED `fetch_paginated` string-data corruption has no guard | ACLED API returns non-list `data` field | ACLED data integrity |
@@ -159,16 +159,16 @@ Items that should be resolved together:
 | **Server hardening** | C-88, C-121, C-173 (C-84, C-85, C-86, C-87 resolved) | Before production deployment |
 | ~~**V-Dem readiness**~~ | ~~C-44~~ (C-91 resolved) | Resolved 2026-05-26: V-Dem integration complete |
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
-| **Compilation correctness** | ~~C-174~~, C-175 | Source with unvalidated coordinates or renamed fields (C-174 resolved) |
-| **UCDP schema defense** | C-36, C-37, C-45, C-175 | UCDP API change |
+| ~~**Compilation correctness**~~ | ~~C-174~~, ~~C-175~~ | Resolved 2026-05-27: C-174 resolved 2026-05-23 (ValueError on OOB coords), C-175 resolved 2026-05-27 (already mitigated by `_required_columns()`) |
+| **UCDP schema defense** | C-36, C-37, C-45, ~~C-175~~ | UCDP API change (C-175 resolved 2026-05-27) |
 | **Test infrastructure** | C-29, C-78, C-79, C-146 (C-60, C-169 resolved) | Test suite growth |
 | ~~**Code cleanup**~~ | ~~C-93~~ (~~C-31~~, ~~C-176~~ resolved; C-80, C-112 resolved; C-93 demoted 2026-05-26) | Resolved — all items resolved or demoted |
 | ~~**Consumer integration**~~ | ~~C-122, C-123, C-124~~ | ~~Resolved~~ |
 | ~~**Query correctness**~~ | ~~C-127~~ | Resolved 2026-04-27: warning on fallback, export already writes feature_order |
-| **ADR-003 compliance** | ~~C-128~~, C-129, ~~C-168~~ | Before next assembly/compilation change (C-128, C-168 resolved) |
+| ~~**ADR-003 compliance**~~ | ~~C-128~~, ~~C-129~~, ~~C-168~~ | Resolved 2026-05-27: all items resolved (C-128 2026-04-27, C-168 2026-05-23, C-129 2026-05-27) |
 | **Operational monitoring** | C-131, C-132, C-136, C-147, ~~C-191~~ | Before relying on Hetzner pipeline without manual checks (C-191 resolved) |
 | **Scaling headroom** | C-144, C-145 | Before consolidated store exceeds ~5M rows |
-| **Data integrity** | C-138, C-149 (C-137, C-139 resolved 2026-05-26) | Before relying on served data for model training |
+| **Data integrity** | C-138, ~~C-149~~ (C-137, C-139 resolved 2026-05-26, C-149 resolved 2026-05-27) | Before relying on served data for model training |
 | **Data boundary** | C-130, ~~C-133~~, ~~C-134~~, C-135 | Before consumer models train on data from the factory (C-133, C-134 resolved) |
 | ~~**GHS-POP deployment**~~ | ~~C-165, C-166, C-167~~ | Resolved 2026-05-20 |
 | ~~**GHS-POP memory**~~ | ~~C-170, C-171, C-172~~ | Resolved 2026-05-20 |
@@ -221,14 +221,17 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 **Location:** `src/datafactory_provenance/health.py:124-195` (`check_export_freshness`), `scripts/check_health.py:111-128`.
 **Source:** Falsification audit P3 (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
 
-### C-149: 603 unmapped GAUL cells silently excluded from CM aggregation — [RESOLVING]
-603 PRIO-GRID cells in `africa_me_legacy` (and ~1,800 in `land`) have centroids that fall outside any FAO GAUL polygon — coastal cells, small islands, boundary edge cases. These cells are assigned `gaul0_code = -1` during assembly. `grid_to_country_month()` filters on `country_ids > 0`, silently dropping these cells from CM output. The dropped cells carry significant fatalities: 45,593 sb_best, 6,012 ns_best, 7,986 os_best across 435 months, with single-month peaks up to 2,688. This creates a ~4% systematic gap between PGM and CM fatality totals. A model training on CM data (e.g., shining_codex) sees fewer total fatalities than a model training on PGM data (e.g., heavy_freighter) for the same region and time range, with no warning.
+### ~~C-149~~: 603 unmapped GAUL cells silently excluded from CM aggregation — RESOLVED
+603 PRIO-GRID cells in `africa_me_legacy` (and ~1,800 in `land`) have centroids that fall outside any FAO GAUL polygon — coastal cells, small islands, boundary edge cases. These cells are assigned `gaul0_code = -1` during assembly. `grid_to_country_month()` filters on `country_ids > 0`, dropping these cells from CM output. The dropped cells carry significant fatalities: 45,593 sb_best, 6,012 ns_best, 7,986 os_best across 435 months, with single-month peaks up to 2,688. This creates a ~4% systematic gap between PGM and CM fatality totals.
 
-**Fix applied (2026-04-30):** Added verification tests (`test_model_parity.py::TestCMParity`, `test_pipeline_consistency.py::TestPGMCMAggregation`) that explicitly account for the gap by filtering PGM to `gaul0_code > 0` in internal consistency checks and using bounded tolerances for gold set comparison. **Remaining:** No runtime warning when CM aggregation drops cells with events. Consumer has no way to discover which cells are excluded or quantify the gap. Resolution options: (a) emit warning/metadata listing excluded pgids and their event totals, (b) improve GAUL spatial join to capture more coastal cells via buffered centroids or polygon-edge matching.
+**Fix applied (2026-04-30):** Added verification tests (`test_model_parity.py::TestCMParity`, `test_pipeline_consistency.py::TestPGMCMAggregation`) that explicitly account for the gap.
+
+**Fix applied (2026-05-27):** Added runtime `UserWarning` in `grid_to_country_month()` that fires when excluded cells (country_id <= 0) have nonzero event values (`ged_*` or `acled_*` features). The warning includes the count of excluded cell-months, how many carry events, and a C-149 cross-reference. CIC updated (section 5, Outputs and Side Effects). Three tests added: warning fires on excluded cells with events, no warning when all-zero, existing ocean test updated.
 
 **Trigger:** Consumer trains a CM model and observes unexplained discrepancy vs PGM totals, or adds a new region with more coastal cells where the gap is larger.
-**Location:** `src/datafactory_adapters/grid_to_country_month.py:72-76` (land_mask filter), `scripts/assemble_grid.py:177-179` (gaul0_code = -1 fill), `src/datafactory_harvester/sources/gaul_admin.py:358-359` (unmatched centroids skipped).
+**Location:** `src/datafactory_adapters/grid_to_country_month.py:74-95` (land_mask filter + warning), `docs/CICs/grid_to_country_month.md` (section 5).
 **Source:** Pipeline verification audit 2026-04-30. Cross-ref: C-125 (CM aggregation implementation), C-139 (aggregate total checks).
+**Resolved 2026-05-27 (sprint S4).** Runtime warning added. Consumers now receive explicit signal when CM aggregation drops cells carrying events. The 4% gap remains by design (GAUL spatial join limitation), but is no longer silent.
 
 ### ~~C-137: No round-trip integrity check after zarr export~~ — RESOLVED
 `export_zarr.py` writes the assembled grid to a zarr store but never reads it back to verify the data survived the write. A truncated write, chunking bug, or partial store would produce a zarr store with wrong values and no error signal. This is the exact failure mode that caused the 46% fatality gap on the Hetzner server: the served zarr store had missing pre-2014 data, but the export step reported success.
@@ -272,13 +275,15 @@ Previously the `UserWarning` in `load_dataset()` only fired when `end` was an in
 **Source:** Falsification audit P4/P6 (2026-04-22). Cross-ref: C-130 (zero-padding metadata).
 **Resolved 2026-05-26 (review-rr strategic curation).** Code fix complete and merged (2026-04-22). Warning fires for all calling patterns (integer, string, None). Confirmed by falsification tests P4 and P6. The Hetzner deployment dependency (remote zarr store lacking `last_valid_month_id` attribute) is tracked by C-130, not by this entry.
 
-### C-129: Partition boundaries (month IDs) have no single source of truth
-The calibration/validation/forecasting partition boundaries (121/444, 445/492, 493/540) appear as bare literals in 4+ independent locations: `scripts/generate_consumer_data.py:56` (`PARTITIONS` dict), `examples/ex_partitions.py` (6+ occurrences in assertions), `tests/test_consumer_data.py:162,169`, and downstream in `bright_starship/configs/config_partitions.py`. No shared authoritative definition exists. Adding a new partition type or shifting a boundary (e.g., extending calibration) requires coordinated find-and-replace across repos with no compiler or test to catch a missed update. Per ADR-003: "a single source of truth must be designated."
+### ~~C-129~~: Partition boundaries (month IDs) have no single source of truth — RESOLVED
+The calibration/validation/forecasting partition boundaries (121/444, 445/492, 493/540) appeared as bare literals in multiple locations.
+
+**Fix applied (2026-05-27):** The canonical single source of truth already existed at `src/datafactory_query/defaults.py:89-101` as a `MappingProxyType`-frozen `PARTITIONS` dict. Remaining bare literals replaced: `scripts/generate_consumer_data.py` and `tests/test_consumer_parity.py` now import from `datafactory_query.defaults.PARTITIONS`. No new file was needed.
 
 **Trigger:** VIEWS operational calendar shifts partition boundaries (e.g., extending calibration end from month 444 to 456).
-**Location:** `scripts/generate_consumer_data.py:56`, `examples/ex_partitions.py:21-101`, `tests/test_consumer_data.py:162,169`, `tests/test_consumer_parity.py:57`, downstream `bright_starship/configs/config_partitions.py`.
-**Resolution:** Define a `PARTITIONS` frozen dict or dataclass in a shared location within `src/` and have all consumers import from it.
+**Location:** `src/datafactory_query/defaults.py:89-101` (canonical source), `scripts/generate_consumer_data.py`, `tests/test_consumer_parity.py`.
 **Source:** Magic-values compliance audit 2026-04-21. Cross-ref: ADR-003 (single source of truth).
+**Resolved 2026-05-27 (sprint S4).** Canonical source already existed in `datafactory_query.defaults`. Bare literals in 2 remaining files replaced with imports.
 
 ### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
 14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
@@ -360,17 +365,17 @@ See also C-130 (zero-fill ambiguity — same class of silent data misrepresentat
 
 ---
 
-### C-175: Aggregation missing-field coalesced to zero, not NaN — [DEFER]
+### ~~C-175~~: Aggregation missing-field coalesced to zero, not NaN — RESOLVED
 
 | Field | Value |
 |-------|-------|
 | ID | C-175 |
 | Tier | 3 |
 | Source | repo-assimilation (2026-05-20) |
-| Trigger | Source removes or renames a field that a `FeatureSpec.value_field` references — e.g., UCDP renames `best` to `best_estimate` |
-| Location | `src/datafactory_compilation/aggregation.py:18-19` (`sum_field`: `e.get(field, 0) or 0`), `src/datafactory_compilation/aggregation.py:28-29` (`max_field`: `e.get(field, 0) or 0`) |
+| Trigger | Resolved 2026-05-27 |
+| Location | `src/datafactory_compilation/grid_compilation.py:33-41` (`_required_columns`), `src/datafactory_compilation/aggregation.py:18-19` |
 
-`sum_field` and `max_field` aggregation strategies treat missing event fields as 0 via `e.get(field, 0) or 0`. If UCDP renames `best` to `best_estimate`, every event would contribute 0 to the `fatalities` feature — the compiled grid would contain all zeros for that column, indistinguishable from "zero events." The `count` strategy is unaffected (ignores field). The current mitigation is that `grid_compilation.py:_required_columns()` validates that `config.lat_field`, `config.lon_field`, and `config.date_field` exist in the table — but `value_field` is not validated at the column level before aggregation. Not Tier 1 because: (a) current sources have stable field names, (b) the zero-fill is consistent (every event contributes 0, so the feature is uniformly zero rather than subtly wrong). Tier 3 because: if triggered, the entire feature column is silently useless.
+**Resolved 2026-05-27 (sprint S4).** Investigation found the risk was already mitigated by existing code. `_required_columns()` at `grid_compilation.py:33-41` builds the set of required Parquet columns including `value_field` for non-count strategies. `compile_grid()` at lines 199-209 validates these columns exist in the source Parquet before aggregation runs. If UCDP renamed `best` to `best_estimate`, the pipeline would raise `ValueError: Source Parquet missing required columns: ['best']` — a loud, immediate failure, not silent zero-fill. Two tests already cover this: `test_compiler.py::test_missing_value_field_raises` and `test_acled_compilation.py::test_missing_fatalities_column_raises`. No code changes needed.
 
 See also C-45 (no Parquet schema evolution), C-36 (UCDP API contract no schema versioning).
 
