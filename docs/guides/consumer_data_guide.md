@@ -379,30 +379,34 @@ Built-up surface area from the EU Joint Research Centre Global Human Settlement 
 
 ### V-Dem democracy indicators (22 features)
 
-| Feature | Description |
-|---------|-------------|
-| `vdem_v2xcl_dmove` | Freedom of domestic movement |
-| `vdem_v2xeg_eqdr` | Equal distribution of resources |
-| `vdem_v2xpe_exlsocgr` | Exclusion by social group |
-| `vdem_v2x_clphy` | Physical violence index |
-| `vdem_v2xcl_prpty` | Property rights |
-| `vdem_v2x_ex_military` | Military dimension of executive |
-| `vdem_v2x_ex_party` | Party dimension of executive |
-| `vdem_v2x_horacc` | Horizontal accountability |
-| `vdem_v2xnp_client` | Clientelism index |
-| `vdem_v2xnp_regcorr` | Regime corruption |
-| `vdem_v2xpe_exlgeo` | Exclusion by urban-rural location |
-| `vdem_v2x_veracc` | Vertical accountability |
-| `vdem_v2xpe_exlpol` | Political exclusion |
-| `vdem_v2x_diagacc` | Diagonal accountability |
-| `vdem_v2x_divparctrl` | Divided party control |
-| `vdem_v2xeg_eqprotec` | Equal protection index |
-| `vdem_v2x_genpp` | Gender equality in power |
-| `vdem_v2xpe_exlgender` | Exclusion by gender |
-| `vdem_v2x_hosabort` | Head of state removal by legislature |
-| `vdem_v2x_libdem` | Liberal democracy index |
-| `vdem_v2xcl_rol` | Rule of law |
-| `vdem_v2x_accountability` | Accountability index |
+**Scale types:** V-Dem features use two distinct scales. 17 features are bounded indices in [0, 1] (higher = more democratic). 5 accountability features use an interval scale centered near 0 with approximate range [-2.3, +2.3] (V-Dem's additive polyarchy measurement model). Do not normalize interval-scale features to [0, 1] — this clips meaningful variation.
+
+| Feature | Description | Scale |
+|---------|-------------|-------|
+| `vdem_v2xcl_dmove` | Freedom of domestic movement | Bounded [0, 1] |
+| `vdem_v2xeg_eqdr` | Equal distribution of resources | Bounded [0, 1] |
+| `vdem_v2xpe_exlsocgr` | Exclusion by social group † | Bounded [0, 1] |
+| `vdem_v2x_clphy` | Physical violence index | Bounded [0, 1] |
+| `vdem_v2xcl_prpty` | Property rights | Bounded [0, 1] |
+| `vdem_v2x_ex_military` | Military dimension of executive | Bounded [0, 1] |
+| `vdem_v2x_ex_party` | Party dimension of executive | Bounded [0, 1] |
+| `vdem_v2x_horacc` | Horizontal accountability | Interval [-2.3, +2.3] |
+| `vdem_v2xnp_client` | Clientelism index | Bounded [0, 1] |
+| `vdem_v2xnp_regcorr` | Regime corruption | Bounded [0, 1] |
+| `vdem_v2xpe_exlgeo` | Exclusion by urban-rural location † | Bounded [0, 1] |
+| `vdem_v2x_veracc` | Vertical accountability | Interval [-2.3, +2.3] |
+| `vdem_v2xpe_exlpol` | Political exclusion † | Bounded [0, 1] |
+| `vdem_v2x_diagacc` | Diagonal accountability | Interval [-2.3, +2.3] |
+| `vdem_v2x_divparctrl` | Divided party control | Interval [-2.3, +2.3] |
+| `vdem_v2xeg_eqprotec` | Equal protection index | Bounded [0, 1] |
+| `vdem_v2x_genpp` | Gender equality in power | Bounded [0, 1] |
+| `vdem_v2xpe_exlgender` | Exclusion by gender † | Bounded [0, 1] |
+| `vdem_v2x_hosabort` | Head of state removal by legislature | Bounded [0, 1] |
+| `vdem_v2x_libdem` | Liberal democracy index | Bounded [0, 1] |
+| `vdem_v2xcl_rol` | Rule of law | Bounded [0, 1] |
+| `vdem_v2x_accountability` | Accountability index | Interval [-2.3, +2.3] |
+
+† Exclusion features have data through 2023 only (V-Dem v16). Values are NaN for 2024 onward. See `docs/sources/vdem.md` (Temporal Caveats).
 
 V-Dem (Varieties of Democracy) v16 indicators. Country-year data mapped to PRIO-GRID cells via GAUL ISO3 crosswalk and expanded to monthly. NaN for countries/years not covered by V-Dem.
 

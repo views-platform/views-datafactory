@@ -672,3 +672,43 @@ fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its 
 **Demoted to tech-debt backlog 2026-05-26.** External dependency behavior, out of our control, workaround documented.
 
 **Source:** Falsification audit 2026-04-01 (F3).
+
+### ~~C-217: Consumer guide and data card omit V-Dem feature scale classification~~ RESOLVED
+
+Consumer guide listed 22 V-Dem features with name and description only — no scale or range information. 17 features are bounded [0,1] indices; 5 accountability features use interval scale ~[-2.3, +2.3]. Without this distinction, consumers would normalize all features identically, clipping meaningful variation in the interval-scale features.
+
+**Resolved 2026-05-27 (Sprint S2).** Scale column added to consumer guide V-Dem feature table. Scale Classification section added to data card. Scale note added to ADR-035 Implementation Notes.
+
+**Source:** Falsification audit (V-Dem visual audit documentation, P-3/P-7, 2026-05-26). Cross-ref: C-218, C-219, C-220, C-221.
+
+### ~~C-218: Exclusion features' 2023 temporal cutoff undocumented~~ RESOLVED
+
+Four exclusion features (v2xpe_exlsocgr, exlgeo, exlpol, exlgender) have data only through 2023 in V-Dem v16. All governance docs stated blanket "1789-2025" coverage without per-feature caveats. Consumers querying these features at 2024-2025 would get NaN with no explanation.
+
+**Resolved 2026-05-27 (Sprint S2).** Temporal Caveats section added to data card. Per-feature temporal caveat note added to ADR-035. Consumer guide exclusion features annotated with † footnote.
+
+**Source:** Falsification audit (V-Dem visual audit documentation, P-4, 2026-05-26). Cross-ref: C-217.
+
+### ~~C-219: No CIC for PrecomputedData (verify scripts)~~ RESOLVED
+
+PrecomputedData is a 21-field dataclass in `scripts/verify_vdem_grid.py` maintaining precomputed state for 15 verification plots. The `country_values` field has a non-obvious invariant: values are extracted at each feature's own last valid time step (exclusion features at Dec 2023, others at Dec 2025). ADR-006 requires CICs for non-trivial classes in scripts/.
+
+**Resolved 2026-05-27 (Sprint S2).** CIC created at `docs/CICs/PrecomputedData.md`. Documents all 22 fields, per-feature last_valid_t invariant, country deduplication method, failure modes, and test alignment.
+
+**Source:** Falsification audit (V-Dem visual audit documentation, P-1, 2026-05-26). Cross-ref: C-164, C-206.
+
+### ~~C-220: Broadcast invariant not formalized in ADR-024~~ RESOLVED
+
+V-Dem values are broadcast identically to all cells within a country. ADR-024 listed 5 compilation grid invariants; broadcast was not among them. Without formalization, a new compilation path for a country-level source could omit the broadcast check.
+
+**Resolved 2026-05-27 (Sprint S2).** Invariant 6 (Country-Level Broadcast) added to ADR-024. Scoped to pregridded country-level sources. ADR-035 updated with cross-reference.
+
+**Source:** Falsification audit (V-Dem visual audit documentation, P-5, 2026-05-26). Cross-ref: C-217.
+
+### ~~C-221: Inverse pgid formula not documented in any governance artifact~~ RESOLVED
+
+The inverse pgid formula (`row = (pgid - 1) // 720, col = (pgid - 1) % 720`) was used in verification scripts and viewpoint builders but not stated in any ADR, CIC, or guide. The 1-indexed convention (pgid starts at 1, not 0) is the source of off-by-one bugs.
+
+**Resolved 2026-05-27 (Sprint S2).** PGID Convention subsection added to ADR-024 under Invariant 6. Documents both forward and inverse formulas, 1-indexed convention, and consequences of omitting the -1 offset.
+
+**Source:** Falsification audit (V-Dem visual audit documentation, P-2, 2026-05-26). Cross-ref: ADR-024.

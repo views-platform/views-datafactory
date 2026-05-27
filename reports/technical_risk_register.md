@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-05-26)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26
-**Status:** 221 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 135 resolved, 61 open concerns (6 Tier 2, 15 Tier 3, 34 Tier 4, 6 deferred by design; 3 with fired triggers), 4 open disagreements. 116 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
+**Status:** 221 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-03 merged into C-176): 140 resolved, 56 open concerns (6 Tier 2, 13 Tier 3, 31 Tier 4, 6 deferred by design; 3 with fired triggers), 4 open disagreements. 121 resolved concerns as full entries + 19 early-archive reference rows + 25 resolved disagreements in archive. 29 disagreement IDs total: 25 resolved, 4 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -139,11 +139,11 @@
 | ~~C-124~~ | ~~4~~ | ~~No consumer onboarding for remote zarr credentials~~ | Resolved 2026-04-19 | Consumer integration |
 | ~~C-193~~ | ~~4~~ | ~~Deployment guide GHS-BUILT-S download size overstated (~5 GB vs ~2.1 GB)~~ | Resolved 2026-05-23 | Documentation |
 | ~~C-194~~ | ~~4~~ | ~~Raster harvesters lack `logger.error` before bare `raise` — ADR-008~~ | Resolved 2026-05-23 | ADR-008 compliance |
-| C-217 | 3 | Consumer guide and data card omit V-Dem feature scale classification | Consumer normalizes interval-scale features to [0,1], clipping values | V-Dem documentation |
-| C-218 | 3 | Exclusion features' 2023 temporal cutoff undocumented | Developer queries v2xpe_exl* at 2024-2025 expecting valid data | V-Dem documentation |
-| C-219 | 4 | No CIC for PrecomputedData (verify scripts) | Developer modifies PrecomputedData fields without understanding invariants | V-Dem documentation |
-| C-220 | 4 | Broadcast invariant not formalized in ADR-024 | New compilation path omits broadcast check — silent within-country divergence | V-Dem documentation |
-| C-221 | 4 | Inverse pgid formula not documented in any governance artifact | Developer implements pgid→(row,col) with wrong indexing convention | Documentation |
+| ~~C-217~~ | ~~3~~ | ~~Consumer guide and data card omit V-Dem feature scale classification~~ | Resolved 2026-05-27 | V-Dem documentation |
+| ~~C-218~~ | ~~3~~ | ~~Exclusion features' 2023 temporal cutoff undocumented~~ | Resolved 2026-05-27 | V-Dem documentation |
+| ~~C-219~~ | ~~4~~ | ~~No CIC for PrecomputedData (verify scripts)~~ | Resolved 2026-05-27 | V-Dem documentation |
+| ~~C-220~~ | ~~4~~ | ~~Broadcast invariant not formalized in ADR-024~~ | Resolved 2026-05-27 | V-Dem documentation |
+| ~~C-221~~ | ~~4~~ | ~~Inverse pgid formula not documented in any governance artifact~~ | Resolved 2026-05-27 | Documentation |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
@@ -177,7 +177,7 @@ Items that should be resolved together:
 | ~~**Test coverage**~~ | ~~C-140, C-141, C-142, C-143~~ | Resolved 2026-04-26: 32 tests added |
 | ~~**ACLED test coverage**~~ | ~~C-150, C-151, C-152~~ | Resolved 2026-05-02: 13 Red tests + 5 profile tests + 3 CICs added |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
-| **V-Dem documentation** | C-217, C-218, C-219, C-220, C-221 | Before V-Dem data used by external consumers |
+| ~~**V-Dem documentation**~~ | ~~C-217, C-218, C-219, C-220, C-221~~ | Resolved 2026-05-27 |
 | ~~**Workflow process**~~ | ~~C-192~~ | Resolved 2026-05-23 |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203, C-204, C-205, C-206, C-207, C-208, C-209, C-210, C-211~~ | Resolved 2026-05-26: 20 compilation tests, 7 deploy-readiness tests, 2 CICs, 6 doc indices updated, NaN fix, harvester failure ledger, ADR-009/016 drift fixed, consumer guide 51→75 |
 | ~~**Documentation drift**~~ | ~~C-157, C-158~~ | Resolved 2026-05-07: 19 docs updated, 2 CICs created |
@@ -1278,7 +1278,7 @@ Cross-ref: C-164 (WET-before-DRY refactor inventory).
 
 ---
 
-### C-217: Consumer guide and data card omit V-Dem feature scale classification
+### ~~C-217: Consumer guide and data card omit V-Dem feature scale classification~~ — RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -1290,9 +1290,11 @@ Cross-ref: C-164 (WET-before-DRY refactor inventory).
 
 The consumer data guide lists 22 V-Dem features with name and one-line description only. No scale or range information is provided. The V-Dem data card and ADR-035 also omit scale classification. 17 features are bounded [0,1] indices; 5 use interval scale centered near 0 with range approximately [-2.3, +2.3]. The only location where this distinction is documented is the `INTERVAL_SCALE_FEATURES` constant in `scripts/verify_vdem_grid.py`. A consumer reading only the guide would have no way to know that 5 features use a fundamentally different scale, leading to incorrect normalization, visualization, or model training. Tier 3: multiple consumers affected, no runtime error but model feature engineering will be wrong.
 
+**Resolved 2026-05-27 (Sprint S2).** Scale column added to consumer guide V-Dem feature table (bounded vs interval for each feature). Scale Classification section added to data card. Scale note added to ADR-035 Implementation Notes. Falsification test `test_consumer_guide_has_scale_info` and `test_data_card_has_scale_info` now pass.
+
 Cross-ref: C-214 (consumer guide feature names — resolved), C-211 (consumer guide feature count — resolved).
 
-### C-218: Exclusion features' 2023 temporal cutoff undocumented
+### ~~C-218: Exclusion features' 2023 temporal cutoff undocumented~~ — RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -1304,9 +1306,11 @@ Cross-ref: C-214 (consumer guide feature names — resolved), C-211 (consumer gu
 
 All governance docs state V-Dem temporal coverage as "1789-2025" (grid uses "1980-2025") without per-feature caveats. Four exclusion features (v2xpe_exlsocgr, v2xpe_exlgeo, v2xpe_exlpol, v2xpe_exlgender) have data only through 2023 in V-Dem v16. A consumer or developer querying these features at 2024-2025 receives NaN with no documentation explaining why. This is an upstream data property of V-Dem v16, not a pipeline bug, but the docs should inform consumers. Tier 3: affects anyone using exclusion features for recent years.
 
+**Resolved 2026-05-27 (Sprint S2).** Temporal Caveats section added to data card. Per-feature temporal caveat note added to ADR-035 Implementation Notes. Consumer guide exclusion features annotated with † footnote. Data card temporal coverage line updated. Falsification test `test_exclusion_lag_documented` now passes.
+
 Cross-ref: C-217 (scale classification — same doc gap class).
 
-### C-219: No CIC for PrecomputedData (verify scripts)
+### ~~C-219: No CIC for PrecomputedData (verify scripts)~~ — RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -1318,9 +1322,11 @@ Cross-ref: C-217 (scale classification — same doc gap class).
 
 PrecomputedData is a 21-field dataclass that maintains precomputed state for 15 verification plots. ADR-006 requires CICs for non-trivial classes that "maintain internal state across operations" and explicitly scopes scripts/ (lists AssemblyConfig from `scripts/assemble_grid.py` as priority candidate). The `country_values` field has a non-obvious invariant: values are extracted at each feature's own last valid time step, not a single shared t. This means exclusion features use t=419 (Dec 2023) while others use t=443 (Dec 2025). Without a CIC, this invariant is undiscoverable. Tier 4: single-developer scope, verification-only (not production data path), no correctness impact on served data.
 
+**Resolved 2026-05-27 (Sprint S2).** CIC created at `docs/CICs/PrecomputedData.md`. Documents all 22 fields, per-feature last_valid_t invariant, country deduplication method, failure modes, and test alignment. Added to CIC README. Falsification test `test_precomputed_data_cic_exists` now passes.
+
 Cross-ref: C-164 (cross-layer WET debt, includes PrecomputedData duplication), C-206 (VdemConfig/VdemViewpointConfig CICs — resolved).
 
-### C-220: Broadcast invariant not formalized in ADR-024
+### ~~C-220: Broadcast invariant not formalized in ADR-024~~ — RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -1332,9 +1338,11 @@ Cross-ref: C-164 (cross-layer WET debt, includes PrecomputedData duplication), C
 
 ADR-035 states informally that "all cells in a country get the same V-Dem value" and "V-Dem does not vary within countries." However, this is described as a data property, not formalized as a testable invariant. ADR-024 lists 5 compilation grid invariants (dimension order, spatial binning, temporal binning, feature stacking, filter semantics); broadcast is not among them. No CIC declares within-country variance = 0 as a guarantee. Plot 14 in the V-Dem visual audit tests it, but no governance doc requires this test. Tier 4: the broadcast is correctly implemented and tested; the gap is formalization only. When WDI or another country-level source is added, the developer should know this invariant exists.
 
+**Resolved 2026-05-27 (Sprint S2).** Invariant 6 (Country-Level Broadcast) added to ADR-024. Scoped to pregridded country-level sources. Includes verification reference (Plot 14), rationale, and not-applicable scope. ADR-035 updated with cross-reference to ADR-024 Invariant 6. Falsification test `test_broadcast_in_compilation_invariants` now passes.
+
 Cross-ref: C-217 (V-Dem documentation gaps — same class).
 
-### C-221: Inverse pgid formula not documented in any governance artifact
+### ~~C-221: Inverse pgid formula not documented in any governance artifact~~ — RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -1345,6 +1353,8 @@ Cross-ref: C-217 (V-Dem documentation gaps — same class).
 | Location | `src/datafactory_priogrid/cell_generator.py:30` (forward formula only), `scripts/verify_vdem_grid.py:288-290` (inverse used without doc reference) |
 
 The forward pgid formula (`pgid = row * ncol + col + 1`, 1-indexed) is documented in a code comment in `cell_generator.py:30`. The inverse formula (`row = (pgid - 1) // 720, col = (pgid - 1) % 720`) is used in verification scripts and viewpoint builders but is not stated in any ADR, CIC, or guide. ADR-024 documents spatial binning (lat/lon → cell) but not pgid → (row, col). The formula is trivially derivable from the forward direction, but the 1-indexed convention (pgid starts at 1, not 0) is the source of off-by-one bugs. Tier 4: derivable from existing code, single-developer scope.
+
+**Resolved 2026-05-27 (Sprint S2).** PGID Convention subsection added to ADR-024 under Invariant 6. Documents both forward and inverse formulas, 1-indexed convention, and the consequence of omitting the -1 offset. References `cell_generator.py:30` as authoritative source.
 
 ## Deferred by Design
 

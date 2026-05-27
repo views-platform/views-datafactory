@@ -13,8 +13,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 DOCS = Path("docs")
 CICS = DOCS / "CICs"
 ADRS = DOCS / "ADRs"
@@ -35,13 +33,6 @@ class TestP1PrecomputedDataCIC:
     from scripts/assemble_grid.py).
     """
 
-    @pytest.mark.xfail(
-        reason=(
-            "P-1: No CIC for PrecomputedData — "
-            "ADR-006 requires one for non-trivial "
-            "classes in scripts/"
-        ),
-    )
     def test_precomputed_data_cic_exists(self) -> None:
         cic = CICS / "PrecomputedData.md"
         assert cic.exists(), (
@@ -71,12 +62,6 @@ class TestP3P7ConsumerGuideScaleClassification:
         "v2x_accountability",
     }
 
-    @pytest.mark.xfail(
-        reason=(
-            "P-3: Consumer guide has no scale/range "
-            "info for V-Dem features"
-        ),
-    )
     def test_consumer_guide_has_scale_info(self) -> None:
         guide = GUIDES / "consumer_data_guide.md"
         assert guide.exists()
@@ -88,12 +73,6 @@ class TestP3P7ConsumerGuideScaleClassification:
             "fundamentally different ranges."
         )
 
-    @pytest.mark.xfail(
-        reason=(
-            "P-7: V-Dem data card has no scale/range "
-            "info for individual features"
-        ),
-    )
     def test_data_card_has_scale_info(self) -> None:
         card = SOURCES / "vdem.md"
         assert card.exists()
@@ -125,12 +104,6 @@ class TestP4ExclusionTemporalLag:
         "v2xpe_exlgender",
     ]
 
-    @pytest.mark.xfail(
-        reason=(
-            "P-4: No governance doc mentions exclusion "
-            "features ending at 2023"
-        ),
-    )
     def test_exclusion_lag_documented(self) -> None:
         docs_to_check = [
             ADRS / "035_vdem_as_democracy_source.md",
@@ -163,12 +136,6 @@ class TestP5BroadcastInvariantFormalized:
     must be zero.
     """
 
-    @pytest.mark.xfail(
-        reason=(
-            "P-5: Broadcast invariant not in ADR-024 "
-            "compilation invariants"
-        ),
-    )
     def test_broadcast_in_compilation_invariants(
         self,
     ) -> None:
