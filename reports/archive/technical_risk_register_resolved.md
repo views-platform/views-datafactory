@@ -712,3 +712,11 @@ The inverse pgid formula (`row = (pgid - 1) // 720, col = (pgid - 1) % 720`) was
 **Resolved 2026-05-27 (Sprint S2).** PGID Convention subsection added to ADR-024 under Invariant 6. Documents both forward and inverse formulas, 1-indexed convention, and consequences of omitting the -1 offset.
 
 **Source:** Falsification audit (V-Dem visual audit documentation, P-2, 2026-05-26). Cross-ref: ADR-024.
+
+### ~~C-222: Register search window too narrow for Source line growth~~ RESOLVED
+
+The falsification test `test_register_header_count` in `test_falsification_v1221_cleanup.py:81` searches only the first 2000 characters of the register for "N open concerns". The Source line on `development` grew past this boundary (char 2012), causing the test to fail. The search window was widened to 3000 characters. A regression guard (`test_falsification_merge_readiness.py`) ensures future Source line growth is detected before it overflows again.
+
+**Resolved 2026-05-27.** Search window widened from 2000 to 3000 chars. Regression guard added.
+
+**Source:** Falsification audit (merge readiness, P-1, 2026-05-27). Location: `tests/test_falsification_v1221_cleanup.py:81`.

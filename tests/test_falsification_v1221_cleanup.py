@@ -78,7 +78,7 @@ class TestF1PostSprintRegisterUpdates:
             "reports/technical_risk_register.md"
         ).read_text()
         match = re.search(
-            r"(\d+) open concerns", register[:2000],
+            r"(\d+) open concerns", register[:3000],
         )
         assert match, (
             "Could not find 'N open concerns' in header"
