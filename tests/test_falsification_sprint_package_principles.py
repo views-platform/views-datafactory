@@ -34,6 +34,7 @@ class TestP6ProvenanceAbstractness:
 
     @pytest.mark.xfail(
         reason="P-6 deferred: provenance needs Protocol/ABC",
+        strict=True,
     )
     def test_provenance_has_at_least_one_abstraction(self) -> None:
         prov_dir = Path("src/datafactory_provenance")

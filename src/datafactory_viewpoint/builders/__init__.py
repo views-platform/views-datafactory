@@ -17,7 +17,6 @@ _registry: Registry[Callable[..., Any]] = Registry("viewpoint builder")
 
 register_builder = _registry.register
 list_builders = _registry.list_entries
-_clear_registry = _registry.clear
 
 
 def build_viewpoint(name: str, **kwargs: Any) -> Any:
