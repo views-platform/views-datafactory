@@ -244,8 +244,8 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 The health check (`check_health.py`) validates metadata freshness (export timestamp, data boundary month) but never checks whether the data values in the served zarr store are correct. A zarr store that passes all metadata checks but contains wrong values (stale data, partial export, corrupted chunks) is invisible to the current monitoring stack. The Hetzner zarr store served data with 46% missing fatalities for weeks while all health checks passed.
 
 **Trigger:** Pipeline completes successfully but the HTTP-served zarr store doesn't match the local assembled grid.
-**Location:** `scripts/check_health.py`, `scripts/refresh_pipeline.sh` (step 7).
-**Resolution:** Add a `verify_remote_data.py` script that fetches a small slice from the HTTP endpoint and compares totals against the local grid. Run as pipeline step 8.
+**Location:** `scripts/check_health.py`, `scripts/refresh_pipeline.sh` (step 11).
+**Resolution:** Add a `verify_remote_data.py` script that fetches a small slice from the HTTP endpoint and compares totals against the local grid. Run as pipeline step 12.
 **Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-137 (export integrity), C-132 (health check gap).
 
 ### ~~C-139: Consumer parity tests check per-cell rates but not aggregate totals~~ — RESOLVED
