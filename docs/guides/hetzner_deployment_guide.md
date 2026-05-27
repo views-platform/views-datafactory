@@ -428,6 +428,14 @@ This runs 10 checks against the remote server:
 The script reads credentials from `~/.netrc` for HTTP checks and
 constructs `aiohttp.BasicAuth` for the xarray check.
 
+After `verify_remote.py` passes, run the data correctness check:
+
+```bash
+uv run python scripts/verify_remote_data.py
+```
+
+This compares feature sums between the local assembled grid and the remote zarr store at representative time steps. It catches failures where metadata checks pass but the actual data values are wrong (e.g., stale zarr chunks from a partial export). See C-138.
+
 ### 5.3 Consumer examples
 
 **xarray (zarr) — reads credentials from ~/.netrc:**
@@ -1328,6 +1336,7 @@ After completing all hardening steps:
 - [ ] Break-glass `emergency` account works
 - [ ] SSH from non-whitelisted IP is blocked
 - [ ] `verify_remote.py` passes 10/10 (data serving unaffected)
+- [ ] `verify_remote_data.py` passes all feature sum comparisons (C-138)
 - [ ] `cat /home/views-deploy/.views-deploy-tag` returns the current deploy tag
 
 ---
@@ -1338,6 +1347,6 @@ After completing all hardening steps:
 - **Get a domain name:** Switch Caddy to Option A for automatic HTTPS
 - **Monitor health remotely:** `ssh server 'cd views-datafactory && uv run python scripts/check_health.py --json'`
 - **Change update frequency:** Edit the cron schedule (e.g., weekly: `0 3 * * 1`)
-- **Verify after pipeline run:** `uv run python scripts/verify_remote.py`
+- **Verify after pipeline run:** `uv run python scripts/verify_remote.py` (metadata) and `uv run python scripts/verify_remote_data.py` (data correctness)
 - **Add a query API:** See `data_serving_guide.md` section 9
 - **Add MCP:** See `data_serving_guide.md` section 9

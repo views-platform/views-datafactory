@@ -16,6 +16,7 @@ No authentication required — V-Dem data is open access (CC-BY-SA).
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -45,6 +46,10 @@ def main() -> int:
     parser.add_argument(
         "--force", action="store_true",
         help="Force re-download even if cached",
+    )
+    parser.add_argument(
+        "--verify", action="store_true",
+        help="Run visual audit after compilation",
     )
     args = parser.parse_args()
 
@@ -153,12 +158,24 @@ def main() -> int:
     # ── Step 3: Compile ──────────────────────────────────────
 
     print("[3/3] COMPILE")
+    import importlib.util
+
     from datafactory_compilation import compile_pregridded
     from datafactory_compilation.pregridded_compilation import (
         PregriddedCompilationConfig,
     )
     from datafactory_priogrid import GridConfig, TemporalConfig
-    from scripts.compile_vdem import VDEM_FEATURES
+
+    _compile_vdem_path = Path(__file__).parent / "compile_vdem.py"
+    _spec = importlib.util.spec_from_file_location(
+        "compile_vdem", _compile_vdem_path,
+    )
+    if _spec is None or _spec.loader is None:
+        msg = f"Cannot load {_compile_vdem_path}"
+        raise FileNotFoundError(msg)
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    vdem_features = _mod.VDEM_FEATURES
 
     output_dir = Path("data/compiled/vdem")
 
@@ -168,7 +185,7 @@ def main() -> int:
         temporal_config=TemporalConfig(
             end_year=args.end_year,
         ),
-        features=VDEM_FEATURES,
+        features=vdem_features,
         output_dir=output_dir,
         ledger_path=Path(
             "provenance/compilation/vdem_ledger.jsonl",
@@ -190,6 +207,25 @@ def main() -> int:
     print(f"  Output: {result_dir}")
     print(f"  ({time.monotonic() - t0:.1f}s)")
     print()
+
+    # ── Step 4 (optional): Verify ───────────────────────────
+
+    if args.verify:
+        print("[4/4] VERIFY")
+        t0 = time.monotonic()
+        rc = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).parent / "verify_vdem_grid.py"),
+                "--input", str(output_dir),
+            ],
+            check=False,
+        ).returncode
+        print(f"  ({time.monotonic() - t0:.1f}s)")
+        if rc != 0:
+            print("  FAIL: verify script exited non-zero")
+            return 1
+        print()
 
     # ── Summary ──────────────────────────────────────────────
 

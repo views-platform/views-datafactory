@@ -69,7 +69,7 @@ VDEM_ID_COLUMNS: tuple[str, ...] = (
 )
 
 DEFAULT_DOWNLOAD_URL = (
-    "https://v-dem.net/media/datasets/V-Dem-CY-Full+Others-v16.csv.zip"
+    "https://v-dem.net/media/datasets/V-Dem-CY-FullOthers-v16_csv.zip"
 )
 
 

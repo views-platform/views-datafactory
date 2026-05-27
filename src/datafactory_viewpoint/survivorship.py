@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 _registry: Registry[Callable[[list[dict]], dict]] = Registry(
     "survivorship strategy"
 )
-STRATEGIES = _registry.entries
 
 __all__ = ["get_survivorship", "annual_wins", "dot9_wins"]
 

@@ -12,7 +12,7 @@
 | Native format | CSV (inside ZIP) |
 | Native resolution | Country-year |
 | Spatial extent | Global (202 countries) |
-| Temporal coverage | 1789–2025 (grid uses 1980–2025) |
+| Temporal coverage | 1789–2025 (4 exclusion features end at 2023; grid uses 1980–2025) |
 | Temporal granularity | Annual |
 | Update cadence | Annual (typically March) |
 | Access method | Direct download (no authentication) |
@@ -36,6 +36,24 @@ V-Dem is country-year data — every cell in a country gets the same value for e
 - **Viewpoint:** Reads GAUL `iso3_code.parquet` for ISO3→pgid crosswalk. Expands annual values to 12 monthly rows (step function: constant within year). Outputs (pgid, month_id, variables) Parquet.
 - **Compilation:** Places (pgid, month_id, value) data onto [T, H, W, C] grid via `compile_pregridded`.
 - **Assembly:** Combined with UCDP, ACLED, GHS-POP, GHS-BUILT-S, PRIO-GRID static, and GAUL admin into the final grid.
+
+## Scale Classification
+
+| Scale | Range | Features |
+|-------|-------|----------|
+| Bounded index | [0, 1] | 17 features: v2xcl_dmove, v2xeg_eqdr, v2xpe_exlsocgr, v2x_clphy, v2xcl_prpty, v2x_ex_military, v2x_ex_party, v2xnp_client, v2xnp_regcorr, v2xeg_eqprotec, v2x_genpp, v2x_hosabort, v2x_libdem, v2xcl_rol, v2xpe_exlgeo, v2xpe_exlpol, v2xpe_exlgender |
+| Interval (additive polyarchy) | ~[-2.3, +2.3] | 5 features: v2x_horacc, v2x_veracc, v2x_diagacc, v2x_divparctrl, v2x_accountability |
+
+The interval-scale features use V-Dem's additive polyarchy measurement model. They are centered near 0 and can take negative values. The authoritative code constant is `INTERVAL_SCALE_FEATURES` in `scripts/verify_vdem_grid.py`.
+
+## Temporal Caveats
+
+| Features | Coverage | Grid behavior after cutoff |
+|----------|----------|---------------------------|
+| 18 main features | Through 2025 | NaN beyond Dec 2025 |
+| 4 exclusion features (v2xpe_exl*) | Through 2023 | NaN after Dec 2023 |
+
+The 4 exclusion indices (v2xpe_exlsocgr, v2xpe_exlgeo, v2xpe_exlpol, v2xpe_exlgender) are published with a ~2 year lag in V-Dem's release cycle. Consumers using these features for 2024–2025 predictions should be aware that values will be NaN. The verification script (`scripts/verify_vdem_grid.py`, Plot 13) visualizes this cutoff as a vertical dashed line.
 
 ## Known limitations
 

@@ -23,7 +23,6 @@ __all__ = [
 _registry: Registry[Callable[[list[dict], str], float]] = Registry(
     "aggregation strategy"
 )
-STRATEGIES = _registry.entries
 
 
 @_registry.decorator("count")

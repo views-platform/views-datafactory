@@ -77,6 +77,7 @@ Contracts must be clear enough that:
 - `VdemConfig.md` -- immutable V-Dem harvest configuration (download URL, variables, version)
 - `VdemViewpointConfig.md` -- immutable V-Dem viewpoint configuration (crosswalk, temporal range, variables)
 - `AssemblyConfig.md` -- immutable assembly configuration (compiled grid paths, output directory)
+- `PrecomputedData.md` -- precomputed state container for V-Dem grid verification (24 fields, per-feature temporal handling)
 - `PregriddedCompilationConfig.md` -- immutable pre-gridded compilation configuration (GHS-POP, GHS-BUILT-S)
 - `SourceEntry.md` -- immutable source registry entry (name, features, provenance paths)
 - `grid_to_country_month.md` -- grid-to-country-month aggregation function contract

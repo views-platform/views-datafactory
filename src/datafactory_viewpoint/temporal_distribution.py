@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 _registry: Registry[Callable[[dict], list[dict]]] = Registry(
     "distribution strategy"
 )
-STRATEGIES = _registry.entries
 
 __all__ = [
     "get_distribution",

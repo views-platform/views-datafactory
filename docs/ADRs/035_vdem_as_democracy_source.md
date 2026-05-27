@@ -69,7 +69,7 @@ V-Dem data is country-year. To place it on the PRIO-GRID, we use the GAUL admin 
 2. V-Dem `country_text_id` is ISO3 alpha-3
 3. Invert the GAUL mapping: ISO3 → set of pgids → broadcast country-level values to all cells
 
-All cells in a country get the same V-Dem value. This is not a limitation — it is what the data says. V-Dem does not vary within countries.
+All cells in a country get the same V-Dem value. This is not a limitation — it is what the data says. V-Dem does not vary within countries. This broadcast property is formalized as ADR-024 Invariant 6 (Country-Level Broadcast).
 
 ### Annual → monthly expansion as step function
 
@@ -126,6 +126,10 @@ These costs are accepted. The 22 variables are already consumed by production mo
 ### Feature names in assembled grid
 
 All 22 features are prefixed `vdem_`: `vdem_v2xcl_dmove`, `vdem_v2xeg_eqdr`, etc.
+
+**Per-feature temporal caveat:** Four exclusion features (v2xpe_exlsocgr, v2xpe_exlgeo, v2xpe_exlpol, v2xpe_exlgender) have data only through 2023 in V-Dem v16, while all other features extend to 2025. The compiled grid contains NaN for these features at months after December 2023. This is an upstream V-Dem data property — these indices are published with a lag relative to the main release. Future V-Dem versions may close the gap. See `docs/sources/vdem.md` (Temporal Caveats).
+
+**Scale note:** The 22 selected features span two V-Dem scale types: 17 bounded [0, 1] indices and 5 interval-scale accountability measures (~[-2.3, +2.3]). Consumer documentation must distinguish these scales to prevent incorrect normalization. See `docs/sources/vdem.md` (Scale Classification).
 
 ### Pipeline flow
 

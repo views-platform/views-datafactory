@@ -16,7 +16,7 @@ The compilation layer (Layer 4) transforms viewpoint event tables into fixed-sha
 
 ## Decision
 
-The following are architectural invariants of the grid compiler (`grid_compilation.py`). They define the physical layout of the output array and cannot be changed without breaking all downstream consumers (zarr export, dataframe adapter, FeatureFrame adapter, model training scripts).
+The following 6 architectural invariants define the physical layout of the output array and cannot be changed without breaking all downstream consumers (zarr export, dataframe adapter, FeatureFrame adapter, model training scripts). Invariants 1–5 apply to all compiled grids; Invariant 6 applies only to country-level sources.
 
 ### 1. Grid Dimension Order: [T, H, W, C]
 
@@ -50,6 +50,29 @@ Feature channel 0 corresponds to `config.features[0]`, channel 1 to `config.feat
 ### 5. Per-Feature Filter Semantics: AND Logic
 
 When a `FeatureSpec` has a non-empty `filter` dict, all conditions must be satisfied (AND semantics). There is no OR or NOT support.
+
+### 6. Country-Level Broadcast
+
+**Applies to:** Pregridded (country-level) sources only (V-Dem, future WDI).
+
+For sources that provide country-level data (not cell-level), all PRIO-GRID cells within the same country must have identical values at every time step for every feature. Within-country standard deviation must be exactly zero.
+
+**Rationale:** Country-level sources like V-Dem provide one value per country-year. The viewpoint builder broadcasts this value to all cells in the country via the GAUL ISO3→pgid crosswalk. If the broadcast is incorrect (e.g., off-by-one in pgid mapping, partial crosswalk update), neighboring country values would bleed into each other — a spatial data corruption that would be invisible in country-level analysis but produce wrong cell-level model inputs.
+
+**Verification:** `scripts/verify_vdem_grid.py`, Plot 14 (Broadcast Integrity). Computes within-country standard deviation for all features at the latest valid time step. PASS if all values are exactly 0.0.
+
+**Not applicable to:** Event-based sources (UCDP, ACLED) where cell values differ by construction. Raster sources (GHS-POP, GHS-BUILT-S) where cell values vary spatially within countries.
+
+### PGID Convention
+
+PRIO-GRID cell IDs (`pgid`) are 1-indexed. This convention applies to all grid operations (spatial binning, event compilation, raster placement, country-level broadcast).
+
+- **Forward (coordinates → pgid):** `pgid = row * 720 + col + 1` where `row = 0..359` (south to north), `col = 0..719` (west to east).
+- **Inverse (pgid → grid indices):** `row = (pgid - 1) // 720`, `col = (pgid - 1) % 720`.
+
+The 1-indexed convention means `pgid` ranges from 1 to 259,200. Grid arrays use 0-indexed `[row, col]`. The `- 1` in the inverse formula accounts for this offset. Omitting it shifts all spatial data one cell east and wraps the last column.
+
+**Authoritative source:** `src/datafactory_priogrid/cell_generator.py:30`.
 
 ---
 

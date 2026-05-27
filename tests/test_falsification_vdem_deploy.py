@@ -11,8 +11,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 
 class TestF1PipelineWiring:
     """refresh_pipeline.sh must wire V-Dem harvest and compile steps."""
@@ -102,7 +100,6 @@ class TestF5CompileScript:
 class TestF6VersionBump:
     """Current version should not already be tagged."""
 
-    @pytest.mark.xfail(reason="Version bump deferred to ship-it")
     def test_version_not_already_tagged(self) -> None:
         from importlib.metadata import version
 

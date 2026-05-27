@@ -17,7 +17,6 @@ _registry: Registry[Callable[..., Any]] = Registry("consolidator")
 
 register_consolidator = _registry.register
 list_consolidators = _registry.list_entries
-_clear_registry = _registry.clear
 
 
 def consolidate_source(name: str, **kwargs: Any) -> Any:

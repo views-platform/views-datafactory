@@ -69,8 +69,9 @@ def _current_month_id() -> int:
 def _forecasting_partition(steps: int = 36) -> dict:
     """Compute forecasting partition from current date."""
     month_last = _current_month_id() - 1
+    cal_start = _BASE_PARTITIONS["calibration"]["train"][0]
     return {
-        "train": (121, month_last),
+        "train": (cal_start, month_last),
         "test": (month_last + 1, month_last + 1 + steps),
     }
 

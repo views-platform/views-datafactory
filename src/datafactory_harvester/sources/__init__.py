@@ -17,7 +17,6 @@ _registry: Registry[Callable[..., Any]] = Registry("source")
 _SOURCES = _registry.entries  # conftest.py accesses this directly
 register_source = _registry.register
 list_sources = _registry.list_entries
-_clear_registry = _registry.clear
 
 
 def fetch_source(name: str, **kwargs: Any) -> Any:
