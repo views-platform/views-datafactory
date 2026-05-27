@@ -55,7 +55,7 @@ Assumptions not met cause immediate `ValueError`.
 - Returns a `pd.DataFrame` with `(month_id, country_id)` MultiIndex
 - One column per feature except the country feature
 - All values are sums over grid cells belonging to each (month, country) group
-- No side effects. Pure function.
+- Emits `UserWarning` when excluded cells (country_id <= 0) have nonzero event feature values (features starting with `ged_` or `acled_`). The warning includes the count of excluded cell-months and how many carry events. See C-149.
 
 ---
 

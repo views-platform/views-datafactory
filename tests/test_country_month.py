@@ -80,7 +80,8 @@ class TestGridToCountryMonth:
         grid, pgids, ts, feats = _synthetic_grid()
         # Set bottom row to ocean (gaul0_code = 0)
         grid[:, 3, :, 2] = 0
-        df = grid_to_country_month(grid, pgids, ts, feats)
+        with pytest.warns(UserWarning, match="unmapped GAUL"):
+            df = grid_to_country_month(grid, pgids, ts, feats)
         countries = df.index.get_level_values("country_id").unique()
         assert 0 not in countries
         # Country B now has only 1 row = 5 cells
@@ -99,6 +100,26 @@ class TestGridToCountryMonth:
                 grid, pgids, ts, ["a", "b", "c"],
                 country_feature="nonexistent",
             )
+
+    def test_warns_on_excluded_cells_with_events(self) -> None:
+        """C-149: excluded cells with nonzero events must trigger warning."""
+        grid, pgids, ts, feats = _synthetic_grid()
+        # Set one row to unmapped (gaul0_code = -1) but keep event values
+        grid[:, 3, :, 2] = -1
+        with pytest.warns(UserWarning, match="unmapped GAUL"):
+            grid_to_country_month(grid, pgids, ts, feats)
+
+    def test_no_warning_when_excluded_cells_all_zero(self) -> None:
+        """No warning when excluded cells have zero event values."""
+        grid, pgids, ts, feats = _synthetic_grid()
+        # Set one row to ocean (gaul0_code = 0) AND zero out events
+        grid[:, 3, :, 2] = 0
+        grid[:, 3, :, 0] = 0.0  # ged_sb_best
+        grid[:, 3, :, 1] = 0.0  # ged_ns_best
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            grid_to_country_month(grid, pgids, ts, feats)
 
     def test_land_pgids_filter(self) -> None:
         grid, pgids, ts, feats = _synthetic_grid()

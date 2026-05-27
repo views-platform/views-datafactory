@@ -24,6 +24,7 @@ import pytest
 
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
 from datafactory_query import load_dataset
+from datafactory_query.defaults import PARTITIONS
 
 # ── Paths ────────────────────────────────────────────────
 _DEFAULT_PARQUET = (
@@ -54,8 +55,8 @@ DF_FEATURES = list(FEATURE_RENAME.keys())
 FEATURE_COLS = list(FEATURE_RENAME.values())
 
 # ── Temporal bounds (calibration partition) ───────────────
-MONTH_START = 121  # 1990-01
-MONTH_END = 492  # 2018-12
+MONTH_START = PARTITIONS["calibration"]["train"][0]  # 121 = 1990-01
+MONTH_END = PARTITIONS["calibration"]["test"][1]  # 492 = 2018-12
 MONTH_ID_EPOCH = 1980
 
 # ── Parity columns (c_id excluded: GAUL != VIEWSER codes) ─

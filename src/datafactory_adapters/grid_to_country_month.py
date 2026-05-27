@@ -11,6 +11,7 @@ flattening step.
 from __future__ import annotations
 
 import logging
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -71,6 +72,28 @@ def grid_to_country_month(
 
     # Exclude ocean cells (country_id <= 0)
     land_mask = country_ids > 0
+    excluded_mask = ~land_mask
+    n_excluded = int(excluded_mask.sum())
+
+    if n_excluded > 0:
+        event_indices = [
+            i for i, f in enumerate(feature_names)
+            if f.startswith(("ged_", "acled_"))
+        ]
+        if event_indices:
+            excluded_events = flat_data[excluded_mask][:, event_indices]
+            rows_with_events = np.nansum(excluded_events, axis=1) > 0
+            n_with_events = int(rows_with_events.sum())
+            if n_with_events > 0:
+                warnings.warn(
+                    f"CM aggregation excluded {n_excluded} cell-months "
+                    f"with country_id <= 0 (unmapped GAUL centroids). "
+                    f"{n_with_events} have nonzero event values. "
+                    f"See C-149 in the technical risk register.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
     flat_data = flat_data[land_mask]
     all_month_ids = all_month_ids[land_mask]
     country_ids = country_ids[land_mask]
