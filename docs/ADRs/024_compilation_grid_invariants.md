@@ -67,7 +67,7 @@ For sources that provide country-level data (not cell-level), all PRIO-GRID cell
 
 PRIO-GRID cell IDs (`pgid`) are 1-indexed. This convention applies to all grid operations (spatial binning, event compilation, raster placement, country-level broadcast).
 
-- **Forward (coordinates → pgid):** `pgid = row * 720 + col + 1` where `row = 0..359` (north to south), `col = 0..719` (west to east).
+- **Forward (coordinates → pgid):** `pgid = row * 720 + col + 1` where `row = 0..359` (south to north), `col = 0..719` (west to east).
 - **Inverse (pgid → grid indices):** `row = (pgid - 1) // 720`, `col = (pgid - 1) % 720`.
 
 The 1-indexed convention means `pgid` ranges from 1 to 259,200. Grid arrays use 0-indexed `[row, col]`. The `- 1` in the inverse formula accounts for this offset. Omitting it shifts all spatial data one cell east and wraps the last column.

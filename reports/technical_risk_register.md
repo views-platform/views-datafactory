@@ -1322,7 +1322,7 @@ Cross-ref: C-217 (scale classification — same doc gap class).
 
 PrecomputedData is a 21-field dataclass that maintains precomputed state for 15 verification plots. ADR-006 requires CICs for non-trivial classes that "maintain internal state across operations" and explicitly scopes scripts/ (lists AssemblyConfig from `scripts/assemble_grid.py` as priority candidate). The `country_values` field has a non-obvious invariant: values are extracted at each feature's own last valid time step, not a single shared t. This means exclusion features use t=419 (Dec 2023) while others use t=443 (Dec 2025). Without a CIC, this invariant is undiscoverable. Tier 4: single-developer scope, verification-only (not production data path), no correctness impact on served data.
 
-**Resolved 2026-05-27 (Sprint S2).** CIC created at `docs/CICs/PrecomputedData.md`. Documents all 22 fields, per-feature last_valid_t invariant, country deduplication method, failure modes, and test alignment. Added to CIC README. Falsification test `test_precomputed_data_cic_exists` now passes.
+**Resolved 2026-05-27 (Sprint S2).** CIC created at `docs/CICs/PrecomputedData.md`. Documents all 24 fields, per-feature last_valid_t invariant, country deduplication method, failure modes, and test alignment. Added to CIC README. Falsification test `test_precomputed_data_cic_exists` now passes.
 
 Cross-ref: C-164 (cross-layer WET debt, includes PrecomputedData duplication), C-206 (VdemConfig/VdemViewpointConfig CICs — resolved).
 

@@ -693,7 +693,7 @@ Four exclusion features (v2xpe_exlsocgr, exlgeo, exlpol, exlgender) have data on
 
 PrecomputedData is a 21-field dataclass in `scripts/verify_vdem_grid.py` maintaining precomputed state for 15 verification plots. The `country_values` field has a non-obvious invariant: values are extracted at each feature's own last valid time step (exclusion features at Dec 2023, others at Dec 2025). ADR-006 requires CICs for non-trivial classes in scripts/.
 
-**Resolved 2026-05-27 (Sprint S2).** CIC created at `docs/CICs/PrecomputedData.md`. Documents all 22 fields, per-feature last_valid_t invariant, country deduplication method, failure modes, and test alignment.
+**Resolved 2026-05-27 (Sprint S2).** CIC created at `docs/CICs/PrecomputedData.md`. Documents all 24 fields, per-feature last_valid_t invariant, country deduplication method, failure modes, and test alignment.
 
 **Source:** Falsification audit (V-Dem visual audit documentation, P-1, 2026-05-26). Cross-ref: C-164, C-206.
 
