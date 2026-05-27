@@ -216,7 +216,7 @@ def main() -> int:
         rc = subprocess.run(
             [
                 sys.executable,
-                "scripts/verify_vdem_grid.py",
+                str(Path(__file__).parent / "verify_vdem_grid.py"),
                 "--input", str(output_dir),
             ],
             check=False,
