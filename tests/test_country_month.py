@@ -8,6 +8,7 @@ the country_month output format end-to-end.
 from __future__ import annotations
 
 import json
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -116,7 +117,6 @@ class TestGridToCountryMonth:
         grid[:, 3, :, 2] = 0
         grid[:, 3, :, 0] = 0.0  # ged_sb_best
         grid[:, 3, :, 1] = 0.0  # ged_ns_best
-        import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             grid_to_country_month(grid, pgids, ts, feats)
