@@ -356,7 +356,11 @@ uv run python scripts/compile_acled.py             # ACLED → grid.npy
 uv run python scripts/run_ghspop_pipeline.py       # GHS-POP viewpoint + compile
 uv run python scripts/run_ghsbuilts_pipeline.py    # GHS-BUILT-S viewpoint + compile
 uv run python scripts/run_vdem_pipeline.py         # V-Dem viewpoint + compile
-uv run python scripts/assemble_grid.py             # all compiled sources → assembled grid
+uv run python scripts/assemble_grid.py \            # assemble all sources into one grid
+    --acled-grid data/compiled/acled \               #   (each --*-grid flag is optional;
+    --ghspop-grid data/compiled/ghspop \             #    omitted sources are silently skipped,
+    --ghsbuilts-grid data/compiled/ghsbuilts \       #    producing a partial grid)
+    --vdem-grid data/compiled/vdem
 uv run python scripts/generate_consumer_data.py    # factory → VIEWSER training parquets
 
 # Visualize the assembled grid
