@@ -130,6 +130,56 @@ echo "v1.2.4" | sudo tee /home/views-deploy/.views-deploy-tag
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh'
 ```
 
+### Run individual pipeline steps manually
+
+Use this when you need to run specific steps instead of the full
+pipeline — for example, after adding a new source whose pipeline
+script isn't in `refresh_pipeline.sh` yet, or when re-running only
+one stage after a failure.
+
+**Important:** `assemble_grid.py` silently skips any source whose
+`--*-grid` flag is omitted. If you run it without flags you get a
+UCDP + static + admin grid only (~42 features instead of ~75).
+There is no error or warning — the output looks correct but is
+incomplete.
+
+```bash
+# 1. Source pipelines (run whichever sources need updating)
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/run_vdem_pipeline.py'
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/run_ghspop_pipeline.py'
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/run_ghsbuilts_pipeline.py'
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/run_acled_pipeline.py'
+
+# 2. Assemble — pass ALL source flags to get the full grid
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/assemble_grid.py \
+    --acled-grid data/compiled/acled \
+    --ghspop-grid data/compiled/ghspop \
+    --ghsbuilts-grid data/compiled/ghsbuilts \
+    --vdem-grid data/compiled/vdem'
+
+# 3. Export
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/export_zarr.py'
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/export_dataframe.py'
+
+# 4. Health check
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/check_health.py'
+
+# 5. Verify feature count
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python -c "
+import json
+f = json.load(open(\"data/assembled/feature_names.json\"))
+print(f\"Features: {len(f)}\")
+for i, name in enumerate(f):
+    print(f\"  {i}: {name}\")
+"'
+# Expected: 75 features (6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S
+#   + 22 V-Dem + 34 static + 3 admin)
+```
+
+If you only need to re-run assembly (all sources already compiled),
+skip step 1. If `refresh_pipeline.sh` is up to date with all sources,
+prefer that instead — it handles flags and step ordering automatically.
+
 ### Verify data after pipeline run
 
 Check that the assembled grid has the right totals:
@@ -239,6 +289,49 @@ sudo -u views-deploy tail -100 /home/views-deploy/views-datafactory/logs/refresh
 # Just the last run
 sudo -u views-deploy bash -c 'cd ~/views-datafactory && cat logs/pipeline_duration.json'
 ```
+
+---
+
+## Swap Configuration
+
+The CPX32 has 8 GB RAM. Assembly with 75+ features (UCDP + ACLED +
+GHS-POP + GHS-BUILT-S + V-Dem + static + admin) peaks around 9-10 GB,
+which causes the OOM killer to terminate the process. Adding swap lets
+the kernel spill excess pages to NVMe, which is fast enough for the
+occasional overflow without upgrading the server plan.
+
+### Add 4 GB swap (one-time setup)
+
+```bash
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+The last line makes it persistent across reboots.
+
+### Verify swap is active
+
+```bash
+free -h
+# Should show: Swap: 4.0Gi total
+```
+
+### Remove swap (if upgrading server plan instead)
+
+```bash
+sudo swapoff /swapfile
+sudo rm /swapfile
+sudo sed -i '/swapfile/d' /etc/fstab
+```
+
+### Alternative: rescale the server
+
+In the Hetzner Cloud console, click **Rescale** to upgrade to CPX42
+(8 vCPU, 16 GB RAM, ~27 EUR/mo). Requires a power-off (~30 seconds).
+CPU/RAM can be scaled back down later; disk resize is one-way.
 
 ---
 
