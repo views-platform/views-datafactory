@@ -53,10 +53,10 @@ SHDI_VARIABLES: tuple[str, ...] = (
 
 SHDI_ID_COLUMNS: tuple[str, ...] = (
     "GDLCODE",
-    "level",
-    "country",
-    "region",
-    "year",
+    "Level",
+    "Country",
+    "Region",
+    "Year",
 )
 
 DEFAULT_CENTROID_PATH = Path(
@@ -145,10 +145,8 @@ class ShdiConfig:
                 raise ValueError(msg)
             seen.add(var)
 
-    @property
-    def download_url(self) -> str:
-        indicators = "+".join(self.variables)
-        return f"{self.api_base_url}/shdi/download/{indicators}/"
+    def indicator_url(self, variable: str) -> str:
+        return f"{self.api_base_url}/shdi/download/{variable}/"
 
     @property
     def output_path(self) -> Path:
@@ -225,40 +223,50 @@ def fetch_shdi(
     # Resolve token
     token = get_gdl_token()
 
-    # Download CSV from API
+    # Download each indicator separately (GDL API returns only latest
+    # year when multiple indicators are combined in one request).
     logger.info(
-        "Downloading SHDI %s from %s ...",
-        config.version, config.download_url,
+        "Downloading SHDI %s — %d indicators ...",
+        config.version, len(config.variables),
     )
     t0 = time.monotonic()
+    all_csv_bytes: list[bytes] = []
 
-    try:
-        resp = request_with_retry(
-            config.download_url,
-            params={"format": "csv", "token": token},
-            timeout=config.timeout,
-        )
-    except _requests.RequestException:
-        logger.error(
-            "Download failed for SHDI %s", config.version
-        )
-        append_ledger_entry(config.ledger_path, {
-            "dataset": DATASET_ID,
-            "version": config.version,
-            "outcome": "failed",
-            "ledger_version": LEDGER_VERSION,
-            "digest_algorithm": DIGEST_SCHEME,
-        })
-        raise
+    for var in config.variables:
+        url = config.indicator_url(var)
+        logger.info("  %s → %s", var, url)
+        try:
+            resp = request_with_retry(
+                url,
+                params={"format": "csv", "token": token},
+                timeout=config.timeout,
+            )
+        except _requests.RequestException:
+            logger.error(
+                "Download failed for SHDI %s (%s)",
+                config.version, var,
+            )
+            append_ledger_entry(config.ledger_path, {
+                "dataset": DATASET_ID,
+                "version": config.version,
+                "outcome": "failed",
+                "reason": f"download failed for {var}",
+                "ledger_version": LEDGER_VERSION,
+                "digest_algorithm": DIGEST_SCHEME,
+            })
+            raise
+        all_csv_bytes.append(resp.content)
 
-    csv_bytes = resp.content
     elapsed_dl = time.monotonic() - t0
-    size_mb = len(csv_bytes) / 1e6
-    logger.info("Downloaded %.1f MB in %.1fs", size_mb, elapsed_dl)
+    total_mb = sum(len(b) for b in all_csv_bytes) / 1e6
+    logger.info(
+        "Downloaded %d indicators (%.1f MB) in %.1fs",
+        len(config.variables), total_mb, elapsed_dl,
+    )
 
-    # Parse and filter CSV
+    # Parse each indicator CSV and merge on ID columns
     try:
-        table = _parse_and_filter(csv_bytes, config)
+        table = _parse_and_merge(all_csv_bytes, config)
     except ValueError as exc:
         append_ledger_entry(config.ledger_path, {
             "dataset": DATASET_ID,
@@ -284,7 +292,7 @@ def fetch_shdi(
         raise ValueError(msg)
 
     # Filter to subnational rows only (level == "Subnat")
-    level_col = table.column("level").to_pylist()
+    level_col = table.column("Level").to_pylist()
     subnat_mask = [lv == "Subnat" for lv in level_col]
     table = table.filter(pa.array(subnat_mask))
 
@@ -368,8 +376,8 @@ def fetch_shdi(
         n_pgids, gdl_codes_mapped, elapsed_xwalk,
     )
 
-    # Provenance
-    content_digest = compute_content_digest(csv_bytes)
+    # Provenance — digest covers all indicator CSVs concatenated
+    content_digest = compute_content_digest(b"".join(all_csv_bytes))
 
     previous = last_digest_for_version(
         config.ledger_path, config.version
@@ -380,7 +388,7 @@ def fetch_shdi(
 
     gdl_col = table.column("GDLCODE").to_pylist()
     n_regions = len(set(gdl_col))
-    year_col = table.column("year").to_pylist()
+    year_col = table.column("Year").to_pylist()
     min_year = int(min(year_col))
     max_year = int(max(year_col))
 
@@ -426,33 +434,58 @@ def fetch_shdi(
 # ---- CSV parsing ----
 
 
-def _parse_and_filter(
-    csv_bytes: bytes,
+def _parse_and_merge(
+    csv_list: list[bytes],
     config: ShdiConfig,
 ) -> pa.Table:
-    """Parse SHDI CSV and filter to requested columns."""
-    needed_cols = list(SHDI_ID_COLUMNS) + list(config.variables)
+    """Parse per-indicator CSVs and merge on ID columns.
 
-    read_opts = pcsv.ReadOptions(
-        column_names=None,
-        autogenerate_column_names=False,
-    )
-    convert_opts = pcsv.ConvertOptions(
-        include_columns=needed_cols,
-    )
-
-    try:
-        table = pcsv.read_csv(
-            pa.py_buffer(csv_bytes),
-            read_options=read_opts,
-            convert_options=convert_opts,
+    Each CSV has ID columns + one indicator column. We parse each,
+    keep only ID + that indicator, then join them together.
+    """
+    if len(csv_list) != len(config.variables):
+        msg = (
+            f"Expected {len(config.variables)} CSVs, "
+            f"got {len(csv_list)}"
         )
-    except (pa.ArrowInvalid, pa.ArrowKeyError) as exc:
-        msg = f"SHDI CSV missing required columns: {exc}"
-        logger.error(msg)
-        raise ValueError(msg) from exc
+        raise ValueError(msg)
 
-    return table
+    id_cols = list(SHDI_ID_COLUMNS)
+    tables: list[pa.Table] = []
+
+    for csv_bytes, var in zip(csv_list, config.variables, strict=True):
+        needed = id_cols + [var]
+        convert_opts = pcsv.ConvertOptions(include_columns=needed)
+        try:
+            tbl = pcsv.read_csv(
+                pa.py_buffer(csv_bytes),
+                convert_options=convert_opts,
+            )
+        except (pa.ArrowInvalid, pa.ArrowKeyError) as exc:
+            msg = f"SHDI CSV missing required columns for {var}: {exc}"
+            logger.error(msg)
+            raise ValueError(msg) from exc
+        tables.append(tbl)
+
+    if tables[0].num_rows == 0:
+        return tables[0]
+
+    expected_rows = tables[0].num_rows
+    result = tables[0]
+    for i, tbl in enumerate(tables[1:], start=1):
+        result = result.join(tbl, keys=id_cols, join_type="inner")
+        if result.num_rows < expected_rows:
+            dropped = expected_rows - result.num_rows
+            var = config.variables[i]
+            msg = (
+                f"SHDI inner join lost {dropped} rows "
+                f"({dropped / expected_rows:.1%}) merging {var} — "
+                f"indicator coverage mismatch"
+            )
+            logger.error(msg)
+            raise ValueError(msg)
+
+    return result
 
 
 # ---- Spatial join crosswalk ----

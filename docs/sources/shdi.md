@@ -47,6 +47,14 @@ This is the first subnational socioeconomic source in the data factory. Unlike V
 
 GDL uses proprietary region codes (GDL-Code), not GAUL or ISO 3166-2. The crosswalk is built via direct spatial join of GDL shapefile polygons against PRIO-GRID centroids using STRtree — the same pattern as `gaul_admin.py`. Output: `data/raw/shdi/gdl_to_pgid.parquet` with schema `(gid: int32, gdl_code: string)`.
 
+## Licensing and access
+
+GDL terms of use (https://globaldatalab.org/termsofuse/) permit free download and use for noncommercial purposes with attribution. Commercial use requires written permission.
+
+VIEWS is a publicly funded academic project at PRIO and Uppsala University. Our use of SHDI as an input covariate in conflict forecasting models is noncommercial — we do not redistribute GDL data, and our forecasts are freely available. However, because VIEWS also serves as an operational early warning system used by international organizations and governments, we sent a proactive permission request to GDL (Professor Jeroen Smits) on 2026-05-29 to confirm our use is within terms. Response pending as of 2026-05-29.
+
+**API token:** Free account registered at globaldatalab.org → "My GDL" → "API Access". Token stored as `GDL_API_TOKEN` environment variable per ADR-026. The token is shown once at creation and cannot be retrieved later — keep a record. GDL limits each token to 1000 requests (our harvester uses 5 requests per run — one per indicator plus shapefile — so this is not a constraint). Note: GDL built the API for their R package (`gdldata`) and describes it as intended "for both classroom settings and research alike." We discovered it works as a plain REST endpoint by reading the R package source code.
+
 ## Known limitations
 
 - **Admin-1 granularity.** All grid cells within a GDL region share the same SHDI value. No variation below admin-1.

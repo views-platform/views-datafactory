@@ -191,6 +191,7 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
     ),
     SourceEntry(
         name="SHDI",
+        required_env_vars=("GDL_API_TOKEN",),
         features=(
             "shdi_shdi",
             "shdi_healthindex",

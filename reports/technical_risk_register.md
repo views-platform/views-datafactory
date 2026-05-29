@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-05-29)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29
-**Status:** 226 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 174 resolved, 49 open concerns (2 Tier 2, 9 Tier 3, 32 Tier 4, 6 deferred by design; 1 with fired trigger), 3 open disagreements. 151 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 26 resolved disagreements in archive. 29 disagreement IDs total: 26 resolved, 3 open.
+**Status:** 229 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 179 resolved, 47 open concerns (2 Tier 2, 9 Tier 3, 30 Tier 4, 6 deferred by design; 1 with fired trigger), 3 open disagreements. 156 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 26 resolved disagreements in archive. 29 disagreement IDs total: 26 resolved, 3 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -59,8 +59,11 @@
 | C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | Next audit round adds files, or total exceeds 45 | Test hygiene |
 | C-173 | 4 | Hetzner server memory headroom (CPX42 + swap) | Software optimization needed before next large source | Server hardening |
 | C-164 | 3 | Cross-layer WET debt: 5 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI integration, or when 6th pipeline source is planned | WET-before-DRY |
-| C-225 | 4 | SHDI version drift in docs — "v8.3" in two files, code defaults to "v10.2" | Developer reads ADR README or consumer guide and trusts "v8.3" for Sprint 2 | SHDI docs |
-| C-226 | 4 | SHDI shapefile download failure writes no ledger entry | PRIO CDN unreachable during SHDI harvest — no provenance trail, redundant CSV re-download on retry | SHDI harvest |
+| ~~C-225~~ | ~~4~~ | ~~SHDI version drift in docs~~ | Resolved 2026-05-29 (version strings corrected) | SHDI docs |
+| ~~C-226~~ | ~~4~~ | ~~SHDI shapefile download failure writes no ledger entry~~ | Resolved 2026-05-29 (try/except + ledger entry added) | SHDI harvest |
+| ~~C-227~~ | ~~2~~ | ~~SHDI inner join can silently drop rows~~ | Resolved 2026-05-29 (fail-loud row-count guard + test) | SHDI harvest |
+| ~~C-228~~ | ~~4~~ | ~~Dead `download_url` property~~ | Resolved 2026-05-29 (property + dead test removed) | SHDI harvest |
+| ~~C-229~~ | ~~4~~ | ~~Doc claims "1 request per run"~~ | Resolved 2026-05-29 (updated to "5 requests per run") | SHDI docs |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
 | C-159 | 4 | ACLED snapshot archiving and revision comparison paths untested | Archiving logic implicated in data integrity incident | ACLED test coverage |
 | ~~C-160~~ | ~~4~~ | ~~ACLED `fetch_paginated` string-data corruption has no guard~~ | Demoted to tech-debt backlog 2026-05-28 | — |
@@ -619,31 +622,25 @@ Cross-ref: C-144 (compilation to_pydict), C-145 (viewpoint full store load), C-1
 
 ---
 
-### C-225: SHDI version drift in docs — "v8.3" in two files, code defaults to "v10.2"
+### ~~C-225: SHDI version drift in docs — "v8.3" in two files, code defaults to "v10.2" (Resolved 2026-05-29)~~ RESOLVED
 
-| Field | Value |
-|-------|-------|
-| ID | C-225 |
-| Tier | 4 |
-| Source | review-diff (2026-05-29) |
-| Trigger | Developer reads ADR-036 README entry or consumer guide and implements Sprint 2 viewpoint/compilation targeting "v8.3" when code defaults to "v10.2" |
-| Location | `docs/ADRs/README.md:135` ("SHDI v8.3 integration"), `docs/guides/consumer_data_guide.md:421` ("GDL SHDI v8.3 indicators") |
+Both version strings corrected to "v10.2" in `docs/ADRs/README.md:135` and `docs/guides/consumer_data_guide.md:421`.
 
-`docs/ADRs/README.md` line 135 says "SHDI v8.3 integration" and `docs/guides/consumer_data_guide.md` line 421 says "GDL SHDI v8.3 indicators." Both should say "v10.2" to match `ShdiConfig.version = "v10.2"` in `shdi.py:125`. The ADR-036 body and `docs/sources/shdi.md` are correct (no hardcoded version or omit it). Tier 4: doc quality, no correctness impact, single-developer scope.
+### ~~C-226: SHDI shapefile download failure writes no ledger entry (Resolved 2026-05-29)~~ RESOLVED
 
-### C-226: SHDI shapefile download failure writes no ledger entry
+Try/except added around shapefile download with `"failed"` ledger entry before re-raise (shdi.py:331-348).
 
-| Field | Value |
-|-------|-------|
-| ID | C-226 |
-| Tier | 4 |
-| Source | review-diff (2026-05-29) |
-| Trigger | PRIO CDN is unreachable during SHDI harvest — shapefile download fails without provenance trail, and the already-written CSV parquet causes redundant re-download on retry |
-| Location | `src/datafactory_harvester/sources/shdi.py:314-326` (shapefile download, no try/except) |
+### ~~C-227: SHDI `_parse_and_merge` inner join can silently drop rows (Resolved 2026-05-29)~~ RESOLVED
 
-The SHDI harvester wraps the CSV download in try/except `RequestException` and writes a `"failed"` ledger entry before re-raising (lines 241-252). The shapefile download at lines 318-322 has no equivalent — if `request_with_retry()` raises, the exception propagates with no ledger entry. At that point the CSV parquet is already written (line 306) but the crosswalk is not. On retry, the cache check fails (crosswalk missing at line 208), so the CSV gets redundantly re-downloaded. No silent corruption — the exception is fail-loud — but provenance is incomplete and the retry is wasteful. Same class of problem as C-186 (shapefile harvester lacks failure provenance).
+Added fail-loud row-count guard in `_parse_and_merge` (`shdi.py:478-490`): after each inner join step, compares `result.num_rows` against `expected_rows`. If any rows are lost, logs error with percentage and raises `ValueError` with "coverage mismatch" message. Test: `test_indicator_row_mismatch_raises`. Live API confirmed all 4 indicators have identical 62,531-row key sets — guard passes today, will fire if GDL changes.
 
-Cross-ref: C-186 (shapefile harvester outcome vocabulary gap).
+### ~~C-228: Dead `download_url` property on `ShdiConfig` (Resolved 2026-05-29)~~ RESOLVED
+
+Removed `download_url` property from `ShdiConfig` and replaced `test_download_url_includes_indicators` with `test_indicator_url_includes_variable`.
+
+### ~~C-229: `docs/sources/shdi.md` claims "1 request per run" (Resolved 2026-05-29)~~ RESOLVED
+
+Updated to "5 requests per run — one per indicator plus shapefile."
 
 ### C-224: No server backup or disaster recovery plan — [DEFER]
 

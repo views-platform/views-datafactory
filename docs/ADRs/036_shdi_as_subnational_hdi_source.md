@@ -11,7 +11,7 @@
 
 The assembled grid carries conflict events (UCDP, ACLED), population (GHS-POP), built-up surface (GHS-BUILT-S), static geography (PRIO-GRID), administrative codes (GAUL), and democracy indicators (V-Dem). All socioeconomic data is either country-level (V-Dem) or grid-level (GHS-POP/BUILT-S). There is no subnational socioeconomic indicator — no measure of human development that varies within countries.
 
-The Global Data Lab (GDL) publishes the Subnational Human Development Index (SHDI), covering 1,801 administrative regions across 167 countries from 1990 to 2023. SHDI provides a composite HDI plus three sub-indices (health, education, income) at admin-1 resolution — finer than V-Dem's country level but coarser than PRIO-GRID's 0.5° cells.
+The Global Data Lab (GDL) publishes the Subnational Human Development Index (SHDI), covering 1,801 administrative regions across 188 countries from 1990 to 2023. SHDI provides a composite HDI plus three sub-indices (health, education, income) at admin-1 resolution — finer than V-Dem's country level but coarser than PRIO-GRID's 0.5° cells.
 
 SHDI is the 6th data source contributing features to the assembled grid (8th overall counting PRIO-GRID Shapefile and GAUL Admin which don't contribute features directly).
 
@@ -121,7 +121,7 @@ SHDI's 4 indices (composite + 3 sub-indices) are the core product. GDL's other i
 ## Implementation Notes
 
 - **Harvester:** `src/datafactory_harvester/sources/shdi.py` — downloads SHDI CSV from GDL Data API (`GDL_API_TOKEN` env var, ADR-026), GDL shapefiles from PRIO CDN (no auth), produces `shdi_v10.2.parquet` + `gdl_to_pgid.parquet`
-- **Data API:** `https://globaldatalab.org/shdi/download/{indicators}/?format=csv&token={token}` — indicators joined with `+`, returns CSV directly
+- **Data API:** `https://globaldatalab.org/shdi/download/{indicator}/?format=csv&token={token}` — one request per indicator (combined URL returns only latest year; discovered during live smoke test)
 - **Shapefile CDN:** `https://cdn.cloud.prio.org/files/604a306f-80de-49af-8610-948af8e2e474/GDL%20Shapefiles%20V64.zip` — cached locally after first download
 - **Spatial join:** Reuse STRtree pattern from `gaul_admin.py:187-264`. Load PRIO-GRID centroids, build STRtree index of GDL polygons, join centroid → polygon.
 - **Crosswalk output:** `data/raw/shdi/gdl_to_pgid.parquet` with schema `(gid: int32, gdl_code: string)`

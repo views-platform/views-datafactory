@@ -22,20 +22,21 @@ import pytest
 
 SAMPLE_VARIABLES = ("shdi", "healthindex", "edindex")
 
-SAMPLE_CSV = (
-    "GDLCODE,level,country,region,year,"
-    "shdi,healthindex,edindex,incindex\n"
-    "NORr101,Subnat,Norway,Oslo,2020,"
-    "0.95,0.97,0.96,0.92\n"
-    "NORr102,Subnat,Norway,Bergen,2020,"
-    "0.93,0.95,0.94,0.90\n"
-    "NORr101,Subnat,Norway,Oslo,2021,"
-    "0.96,0.97,0.97,0.93\n"
-    "NORr102,Subnat,Norway,Bergen,2021,"
-    "0.94,0.96,0.95,0.91\n"
-    "NOR,National,Norway,,2020,"
-    "0.94,0.96,0.95,0.91\n"
-)
+# Per-indicator sample rows — GDL API returns one indicator per request.
+_SAMPLE_ID_ROWS = [
+    "NORr101,Subnat,Norway,Oslo,2020",
+    "NORr102,Subnat,Norway,Bergen,2020",
+    "NORr101,Subnat,Norway,Oslo,2021",
+    "NORr102,Subnat,Norway,Bergen,2021",
+    "NOR,National,Norway,Total,2020",
+]
+
+_SAMPLE_VALUES: dict[str, list[str]] = {
+    "shdi": ["0.95", "0.93", "0.96", "0.94", "0.94"],
+    "healthindex": ["0.97", "0.95", "0.97", "0.96", "0.96"],
+    "edindex": ["0.96", "0.94", "0.97", "0.95", "0.95"],
+    "incindex": ["0.92", "0.90", "0.93", "0.91", "0.91"],
+}
 
 SAMPLE_CROSSWALK = [
     (100001, "NORr101"),
@@ -46,19 +47,21 @@ SAMPLE_CROSSWALK = [
 _SHDI_MODULE = "datafactory_harvester.sources.shdi"
 
 
-def _mock_csv_response(
-    csv_content: str = SAMPLE_CSV,
-) -> MagicMock:
-    """Create a mock response returning CSV bytes."""
-    resp = MagicMock()
-    resp.content = csv_content.encode()
-    return resp
+def _make_indicator_csv(variable: str) -> str:
+    """Build a single-indicator CSV matching GDL API format."""
+    header = f"GDLCODE,Level,Country,Region,Year,{variable}"
+    lines = [header]
+    for id_row, val in zip(
+        _SAMPLE_ID_ROWS, _SAMPLE_VALUES[variable], strict=True,
+    ):
+        lines.append(f"{id_row},{val}")
+    return "\n".join(lines) + "\n"
 
 
-def _mock_shapefile_response() -> MagicMock:
-    """Create a mock response returning dummy shapefile ZIP bytes."""
+def _mock_response(content: bytes) -> MagicMock:
+    """Create a mock HTTP response with given content."""
     resp = MagicMock()
-    resp.content = b"fake-shapefile-zip"
+    resp.content = content
     return resp
 
 
@@ -70,11 +73,20 @@ def _mock_build_crosswalk(
     return list(SAMPLE_CROSSWALK)
 
 
-def _side_effect_for_download(csv_resp: MagicMock):
-    """Return CSV response for first call, shapefile for second."""
-    shp_resp = _mock_shapefile_response()
-    responses = iter([csv_resp, shp_resp])
-    return lambda *a, **kw: next(responses)
+def _side_effect_for_download(
+    variables: tuple[str, ...] = (
+        "shdi", "healthindex", "edindex", "incindex",
+    ),
+):
+    """Return per-indicator CSV responses then shapefile response."""
+    responses: list[MagicMock] = []
+    for var in variables:
+        responses.append(
+            _mock_response(_make_indicator_csv(var).encode()),
+        )
+    responses.append(_mock_response(b"fake-shapefile-zip"))
+    it = iter(responses)
+    return lambda *a, **kw: next(it)
 
 
 # ===================================================================
@@ -120,11 +132,13 @@ class TestShdiConfigGreen:
         cfg = ShdiConfig()
         assert cfg.crosswalk_path.name == "gdl_to_pgid.parquet"
 
-    def test_download_url_includes_indicators(self) -> None:
+    def test_indicator_url_includes_variable(self) -> None:
         from datafactory_harvester.sources.shdi import ShdiConfig
 
-        cfg = ShdiConfig(variables=("shdi", "edindex"))
-        assert "shdi+edindex" in cfg.download_url
+        cfg = ShdiConfig()
+        url = cfg.indicator_url("edindex")
+        assert "edindex" in url
+        assert url.endswith("/")
 
     def test_shapefile_cache_path(self) -> None:
         from datafactory_harvester.sources.shdi import ShdiConfig
@@ -184,8 +198,6 @@ class TestFetchShdiGreen:
             fetch_shdi,
         )
 
-        csv_resp = _mock_csv_response()
-
         config = ShdiConfig(
             data_dir=tmp_path / "raw",
             ledger_path=tmp_path / "ledger.jsonl",
@@ -198,7 +210,7 @@ class TestFetchShdiGreen:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                side_effect=_side_effect_for_download(csv_resp),
+                side_effect=_side_effect_for_download(),
             ),
             patch(
                 f"{_SHDI_MODULE}._build_crosswalk",
@@ -232,8 +244,6 @@ class TestFetchShdiGreen:
             fetch_shdi,
         )
 
-        csv_resp = _mock_csv_response()
-
         config = ShdiConfig(
             data_dir=tmp_path / "raw",
             ledger_path=tmp_path / "ledger.jsonl",
@@ -246,7 +256,7 @@ class TestFetchShdiGreen:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                side_effect=_side_effect_for_download(csv_resp),
+                side_effect=_side_effect_for_download(),
             ),
             patch(
                 f"{_SHDI_MODULE}._build_crosswalk",
@@ -256,7 +266,7 @@ class TestFetchShdiGreen:
             result = fetch_shdi(config)
 
         table = pq.read_table(config.output_path)
-        levels = set(table.column("level").to_pylist())
+        levels = set(table.column("Level").to_pylist())
         assert levels == {"Subnat"}
         assert result["n_rows"] == 4
 
@@ -273,15 +283,15 @@ class TestFetchShdiGreen:
             ledger_path=tmp_path / "ledger.jsonl",
         )
 
+        # 4 indicators + 1 shapefile = 5 calls for first fetch
+        first_fetch = _side_effect_for_download()
         call_count = 0
 
         def counting_side_effect(*a, **kw):
             nonlocal call_count
             call_count += 1
-            if call_count <= 2:
-                if call_count == 1:
-                    return _mock_csv_response()
-                return _mock_shapefile_response()
+            if call_count <= 5:
+                return first_fetch(*a, **kw)
             raise AssertionError("Should not download again")
 
         with (
@@ -302,7 +312,7 @@ class TestFetchShdiGreen:
             result = fetch_shdi(config)
 
         assert result["outcome"] == "cached"
-        assert call_count == 2
+        assert call_count == 5
 
     def test_force_refresh_re_downloads(
         self, tmp_path: Path,
@@ -317,8 +327,17 @@ class TestFetchShdiGreen:
             ledger_path=tmp_path / "ledger.jsonl",
         )
 
-        csv_resp = _mock_csv_response()
-        shp_resp = _mock_shapefile_response()
+        # Two full fetches: 4 CSVs + 1 shapefile each = 10 calls
+        fetch1 = _side_effect_for_download()
+        fetch2 = _side_effect_for_download()
+        call_count = 0
+
+        def two_fetches(*a, **kw):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 5:
+                return fetch1(*a, **kw)
+            return fetch2(*a, **kw)
 
         with (
             patch(
@@ -327,11 +346,8 @@ class TestFetchShdiGreen:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                side_effect=[
-                    csv_resp, shp_resp,
-                    _mock_csv_response(), _mock_shapefile_response(),
-                ],
-            ) as mock_req,
+                side_effect=two_fetches,
+            ),
             patch(
                 f"{_SHDI_MODULE}._build_crosswalk",
                 side_effect=_mock_build_crosswalk,
@@ -341,7 +357,7 @@ class TestFetchShdiGreen:
             result = fetch_shdi(config, force_refresh=True)
 
         assert result["outcome"] in ("success", "unchanged")
-        assert mock_req.call_count == 4
+        assert call_count == 10
 
     def test_parquet_contains_only_requested_columns(
         self, tmp_path: Path,
@@ -350,8 +366,6 @@ class TestFetchShdiGreen:
             ShdiConfig,
             fetch_shdi,
         )
-
-        csv_resp = _mock_csv_response()
 
         config = ShdiConfig(
             variables=SAMPLE_VARIABLES,
@@ -366,7 +380,7 @@ class TestFetchShdiGreen:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                side_effect=_side_effect_for_download(csv_resp),
+                side_effect=_side_effect_for_download(SAMPLE_VARIABLES),
             ),
             patch(
                 f"{_SHDI_MODULE}._build_crosswalk",
@@ -379,7 +393,7 @@ class TestFetchShdiGreen:
         col_names = set(table.column_names)
 
         assert "GDLCODE" in col_names
-        assert "year" in col_names
+        assert "Year" in col_names
         for var in SAMPLE_VARIABLES:
             assert var in col_names
         assert "incindex" not in col_names
@@ -389,8 +403,6 @@ class TestFetchShdiGreen:
             ShdiConfig,
             fetch_shdi,
         )
-
-        csv_resp = _mock_csv_response()
 
         config = ShdiConfig(
             data_dir=tmp_path / "raw",
@@ -404,7 +416,7 @@ class TestFetchShdiGreen:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                side_effect=_side_effect_for_download(csv_resp),
+                side_effect=_side_effect_for_download(),
             ),
             patch(
                 f"{_SHDI_MODULE}._build_crosswalk",
@@ -438,8 +450,6 @@ class TestFetchShdiGreen:
         )
         config.shapefile_cache_path.write_bytes(b"cached-zip")
 
-        csv_resp = _mock_csv_response()
-
         with (
             patch(
                 f"{_SHDI_MODULE}.get_gdl_token",
@@ -447,7 +457,7 @@ class TestFetchShdiGreen:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                return_value=csv_resp,
+                side_effect=_side_effect_for_download(),
             ) as mock_req,
             patch(
                 f"{_SHDI_MODULE}._build_crosswalk",
@@ -456,7 +466,8 @@ class TestFetchShdiGreen:
         ):
             fetch_shdi(config)
 
-        assert mock_req.call_count == 1
+        # 4 indicator CSVs only — shapefile already cached
+        assert mock_req.call_count == 4
 
 
 # ===================================================================
@@ -568,13 +579,21 @@ class TestFetchShdiRed:
             fetch_shdi,
         )
 
-        bad_csv = "GDLCODE,year,shdi\nNORr101,2020,0.95\n"
-        csv_resp = _mock_csv_response(bad_csv)
+        # First indicator CSV missing ID columns (Level, Country, Region)
+        bad_csv = b"GDLCODE,Year,shdi\nNORr101,2020,0.95\n"
 
         config = ShdiConfig(
             data_dir=tmp_path / "raw",
             ledger_path=tmp_path / "ledger.jsonl",
         )
+
+        responses = [_mock_response(bad_csv)]
+        for var in list(config.variables)[1:]:
+            responses.append(
+                _mock_response(_make_indicator_csv(var).encode()),
+            )
+        responses.append(_mock_response(b"fake-shapefile-zip"))
+        it = iter(responses)
 
         with (
             patch(
@@ -583,7 +602,7 @@ class TestFetchShdiRed:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                return_value=csv_resp,
+                side_effect=lambda *a, **kw: next(it),
             ),
             pytest.raises(ValueError, match="missing"),
         ):
@@ -597,13 +616,20 @@ class TestFetchShdiRed:
             fetch_shdi,
         )
 
-        bad_csv = "GDLCODE,year,shdi\nNORr101,2020,0.95\n"
-        csv_resp = _mock_csv_response(bad_csv)
+        bad_csv = b"GDLCODE,Year,shdi\nNORr101,2020,0.95\n"
 
         config = ShdiConfig(
             data_dir=tmp_path / "raw",
             ledger_path=tmp_path / "ledger.jsonl",
         )
+
+        responses = [_mock_response(bad_csv)]
+        for var in list(config.variables)[1:]:
+            responses.append(
+                _mock_response(_make_indicator_csv(var).encode()),
+            )
+        responses.append(_mock_response(b"fake-shapefile-zip"))
+        it = iter(responses)
 
         with (
             patch(
@@ -612,7 +638,7 @@ class TestFetchShdiRed:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                return_value=csv_resp,
+                side_effect=lambda *a, **kw: next(it),
             ),
             pytest.raises(ValueError, match="missing"),
         ):
@@ -630,16 +656,18 @@ class TestFetchShdiRed:
             fetch_shdi,
         )
 
-        empty_csv = (
-            "GDLCODE,level,country,region,year,"
-            "shdi,healthindex,edindex,incindex\n"
-        )
-        csv_resp = _mock_csv_response(empty_csv)
-
         config = ShdiConfig(
             data_dir=tmp_path / "raw",
             ledger_path=tmp_path / "ledger.jsonl",
         )
+
+        # All indicator CSVs: headers only, no data rows
+        responses: list[MagicMock] = []
+        for var in config.variables:
+            empty = f"GDLCODE,Level,Country,Region,Year,{var}\n"
+            responses.append(_mock_response(empty.encode()))
+        responses.append(_mock_response(b"fake-shapefile-zip"))
+        it = iter(responses)
 
         with (
             patch(
@@ -648,7 +676,7 @@ class TestFetchShdiRed:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                return_value=csv_resp,
+                side_effect=lambda *a, **kw: next(it),
             ),
             pytest.raises(ValueError, match="zero rows"),
         ):
@@ -667,18 +695,24 @@ class TestFetchShdiRed:
             fetch_shdi,
         )
 
-        national_only = (
-            "GDLCODE,level,country,region,year,"
-            "shdi,healthindex,edindex,incindex\n"
-            "NOR,National,Norway,,2020,"
-            "0.94,0.96,0.95,0.91\n"
-        )
-        csv_resp = _mock_csv_response(national_only)
-
         config = ShdiConfig(
             data_dir=tmp_path / "raw",
             ledger_path=tmp_path / "ledger.jsonl",
         )
+
+        nat_values = {
+            "shdi": "0.94", "healthindex": "0.96",
+            "edindex": "0.95", "incindex": "0.91",
+        }
+        responses: list[MagicMock] = []
+        for var in config.variables:
+            csv = (
+                f"GDLCODE,Level,Country,Region,Year,{var}\n"
+                f"NOR,National,Norway,Total,2020,{nat_values[var]}\n"
+            )
+            responses.append(_mock_response(csv.encode()))
+        responses.append(_mock_response(b"fake-shapefile-zip"))
+        it = iter(responses)
 
         with (
             patch(
@@ -687,7 +721,7 @@ class TestFetchShdiRed:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                return_value=csv_resp,
+                side_effect=lambda *a, **kw: next(it),
             ),
             pytest.raises(ValueError, match="subnational"),
         ):
@@ -707,17 +741,23 @@ class TestFetchShdiRed:
             fetch_shdi,
         )
 
-        csv_resp = _mock_csv_response()
-
         config = ShdiConfig(
             data_dir=tmp_path / "raw",
             ledger_path=tmp_path / "ledger.jsonl",
         )
 
-        def csv_then_fail(*a, **kw):
-            if not hasattr(csv_then_fail, "called"):
-                csv_then_fail.called = True
-                return csv_resp
+        # 4 indicator CSVs succeed, then shapefile fails
+        csv_responses = [
+            _mock_response(_make_indicator_csv(var).encode())
+            for var in config.variables
+        ]
+        call_count = 0
+
+        def csvs_then_fail(*a, **kw):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= len(csv_responses):
+                return csv_responses[call_count - 1]
             raise requests.ConnectionError("CDN down")
 
         with (
@@ -727,7 +767,7 @@ class TestFetchShdiRed:
             ),
             patch(
                 f"{_SHDI_MODULE}.request_with_retry",
-                side_effect=csv_then_fail,
+                side_effect=csvs_then_fail,
             ),
             pytest.raises(requests.ConnectionError),
         ):
@@ -738,6 +778,47 @@ class TestFetchShdiRed:
         entry = json.loads(ledger.splitlines()[-1])
         assert entry["outcome"] == "failed"
         assert "shapefile" in entry["reason"].lower()
+
+    def test_indicator_row_mismatch_raises(
+        self, tmp_path: Path,
+    ) -> None:
+        """C-227: inner join must fail-loud on coverage mismatch."""
+        from datafactory_harvester.sources.shdi import (
+            ShdiConfig,
+            fetch_shdi,
+        )
+
+        config = ShdiConfig(
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        # shdi has 2020+2021, edindex has only 2020 — join should detect
+        csvs: list[MagicMock] = []
+        for var in config.variables:
+            csv = _make_indicator_csv(var)
+            if var == "edindex":
+                lines = csv.strip().split("\n")
+                csv = "\n".join(
+                    ln for ln in lines
+                    if ",2021," not in ln
+                ) + "\n"
+            csvs.append(_mock_response(csv.encode()))
+        csvs.append(_mock_response(b"fake-shapefile-zip"))
+        it = iter(csvs)
+
+        with (
+            patch(
+                f"{_SHDI_MODULE}.get_gdl_token",
+                return_value="test-token",
+            ),
+            patch(
+                f"{_SHDI_MODULE}.request_with_retry",
+                side_effect=lambda *a, **kw: next(it),
+            ),
+            pytest.raises(ValueError, match="coverage mismatch"),
+        ):
+            fetch_shdi(config)
 
 
 # ===================================================================
