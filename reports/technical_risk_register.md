@@ -149,7 +149,7 @@ See also C-79 (Parquet I/O in tests), C-179 (consolidation dedup to_pylist).
 | Field | Value |
 |-------|-------|
 | ID | C-146 |
-| Tier | 3 |
+| Tier | 4 (recalibrated from 3 during strategic curation 2026-05-28) |
 | Source | repo-assimilation (2026-04-30) |
 | Trigger | When assembly orchestration needs refactoring, or a second assembly path is needed (e.g., different feature sets for different consumers) |
 | Location | `scripts/assemble_grid.py` (~350 LOC procedural, not in any `src/datafactory_*` package) |
@@ -511,7 +511,7 @@ Cross-ref: C-44 (harvest pipeline template), C-184 (ACLED same structural gap), 
 | Field | Value |
 |-------|-------|
 | ID | C-189 |
-| Tier | 3 |
+| Tier | 4 (recalibrated from 3 during strategic curation 2026-05-28) |
 | Source | Falsification audit — coverage parity (2026-05-22) |
 | Trigger | GHS-BUILT-S encounters a production incident on Hetzner that would have been caught by Red-team or falsification tests present for GHS-POP but absent for GHS-BUILT-S |
 | Location | `tests/test_ghsbuilts_harvester.py`, `tests/test_ghsbuilts_viewpoint.py`, `tests/test_ghsbuilts_compilation.py`; parity stubs in `tests/test_falsification_ghsbuilts_coverage_parity.py` |

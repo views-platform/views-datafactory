@@ -506,7 +506,7 @@ GoF: extract to `datafactory_query.consumer_contract` for reuse. Beck: test the 
 **Resolved 2026-05-02.** Added `TestAcledProfilesGreen` (4 tests: `load_acled_violence_only`, `load_acled_all_events`, `load_with_override`, `list_acled_profiles`) and `TestAcledProfilesRed` (1 test: `unknown_acled_profile_raises`) in `tests/test_acled_viewpoint.py`.
 **Source:** ACLED integration test review (2026-05-02). Cross-ref: C-150 (ACLED test gaps).
 
-### C-157: ~~Systematic ACLED documentation drift across ADRs, CICs, and guides RESOLVED~~ RESOLVED
+### C-157: ~~Systematic ACLED documentation drift across ADRs, CICs, and guides~~ RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -526,11 +526,11 @@ Cross-ref: C-158 (missing CICs).
 **Resolved 2026-04-26.** Added `TestRequestWithRetryRed` (2 tests: `requests.Timeout` retried, `HTTPError` with `response=None` retried not treated as 4xx).
 **Source:** Test review 2026-04-26. Cross-ref: C-70, C-72.
 
-### C-125: ~~No country-month (cm) aggregation — 48/70 models cannot migrate~~ RESOLVED~~ RESOLVED
+### C-125: ~~No country-month (cm) aggregation — 48/70 models cannot migrate~~ RESOLVED
 Resolved 2026-04-21. `load_dataset(output_format="country_month")` now aggregates grid cells by country per month using `gaul0_code` as the grouping key. Adapter: `grid_to_country_month()` in `datafactory_adapters`. Active conflict features (ged_sb/ns/os_best) summed per (month_id, country_id). WDI/V-DEM/topic features remain out of scope (C-126 covers the transform gap).
 **Source:** Falsification audit 2026-04-20 (F3). Cross-ref: S1 in `test_falsification_viewser_replacement.py`.
 
-### C-158: ~~No CICs for SourceEntry or AssemblyConfig RESOLVED~~ RESOLVED
+### C-158: ~~No CICs for SourceEntry or AssemblyConfig~~ RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -641,7 +641,7 @@ Previously the `UserWarning` in `load_dataset()` only fired when `end` was an in
 
 **Source:** Stale-zarr incident 2026-04-24. Cross-ref: C-137.
 
-### C-21: ~~No characterization tests for migration source DEMOTED~~ RESOLVED
+### C-21: ~~No characterization tests for migration source~~ RESOLVED
 
 No "golden output" tests capture expected behavior of migrated code from metric lab. Partially addressed by 15 `examples/ex_*.py` verification scripts covering the consumer API surface. Tier recalibrated 3→4 during review-rr 2026-05-24.
 
@@ -649,7 +649,7 @@ No "golden output" tests capture expected behavior of migrated code from metric 
 
 **Source:** Feathers (expert review). Cross-ref: verification examples suite (M13).
 
-### C-75: ~~FeatureFrame is shallow — adds validation but little abstraction DEMOTED~~ RESOLVED
+### C-75: ~~FeatureFrame is shallow — adds validation but little abstraction~~ RESOLVED
 
 8 public methods/properties wrapping numpy arrays. Each method is 1-5 lines. Callers must understand `[N, D]` vs `[N, D, S]` shapes. Acceptable for a data wrapper; no incidents in two months of monitoring.
 
@@ -657,7 +657,7 @@ No "golden output" tests capture expected behavior of migrated code from metric 
 
 **Source:** Ousterhout (expert review #4).
 
-### C-93: ~~`_count_outcomes` mixes raw counts with derived computation DEMOTED~~ RESOLVED
+### C-93: ~~`_count_outcomes` mixes raw counts with derived computation~~ RESOLVED
 
 `harvest_ucdp.py:_count_outcomes()` counts raw outcome categories then adds a computed `"served"` key. Mixing enumeration with derivation in a counting function is a minor naming/responsibility ambiguity in a 15-line function.
 
@@ -665,7 +665,7 @@ No "golden output" tests capture expected behavior of migrated code from metric 
 
 **Source:** PR #2 code review 2026-03-30.
 
-### C-96: ~~fsspec does not auto-read `~/.netrc` DEMOTED~~ RESOLVED
+### C-96: ~~fsspec does not auto-read `~/.netrc`~~ RESOLVED
 
 fsspec's HTTPFileSystem does not read `~/.netrc` or set `trust_env=True` on its aiohttp session. Workaround documented in consumer guide.
 
