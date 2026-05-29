@@ -174,7 +174,7 @@ result = load_dataset(
     region="land",                          # geographic filter
     start=None,                             # time range start (inclusive)
     end=None,                               # time range end (inclusive)
-    features=None,                          # feature subset (None = all 75)
+    features=None,                          # feature subset (None = all 79)
     output_format="feature_frame",          # "feature_frame" or "dataframe"
     data_dir=Path("data/assembled"),        # local path or zarr URL
     gaul_dir=Path("data/raw/gaul_admin"),   # GAUL admin data
@@ -307,7 +307,7 @@ The server at `http://204.168.219.108` serves two endpoints with **different fea
 
 | Endpoint | Features | Source | Use case |
 |----------|----------|--------|----------|
-| `/grid.zarr` | **75 features** (6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S + 22 V-Dem + 34 static + 3 GAUL) | `data/assembled/` | Full grid access, `load_dataset()`, research |
+| `/grid.zarr` | **79 features** (6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S + 22 V-Dem + 4 SHDI + 34 static + 3 GAUL) | `data/assembled/` | Full grid access, `load_dataset()`, research |
 | `/dataframe.parquet` | **6 features** (UCDP conflict only) | `data/compiled/` | Lightweight conflict-only download |
 
 This is intentional. The zarr store contains the full assembled grid (all 7 data sources). The parquet export contains only the compiled UCDP conflict features (counts + best estimates for state-based, non-state, and one-sided violence). Use zarr for training and analysis; use parquet for quick conflict-data checks.
@@ -333,7 +333,7 @@ See [ADR-025](../ADRs/025_country_identity_gaul.md) and C-149 in the risk regist
 
 ## Feature inventory
 
-The assembled grid contains 75 features across seven groups:
+The assembled grid contains 79 features across eight groups:
 
 ### UCDP conflict events (6 features)
 
@@ -409,6 +409,17 @@ Built-up surface area from the EU Joint Research Centre Global Human Settlement 
 † Exclusion features have data through 2023 only (V-Dem v16). Values are NaN for 2024 onward. See `docs/sources/vdem.md` (Temporal Caveats).
 
 V-Dem (Varieties of Democracy) v16 indicators. Country-year data mapped to PRIO-GRID cells via GAUL ISO3 crosswalk and expanded to monthly. NaN for countries/years not covered by V-Dem.
+
+### SHDI subnational human development (4 features)
+
+| Feature | Description | Scale |
+|---------|-------------|-------|
+| `shdi_shdi` | Subnational Human Development Index (composite) | Bounded [0, 1] |
+| `shdi_healthindex` | Health sub-index (life expectancy) | Bounded [0, 1] |
+| `shdi_edindex` | Education sub-index (schooling years) | Bounded [0, 1] |
+| `shdi_incindex` | Income sub-index (GNI per capita, log) | Bounded [0, 1] |
+
+GDL SHDI v10.2 indicators. Admin-1 data (1,801 GDL regions) mapped to PRIO-GRID cells via spatial join crosswalk and expanded to monthly. NaN for cells outside GDL coverage and years before 1990.
 
 ### PRIO-GRID static variables (34 features)
 

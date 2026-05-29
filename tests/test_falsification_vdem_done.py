@@ -67,12 +67,11 @@ class TestF3DocumentationIndices:
             "index table was not updated."
         )
 
-    def test_sources_readme_feature_count_75(self) -> None:
+    def test_sources_readme_feature_count_79(self) -> None:
         readme = (DOCS / "sources" / "README.md").read_text()
-        assert "75" in readme.split("Total features")[1], (
+        assert "79" in readme.split("Total features")[1], (
             "docs/sources/README.md total feature count is not "
-            "75 — should be 75 after V-Dem (22 features added). "
-            "Currently says 53."
+            "79 — should be 79 after SHDI (4 features added). "
         )
 
     def test_adrs_readme_lists_035(self) -> None:
@@ -106,16 +105,16 @@ class TestF4AdrDrift:
 
 
 class TestF5ConsumerGuide:
-    """Consumer data guide must reflect 75 features."""
+    """Consumer data guide must reflect 79 features."""
 
-    def test_consumer_guide_says_75(self) -> None:
+    def test_consumer_guide_says_79(self) -> None:
         guide = (DOCS / "guides" / "consumer_data_guide.md").read_text()
         inventory = guide.split("Feature inventory")[1].split("##")[0]
         assert "51" not in inventory, (
             "consumer_data_guide.md feature inventory still says 51"
         )
-        assert "75" in guide, (
-            "consumer_data_guide.md does not mention 75 features"
+        assert "79" in guide, (
+            "consumer_data_guide.md does not mention 79 features"
         )
 
     def test_consumer_guide_lists_vdem(self) -> None:
