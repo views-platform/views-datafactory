@@ -25,6 +25,7 @@ from pathlib import Path
 import requests as _requests
 
 from datafactory_harvester.sources import register_source
+from datafactory_harvester.validation import validate_positive_int
 from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
@@ -78,9 +79,7 @@ class GhsPopConfig:
                     f"Valid epochs: {KNOWN_EPOCHS}"
                 )
                 raise ValueError(msg)
-        if self.timeout < 1:
-            msg = f"timeout must be >= 1, got {self.timeout}"
-            raise ValueError(msg)
+        validate_positive_int(self.timeout, "timeout")
 
     def _stem(self, epoch: int) -> str:
         return (

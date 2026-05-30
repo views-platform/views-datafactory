@@ -31,6 +31,12 @@ from datafactory_harvester.sources._ucdp_common import (
     UCDP_GED_API_BASE,
     validate_envelope,
 )
+from datafactory_harvester.validation import (
+    validate_nonempty_string,
+    validate_positive_float,
+    validate_positive_int,
+    validate_year_range,
+)
 from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
@@ -112,33 +118,12 @@ class UcdpAnnualConfig:
     ledger_path: Path = Path("provenance/ucdp_annual/ingestion_ledger.jsonl")
 
     def __post_init__(self) -> None:
-        if self.end_year < self.start_year:
-            err_msg = (
-                f"end_year ({self.end_year}) must be >= "
-                f"start_year ({self.start_year})"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.page_size < 1:
-            err_msg = f"page_size must be >= 1, got {self.page_size}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.max_retries < 1:
-            err_msg = f"max_retries must be >= 1, got {self.max_retries}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.page_delay <= 0:
-            err_msg = f"page_delay must be > 0, got {self.page_delay}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.timeout < 1:
-            err_msg = f"timeout must be >= 1, got {self.timeout}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if not self.version:
-            err_msg = "version must be non-empty"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
+        validate_year_range(self.start_year, self.end_year)
+        validate_positive_int(self.page_size, "page_size")
+        validate_positive_int(self.max_retries, "max_retries")
+        validate_positive_float(self.page_delay, "page_delay")
+        validate_positive_int(self.timeout, "timeout")
+        validate_nonempty_string(self.version, "version")
 
 
 # ---- API client ----

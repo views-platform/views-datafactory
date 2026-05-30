@@ -34,6 +34,7 @@ from shapely.geometry import Point, shape
 from shapely.strtree import STRtree
 
 from datafactory_harvester.sources import register_source
+from datafactory_harvester.validation import validate_positive_int
 from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
@@ -91,12 +92,7 @@ class GaulAdminConfig:
     variables: tuple[str, ...] | None = field(default=None)
 
     def __post_init__(self) -> None:
-        if self.timeout < 1:
-            err_msg = (
-                f"timeout must be >= 1, got {self.timeout}"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
+        validate_positive_int(self.timeout, "timeout")
 
 
 # ---- Shapefile download ----

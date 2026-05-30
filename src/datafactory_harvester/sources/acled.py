@@ -33,6 +33,11 @@ from datafactory_harvester.snapshot_storage import (
     save_event_snapshot,
 )
 from datafactory_harvester.sources import register_source
+from datafactory_harvester.validation import (
+    validate_positive_float,
+    validate_positive_int,
+    validate_year_range,
+)
 from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
@@ -118,39 +123,18 @@ class AcledConfig:
     ledger_path: Path = Path("provenance/acled/ingestion_ledger.jsonl")
 
     def __post_init__(self) -> None:
-        if self.end_year < self.start_year:
-            err_msg = (
-                f"end_year ({self.end_year}) must be >= "
-                f"start_year ({self.start_year})"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.page_size < 1:
-            err_msg = f"page_size must be >= 1, got {self.page_size}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.max_retries < 1:
-            err_msg = (
-                f"max_retries must be >= 1, got {self.max_retries}"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.page_delay <= 0:
-            err_msg = f"page_delay must be > 0, got {self.page_delay}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.timeout < 1:
-            err_msg = f"timeout must be >= 1, got {self.timeout}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
+        validate_year_range(self.start_year, self.end_year)
+        validate_positive_int(self.page_size, "page_size")
+        validate_positive_int(self.max_retries, "max_retries")
+        validate_positive_float(self.page_delay, "page_delay")
+        validate_positive_int(self.timeout, "timeout")
         for et in self.event_types:
             if et not in ALL_EVENT_TYPES:
-                err_msg = (
+                msg = (
                     f"Unknown event type '{et}'. "
                     f"Valid: {ALL_EVENT_TYPES}"
                 )
-                logger.error(err_msg)
-                raise ValueError(err_msg)
+                raise ValueError(msg)
 
 
 # ---- Credential resolution (ADR-026) ----
