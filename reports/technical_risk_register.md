@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-29)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29
-**Status:** 229 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 179 resolved, 47 open concerns (2 Tier 2, 9 Tier 3, 30 Tier 4, 6 deferred by design; 1 with fired trigger), 3 open disagreements. 156 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 26 resolved disagreements in archive. 29 disagreement IDs total: 26 resolved, 3 open.
+**Date:** 2026-03-17 (updated 2026-05-30)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30
+**Status:** 231 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 179 resolved, 49 open concerns (2 Tier 2, 9 Tier 3, 32 Tier 4, 6 deferred by design; 1 with fired trigger), 5 open disagreements. 156 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 26 resolved disagreements in archive. 31 disagreement IDs total: 26 resolved, 5 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -48,6 +48,10 @@
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
 | D-26 | — | Discovery probing cost vs cache staleness (UCDP candidate/dot9) | Open | Harvest caching |
 | D-29 | — | Shapefile harvester retrofit depth — full outcome compliance vs organic | Open | Harvest correctness |
+| D-30 | — | Config validator extraction depth — utility functions vs declarative specs | Open | WET-before-DRY |
+| D-31 | — | Harvest script consolidation — single unified script vs thin delegates | Open | WET-before-DRY |
+| C-230 | 4 | Script layer (harvest + pipeline) has zero unit tests | Pattern #7/#8 extraction changes behavior with no test to catch regression | Test coverage |
+| C-231 | 4 | No compilation idempotence guard — silent recompilation with stale inputs | Operator re-runs compilation after viewpoint re-built with different parameters | Compilation correctness |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
 | C-146 | 4 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
@@ -58,7 +62,7 @@
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Before 6th pipeline source (WDI) requires a verify script | Visual audit |
 | C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | Next audit round adds files, or total exceeds 45 | Test hygiene |
 | C-173 | 4 | Hetzner server memory headroom (CPX42 + swap) | Software optimization needed before next large source | Server hardening |
-| C-164 | 3 | Cross-layer WET debt: 5 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI integration, or when 6th pipeline source is planned | WET-before-DRY |
+| C-164 | 3 | Cross-layer WET debt: 6 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI integration or next data source | WET-before-DRY |
 | ~~C-225~~ | ~~4~~ | ~~SHDI version drift in docs~~ | Resolved 2026-05-29 (version strings corrected) | SHDI docs |
 | ~~C-226~~ | ~~4~~ | ~~SHDI shapefile download failure writes no ledger entry~~ | Resolved 2026-05-29 (try/except + ledger entry added) | SHDI harvest |
 | ~~C-227~~ | ~~2~~ | ~~SHDI inner join can silently drop rows~~ | Resolved 2026-05-29 (fail-loud row-count guard + test) | SHDI harvest |
@@ -88,7 +92,7 @@ Items that should be resolved together:
 | ~~**Data integrity**~~ | ~~C-138~~, ~~C-149~~ (C-137, C-139 resolved 2026-05-26, C-149 resolved 2026-05-27, C-138 resolved 2026-05-28) | Resolved 2026-05-28: all items resolved |
 | ~~**Data boundary**~~ | ~~C-130~~, ~~C-133~~, ~~C-134~~, C-135 | Resolved 2026-05-28: C-130 resolved, C-135 demoted (C-133, C-134 resolved earlier) |
 | **Harvest correctness** | ~~C-182~~, C-184, C-185, C-186, ~~C-188~~ | Before relying on harvest caching for correctness |
-| **WET-before-DRY refactor** | ~~C-44~~, C-07, C-155, C-164, C-195 | Before WDI or next refactor sprint (V-Dem added without extraction; C-44 merged into C-164) |
+| **WET-before-DRY refactor** | ~~C-44~~, C-07, C-155, C-164, C-195, C-230 | Before WDI or next refactor sprint (V-Dem added without extraction; C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8) |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
 
@@ -340,14 +344,14 @@ Each data source has its own plotting/audit script with duplicated structural pa
 
 See also C-44 (harvest pipeline template — same WET-before-DRY decision), C-154 (ACLED feature config duplication), C-164 (cross-layer WET inventory), C-195 (falsification test accumulation).
 
-### C-164: Cross-layer WET debt — 5 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
+### C-164: Cross-layer WET debt — 6 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
 
 | Field | Value |
 |-------|-------|
 | ID | C-164 |
 | Tier | 3 |
-| Source | WET-before-DRY audit (2026-05-19), GHS-POP Phase 4 completion |
-| Trigger | **Fired 2026-05-22 (GHS-BUILT-S), 2026-05-26 (V-Dem):** 5th pipeline source copied cross-layer patterns without extraction. Before WDI integration, or when 6th pipeline source is planned (trigger rewritten during review-rr 2026-05-26). |
+| Source | WET-before-DRY audit (2026-05-19), GHS-POP Phase 4 completion, expert code review (2026-05-30) |
+| Trigger | **Fired 2026-05-22 (GHS-BUILT-S), 2026-05-26 (V-Dem), 2026-05-29 (SHDI):** 6th pipeline source copied cross-layer patterns without extraction. Before WDI integration or next data source. |
 | Location | All `src/datafactory_*` packages — see inventory below |
 
 With 4 sources implemented (UCDP, ACLED, GHS-POP, GHS-BUILT-S), the codebase has accumulated intentional WET patterns across all four layers. The WET-before-DRY strategy (ADR: write 3 times before abstracting) has succeeded — concrete patterns are now clear. The 4th source (GHS-BUILT-S, v1.2.20) copied all patterns again, confirming the abstraction boundaries.
@@ -417,7 +421,24 @@ Raster-specific functions confirmed identical copy-paste between `ghspop_v1.py` 
 
 **Note (2026-05-28, review-rr strategic curation):** C-44 merged into this entry. C-44 (harvest pipeline template) was a subset covering only the harvest layer; its 9 accumulated notes tracked each source addition. The harvest template gap is covered here as patterns #1 (harvester config validators) and #8 (harvest script wrappers). C-183 was previously merged into C-44, and now transitively merges here.
 
-**Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19), updated GHS-BUILT-S (2026-05-22), tech-debt-cleanup investigation (2026-05-24), v1.2.21 maintenance sprint (2026-05-25).
+**Note (2026-05-30, expert code review C-164):** SHDI (10th source, 6th pipeline source) added — replicated all remaining unextracted patterns. Deep audit quantified actual pattern scope:
+- Pattern #1: 10 config classes (not 5) with `__post_init__` validation: `ucdp_annual.py`, `ucdp_candidate.py`, `ucdp_dot9.py`, `acled.py`, `ghspop.py`, `ghsbuilts.py`, `priogrid_static.py`, `gaul_admin.py`, `vdem.py`, `shdi.py`. `timeout < 1` check appears in all 10.
+- Pattern #3: 5 viewpoint builders (not 3-4): `ucdp_v1.py`, `acled_v1.py`, `ghspop_v1.py`, `ghsbuilts_v1.py`, `vdem_v1.py`. All share config-or-shortcut entry point + `append_ledger_entry` with `LEDGER_VERSION`/`DIGEST_SCHEME`.
+- Pattern #7: 4 pipeline runners (not 3): `run_acled_pipeline.py`, `run_ghspop_pipeline.py`, `run_ghsbuilts_pipeline.py`, `run_vdem_pipeline.py`. All use `STEPS.index(args.skip_to)` + `if skip_idx < N` pattern. Total 1,093 lines.
+- Pattern #8: 9 harvest scripts (not 7): `harvest_ucdp.py`, `harvest_acled.py`, `harvest_ghspop.py`, `harvest_ghsbuilts.py`, `harvest_priogrid.py`, `harvest_gaul.py`, `harvest_shapefile.py`, `harvest_vdem.py`, `harvest_shdi.py`. Total 1,185 lines of argparse + banner + timing boilerplate.
+- Pattern #6: 87 provenance call sites in `/src` (47 `append_ledger_entry`, 16 `last_digest_for_version`, 10 `compute_content_digest`, 9 `compute_file_digest`, 5 other).
+
+Total: 6 sources × 5 remaining patterns = 30 pattern copies, 8,537 lines in pattern-affected files.
+
+Extraction risks identified (failure mode analysis):
+- FM-1 (Pattern #1): Extracted validator could produce wrong field name in error message → mitigated by TDD (test error message includes field name).
+- FM-2 (Pattern #8): Shared HarvestRunner could change exit codes → mitigated by characterization tests before extraction.
+- FM-3 (Pattern #7): Shared PipelineRunner could change `--skip-to` precondition checking → mitigated by source-specific preconditions declared per pipeline.
+- FM-4 (Pattern #3): Config-or-shortcut resolution varies (V-Dem accepts 2 shortcuts, others accept 1) → mitigated by per-config `@classmethod from_shortcuts()`.
+
+Recommended extraction order (TDD): #1 (config validators, trivial, low risk) → #8 (harvest wrappers, moderate, characterize first) → #7 (pipeline runners, moderate) → #3 (viewpoint scaffolding, low risk but low payoff) → #6 (provenance, HIGH risk, DEFER to C-06).
+
+**Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19), updated GHS-BUILT-S (2026-05-22), tech-debt-cleanup investigation (2026-05-24), v1.2.21 maintenance sprint (2026-05-25), expert code review C-164 (2026-05-30).
 
 ### C-181: UCDP candidate/dot9 discovery probes API even when all versions cached — [DEFER]
 
@@ -656,6 +677,46 @@ The Hetzner server stores all pipeline data (raw harvests, consolidated stores, 
 
 Cross-ref: C-88 (SSH access control), C-131 (no external monitoring).
 
+### C-230: Script layer (harvest + pipeline) has zero unit tests — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-230 |
+| Tier | 4 |
+| Source | Expert code review of C-164 (2026-05-30), Feathers and Beck perspectives |
+| Trigger | Harvest script or pipeline runner refactoring (Pattern #7/#8 extraction) changes exit codes, banner format, or `--skip-to` behavior with no test to catch the regression |
+| Location | `scripts/harvest_*.py` (9 files, 1,185 lines), `scripts/run_*_pipeline.py` (4 files, 1,093 lines) |
+
+The 9 harvest scripts and 4 pipeline runners have zero unit tests. The scripts are tested only via integration (running the full pipeline on a live server). There are no tests for: correct argument forwarding (`--force` → `force_refresh=True`), exit code semantics (0 on success, 1 on failure), `--skip-to` precondition checking (file existence before skipping), or banner output correctness. This is the largest untested surface in the codebase (2,278 lines, 13 files). When Pattern #8 and #7 extraction begins, characterization tests must be written FIRST to capture current behavior before refactoring. Tier 4 because: (a) scripts are thin wrappers with most logic in the tested source modules, (b) single-developer project, (c) no correctness risk from script bugs beyond operational inconvenience.
+
+Cross-ref: C-164 (WET-before-DRY — patterns #7 and #8), C-180 (no falsification tests for non-GHS-POP paths), C-189 (test coverage parity gap).
+
+### C-231: No compilation idempotence guard — silent recompilation with stale inputs — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-231 |
+| Tier | 4 |
+| Source | Expert code review of C-164 (2026-05-30), Kleppmann perspective |
+| Trigger | Operator re-runs compilation after viewpoint is re-built with different parameters, producing a grid from mixed-vintage inputs without warning |
+| Location | `src/datafactory_compilation/grid_compilation.py` (`compile_grid`), `src/datafactory_compilation/pregridded_compilation.py` (`compile_pregridded`), `src/datafactory_compilation/output.py` (`write_compilation_output`) |
+
+`compile_grid()` and `compile_pregridded()` always overwrite the output directory. If run twice with different inputs (e.g., viewpoint was re-built between runs with different parameters), there is no warning that the input context changed. The provenance ledger records what happened, but nothing reads the ledger to check input consistency before writing. A pre-compilation digest check — compute digests of all input files, compare against the previous compilation's input digests in the ledger — would be cheap and would catch accidental recompilation with stale or mixed inputs. Tier 4 because: (a) single-operator deployment, (b) the pipeline script runs steps in order so mixed inputs are unlikely, (c) provenance provides post-hoc audit capability.
+
+Cross-ref: C-223 (compilation memory — same functions, different concern), C-46 (no ledger write idempotency).
+
+### D-30: Config validator extraction depth — utility functions vs declarative specs
+
+Martin/Beck advocate extracting simple utility functions (`validate_positive_int(value, name)`) that configs call in their `__post_init__`. Each config retains its `__post_init__` method but delegates to shared validators. This preserves the existing seam, is easy to TDD, and follows the proven extraction precedent (`raster_io.py`, `temporal.py`). Hickey advocates a declarative validation spec where configs declare constraints as data and a single generic validator applies them, eliminating `__post_init__` entirely for standard constraints. The declarative approach is more elegant but harder to reverse: once configs drop their `__post_init__`, re-adding them requires touching every config class. **Recommendation: start with utility functions (lower risk, reversible), promote to declarative specs only if utility approach still feels repetitive at 12+ sources.**
+
+**Source:** Expert code review of C-164 (2026-05-30). Cross-ref: C-07 (frozen dataclass pattern), C-164 (pattern #1).
+
+### D-31: Harvest script consolidation — single unified script vs thin delegates
+
+Ousterhout argues the 9 harvest scripts should be merged into one deep `harvest.py` with `--source acled|vdem|shdi|...` dispatch via the existing Registry. The scripts are shallow modules (pure boilerplate) and 9 copies of a shallow module is worse than 1. Nygard counters that a single script creates a single failure domain — a bug in shared argparse handling blocks all 9 sources. Feathers proposes a middle path: extract a shared `HarvestRunner` function, but keep source-specific scripts as 5-10 line thin delegates that call it. This satisfies both deep-module design (Ousterhout) and blast-radius isolation (Nygard). **No resolution yet — the middle path (shared runner + thin delegates) appears to be the pragmatic choice, but extraction hasn't started.**
+
+**Source:** Expert code review of C-164 (2026-05-30). Cross-ref: C-164 (pattern #8), C-230 (script layer zero tests).
+
 ---
 
 ## Deferred by Design
@@ -677,8 +738,8 @@ Every module independently calls `append_ledger_entry()` with its own format. A 
 **Source:** Hickey. DDIA Ch.12 pp.499-501.
 
 ### C-07: Frozen dataclass pattern repeated
-7 config classes follow the same frozen-dataclass-with-`__post_init__` pattern. No shared Protocol or base. A declarative validation approach or `ValidatedConfig` Protocol would reduce duplication. Kleppmann (Ch.4 p.127) argues schemas serve as documentation that "cannot diverge from reality" — our frozen dataclasses with `__post_init__` validation are effectively runtime schemas. **Accepted: explicit repetition is simple and readable; each config is its own schema.**
-**Source:** Hickey. DDIA Ch.4 p.127.
+14 config classes (10 harvester + 4 viewpoint) follow the same frozen-dataclass-with-`__post_init__` pattern. No shared Protocol or base. A declarative validation approach or `ValidatedConfig` Protocol would reduce duplication. Kleppmann (Ch.4 p.127) argues schemas serve as documentation that "cannot diverge from reality" — our frozen dataclasses with `__post_init__` validation are effectively runtime schemas. **Accepted: explicit repetition is simple and readable; each config is its own schema.** See D-30 for the utility-functions vs declarative-specs disagreement.
+**Source:** Hickey. DDIA Ch.4 p.127. Updated: expert code review C-164 (2026-05-30).
 
 ### C-32: Source registry returns `Any`
 `fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Sources, consolidators, and builders are intentionally heterogeneous — each has a different signature. The three strategy registries (aggregation, survivorship, temporal_distribution) already use precise types. Kleppmann (Ch.4 p.126) notes dynamically generated schemas are an acceptable trade-off when sources have heterogeneous structures. **Accepted: heterogeneous signatures are by design.**
