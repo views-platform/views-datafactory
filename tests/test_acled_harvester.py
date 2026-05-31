@@ -342,14 +342,17 @@ class TestFetchAcledGreen:
 
         snap_2024 = config.data_dir / "acled_2024_2024.parquet"
         snap_2024.parent.mkdir(parents=True)
-        snap_2024.write_text("fake")
+        snap_2024.write_bytes(b"fake parquet 2024")
 
-        from datafactory_provenance import append_ledger_entry
+        from datafactory_provenance import (
+            append_ledger_entry,
+            compute_file_digest,
+        )
 
         append_ledger_entry(
             config.ledger_path,
             {
-                "content_digest": "abc123",
+                "content_digest": compute_file_digest(snap_2024),
                 "version": "2024_2024",
             },
         )
@@ -402,18 +405,21 @@ class TestFetchAcledGreen:
             ledger_path=tmp_path / "provenance" / "ledger.jsonl",
         )
 
-        from datafactory_provenance import append_ledger_entry
+        from datafactory_provenance import (
+            append_ledger_entry,
+            compute_file_digest,
+        )
 
         for year in (2024, 2025):
             snap = (
                 config.data_dir / f"acled_{year}_{year}.parquet"
             )
             snap.parent.mkdir(parents=True, exist_ok=True)
-            snap.write_text("fake")
+            snap.write_bytes(f"fake parquet {year}".encode())
             append_ledger_entry(
                 config.ledger_path,
                 {
-                    "content_digest": f"digest_{year}",
+                    "content_digest": compute_file_digest(snap),
                     "version": f"{year}_{year}",
                 },
             )
@@ -464,7 +470,33 @@ class TestYearCacheGreen:
     def test_cached_when_snapshot_and_digest(
         self, tmp_path: Path,
     ) -> None:
-        """Year is cached when both snapshot and ledger digest exist."""
+        """Year is cached when snapshot and ledger digest match."""
+        from datafactory_provenance import (
+            append_ledger_entry,
+            compute_file_digest,
+        )
+
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        snap = config.data_dir / "acled_2024_2024.parquet"
+        snap.parent.mkdir(parents=True)
+        snap.write_bytes(b"fake parquet content")
+        digest = compute_file_digest(snap)
+        append_ledger_entry(
+            config.ledger_path,
+            {
+                "content_digest": digest,
+                "version": "2024_2024",
+            },
+        )
+        assert _year_is_cached(2024, config)
+
+    def test_uncached_when_digest_mismatch(
+        self, tmp_path: Path,
+    ) -> None:
+        """Year is not cached when file digest differs from ledger."""
         from datafactory_provenance import append_ledger_entry
 
         config = AcledConfig(
@@ -473,15 +505,15 @@ class TestYearCacheGreen:
         )
         snap = config.data_dir / "acled_2024_2024.parquet"
         snap.parent.mkdir(parents=True)
-        snap.write_text("fake")
+        snap.write_bytes(b"truncated content")
         append_ledger_entry(
             config.ledger_path,
             {
-                "content_digest": "abc123",
+                "content_digest": "wrong_digest_value",
                 "version": "2024_2024",
             },
         )
-        assert _year_is_cached(2024, config)
+        assert not _year_is_cached(2024, config)
 
 
 class TestFetchAcledBeige:

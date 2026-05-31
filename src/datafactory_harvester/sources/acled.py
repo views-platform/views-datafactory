@@ -43,6 +43,7 @@ from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
     append_ledger_entry,
+    compute_file_digest,
     last_digest_for_version,
 )
 
@@ -417,14 +418,25 @@ def _snapshot_path(config: AcledConfig) -> Path:
 
 
 def _year_is_cached(year: int, config: AcledConfig) -> bool:
-    """Check if a year's snapshot exists with a ledger digest."""
+    """Check if a year's snapshot exists with a matching ledger digest."""
     version = f"{year}_{year}"
     snap_path = config.data_dir / f"acled_{year}_{year}.parquet"
     if not snap_path.exists():
         return False
-    return last_digest_for_version(
+    previous = last_digest_for_version(
         config.ledger_path, version
-    ) is not None
+    )
+    if previous is None:
+        return False
+    actual = compute_file_digest(snap_path)
+    if actual != previous:
+        logger.warning(
+            "Year %d cached file digest mismatch "
+            "(expected %s, got %s) — re-fetching",
+            year, previous, actual,
+        )
+        return False
+    return True
 
 
 def _fetch_single_year(
