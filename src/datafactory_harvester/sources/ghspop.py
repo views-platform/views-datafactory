@@ -32,6 +32,7 @@ from datafactory_provenance import (
     LEDGER_VERSION,
     append_ledger_entry,
     compute_content_digest,
+    compute_file_digest,
     last_digest_for_version,
 )
 
@@ -146,21 +147,29 @@ def _fetch_epoch(
     tif_path = config.data_dir / tif_name
     version = f"E{epoch}"
 
-    # Cache check
+    # Cache check: file exists + ledger digest + file integrity
     if not force_refresh and tif_path.exists():
         previous = last_digest_for_version(
             config.ledger_path, version
         )
         if previous is not None:
-            logger.info(
-                "Epoch %d cached (digest: %s)", epoch, previous
+            actual = compute_file_digest(tif_path)
+            if actual == previous:
+                logger.info(
+                    "Epoch %d cached (digest: %s)",
+                    epoch, previous,
+                )
+                return {
+                    "dataset": DATASET_ID,
+                    "epoch": epoch,
+                    "outcome": "cached",
+                    "content_digest": previous,
+                }
+            logger.warning(
+                "Epoch %d cached file digest mismatch "
+                "(expected %s, got %s) — re-downloading",
+                epoch, previous, actual,
             )
-            return {
-                "dataset": DATASET_ID,
-                "epoch": epoch,
-                "outcome": "cached",
-                "content_digest": previous,
-            }
 
     # Download
     url = config.download_url(epoch)

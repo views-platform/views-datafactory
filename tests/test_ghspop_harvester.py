@@ -205,6 +205,48 @@ class TestFetchGhsPopGreen:
         assert len(results) == 1
         assert results[0]["outcome"] == "cached"
 
+    def test_uncached_when_digest_mismatch(self, tmp_path: Path) -> None:
+        """File with mismatched digest triggers re-download."""
+        from datafactory_harvester.sources.ghspop import (
+            GhsPopConfig,
+            fetch_ghspop,
+        )
+
+        cfg = GhsPopConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        # Pre-populate with stale/corrupt content
+        tif_path = cfg.data_dir / cfg.tif_filename(2020)
+        tif_path.parent.mkdir(parents=True, exist_ok=True)
+        tif_path.write_bytes(b"corrupt geotiff")
+
+        from datafactory_provenance import append_ledger_entry
+
+        append_ledger_entry(cfg.ledger_path, {
+            "dataset": "ghspop",
+            "version": "E2020",
+            "content_digest": "wrong_digest_value",
+            "outcome": "success",
+        })
+
+        # Should re-download because digest doesn't match
+        tif_name = cfg.tif_filename(2020)
+        fake_zip = _make_fake_geotiff_zip(tif_name)
+        mock_resp = MagicMock()
+        mock_resp.content = fake_zip
+
+        with (
+            patch("datafactory_http.retry.requests.request", return_value=mock_resp),
+            patch("datafactory_http.retry.time.sleep"),
+        ):
+            results = fetch_ghspop(cfg)
+
+        assert results[0]["outcome"] == "success"
+        assert tif_path.read_bytes() == b"fake geotiff data"
+
     def test_multiple_epochs(self, tmp_path: Path) -> None:
         """Fetching multiple epochs returns one result per epoch."""
         from datafactory_harvester.sources.ghspop import (
