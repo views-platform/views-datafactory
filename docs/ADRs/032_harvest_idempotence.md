@@ -140,7 +140,7 @@ Early ledger entries (pre-v1.2) don't have an `outcome` field. These are necessa
 - GHS-POP (`ghspop.py:_fetch_epoch`): uses `last_digest_for_version`. Single-tier with `"cached"` outcome on skip. Records `"failed"` on download, ZIP, or extraction failure.
 - PRIO-GRID static (`priogrid_static.py:_fetch_variable`): uses `last_digest_for_version`. Records `"failed"` on empty or invalid API response.
 - GAUL admin (`gaul_admin.py:fetch_gaul_admin`): uses `last_digest_for_version`. Records `"failed"` in ledger via `append_ledger_entry` in the except block wrapping `_write_variable` (C-188, fixed v1.2.18).
-- PRIO-GRID shapefile (`shapefile_harvester.py:fetch_shapefile`): uses `last_digest` (non-versioned). Pre-outcome harvester — entries use `"changed": True/False` instead of outcome vocabulary. No failure recording (C-186). Backward-compatible: entries without `outcome` are accepted by the digest functions.
+- PRIO-GRID shapefile (`shapefile_harvester.py:fetch_shapefile`): uses `last_digest` (non-versioned). **C-186 resolved (2026-05-31):** outcome vocabulary (`"outcome": "success"/"unchanged"/"failed"`) and failure recording added. `"changed"` field retained for backward compatibility.
 
 ---
 
