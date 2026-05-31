@@ -16,15 +16,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 
+from datafactory_harvester.harvest_runner import run_harvest
 from datafactory_harvester.sources.shdi import ShdiConfig, fetch_shdi
 
 
 def main() -> int:
     """Harvest SHDI data from GDL API."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description="Harvest GDL SHDI data from API",
     )
@@ -35,33 +33,31 @@ def main() -> int:
     args = parser.parse_args()
 
     config = ShdiConfig()
+    result = run_harvest(
+        source_name="SHDI",
+        fetch_fn=fetch_shdi,
+        config_summary={
+            "Version": config.version,
+            "Variables": ", ".join(config.variables),
+            "API": f"{config.api_base_url}/shdi/download/<indicator>/",
+            "Output": str(config.output_path),
+            "Crosswalk": str(config.crosswalk_path),
+        },
+        force_refresh=args.force,
+        fetch_kwargs={"config": config},
+    )
 
-    print("=" * 60)
-    print("SHDI HARVEST")
-    print(f"Version: {config.version}")
-    print(f"Variables: {', '.join(config.variables)}")
-    print(f"API: {config.api_base_url}/shdi/download/<indicator>/")
-    print(f"Output: {config.output_path}")
-    print(f"Crosswalk: {config.crosswalk_path}")
-    print("=" * 60)
-    print()
-
-    t0 = time.monotonic()
-    try:
-        result = fetch_shdi(config, force_refresh=args.force)
-    except Exception as e:
-        print(f"FAIL: {e}")
+    if result.outcome == "failed":
         return 1
 
-    elapsed = time.monotonic() - t0
-    print(f"Outcome: {result['outcome']}")
-    if "n_rows" in result:
-        print(f"Rows: {result['n_rows']:,}")
-    if "n_regions" in result:
-        print(f"Regions: {result['n_regions']:,}")
-    if "n_pgids_mapped" in result:
-        print(f"Pgids mapped: {result['n_pgids_mapped']:,}")
-    print(f"({elapsed:.1f}s)")
+    print(f"Outcome: {result.data['outcome']}")
+    if "n_rows" in result.data:
+        print(f"Rows: {result.data['n_rows']:,}")
+    if "n_regions" in result.data:
+        print(f"Regions: {result.data['n_regions']:,}")
+    if "n_pgids_mapped" in result.data:
+        print(f"Pgids mapped: {result.data['n_pgids_mapped']:,}")
+    print(f"({result.elapsed:.1f}s)")
     return 0
 
 

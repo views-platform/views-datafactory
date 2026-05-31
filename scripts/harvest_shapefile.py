@@ -16,14 +16,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 from pathlib import Path
+
+from datafactory_harvester.harvest_runner import run_harvest
 
 
 def main() -> int:
     """Run the PRIO-GRID shapefile harvester."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description="Harvest PRIO-GRID shapefile (Layer 1)"
     )
@@ -46,13 +45,6 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("PRIO-GRID SHAPEFILE HARVESTER (Layer 1)")
-    print(f"Data dir: {args.data_dir}")
-    print(f"Force:    {args.force}")
-    print("=" * 60)
-    print()
-
     from datafactory_priogrid.shapefile_harvester import (
         ShapefileHarvesterConfig,
         fetch_shapefile,
@@ -60,21 +52,29 @@ def main() -> int:
 
     config = ShapefileHarvesterConfig(
         data_dir=args.data_dir,
-        ledger_path=(
-            args.provenance_dir / "ingestion_ledger.jsonl"
-        ),
+        ledger_path=args.provenance_dir / "ingestion_ledger.jsonl",
     )
 
-    t0 = time.monotonic()
-    shp_dir = fetch_shapefile(config, force_refresh=args.force)
-    elapsed = time.monotonic() - t0
+    result = run_harvest(
+        source_name="PRIO-GRID SHAPEFILE",
+        fetch_fn=fetch_shapefile,
+        config_summary={
+            "Data dir": str(args.data_dir),
+            "Force": str(args.force),
+        },
+        force_refresh=args.force,
+        fetch_kwargs={"config": config},
+    )
 
+    if result.outcome == "failed":
+        return 1
+
+    shp_dir = result.data
     centroid = shp_dir / "priogrid_centroid.shp"
     cell = shp_dir / "priogrid_cell.shp"
 
-    print()
     print("=" * 60)
-    print(f"COMPLETE — {elapsed:.1f}s")
+    print(f"COMPLETE — {result.elapsed:.1f}s")
     print(f"Centroid shapefile: {centroid}")
     print(f"  exists: {centroid.exists()}")
     print(f"Cell shapefile:     {cell}")
