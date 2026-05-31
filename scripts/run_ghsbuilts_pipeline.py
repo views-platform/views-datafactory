@@ -23,13 +23,16 @@ import sys
 import time
 from pathlib import Path
 
+from datafactory_harvester.pipeline_runner import (
+    PipelineStep,
+    run_pipeline,
+)
+
 STEPS = ("harvest", "viewpoint", "compile")
 
 
 def main() -> int:
     """Orchestrate the GHS-BUILT-S pipeline end-to-end."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description=(
             "Run full GHS-BUILT-S pipeline (Layers 1, 3, 4)"
@@ -67,33 +70,13 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    skip_idx = (
-        STEPS.index(args.skip_to) if args.skip_to else 0
-    )
-
-    epoch_label = (
-        str(args.epochs) if args.epochs
-        else "all (1975–2030)"
-    )
-
-    print("=" * 60)
-    print("GHS-BUILT-S PIPELINE (Layers 1, 3, 4)")
-    print(f"Epochs: {epoch_label}")
-    print(f"End year: {args.end_year}")
-    print("Consolidation: skipped (single release, ADR-034)")
-    if args.skip_to:
-        print(f"Skipping to: {args.skip_to}")
-    print("=" * 60)
-    print()
-
-    t_start = time.monotonic()
-
-    # ── Step 1: Harvest ──────────────────────────────────────
-
     raw_dir = Path("data/raw/ghsbuilts")
+    viewpoint_path = Path("data/viewpoint/ghsbuilts_v1.parquet")
+    output_dir = Path("data/compiled/ghsbuilts")
 
-    if skip_idx < 1:
-        print("[1/3] HARVEST")
+    # ── Step closures ───────────────────────────────────────────
+
+    def harvest() -> None:
         from datafactory_harvester.sources.ghsbuilts import (
             GhsBuiltSConfig,
             fetch_ghsbuilts,
@@ -110,16 +93,9 @@ def main() -> int:
             ),
             **harvest_kwargs,
         )
-
-        t0 = time.monotonic()
-        try:
-            results = fetch_ghsbuilts(
-                config, force_refresh=args.force,
-            )
-        except Exception as e:
-            print(f"  FAIL: {e}")
-            return 1
-
+        results = fetch_ghsbuilts(
+            config, force_refresh=args.force,
+        )
         n_cached = sum(
             1 for r in results if r["outcome"] == "cached"
         )
@@ -130,28 +106,18 @@ def main() -> int:
             f"  {len(results)} epochs: "
             f"{n_new} downloaded, {n_cached} cached → {raw_dir}"
         )
-        print(f"  ({time.monotonic() - t0:.1f}s)")
-        print()
-    else:
+
+    def check_harvest() -> str:
         tif_files = sorted(raw_dir.glob("*.tif"))
         if not tif_files:
-            print(
-                f"FAIL: No GeoTIFF files in {raw_dir}. "
+            msg = (
+                f"No GeoTIFF files in {raw_dir}. "
                 f"Run without --skip-to first."
             )
-            return 1
-        print(
-            f"[1/3] HARVEST — skipped "
-            f"({len(tif_files)} GeoTIFFs in {raw_dir})"
-        )
-        print()
+            raise FileNotFoundError(msg)
+        return f"{len(tif_files)} GeoTIFFs in {raw_dir}"
 
-    # ── Step 2: Viewpoint ────────────────────────────────────
-
-    viewpoint_path = Path("data/viewpoint/ghsbuilts_v1.parquet")
-
-    if skip_idx < 2:
-        print("[2/3] VIEWPOINT")
+    def viewpoint() -> None:
         from datafactory_viewpoint.builders.ghsbuilts_v1 import (
             GhsBuiltSViewpointConfig,
             build_ghsbuilts_v1,
@@ -170,81 +136,87 @@ def main() -> int:
             ),
             **vp_kwargs,
         )
-
-        t0 = time.monotonic()
-        try:
-            result = build_ghsbuilts_v1(vp_config)
-        except Exception as e:
-            print(f"  FAIL: {e}")
-            return 1
-
+        result = build_ghsbuilts_v1(vp_config)
         print(
             f"  {result.n_events_output:,} rows → "
             f"{viewpoint_path}"
         )
-        print(f"  ({time.monotonic() - t0:.1f}s)")
-        print()
-    else:
+
+    def check_viewpoint() -> str:
         if not viewpoint_path.exists():
-            print(
-                f"FAIL: Expected {viewpoint_path} "
-                f"but not found."
+            msg = (
+                f"Expected {viewpoint_path} but not found."
             )
-            return 1
-        print(
-            f"[2/3] VIEWPOINT — skipped "
-            f"(using {viewpoint_path})"
+            raise FileNotFoundError(msg)
+        return f"using {viewpoint_path}"
+
+    def compile_step() -> None:
+        from datafactory_compilation import compile_pregridded
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
         )
-        print()
+        from datafactory_priogrid import (
+            GridConfig,
+            TemporalConfig,
+        )
 
-    # ── Step 3: Compile ──────────────────────────────────────
-
-    print("[3/3] COMPILE")
-    from datafactory_compilation import compile_pregridded
-    from datafactory_compilation.pregridded_compilation import (
-        PregriddedCompilationConfig,
-        PregriddedFeatureSpec,
-    )
-    from datafactory_priogrid import GridConfig, TemporalConfig
-
-    output_dir = Path("data/compiled/ghsbuilts")
-
-    config = PregriddedCompilationConfig(
-        source_path=viewpoint_path,
-        grid_config=GridConfig(),
-        temporal_config=TemporalConfig(
-            end_year=args.end_year,
-        ),
-        features=(
-            PregriddedFeatureSpec(
-                "ghsbuilts_built_area", "built_area",
+        config = PregriddedCompilationConfig(
+            source_path=viewpoint_path,
+            grid_config=GridConfig(),
+            temporal_config=TemporalConfig(
+                end_year=args.end_year,
             ),
-        ),
-        output_dir=output_dir,
-        ledger_path=Path(
-            "provenance/compilation/ghsbuilts_ledger.jsonl",
-        ),
+            features=(
+                PregriddedFeatureSpec(
+                    "ghsbuilts_built_area", "built_area",
+                ),
+            ),
+            output_dir=output_dir,
+            ledger_path=Path(
+                "provenance/compilation/ghsbuilts_ledger.jsonl",
+            ),
+        )
+        result_dir = compile_pregridded(config)
+
+        import numpy as np
+
+        grid = np.load(result_dir / "grid.npy", mmap_mode="r")
+        print(f"  Grid shape: {grid.shape}")
+        print(f"  Output: {result_dir}")
+
+    # ── Run pipeline ────────────────────────────────────────────
+
+    epoch_label = (
+        str(args.epochs) if args.epochs
+        else "all (1975–2030)"
     )
 
-    t0 = time.monotonic()
-    try:
-        result_dir = compile_pregridded(config)
-    except Exception as e:
-        print(f"  FAIL: {e}")
+    pipeline_steps = (
+        PipelineStep("harvest", harvest, check_harvest),
+        PipelineStep("viewpoint", viewpoint, check_viewpoint),
+        PipelineStep("compile", compile_step),
+    )
+
+    result = run_pipeline(
+        source_name="GHS-BUILT-S",
+        steps=pipeline_steps,
+        config_summary={
+            "Layers": "1, 3, 4",
+            "Epochs": epoch_label,
+            "End year": str(args.end_year),
+            "Consolidation": "skipped (single release, ADR-034)",
+        },
+        skip_to=args.skip_to,
+    )
+
+    if not result.success:
         return 1
 
-    import numpy as np
-
-    grid = np.load(result_dir / "grid.npy", mmap_mode="r")
-    print(f"  Grid shape: {grid.shape}")
-    print(f"  Output: {result_dir}")
-    print(f"  ({time.monotonic() - t0:.1f}s)")
-    print()
-
-    # ── Step 4 (optional): Verify ───────────────────────────
+    # ── Optional verify ─────────────────────────────────────────
 
     if args.verify:
-        print("[4/4] VERIFY")
+        print("[VERIFY]")
         t0 = time.monotonic()
         rc = subprocess.run(
             [
@@ -260,13 +232,13 @@ def main() -> int:
             return 1
         print()
 
-    # ── Summary ──────────────────────────────────────────────
+    # ── Summary ─────────────────────────────────────────────────
 
-    total = time.monotonic() - t_start
     print("=" * 60)
-    print(f"GHS-BUILT-S PIPELINE COMPLETE ({total:.1f}s)")
-    print(f"  Grid: {result_dir / 'grid.npy'}")
-    print(f"  Shape: {grid.shape}")
+    print(
+        f"GHS-BUILT-S PIPELINE COMPLETE "
+        f"({result.elapsed:.1f}s)"
+    )
     print()
     print(
         "Next: uv run python scripts/assemble_grid.py "
