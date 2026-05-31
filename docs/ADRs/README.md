@@ -135,6 +135,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-036** -- GDL Subnational HDI (SHDI) as First Admin-1 Socioeconomic Source
   SHDI v10.2 integration. 4 subnational HDI features, admin-1 to grid via direct spatial join (GDL shapefiles → PRIO-GRID centroids). Skips consolidation (single release); harvester → viewpoint → compilation path.
 
+- **ADR-037** -- Bounded-Memory Compilation via Memory-Mapped Arrays
+  Replace `np.full()` with `np.lib.format.open_memmap()` in compilation. Peak RSS drops from grid-size to ~200 MB regardless of feature count. Pre-flight disk space check. Follows `assemble_grid.py` precedent.
+
 These must comply with the constitutional ADRs above.
 
 ---
