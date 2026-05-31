@@ -110,6 +110,13 @@ class GhsPopViewpointConfig:
             logger.error(err_msg)
             raise ValueError(err_msg)
 
+    @classmethod
+    def from_shortcuts(
+        cls, *, source_dir: Path,
+    ) -> GhsPopViewpointConfig:
+        """Construct config from minimal shortcut arguments."""
+        return cls(source_dir=source_dir)
+
     def tif_filename(self, epoch: int) -> str:
         stem = (
             f"GHS_POP_E{epoch}_GLOBE"
@@ -322,9 +329,7 @@ def _aggregate_with_alignment(
 
 
 def build_ghspop_v1(
-    config: GhsPopViewpointConfig | None = None,
-    *,
-    source_dir: Path | None = None,
+    config: GhsPopViewpointConfig,
 ) -> ViewpointResult:
     """Build GHS-POP viewpoint v1 from harvested GeoTIFF files.
 
@@ -332,23 +337,9 @@ def build_ghspop_v1(
     per-cell values. Then interpolate all cells temporally and write
     Parquet with (pgid, month_id, pop_count).
 
-    Args:
-        config: Full viewpoint configuration. If None, uses defaults
-            with source_dir.
-        source_dir: Shortcut — used only if config is None.
-
     Returns:
         ViewpointResult with cell counts and output digest.
     """
-    if config is None:
-        if source_dir is None:
-            err_msg = (
-                "Either config or source_dir must be provided"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        config = GhsPopViewpointConfig(source_dir=source_dir)
-
     if not config.source_dir.exists():
         err_msg = f"Source directory not found: {config.source_dir}"
         logger.error(err_msg)

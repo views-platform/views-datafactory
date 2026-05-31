@@ -92,3 +92,10 @@ class ViewpointConfig:
                     )
                     logger.error(err_msg)
                     raise ValueError(err_msg) from exc
+
+    @classmethod
+    def from_shortcuts(
+        cls, *, consolidated_path: Path,
+    ) -> ViewpointConfig:
+        """Construct config from minimal shortcut arguments."""
+        return cls(consolidated_path=consolidated_path)
