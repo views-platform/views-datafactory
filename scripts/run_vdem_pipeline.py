@@ -21,13 +21,16 @@ import sys
 import time
 from pathlib import Path
 
+from datafactory_harvester.pipeline_runner import (
+    PipelineStep,
+    run_pipeline,
+)
+
 STEPS = ("harvest", "viewpoint", "compile")
 
 
 def main() -> int:
     """Orchestrate the V-Dem pipeline end-to-end."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description="Run full V-Dem pipeline (Layers 1, 3, 4)",
     )
@@ -53,67 +56,36 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    skip_idx = (
-        STEPS.index(args.skip_to) if args.skip_to else 0
-    )
-
-    print("=" * 60)
-    print("V-Dem PIPELINE (Layers 1, 3, 4)")
-    print(f"End year: {args.end_year}")
-    print("Consolidation: skipped (single release, ADR-035)")
-    if args.skip_to:
-        print(f"Skipping to: {args.skip_to}")
-    print("=" * 60)
-    print()
-
-    t_start = time.monotonic()
-
-    # ── Step 1: Harvest ──────────────────────────────────────
-
     raw_path = Path("data/raw/vdem/vdem_v16.parquet")
+    viewpoint_path = Path("data/viewpoint/vdem_v1.parquet")
+    output_dir = Path("data/compiled/vdem")
 
-    if skip_idx < 1:
-        print("[1/3] HARVEST")
+    # ── Step closures ───────────────────────────────────────────
+
+    def harvest() -> None:
         from datafactory_harvester.sources.vdem import (
             VdemConfig,
             fetch_vdem,
         )
 
         config = VdemConfig()
-
-        t0 = time.monotonic()
-        try:
-            result = fetch_vdem(
-                config, force_refresh=args.force,
-            )
-        except Exception as e:
-            print(f"  FAIL: {e}")
-            return 1
-
+        result = fetch_vdem(
+            config, force_refresh=args.force,
+        )
         print(f"  Outcome: {result['outcome']}")
         if "n_rows" in result:
             print(f"  Rows: {result['n_rows']:,}")
-        print(f"  ({time.monotonic() - t0:.1f}s)")
-        print()
-    else:
+
+    def check_harvest() -> str:
         if not raw_path.exists():
-            print(
-                f"FAIL: Expected {raw_path} but not found. "
+            msg = (
+                f"Expected {raw_path} but not found. "
                 f"Run without --skip-to first."
             )
-            return 1
-        print(
-            f"[1/3] HARVEST — skipped "
-            f"(using {raw_path})"
-        )
-        print()
+            raise FileNotFoundError(msg)
+        return f"using {raw_path}"
 
-    # ── Step 2: Viewpoint ────────────────────────────────────
-
-    viewpoint_path = Path("data/viewpoint/vdem_v1.parquet")
-
-    if skip_idx < 2:
-        print("[2/3] VIEWPOINT")
+    def viewpoint() -> None:
         from datafactory_viewpoint.builders.vdem_v1 import (
             VdemViewpointConfig,
             build_vdem_v1,
@@ -128,95 +100,100 @@ def main() -> int:
             ),
             end_year=args.end_year,
         )
-
-        t0 = time.monotonic()
-        try:
-            result = build_vdem_v1(vp_config)
-        except Exception as e:
-            print(f"  FAIL: {e}")
-            return 1
-
+        result = build_vdem_v1(vp_config)
         print(
             f"  {result.n_events_output:,} rows → "
             f"{viewpoint_path}"
         )
-        print(f"  ({time.monotonic() - t0:.1f}s)")
-        print()
-    else:
+
+    def check_viewpoint() -> str:
         if not viewpoint_path.exists():
-            print(
-                f"FAIL: Expected {viewpoint_path} "
-                f"but not found."
+            msg = (
+                f"Expected {viewpoint_path} but not found."
             )
-            return 1
-        print(
-            f"[2/3] VIEWPOINT — skipped "
-            f"(using {viewpoint_path})"
+            raise FileNotFoundError(msg)
+        return f"using {viewpoint_path}"
+
+    def compile_step() -> None:
+        import importlib.util
+
+        from datafactory_compilation import compile_pregridded
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
         )
-        print()
+        from datafactory_priogrid import (
+            GridConfig,
+            TemporalConfig,
+        )
 
-    # ── Step 3: Compile ──────────────────────────────────────
+        _compile_vdem_path = (
+            Path(__file__).parent / "compile_vdem.py"
+        )
+        _spec = importlib.util.spec_from_file_location(
+            "compile_vdem", _compile_vdem_path,
+        )
+        if _spec is None or _spec.loader is None:
+            msg = f"Cannot load {_compile_vdem_path}"
+            raise FileNotFoundError(msg)
+        _mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        vdem_features = _mod.VDEM_FEATURES
 
-    print("[3/3] COMPILE")
-    import importlib.util
-
-    from datafactory_compilation import compile_pregridded
-    from datafactory_compilation.pregridded_compilation import (
-        PregriddedCompilationConfig,
-    )
-    from datafactory_priogrid import GridConfig, TemporalConfig
-
-    _compile_vdem_path = Path(__file__).parent / "compile_vdem.py"
-    _spec = importlib.util.spec_from_file_location(
-        "compile_vdem", _compile_vdem_path,
-    )
-    if _spec is None or _spec.loader is None:
-        msg = f"Cannot load {_compile_vdem_path}"
-        raise FileNotFoundError(msg)
-    _mod = importlib.util.module_from_spec(_spec)
-    _spec.loader.exec_module(_mod)
-    vdem_features = _mod.VDEM_FEATURES
-
-    output_dir = Path("data/compiled/vdem")
-
-    config = PregriddedCompilationConfig(
-        source_path=viewpoint_path,
-        grid_config=GridConfig(),
-        temporal_config=TemporalConfig(
-            end_year=args.end_year,
-        ),
-        features=vdem_features,
-        output_dir=output_dir,
-        ledger_path=Path(
-            "provenance/compilation/vdem_ledger.jsonl",
-        ),
-        fill_value=float("nan"),
-    )
-
-    t0 = time.monotonic()
-    try:
+        config = PregriddedCompilationConfig(
+            source_path=viewpoint_path,
+            grid_config=GridConfig(),
+            temporal_config=TemporalConfig(
+                end_year=args.end_year,
+            ),
+            features=vdem_features,
+            output_dir=output_dir,
+            ledger_path=Path(
+                "provenance/compilation/vdem_ledger.jsonl",
+            ),
+            fill_value=float("nan"),
+        )
         result_dir = compile_pregridded(config)
-    except Exception as e:
-        print(f"  FAIL: {e}")
+
+        import numpy as np
+
+        grid = np.load(result_dir / "grid.npy", mmap_mode="r")
+        print(f"  Grid shape: {grid.shape}")
+        print(f"  Output: {result_dir}")
+
+    # ── Run pipeline ────────────────────────────────────────────
+
+    pipeline_steps = (
+        PipelineStep("harvest", harvest, check_harvest),
+        PipelineStep("viewpoint", viewpoint, check_viewpoint),
+        PipelineStep("compile", compile_step),
+    )
+
+    result = run_pipeline(
+        source_name="V-Dem",
+        steps=pipeline_steps,
+        config_summary={
+            "Layers": "1, 3, 4",
+            "End year": str(args.end_year),
+            "Consolidation": "skipped (single release, ADR-035)",
+        },
+        skip_to=args.skip_to,
+    )
+
+    if not result.success:
         return 1
 
-    import numpy as np
-
-    grid = np.load(result_dir / "grid.npy", mmap_mode="r")
-    print(f"  Grid shape: {grid.shape}")
-    print(f"  Output: {result_dir}")
-    print(f"  ({time.monotonic() - t0:.1f}s)")
-    print()
-
-    # ── Step 4 (optional): Verify ───────────────────────────
+    # ── Optional verify ─────────────────────────────────────────
 
     if args.verify:
-        print("[4/4] VERIFY")
+        print("[VERIFY]")
         t0 = time.monotonic()
         rc = subprocess.run(
             [
                 sys.executable,
-                str(Path(__file__).parent / "verify_vdem_grid.py"),
+                str(
+                    Path(__file__).parent
+                    / "verify_vdem_grid.py"
+                ),
                 "--input", str(output_dir),
             ],
             check=False,
@@ -227,13 +204,10 @@ def main() -> int:
             return 1
         print()
 
-    # ── Summary ──────────────────────────────────────────────
+    # ── Summary ─────────────────────────────────────────────────
 
-    total = time.monotonic() - t_start
     print("=" * 60)
-    print(f"V-Dem PIPELINE COMPLETE ({total:.1f}s)")
-    print(f"  Grid: {result_dir / 'grid.npy'}")
-    print(f"  Shape: {grid.shape}")
+    print(f"V-Dem PIPELINE COMPLETE ({result.elapsed:.1f}s)")
     print()
     print(
         "Next: uv run python scripts/assemble_grid.py "
