@@ -31,6 +31,11 @@ from shapely import STRtree
 from shapely.geometry import Point, shape
 
 from datafactory_harvester.sources import register_source
+from datafactory_harvester.validation import (
+    validate_nonempty_string,
+    validate_positive_int,
+    validate_string_tuple,
+)
 from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
@@ -126,24 +131,9 @@ class ShdiConfig:
     timeout: int = 300
 
     def __post_init__(self) -> None:
-        if not self.variables:
-            msg = "variables must be non-empty"
-            raise ValueError(msg)
-        if not self.version:
-            msg = "version must be non-empty"
-            raise ValueError(msg)
-        if self.timeout < 1:
-            msg = f"timeout must be >= 1, got {self.timeout}"
-            raise ValueError(msg)
-        seen: set[str] = set()
-        for var in self.variables:
-            if not var:
-                msg = "variables must not contain empty strings"
-                raise ValueError(msg)
-            if var in seen:
-                msg = f"duplicate variable: {var}"
-                raise ValueError(msg)
-            seen.add(var)
+        validate_string_tuple(self.variables, "variables")
+        validate_nonempty_string(self.version, "version")
+        validate_positive_int(self.timeout, "timeout")
 
     def indicator_url(self, variable: str) -> str:
         return f"{self.api_base_url}/shdi/download/{variable}/"

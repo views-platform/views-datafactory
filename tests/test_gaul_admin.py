@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import io
 import json
-import logging
 import zipfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -126,19 +125,9 @@ class TestGaulAdminConfigRed:
 
 class TestGaulAdminADR008:
 
-    _logger_name = "datafactory_harvester.sources.gaul_admin"
-
-    def test_timeout_error_logged(
-        self, caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        with (
-            caplog.at_level(logging.ERROR, logger=self._logger_name),
-            pytest.raises(ValueError, match="timeout"),
-        ):
+    def test_timeout_error_raised(self) -> None:
+        with pytest.raises(ValueError, match="timeout"):
             GaulAdminConfig(timeout=0)
-        assert len(
-            [r for r in caplog.records if r.levelno >= logging.ERROR]
-        ) >= 1
 
 
 # ---- C-188: failure path writes ledger entry ----

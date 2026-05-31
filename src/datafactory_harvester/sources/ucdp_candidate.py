@@ -37,6 +37,11 @@ from datafactory_harvester.sources.ucdp_annual import (
     UcdpAnnualConfig,
     fetch_paginated,
 )
+from datafactory_harvester.validation import (
+    validate_month,
+    validate_positive_float,
+    validate_positive_int,
+)
 from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
@@ -103,41 +108,15 @@ class UcdpCandidateConfig:
     )
 
     def __post_init__(self) -> None:
-        if not (1 <= self.start_month <= 12):
-            err_msg = (
-                f"start_month must be in [1, 12], got {self.start_month}"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.start_year < 1:
-            err_msg = f"start_year must be >= 1, got {self.start_year}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.page_size < 1:
-            err_msg = f"page_size must be >= 1, got {self.page_size}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.max_retries < 1:
-            err_msg = f"max_retries must be >= 1, got {self.max_retries}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.discovery_rate_limit <= 0:
-            err_msg = (
-                f"discovery_rate_limit must be > 0, "
-                f"got {self.discovery_rate_limit}"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.timeout < 1:
-            err_msg = f"timeout must be >= 1, got {self.timeout}"
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        if self.max_versions < 1:
-            err_msg = (
-                f"max_versions must be >= 1, got {self.max_versions}"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
+        validate_month(self.start_month, "start_month")
+        validate_positive_int(self.start_year, "start_year")
+        validate_positive_int(self.page_size, "page_size")
+        validate_positive_int(self.max_retries, "max_retries")
+        validate_positive_float(
+            self.discovery_rate_limit, "discovery_rate_limit",
+        )
+        validate_positive_int(self.timeout, "timeout")
+        validate_positive_int(self.max_versions, "max_versions")
 
 
 # ---- Version Discovery ----

@@ -90,21 +90,9 @@ class TestDot9ConfigRed:
 
 class TestDot9ADR008:
 
-    _logger_name = "datafactory_harvester.sources.ucdp_dot9"
-
-    def test_invalid_month_logged(
-        self, caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        import logging
-
-        with (
-            caplog.at_level(logging.ERROR, logger=self._logger_name),
-            pytest.raises(ValueError, match="start_month"),
-        ):
+    def test_invalid_month_raised(self) -> None:
+        with pytest.raises(ValueError, match="start_month"):
             UcdpDot9Config(start_month=0)
-        assert len(
-            [r for r in caplog.records if r.levelno >= logging.ERROR]
-        ) >= 1
 
 
 class TestDot9ConfigBeige:

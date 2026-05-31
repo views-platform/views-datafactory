@@ -1,298 +1,524 @@
-# Sprint Plan: WET Extraction (C-164)
+# Sprint Plan: WET Extraction + Harvest Correctness (C-164, C-223, C-184/C-185/C-186)
 
-**Date:** 2026-05-29
-**Status:** Draft — developing iteratively
-**Branch:** TBD (from `development`)
-**Register entries:** C-164 (trigger fired), C-07, C-155, C-195
-**Work package:** WET-before-DRY refactor (register row 86)
-**Estimated effort:** ~2-3 days (moderate extraction risk on patterns 3, 7)
-
----
-
-## Problem Statement
-
-C-164 tracks cross-layer WET debt across 5 pipeline sources (UCDP,
-ACLED, GHS-POP, GHS-BUILT-S, V-Dem). The trigger has fired twice:
-GHS-BUILT-S (2026-05-22) and V-Dem (2026-05-26) as the 4th and 5th
-sources. With SHDI planned as the 6th source, every unextracted
-pattern means copying ~100-250 lines per source.
-
-The WET-before-DRY strategy (ADR: write 3 times before abstracting)
-has succeeded — patterns are now concrete and clear from 5+ examples.
-Time to extract.
+**Date:** 2026-05-30
+**Status:** Ready for execution
+**Base branch:** `development`
+**Safety checkpoint:** `a2b798f` (if everything goes sideways: `git reset --hard a2b798f`)
+**GitHub issues:** #73 -- #82
+**Register entries:** C-164 (WET debt), C-223 (bounded memory), C-184/C-185 (cache digest), C-186 (shapefile outcome), C-230 (script layer untested)
+**Estimated effort:** 7 working days across 3 sprints
 
 ---
 
-## Pattern Inventory
+## PR Dependency Graph
 
-C-164 tracks 8 numbered patterns. Status from the 2026-05-24
-tech-debt investigation:
+```
+Sprint A: WET Extraction                Sprint B: Bounded Memory    Sprint C: Harvest Correctness
+========================                ========================    =============================
 
-### Already Extracted (v1.2.21)
+PR-1 (#73)                              PR-7 (#79)                  PR-9 (#81)
+Config validators                       open_memmap()               Cache digest verification
+     |                                       |                           |
+     v                                       v                           v
+PR-2 (#74) -----> PR-3 (#75)            PR-8 (#80)                  PR-10 (#82)
+Harvest chartest   HarvestRunner        Pre-flight checks           Shapefile outcome vocab
+                                                                        
+PR-4 (#76) -----> PR-5 (#77)
+Pipeline chartest  PipelineRunner
 
-| # | Pattern | Lines | Status |
-|---|---------|-------|--------|
-| 2 | Consolidation `_tag_table()` | 34 | Extracted in v1.2.21 |
-| 4 | Compilation output writer | 30 | Extracted in v1.2.21 |
-| 5 | `_VIEWS_EPOCH_YEAR` constant | 2 | Extracted in v1.2.21 |
-| 6 | Provenance recording | ~48 sites | Deferred — C-06 tracks |
-| 9 | Raster I/O shared functions | 39 | Extracted in v1.2.21 |
-| 10 | Temporal interpolation | — | Extracted in v1.2.21 |
+PR-6 (#78)
+Viewpoint scaffolding
 
-### Remaining (This Sprint)
-
-| # | Pattern | Identical lines | Files | Risk |
-|---|---------|----------------|-------|------|
-| 1 | Harvester config validators | 36 (12×3 UCDP) | 5 | Safe |
-| 3 | Viewpoint builder scaffolding | 35 | 4 | Moderate |
-| 7 | Pipeline runner scripts | 80-120 per file | 3 | Moderate |
-| 8 | Harvest script wrappers | 150-250 per file | 7 | Moderate |
-
-Plus: **Verify/visual audit scripts** (~5 files, ~5,466 lines,
-~60% overlap) — identified during C-155 but not numbered in C-164.
-These are the highest-volume duplication in the codebase.
-
----
-
-## Pattern Details
-
-### Pattern 1: Harvester Config Validators (Safe, ~1 hour)
-
-**Files (5):**
-- `src/datafactory_harvester/sources/ucdp_annual.py`
-- `src/datafactory_harvester/sources/ucdp_candidate.py`
-- `src/datafactory_harvester/sources/ucdp_dot9.py`
-- `src/datafactory_harvester/sources/acled.py`
-- `src/datafactory_harvester/sources/ghspop.py`
-
-**Pattern:** Each config's `__post_init__` has identical validators:
-```python
-if self.timeout < 1:
-    raise ValueError("timeout must be >= 1")
-if self.page_size < 1:
-    raise ValueError("page_size must be >= 1")
-if self.max_retries < 1:
-    raise ValueError("max_retries must be >= 1")
+Parallelism:
+  Sprint A: PR-1, PR-2, PR-4, PR-6 can start simultaneously
+            PR-3 blocked by PR-2
+            PR-5 blocked by PR-4
+  Sprint B: PR-7 then PR-8 (sequential)
+  Sprint C: PR-9, PR-10 can start simultaneously
+  Cross-sprint: B and C can start after A merges
 ```
 
-**Extraction approach:** Shared validator functions or a mixin. The
-validators are pure (no side effects, no domain coupling).
-
-**Risk:** Safe — validators have no behavioral coupling to the rest
-of the harvester.
-
-### Pattern 3: Viewpoint Builder Scaffolding (Moderate, ~3 hours)
-
-**Files (4):**
-- `src/datafactory_viewpoint/builders/acled_v1.py`
-- `src/datafactory_viewpoint/builders/ghspop_v1.py`
-- `src/datafactory_viewpoint/builders/ghsbuilts_v1.py`
-- `src/datafactory_viewpoint/builders/ucdp_v1.py`
-
-**Pattern:** Config-or-shortcut, file existence check, provenance
-recording, ViewpointResult construction. ~35 identical lines per file.
-Core logic differs (event filtering vs. spatial aggregation vs.
-country-level expansion).
-
-**Extraction approach:** Base builder class with template method, or
-shared helper functions for the scaffolding steps. The template method
-approach is cleaner but has higher design risk (getting the hook
-points right for 4 different builder types).
-
-**Risk:** Moderate — scaffolding is tightly coupled to config classes.
-Wrong abstraction boundary = worse than WET.
-
-**Note (from C-164):** "Highest design risk" in the pattern inventory.
-V-Dem builder (`vdem_v1.py`) adds a 5th variant with a fundamentally
-different crosswalk pattern (ISO3 → pgid). Any base class must
-accommodate both spatial-join sources and country-level sources.
-
-### Pattern 7: Pipeline Runner Scripts (Moderate, ~4 hours)
-
-**Files (3):**
-- `scripts/run_ucdp_pipeline.py` (~253 lines)
-- `scripts/run_ghspop_pipeline.py` (~253 lines)
-- `scripts/run_ghsbuilts_pipeline.py` (~280 lines)
-
-**Combined:** ~846 lines with shared structure:
-- argparse setup with `--skip-to`, `--stop-after` flags
-- Sequential step execution with numbered log headers
-- Timing per step
-- Error handling with step-level recovery
-- `--dry-run` support
-
-**Extraction approach:** Shared runner with pluggable step definitions.
-Each source provides a list of `(name, callable)` tuples; the runner
-handles argparse, `--skip-to`, timing, and logging.
-
-**Risk:** Moderate — step index handling and fallback validation vary
-between runners. The V-Dem pipeline (`run_vdem_pipeline.py`, ~247
-lines) would be a 4th consumer.
-
-### Pattern 8: Harvest Script Wrappers (Moderate, ~2 hours)
-
-**Files (7):**
-- `scripts/harvest_ucdp.py`
-- `scripts/harvest_acled.py`
-- `scripts/harvest_ghspop.py`
-- `scripts/harvest_ghsbuilts.py`
-- `scripts/harvest_priogrid.py`
-- `scripts/harvest_gaul.py`
-- `scripts/harvest_candidates.py`
-
-**Combined:** ~1,035 lines. Each is a thin wrapper:
-```
-parse args → build config → call harvester function → print summary
-```
-
-**Extraction approach:** Shared `harvest_main()` wrapper that takes
-a config class and harvester function, handles argparse + timing +
-banner boilerplate.
-
-**Risk:** Moderate — argparse flags differ per source (e.g., ACLED
-has `--year-range`, GHS-POP has `--epoch`). The shared wrapper needs
-to support per-source argument extensions.
-
-### Verify/Visual Audit Scripts (High Volume, ~4 hours)
-
-**Files (~5):**
-- `scripts/verify_ghspop.py`
-- `scripts/verify_ghsbuilts.py`
-- `scripts/verify_vdem.py`
-- `scripts/verify_acled.py`
-- `scripts/verify_ucdp.py`
-
-**Combined:** ~5,466 lines with ~60% structural overlap. Shared
-structure: load grid → compute statistics → generate plots → write
-report. Domain-specific: feature selection, expected ranges, plot
-types.
-
-**Note (from C-164):** "Beyond code duplication, the verification
-scripts also lack governance: no ADR, CIC, or standard defines what
-a verification script must check, how plots are selected, or what
-'PASS' means."
-
-**Risk:** These are the largest duplication target but also the
-highest-risk extraction. Each script has domain-specific checks that
-resist generic abstraction. Consider extracting just the framework
-(load, plot, report) and keeping domain checks per-source.
-
 ---
 
-## Extraction Order (Recommended)
+## Sprint A: WET Extraction (4 working days)
 
-Based on ROI (lines saved per hour of effort) and risk:
+### PR-1: Config Validation Utilities (#73)
 
-1. **Pattern 1: Config validators** — Safe, trivial, 5 min each.
-   Good warmup and establishes the extraction workflow.
+**Branch:** `refactor/config-validators`
+**Base:** `development`
+**Blocks:** Nothing (independent)
+**Parallel with:** PR-2, PR-4, PR-6
 
-2. **Pattern 8: Harvest wrappers** — 7 files, high structural
-   similarity. Moderate effort but high line-count payoff.
+**Files created:**
+- `src/datafactory_harvester/validation.py` -- shared validator functions
+- `tests/test_config_validation.py` -- unit tests for validators
 
-3. **Pattern 7: Pipeline runners** — 3 files, moderate complexity.
-   Second-highest payoff per file.
+**Files modified:**
+- `src/datafactory_harvester/sources/ucdp_annual.py` -- replace inline validators
+- `src/datafactory_harvester/sources/ucdp_candidate.py` -- replace inline validators
+- `src/datafactory_harvester/sources/ucdp_dot9.py` -- replace inline validators
+- `src/datafactory_harvester/sources/acled.py` -- replace inline validators
+- `src/datafactory_harvester/sources/ghspop.py` -- replace inline validators
+- `src/datafactory_harvester/sources/ghsbuilts.py` -- replace inline validators
+- `src/datafactory_harvester/sources/priogrid_static.py` -- replace inline validators
+- `src/datafactory_harvester/sources/gaul_admin.py` -- replace inline validators
+- `src/datafactory_harvester/sources/vdem.py` -- replace inline validators
+- `src/datafactory_harvester/sources/shdi.py` -- replace inline validators
 
-4. **Pattern 3: Viewpoint scaffolding** — Highest design risk.
-   Do last so earlier extractions inform the approach.
-
-5. **Verify scripts** — Highest volume but also highest risk.
-   May be better as a separate sprint after patterns 1-4 are done.
-
----
-
-## Task Breakdown
-
-### Task 1: Config Validators (Pattern 1)
-- [ ] Extract shared validators to `src/datafactory_harvester/validation.py`
-  or add to existing config module
-- [ ] Replace validators in 5 harvester configs
-- [ ] Test: validators still raise on invalid input
-- [ ] Test: valid configs still construct
-
-### Task 2: Harvest Wrappers (Pattern 8)
-- [ ] Design `harvest_main()` interface (config class + callable + optional extra args)
-- [ ] Implement shared wrapper
-- [ ] Convert 7 harvest scripts
-- [ ] Test: each script still works with `--help` and basic invocation
-
-### Task 3: Pipeline Runners (Pattern 7)
-- [ ] Design shared runner interface (step list + argparse extensions)
-- [ ] Implement shared runner with `--skip-to`, timing, logging
-- [ ] Convert 3 pipeline scripts (UCDP, GHS-POP, GHS-BUILT-S)
-- [ ] Test: `--skip-to`, `--stop-after`, `--dry-run` still work
-- [ ] Consider converting V-Dem pipeline runner as 4th consumer
-
-### Task 4: Viewpoint Scaffolding (Pattern 3)
-- [ ] Analyze the 4 builder files for exact shared vs. different code
-- [ ] Design extraction (base class vs. helper functions)
-- [ ] Implement and convert 4 builders
-- [ ] Test: each builder produces identical output to pre-extraction
-- [ ] Consider V-Dem builder as 5th consumer (different crosswalk type)
-
-### Task 5: Register Updates
-- [ ] Update C-164 with extraction status
-- [ ] Update C-07 (frozen dataclass pattern) if config validators change
-- [ ] Update C-155 (visual audit framework) if verify scripts addressed
-- [ ] Update C-195 (falsification test accumulation) if relevant
-- [ ] Update header counts
-
----
-
-## Design Principles
-
-From the codebase's WET-before-DRY philosophy (C-44, now merged
-into C-164):
-
-1. **Extract only what's truly identical.** If two implementations
-   differ in subtle ways, keep them separate. Three similar lines
-   is better than a premature abstraction.
-
-2. **The abstraction must be simpler than the duplication.** If the
-   shared code needs more parameters than the original code had lines,
-   the abstraction is wrong.
-
-3. **Test before extracting.** Ensure each pattern has tests that
-   verify behavior BEFORE refactoring, so extraction can be validated
-   by running existing tests.
-
-4. **One pattern per commit.** Each extraction is independently
-   reviewable and revertable.
-
----
-
-## Verification
-
+**Pre-merge gate:**
 ```bash
 uv run ruff check .
-uv run pytest -q
-# Pattern-specific checks:
-uv run pytest tests/test_viewpoint.py -v     # viewpoint scaffolding
-uv run pytest tests/test_harvest*.py -v      # harvest wrappers
+uv run pytest tests/test_config_validation.py -v
+uv run pytest tests/ -q                          # full suite, no regressions
+```
+
+**Merge criteria:**
+- All 10 harvester configs use shared validators
+- Existing config tests still pass (green)
+- New tests cover: valid config, each invalid field, edge cases (timeout=0, timeout=1)
+- No behavioral change in any harvester
+
+---
+
+### PR-2: Harvest Script Characterization Tests (#74)
+
+**Branch:** `test/harvest-script-characterization`
+**Base:** `development`
+**Blocks:** PR-3 (HarvestRunner extraction)
+**Parallel with:** PR-1, PR-4, PR-6
+
+**Files created:**
+- `tests/test_harvest_scripts.py` -- characterization tests for all 9 harvest scripts
+
+**Files modified:** None (test-only PR)
+
+**What the tests must cover:**
+- `--help` exits 0 for each script
+- `--force` flag is accepted
+- Missing credentials raise clear errors (not silent failures)
+- Script imports resolve correctly
+- argparse flags match documented interface
+
+**Pre-merge gate:**
+```bash
+uv run ruff check tests/test_harvest_scripts.py
+uv run pytest tests/test_harvest_scripts.py -v
+uv run pytest tests/ -q                          # no regressions
+```
+
+**Merge criteria:**
+- Every harvest script has at least 3 characterization tests
+- Tests are behavioral (test what the script does, not how)
+- All tests green
+
+---
+
+### PR-3: Extract HarvestRunner (#75)
+
+**Branch:** `refactor/harvest-runner`
+**Base:** `development` (after PR-2 merges)
+**Blocked by:** PR-2 (characterization tests must exist first)
+**Blocks:** Nothing
+
+**Files created:**
+- `src/datafactory_harvester/harvest_runner.py` -- shared runner
+- `tests/test_harvest_runner.py` -- unit tests for runner
+
+**Files modified:**
+- `scripts/harvest_ucdp.py` -- delegate to HarvestRunner
+- `scripts/harvest_acled.py` -- delegate to HarvestRunner
+- `scripts/harvest_ghspop.py` -- delegate to HarvestRunner
+- `scripts/harvest_ghsbuilts.py` -- delegate to HarvestRunner
+- `scripts/harvest_priogrid.py` -- delegate to HarvestRunner
+- `scripts/harvest_gaul.py` -- delegate to HarvestRunner
+- `scripts/harvest_vdem.py` -- delegate to HarvestRunner
+- `scripts/harvest_shdi.py` -- delegate to HarvestRunner
+- `scripts/harvest_shapefile.py` -- delegate to HarvestRunner
+
+**Pre-merge gate:**
+```bash
+uv run ruff check .
+uv run pytest tests/test_harvest_runner.py -v
+uv run pytest tests/test_harvest_scripts.py -v   # characterization tests still pass
+uv run pytest tests/ -q                          # full suite
+```
+
+**Merge criteria:**
+- All 9 harvest scripts use HarvestRunner
+- PR-2 characterization tests still pass (no behavioral change)
+- New unit tests cover: argparse, banner, timing, error propagation
+- Each script is < 30 lines (thin delegate)
+- Per-source argparse extensions work (e.g., ACLED `--year-range`)
+
+---
+
+### PR-4: Pipeline Runner Characterization Tests (#76)
+
+**Branch:** `test/pipeline-runner-characterization`
+**Base:** `development`
+**Blocks:** PR-5 (PipelineRunner extraction)
+**Parallel with:** PR-1, PR-2, PR-6
+
+**Files created:**
+- `tests/test_pipeline_scripts.py` -- characterization tests for all 4 pipeline runners
+
+**Files modified:** None (test-only PR)
+
+**What the tests must cover:**
+- `--help` exits 0 for each runner
+- `--skip-to` with valid step names accepted
+- `--skip-to` with invalid step name raises error
+- `--dry-run` flag accepted
+- Step ordering is correct for each pipeline
+- Missing credentials produce clear errors
+
+**Pre-merge gate:**
+```bash
+uv run ruff check tests/test_pipeline_scripts.py
+uv run pytest tests/test_pipeline_scripts.py -v
+uv run pytest tests/ -q                          # no regressions
+```
+
+**Merge criteria:**
+- Every pipeline runner has at least 4 characterization tests
+- Tests cover `--skip-to` and `--dry-run` flags
+- All tests green
+
+---
+
+### PR-5: Extract PipelineRunner (#77)
+
+**Branch:** `refactor/pipeline-runner`
+**Base:** `development` (after PR-4 merges)
+**Blocked by:** PR-4 (characterization tests must exist first)
+**Blocks:** Nothing
+
+**Files created:**
+- `src/datafactory_harvester/pipeline_runner.py` -- shared runner (or new top-level package)
+- `tests/test_pipeline_runner.py` -- unit tests
+
+**Files modified:**
+- `scripts/run_ucdp_pipeline.py` -- delegate to PipelineRunner
+- `scripts/run_acled_pipeline.py` -- delegate to PipelineRunner
+- `scripts/run_ghspop_pipeline.py` -- delegate to PipelineRunner
+- `scripts/run_ghsbuilts_pipeline.py` -- delegate to PipelineRunner
+- `scripts/run_vdem_pipeline.py` -- delegate to PipelineRunner
+
+**Pre-merge gate:**
+```bash
+uv run ruff check .
+uv run pytest tests/test_pipeline_runner.py -v
+uv run pytest tests/test_pipeline_scripts.py -v  # characterization tests still pass
+uv run pytest tests/ -q                          # full suite
+```
+
+**Merge criteria:**
+- All 4+ pipeline runners use PipelineRunner
+- PR-4 characterization tests still pass
+- `--skip-to`, `--stop-after`, `--dry-run` work identically
+- Step definitions are declarative (list of name + callable tuples)
+- Each script is < 40 lines
+
+---
+
+### PR-6: Viewpoint Scaffolding Extraction (#78)
+
+**Branch:** `refactor/viewpoint-scaffolding`
+**Base:** `development`
+**Blocks:** Nothing
+**Parallel with:** PR-1, PR-2, PR-4
+
+**Files created:**
+- `src/datafactory_viewpoint/builder_base.py` -- shared scaffolding (helpers or base class)
+- `tests/test_viewpoint_scaffolding.py` -- tests for extracted scaffolding
+
+**Files modified:**
+- `src/datafactory_viewpoint/builders/ucdp_v1.py` -- use shared scaffolding
+- `src/datafactory_viewpoint/builders/acled_v1.py` -- use shared scaffolding
+- `src/datafactory_viewpoint/builders/ghspop_v1.py` -- use shared scaffolding
+- `src/datafactory_viewpoint/builders/ghsbuilts_v1.py` -- use shared scaffolding
+- `src/datafactory_viewpoint/builders/vdem_v1.py` -- use shared scaffolding
+
+**Pre-merge gate:**
+```bash
+uv run ruff check .
+uv run pytest tests/test_viewpoint_scaffolding.py -v
+uv run pytest tests/test_viewpoint.py -v         # existing viewpoint tests
+uv run pytest tests/ -q                          # full suite
+```
+
+**Merge criteria:**
+- Config-or-shortcut + provenance + result construction extracted
+- All 5 viewpoint builders use shared scaffolding
+- Existing viewpoint tests pass (no behavioral change)
+- V-Dem's ISO3 crosswalk pattern accommodated (not forced into spatial-join mold)
+- Shared code is simpler than the duplication it replaces
+
+**Design risk note:** This is the highest-risk extraction. If the abstraction
+doesn't cleanly accommodate all 5 builders, defer and keep WET. The abstraction
+must be simpler than the duplication.
+
+---
+
+### Sprint A Exit Gate
+
+Before starting Sprint B or C, all Sprint A PRs must be merged and verified:
+
+```bash
+git checkout development
+git pull origin development
+
+# Full verification
+uv run ruff check .
+uv run pytest tests/ -q
+
+# Confirm no regressions in existing functionality
+uv run pytest tests/test_viewpoint.py -v
+uv run pytest tests/test_harvest_scripts.py -v
+uv run pytest tests/test_pipeline_scripts.py -v
+
+# Line count sanity check: harvest scripts should be < 30 lines each
+wc -l scripts/harvest_*.py
+
+# Line count sanity check: pipeline runners should be < 40 lines each
+wc -l scripts/run_*_pipeline.py
+```
+
+**Exit criteria:**
+- All 6 PRs merged into `development`
+- Full test suite green
+- No lint errors
+- Risk register C-164 updated with extraction status
+
+---
+
+## Sprint B: Bounded-Memory Compilation (1.5 working days)
+
+### PR-7: Replace np.full() with open_memmap() (#79)
+
+**Branch:** `refactor/memmap-compilation`
+**Base:** `development` (after Sprint A exit gate)
+**Blocks:** PR-8
+**Parallel with:** Sprint C PRs (if Sprint A is done)
+
+**Files modified:**
+- `src/datafactory_compilation/pregridded_compilation.py` -- `np.full()` -> `open_memmap()`
+- `src/datafactory_compilation/grid_compilation.py` -- `np.full()` -> `open_memmap()`
+- `scripts/assemble_grid.py` -- assembly uses memmap
+- `scripts/export_zarr.py` -- fix zarr materialization to not load full grid
+- `tests/test_compilation.py` -- verify memmap behavior
+- `tests/test_assemble.py` -- verify assembly with memmap
+
+**Files created:**
+- `docs/ADRs/037_bounded_memory_compilation.md` -- ADR for the approach
+
+**Pre-merge gate:**
+```bash
+uv run ruff check .
+uv run pytest tests/test_compilation.py -v
+uv run pytest tests/test_assemble.py -v
+uv run pytest tests/ -q
+```
+
+**Merge criteria:**
+- `compile_pregridded()` and `compile_grid()` use `open_memmap()`
+- Assembly step uses memmap (no full-grid allocation)
+- Zarr export reads from memmap without materializing
+- All compilation tests pass
+- ADR-037 accepted
+- Peak memory for a single-source compile < 2 GB (vs. ~9.7 GB before)
+
+---
+
+### PR-8: Pre-flight Resource Checks (#80)
+
+**Branch:** `refactor/preflight-resource-checks`
+**Base:** `development` (after PR-7 merges)
+**Blocked by:** PR-7
+**Blocks:** Nothing
+
+**Files created:**
+- `src/datafactory_compilation/preflight.py` -- resource estimation + checks
+- `tests/test_preflight.py` -- unit tests
+
+**Files modified:**
+- `scripts/assemble_grid.py` -- call pre-flight before assembly
+- Pipeline runner scripts -- call pre-flight before compilation step
+
+**Pre-merge gate:**
+```bash
+uv run ruff check .
+uv run pytest tests/test_preflight.py -v
+uv run pytest tests/ -q
+```
+
+**Merge criteria:**
+- Pre-flight estimates memory needed for given (T, H, W, F) shape
+- Pre-flight warns if estimated memory > 80% of available RAM
+- Pre-flight fails loud if estimated memory > available RAM
+- Does not block legitimate operations on machines with sufficient RAM
+
+---
+
+### Sprint B Exit Gate
+
+```bash
+git checkout development
+git pull origin development
+
+uv run ruff check .
+uv run pytest tests/ -q
+
+# Memory verification (requires assembled grid)
+# Peak RSS during assembly should be < 8 GB (was ~33 GB)
+```
+
+**Exit criteria:**
+- PRs 7-8 merged
+- ADR-037 accepted
+- Peak memory for compilation demonstrably reduced
+- C-223 updated or resolved
+
+---
+
+## Sprint C: Harvest Correctness (1.5 working days)
+
+### PR-9: Cache Digest Verification (#81)
+
+**Branch:** `fix/cache-digest-verification`
+**Base:** `development` (after Sprint A exit gate)
+**Blocks:** Nothing
+**Parallel with:** PR-10
+
+**Files modified:**
+- `src/datafactory_harvester/sources/acled.py` -- add content digest check to cache logic
+- `src/datafactory_harvester/sources/ghspop.py` -- add content digest check to cache logic
+- `tests/test_acled_harvester.py` -- test cache hit with matching digest, cache miss with stale digest
+- `tests/test_ghspop_harvester.py` -- test cache hit with matching digest, cache miss with stale digest
+
+**Pre-merge gate:**
+```bash
+uv run ruff check .
+uv run pytest tests/test_acled_harvester.py -v
+uv run pytest tests/test_ghspop_harvester.py -v
+uv run pytest tests/ -q
+```
+
+**Merge criteria:**
+- Cache check verifies file content matches ledger digest (not just file existence)
+- Stale cache (file exists but digest mismatch) triggers re-fetch
+- New tests: cache hit (digest matches), cache miss (file exists, digest stale), cache miss (file missing)
+- C-184 and C-185 resolved
+
+---
+
+### PR-10: Shapefile Outcome Vocabulary (#82)
+
+**Branch:** `fix/shapefile-outcome-vocab`
+**Base:** `development` (after Sprint A exit gate)
+**Blocks:** Nothing
+**Parallel with:** PR-9
+
+**Files modified:**
+- `src/datafactory_harvester/sources/priogrid_shapefile.py` -- `"changed": True/False` -> `"outcome": "success"/"unchanged"`
+- `tests/test_priogrid_shapefile.py` -- test outcome vocabulary
+- `docs/ADRs/032_*.md` -- update if needed to reflect standard vocabulary
+
+**Pre-merge gate:**
+```bash
+uv run ruff check .
+uv run pytest tests/test_priogrid_shapefile.py -v
+uv run pytest tests/ -q
+```
+
+**Merge criteria:**
+- Shapefile harvester uses `"outcome": "success"/"unchanged"/"failed"` (matching all other harvesters)
+- All downstream consumers of shapefile result handle new vocabulary
+- C-186 resolved
+
+---
+
+### Sprint C Exit Gate
+
+```bash
+git checkout development
+git pull origin development
+
+uv run ruff check .
+uv run pytest tests/ -q
+```
+
+**Exit criteria:**
+- PRs 9-10 merged
+- C-184, C-185, C-186 resolved
+- Full test suite green
+
+---
+
+## Execution Timeline
+
+```
+Day 1:  PR-1 (config validators)    -- merge same day
+        PR-2 (harvest char tests)   -- start, merge day 1 or 2
+        PR-4 (pipeline char tests)  -- start, merge day 1 or 2
+        PR-6 (viewpoint scaffold)   -- start
+
+Day 2:  PR-2 merge (if not done)
+        PR-4 merge (if not done)
+        PR-3 (HarvestRunner)        -- start after PR-2 merges
+        PR-5 (PipelineRunner)       -- start after PR-4 merges
+        PR-6 continue
+
+Day 3:  PR-3 merge
+        PR-5 merge
+        PR-6 merge
+        Sprint A exit gate
+
+Day 4:  PR-7 (open_memmap)          -- start
+        PR-9 (cache digest)         -- start in parallel
+        PR-10 (shapefile vocab)     -- start in parallel
+
+Day 5:  PR-7 merge
+        PR-8 (pre-flight checks)    -- start after PR-7
+        PR-9 merge
+        PR-10 merge
+        Sprint C exit gate
+
+Day 6:  PR-8 merge
+        Sprint B exit gate
+
+Day 7:  Buffer / risk register updates / session report
 ```
 
 ---
 
-## Open Questions
+## Risk Register Updates After Completion
 
-1. Should config validators move to `datafactory_harvester/validation.py`
-   or to the existing config modules where the dataclasses live?
-2. For pipeline runners: should the shared runner be a class or a
-   function? (Function is simpler; class allows per-source hook methods)
-3. For harvest wrappers: how to handle per-source argparse extensions?
-   Subparsers? Callback for adding extra args?
-4. Should verify scripts be part of this sprint or deferred to a
-   separate sprint? (~4 hours additional, highest-risk extraction)
-5. Does extracting pattern 3 (viewpoint scaffolding) require a new
-   CIC for the base builder?
-6. Should the V-Dem pipeline runner be converted in this sprint
-   (4th consumer) or left for the SHDI sprint?
+| Entry | Expected State |
+|-------|---------------|
+| C-164 | Resolved -- patterns 1, 3, 7, 8 extracted |
+| C-223 | Resolved -- bounded-memory compilation in place |
+| C-184 | Resolved -- ACLED cache digest verified |
+| C-185 | Resolved -- GHS-POP cache digest verified |
+| C-186 | Resolved -- shapefile outcome vocabulary standardized |
+| C-230 | Partially resolved -- script layer now has characterization tests |
+| C-07  | Updated -- config validation centralized |
+
+**Post-sprint register review:** Run `/review-rr triage` after all PRs merge to
+verify header counts and cross-references are consistent.
 
 ---
 
-## Dependencies
+## What Comes After
 
-- **Blocks:** SHDI integration (6th source would copy all patterns)
-- **Blocked by:** Nothing
-- **Related:** C-164 (primary tracking entry), C-07 (frozen dataclass),
-  C-155 (visual audit framework), C-06 (provenance composability),
-  Harvest correctness sprint (fixes C-184/C-185/C-186 in harvest layer)
+With C-164 extracted, adding the next data source (SHDI Sprint 2, WDI, or climate)
+no longer means copying 5 patterns. New sources use `HarvestRunner`, `PipelineRunner`,
+shared config validators, and viewpoint scaffolding out of the box.
+
+**Immediate next steps (pick one):**
+1. **SHDI Sprint 2** -- viewpoint builder + compilation + assembly integration
+2. **WDI integration** -- new source, first consumer of all extracted patterns
+3. **Verify script framework (C-155)** -- extract the ~5,466 lines of verify script duplication
+
+Pattern #6 (provenance recording, 87 call sites) remains deferred under C-06 until
+the 10th source triggers extraction.
