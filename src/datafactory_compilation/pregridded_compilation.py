@@ -15,6 +15,9 @@ Ref: ADR-024 (grid invariants), ADR-029 (GHS-POP source).
 from __future__ import annotations
 
 import logging
+import os
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import ClassVar
@@ -168,90 +171,130 @@ def compile_pregridded(config: PregriddedCompilationConfig) -> Path:
     n_features = len(config.features)
     dtype = np.dtype(config.output_dtype)
 
-    grid_array = np.full(
-        (n_steps, nrow, ncol, n_features),
-        config.fill_value,
-        dtype=dtype,
+    # Pre-flight disk space check (C-223 / ADR-037)
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    required_bytes = (
+        n_steps * nrow * ncol * n_features * dtype.itemsize
     )
-
-    n_rows = table.num_rows
-    pgids = table[config.pgid_field].to_numpy(zero_copy_only=False)
-    month_ids = table[config.month_id_field].to_numpy(zero_copy_only=False)
-    value_arrays = [
-        table[feat.value_field].to_numpy(zero_copy_only=False)
-        for feat in config.features
-    ]
-    del table
-
-    n_placed = 0
-    n_skipped_spatial = 0
-    n_skipped_temporal = 0
-
-    start_year = config.temporal_config.start_year
-    start_month = config.temporal_config.start_month
-
-    for i in range(n_rows):
-        pgid = pgids[i]
-        if pgid < 1 or pgid > n_cells:
-            n_skipped_spatial += 1
-            continue
-
-        time_idx = _month_id_to_time_index(
-            month_ids[i], start_year, start_month
+    free_bytes = shutil.disk_usage(config.output_dir).free
+    if free_bytes < required_bytes * 1.2:
+        err_msg = (
+            f"Insufficient disk space: "
+            f"need {required_bytes * 1.2 / 1e9:.1f} GB, "
+            f"have {free_bytes / 1e9:.1f} GB free"
         )
-        if time_idx < 0 or time_idx >= n_steps:
-            n_skipped_temporal += 1
-            continue
+        logger.error(err_msg)
+        raise RuntimeError(err_msg)
 
-        pgid_idx = pgid - 1
-        row = pgid_idx // ncol
-        col = pgid_idx % ncol
-
-        for feat_idx in range(n_features):
-            val = value_arrays[feat_idx][i]
-            if not np.isnan(val):
-                grid_array[time_idx, row, col, feat_idx] = val
-
-        n_placed += 1
-
-    if n_skipped_spatial > 0:
-        logger.warning(
-            "Skipped %d rows: pgid outside grid bounds",
-            n_skipped_spatial,
-        )
-    if n_skipped_temporal > 0:
-        logger.warning(
-            "Skipped %d rows: month_id outside temporal range",
-            n_skipped_temporal,
-        )
-    logger.info("Placed %d rows into grid", n_placed)
-
-    feature_names = [feat.name for feat in config.features]
-
-    pgids_flat, _, _ = generate_grid(config.grid_config)
-    pgids_2d = pgids_flat.reshape(nrow, ncol)
-    time_steps = generate_time_steps(config.temporal_config)
-
-    write_compilation_output(
-        grid_array=grid_array,
-        pgids_2d=pgids_2d,
-        time_steps=time_steps,
-        feature_names=feature_names,
-        output_dir=config.output_dir,
-        ledger_path=config.ledger_path,
-        dataset_id=DATASET_ID,
-        source_path=config.source_path,
-        source_digest=source_digest,
-        n_placed=n_placed,
-        n_skipped_spatial=n_skipped_spatial,
-        n_skipped_temporal=n_skipped_temporal,
+    # Allocate grid as memory-mapped file (ADR-037).
+    # OS pages data in/out as needed — peak RSS stays bounded
+    # regardless of feature count.
+    tmp_fd, tmp_mmap_path = tempfile.mkstemp(
+        prefix="_memmap_", suffix=".npy",
+        dir=str(config.output_dir),
     )
+    os.close(tmp_fd)
 
-    logger.info(
-        "Compiled pre-gridded: shape=%s, features=%s, output=%s",
-        grid_array.shape,
-        feature_names,
-        config.output_dir,
-    )
+    grid_array = None
+    try:
+        grid_array = np.lib.format.open_memmap(
+            tmp_mmap_path,
+            mode="w+",
+            dtype=dtype,
+            shape=(n_steps, nrow, ncol, n_features),
+        )
+        grid_array[:] = config.fill_value
+
+        n_rows = table.num_rows
+        pgids = table[config.pgid_field].to_numpy(
+            zero_copy_only=False,
+        )
+        month_ids = table[config.month_id_field].to_numpy(
+            zero_copy_only=False,
+        )
+        value_arrays = [
+            table[feat.value_field].to_numpy(
+                zero_copy_only=False,
+            )
+            for feat in config.features
+        ]
+        del table
+
+        n_placed = 0
+        n_skipped_spatial = 0
+        n_skipped_temporal = 0
+
+        start_year = config.temporal_config.start_year
+        start_month = config.temporal_config.start_month
+
+        for i in range(n_rows):
+            pgid = pgids[i]
+            if pgid < 1 or pgid > n_cells:
+                n_skipped_spatial += 1
+                continue
+
+            time_idx = _month_id_to_time_index(
+                month_ids[i], start_year, start_month
+            )
+            if time_idx < 0 or time_idx >= n_steps:
+                n_skipped_temporal += 1
+                continue
+
+            pgid_idx = pgid - 1
+            row = pgid_idx // ncol
+            col = pgid_idx % ncol
+
+            for feat_idx in range(n_features):
+                val = value_arrays[feat_idx][i]
+                if not np.isnan(val):
+                    grid_array[time_idx, row, col, feat_idx] = val
+
+            n_placed += 1
+
+        if n_skipped_spatial > 0:
+            logger.warning(
+                "Skipped %d rows: pgid outside grid bounds",
+                n_skipped_spatial,
+            )
+        if n_skipped_temporal > 0:
+            logger.warning(
+                "Skipped %d rows: month_id outside temporal range",
+                n_skipped_temporal,
+            )
+        logger.info("Placed %d rows into grid", n_placed)
+
+        feature_names = [feat.name for feat in config.features]
+
+        pgids_flat, _, _ = generate_grid(config.grid_config)
+        pgids_2d = pgids_flat.reshape(nrow, ncol)
+        time_steps = generate_time_steps(config.temporal_config)
+
+        write_compilation_output(
+            grid_array=grid_array,
+            pgids_2d=pgids_2d,
+            time_steps=time_steps,
+            feature_names=feature_names,
+            output_dir=config.output_dir,
+            ledger_path=config.ledger_path,
+            dataset_id=DATASET_ID,
+            source_path=config.source_path,
+            source_digest=source_digest,
+            n_placed=n_placed,
+            n_skipped_spatial=n_skipped_spatial,
+            n_skipped_temporal=n_skipped_temporal,
+        )
+
+        logger.info(
+            "Compiled pre-gridded: shape=%s, features=%s, "
+            "output=%s",
+            grid_array.shape,
+            feature_names,
+            config.output_dir,
+        )
+    finally:
+        if grid_array is not None:
+            del grid_array
+        if os.path.exists(tmp_mmap_path):
+            os.unlink(tmp_mmap_path)
 
     return config.output_dir
