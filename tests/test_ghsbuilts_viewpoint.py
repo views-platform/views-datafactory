@@ -628,8 +628,9 @@ class TestGhsBuiltSViewpointBeige:
         with pytest.raises(FileNotFoundError, match="2020"):
             build_ghsbuilts_v1(config)
 
-    def test_source_dir_shortcut(self, tmp_path: Path) -> None:
+    def test_from_shortcuts_source_dir(self, tmp_path: Path) -> None:
         from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
             build_ghsbuilts_v1,
         )
 
@@ -648,9 +649,10 @@ class TestGhsBuiltSViewpointBeige:
                 prio_cols=1,
             )
 
-        result = build_ghsbuilts_v1(
+        config = GhsBuiltSViewpointConfig.from_shortcuts(
             source_dir=source_dir,
         )
+        result = build_ghsbuilts_v1(config)
         assert result.output_path.exists()
 
     def test_single_epoch_full_flow(self, tmp_path: Path) -> None:
@@ -926,8 +928,8 @@ class TestBuildGhsBuiltSV1Red:
             build_ghsbuilts_v1,
         )
 
-        with pytest.raises(ValueError, match="Either"):
-            build_ghsbuilts_v1()
+        with pytest.raises(TypeError):
+            build_ghsbuilts_v1()  # type: ignore[call-arg]
 
 
 # ===================================================================

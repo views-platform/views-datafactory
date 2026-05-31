@@ -80,6 +80,13 @@ class AcledViewpointConfig:
             logger.error(err_msg)
             raise ValueError(err_msg)
 
+    @classmethod
+    def from_shortcuts(
+        cls, *, consolidated_path: Path,
+    ) -> AcledViewpointConfig:
+        """Construct config from minimal shortcut arguments."""
+        return cls(consolidated_path=consolidated_path)
+
 
 def _assign_date_month(event_date: str) -> str:
     """Extract YYYY-MM from a daily event_date string."""
@@ -87,32 +94,13 @@ def _assign_date_month(event_date: str) -> str:
 
 
 def build_acled_v1(
-    config: AcledViewpointConfig | None = None,
-    *,
-    consolidated_path: Path | None = None,
+    config: AcledViewpointConfig,
 ) -> ViewpointResult:
     """Build ACLED viewpoint v1 from a consolidated event store.
-
-    Args:
-        config: Full viewpoint configuration. If None, uses defaults
-            with consolidated_path.
-        consolidated_path: Shortcut — used only if config is None.
 
     Returns:
         ViewpointResult with record counts and output digest.
     """
-    if config is None:
-        if consolidated_path is None:
-            err_msg = (
-                "Either config or consolidated_path must be "
-                "provided"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        config = AcledViewpointConfig(
-            consolidated_path=consolidated_path
-        )
-
     if not config.consolidated_path.exists():
         err_msg = (
             f"Consolidated store not found: "

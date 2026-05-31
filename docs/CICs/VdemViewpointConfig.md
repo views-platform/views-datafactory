@@ -74,7 +74,8 @@ All failures are immediate and loud. No silent fallbacks.
 
 ## 7. Boundaries and Interactions
 
-- Used by `build_vdem_viewpoint` as the sole configuration input
+- Used by `build_vdem_v1` as the sole configuration input (required argument)
+- Created directly or via `from_shortcuts(source_path=..., crosswalk_path=...)`
 - `source_path` reads output from `fetch_vdem` (Layer 1 harvester)
 - `crosswalk_path` reads output from `harvest_shapefile` (GAUL admin boundaries)
 - Must not depend on any other `datafactory_*` config class
@@ -86,6 +87,7 @@ All failures are immediate and loud. No silent fallbacks.
 
 ```python
 cfg = VdemViewpointConfig()  # All defaults
+cfg = VdemViewpointConfig.from_shortcuts(source_path=Path("data/raw/vdem/vdem_v16.parquet"))
 cfg = VdemViewpointConfig(end_year=2024)
 cfg = VdemViewpointConfig(
     variables=("v2x_libdem", "v2x_polyarchy"),

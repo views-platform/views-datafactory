@@ -75,7 +75,7 @@ All failures are immediate and loud. No silent fallbacks.
 
 ## 7. Boundaries and Interactions
 
-- Created directly or via `profiles.load_profile()`
+- Created directly, via `profiles.load_profile()`, or via `from_shortcuts(consolidated_path=...)`
 - Consumed by viewpoint builders (e.g., `builders/ucdp_v1.py`)
 - Strategy names resolved via `survivorship.get_survivorship()` and `temporal_distribution.get_distribution()`
 - Must not depend on any other `datafactory_*` config class
@@ -86,6 +86,7 @@ All failures are immediate and loud. No silent fallbacks.
 
 ```python
 cfg = ViewpointConfig(consolidated_path=Path("data/store.parquet"))
+cfg = ViewpointConfig.from_shortcuts(consolidated_path=Path("data/store.parquet"))
 cfg = load_profile("production_parity", Path("data/store.parquet"))
 ```
 

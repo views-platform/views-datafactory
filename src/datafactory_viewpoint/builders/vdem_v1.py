@@ -119,6 +119,21 @@ class VdemViewpointConfig:
             logger.error(msg)
             raise ValueError(msg)
 
+    @classmethod
+    def from_shortcuts(
+        cls,
+        *,
+        source_path: Path | None = None,
+        crosswalk_path: Path | None = None,
+    ) -> VdemViewpointConfig:
+        """Construct config from shortcut arguments."""
+        kwargs: dict = {}
+        if source_path is not None:
+            kwargs["source_path"] = source_path
+        if crosswalk_path is not None:
+            kwargs["crosswalk_path"] = crosswalk_path
+        return cls(**kwargs)
+
 
 # ---- Crosswalk ----
 
@@ -156,10 +171,7 @@ def _build_iso3_to_pgids(
 
 
 def build_vdem_v1(
-    config: VdemViewpointConfig | None = None,
-    *,
-    source_path: Path | None = None,
-    crosswalk_path: Path | None = None,
+    config: VdemViewpointConfig,
 ) -> ViewpointResult:
     """Build V-Dem viewpoint v1 from harvested country-year data.
 
@@ -167,23 +179,9 @@ def build_vdem_v1(
     create 12 monthly rows (step function), write Parquet with
     (pgid, month_id, variable_columns).
 
-    Args:
-        config: Full viewpoint configuration. If None, uses defaults
-            with source_path and crosswalk_path.
-        source_path: Shortcut — used only if config is None.
-        crosswalk_path: Shortcut — used only if config is None.
-
     Returns:
         ViewpointResult with row counts and output digest.
     """
-    if config is None:
-        kwargs: dict = {}
-        if source_path is not None:
-            kwargs["source_path"] = source_path
-        if crosswalk_path is not None:
-            kwargs["crosswalk_path"] = crosswalk_path
-        config = VdemViewpointConfig(**kwargs)
-
     if not config.source_path.exists():
         msg = f"Source file not found: {config.source_path}"
         logger.error(msg)
