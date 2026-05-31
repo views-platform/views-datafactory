@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-import shutil
 import tempfile
 from collections import defaultdict
 from pathlib import Path
@@ -22,6 +21,7 @@ import pyarrow.parquet as pq
 from datafactory_compilation.aggregation import get_strategy
 from datafactory_compilation.compilation_config import CompilationConfig
 from datafactory_compilation.output import write_compilation_output
+from datafactory_compilation.preflight import check_disk_space
 from datafactory_priogrid.cell_generator import generate_grid
 from datafactory_priogrid.temporal_generator import generate_time_steps
 from datafactory_provenance import compute_file_digest
@@ -225,20 +225,11 @@ def compile_grid(config: CompilationConfig) -> Path:
     n_features = len(config.features)
     dtype = np.dtype(config.output_dtype)
 
-    # Pre-flight disk space check (C-223 / ADR-037)
     config.output_dir.mkdir(parents=True, exist_ok=True)
-    required_bytes = (
-        n_steps * nrow * ncol * n_features * dtype.itemsize
+    check_disk_space(
+        config.output_dir,
+        n_steps * nrow * ncol * n_features * dtype.itemsize,
     )
-    free_bytes = shutil.disk_usage(config.output_dir).free
-    if free_bytes < required_bytes * 1.2:
-        err_msg = (
-            f"Insufficient disk space: "
-            f"need {required_bytes * 1.2 / 1e9:.1f} GB, "
-            f"have {free_bytes / 1e9:.1f} GB free"
-        )
-        logger.error(err_msg)
-        raise RuntimeError(err_msg)
 
     # Allocate grid as memory-mapped file (ADR-037).
     # OS pages data in/out as needed — peak RSS stays bounded
