@@ -147,19 +147,26 @@ def fetch_shapefile(
         "digest_algorithm": DIGEST_SCHEME,
     }
 
-    files_on_disk = shp_dir.exists() and any(shp_dir.glob("*.shp"))
-    if not changed and not force_refresh and files_on_disk:
-        logger.info("Content unchanged (digest: %s), skipping extraction", digest)
-        append_ledger_entry(config.ledger_path, {**base_entry, "changed": False})
-        return shp_dir
-
     # Extract and record
-    (config.data_dir / "priogrid_shapefiles.zip").write_bytes(content)
-    extracted = _extract_zip(content, shp_dir)
+    try:
+        zip_path = config.data_dir / "priogrid_shapefiles.zip"
+        zip_path.write_bytes(content)
+        extracted = _extract_zip(content, shp_dir)
+    except Exception:
+        logger.error("Extraction failed for shapefile from %s", config.url)
+        append_ledger_entry(config.ledger_path, {
+            **base_entry,
+            "outcome": "failed",
+            "changed": False,
+        })
+        raise
+
     logger.info("Extracted %d files to %s", len(extracted), shp_dir)
 
+    outcome = "success" if changed else "unchanged"
     append_ledger_entry(config.ledger_path, {
         **base_entry,
+        "outcome": outcome,
         "changed": changed,
         "extracted_files": extracted,
     })
