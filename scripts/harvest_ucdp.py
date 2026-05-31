@@ -22,19 +22,15 @@ import sys
 import time
 from pathlib import Path
 
+from datafactory_harvester.harvest_runner import run_harvest
 
-def _count_outcomes(
-    results: list[dict],
-) -> dict[str, int]:
+
+def _count_outcomes(results: list[dict]) -> dict[str, int]:
     """Count harvest outcomes by category."""
     counts: dict[str, int] = {}
-    for key in (
-        "cached", "success", "unchanged",
-        "failed", "not_served",
-    ):
+    for key in ("cached", "success", "unchanged", "failed", "not_served"):
         counts[key] = sum(
-            1 for r in results
-            if r.get("outcome") == key
+            1 for r in results if r.get("outcome") == key
         )
     counts["served"] = len(results) - counts["not_served"]
     return counts
@@ -116,8 +112,7 @@ def main() -> int:
     print("=" * 60)
 
     n_failed = sum(
-        1 for r in results.values()
-        if r.get("status") == "FAIL"
+        1 for r in results.values() if r.get("status") == "FAIL"
     )
     return 1 if n_failed > 0 else 0
 
@@ -135,25 +130,27 @@ def _harvest_annual(
 
     config = UcdpAnnualConfig(
         data_dir=data_dir / "ucdp_annual",
-        ledger_path=(
-            prov_dir / "ucdp_annual" / "ingestion_ledger.jsonl"
-        ),
-        timeout=120,  # Annual dataset is large; 30s often insufficient
+        ledger_path=prov_dir / "ucdp_annual" / "ingestion_ledger.jsonl",
+        timeout=120,
     )
 
-    try:
-        import pyarrow.parquet as pq
+    r = run_harvest(
+        source_name="UCDP Annual",
+        fetch_fn=fetch_ucdp_annual,
+        config_summary={"Version": "v25.1", "Range": "1989-2024"},
+        force_refresh=force,
+        fetch_kwargs={"config": config},
+    )
 
-        path = fetch_ucdp_annual(config, force_refresh=force)
-        t = pq.read_table(path)
-        print(f"[annual] {t.num_rows:,} events — PASS")
-        return {
-            "status": "PASS",
-            "detail": f"({t.num_rows:,} events)",
-        }
-    except Exception as e:
-        print(f"[annual] FAIL: {e}")
-        return {"status": "FAIL", "detail": str(e)}
+    if r.outcome == "failed":
+        print(f"[annual] FAIL: {r.error}")
+        return {"status": "FAIL", "detail": r.error or ""}
+
+    import pyarrow.parquet as pq
+
+    t = pq.read_table(r.data)
+    print(f"[annual] {t.num_rows:,} events — PASS")
+    return {"status": "PASS", "detail": f"({t.num_rows:,} events)"}
 
 
 def _harvest_candidate(
@@ -169,38 +166,33 @@ def _harvest_candidate(
 
     config = UcdpCandidateConfig(
         data_dir=data_dir / "ucdp_candidate",
-        ledger_path=(
-            prov_dir
-            / "ucdp_candidate"
-            / "ingestion_ledger.jsonl"
-        ),
+        ledger_path=prov_dir / "ucdp_candidate" / "ingestion_ledger.jsonl",
     )
 
-    try:
-        t0 = time.monotonic()
-        results = fetch_ucdp_candidate(
-            config, force_refresh=force
-        )
-        elapsed = time.monotonic() - t0
+    r = run_harvest(
+        source_name="UCDP Candidate",
+        fetch_fn=fetch_ucdp_candidate,
+        config_summary={},
+        force_refresh=force,
+        fetch_kwargs={"config": config},
+    )
 
-        c = _count_outcomes(results)
-        print(
-            f"[candidate] {c['served']} versions served "
-            f"({c['not_served']} no longer available): "
-            f"{c['cached']} cached, {c['success']} fetched, "
-            f"{c['unchanged']} unchanged, {c['failed']} failed "
-            f"— {elapsed:.1f}s — PASS"
-        )
-        return {
-            "status": "PASS",
-            "detail": (
-                f"({c['served']} versions, "
-                f"{c['cached']} cached)"
-            ),
-        }
-    except Exception as e:
-        print(f"[candidate] FAIL: {e}")
-        return {"status": "FAIL", "detail": str(e)}
+    if r.outcome == "failed":
+        print(f"[candidate] FAIL: {r.error}")
+        return {"status": "FAIL", "detail": r.error or ""}
+
+    c = _count_outcomes(r.data)
+    print(
+        f"[candidate] {c['served']} versions served "
+        f"({c['not_served']} no longer available): "
+        f"{c['cached']} cached, {c['success']} fetched, "
+        f"{c['unchanged']} unchanged, {c['failed']} failed "
+        f"— {r.elapsed:.1f}s — PASS"
+    )
+    return {
+        "status": "PASS",
+        "detail": f"({c['served']} versions, {c['cached']} cached)",
+    }
 
 
 def _harvest_dot9(
@@ -216,36 +208,33 @@ def _harvest_dot9(
 
     config = UcdpDot9Config(
         data_dir=data_dir / "ucdp_dot9",
-        ledger_path=(
-            prov_dir / "ucdp_dot9" / "ingestion_ledger.jsonl"
-        ),
+        ledger_path=prov_dir / "ucdp_dot9" / "ingestion_ledger.jsonl",
     )
 
-    try:
-        t0 = time.monotonic()
-        results = fetch_ucdp_dot9(
-            config, force_refresh=force
-        )
-        elapsed = time.monotonic() - t0
+    r = run_harvest(
+        source_name="UCDP .9",
+        fetch_fn=fetch_ucdp_dot9,
+        config_summary={},
+        force_refresh=force,
+        fetch_kwargs={"config": config},
+    )
 
-        c = _count_outcomes(results)
-        print(
-            f"[dot9] {c['served']} versions served "
-            f"({c['not_served']} no longer available): "
-            f"{c['cached']} cached, {c['success']} fetched, "
-            f"{c['unchanged']} unchanged, {c['failed']} failed "
-            f"— {elapsed:.1f}s — PASS"
-        )
-        return {
-            "status": "PASS",
-            "detail": (
-                f"({c['served']} versions, "
-                f"{c['cached']} cached)"
-            ),
-        }
-    except Exception as e:
-        print(f"[dot9] FAIL: {e}")
-        return {"status": "FAIL", "detail": str(e)}
+    if r.outcome == "failed":
+        print(f"[dot9] FAIL: {r.error}")
+        return {"status": "FAIL", "detail": r.error or ""}
+
+    c = _count_outcomes(r.data)
+    print(
+        f"[dot9] {c['served']} versions served "
+        f"({c['not_served']} no longer available): "
+        f"{c['cached']} cached, {c['success']} fetched, "
+        f"{c['unchanged']} unchanged, {c['failed']} failed "
+        f"— {r.elapsed:.1f}s — PASS"
+    )
+    return {
+        "status": "PASS",
+        "detail": f"({c['served']} versions, {c['cached']} cached)",
+    }
 
 
 if __name__ == "__main__":
