@@ -64,7 +64,8 @@ All failures are immediate and loud. No silent fallbacks.
 
 ## 7. Boundaries and Interactions
 
-- Used by `build_acled_v1` as the sole configuration input
+- Used by `build_acled_v1` as the sole configuration input (required argument)
+- Created directly or via `from_shortcuts(consolidated_path=...)`
 - Paths consumed by `pq.read_table`, `pq.write_table`, and `append_ledger_entry`
 - Loaded by `load_acled_profile` from `profiles.py`
 - Must not depend on any other `datafactory_*` config class
@@ -76,6 +77,7 @@ All failures are immediate and loud. No silent fallbacks.
 
 ```python
 cfg = AcledViewpointConfig(consolidated_path=Path("data/consolidated/acled/store.parquet"))
+cfg = AcledViewpointConfig.from_shortcuts(consolidated_path=Path("data/consolidated/acled/store.parquet"))
 cfg = AcledViewpointConfig(
     consolidated_path=Path("store.parquet"),
     event_type_filter=("Battles", "Riots"),

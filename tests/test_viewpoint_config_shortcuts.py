@@ -1,9 +1,5 @@
 """Tests for viewpoint config from_shortcuts() classmethods.
 
-TDD Phase 1 for C-164 Pattern #3: viewpoint scaffolding extraction.
-These tests are written before the classmethods exist, ensuring the
-extraction adds correct behavior.
-
 Taxonomy: green (contract verification).
 """
 

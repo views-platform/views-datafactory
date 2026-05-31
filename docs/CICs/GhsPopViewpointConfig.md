@@ -85,7 +85,8 @@ All failures are immediate and loud. No silent fallbacks.
 
 ## 7. Boundaries and Interactions
 
-- Used by `build_ghspop_v1` as the sole configuration input
+- Used by `build_ghspop_v1` as the sole configuration input (required argument)
+- Created directly or via `from_shortcuts(source_dir=...)`
 - Paths consumed by `tifffile.imread`, `pq.write_table`, and `append_ledger_entry`
 - Must not depend on any other `datafactory_*` config class
 - Registered via `register_builder("ghspop_v1", ...)`
@@ -96,6 +97,7 @@ All failures are immediate and loud. No silent fallbacks.
 
 ```python
 cfg = GhsPopViewpointConfig(source_dir=Path("data/raw/ghspop"))
+cfg = GhsPopViewpointConfig.from_shortcuts(source_dir=Path("data/raw/ghspop"))
 cfg = GhsPopViewpointConfig(
     source_dir=Path("data/raw/ghspop"),
     epochs=(2020, 2025),
