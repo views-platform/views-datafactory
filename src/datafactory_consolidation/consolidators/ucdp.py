@@ -266,17 +266,26 @@ def consolidate_ucdp(
 
     # Discover source files
     annual_files = (
-        sorted(config.annual_dir.glob("*.parquet"))
+        sorted(
+            p for p in config.annual_dir.glob("*.parquet")
+            if _ANNUAL_PATTERN.search(p.name)
+        )
         if config.annual_dir.exists()
         else []
     )
     candidate_files = (
-        sorted(config.candidate_dir.glob("*.parquet"))
+        sorted(
+            p for p in config.candidate_dir.glob("*.parquet")
+            if _CANDIDATE_PATTERN.search(p.name)
+        )
         if config.candidate_dir.exists()
         else []
     )
     dot9_files = (
-        sorted(config.dot9_dir.glob("*.parquet"))
+        sorted(
+            p for p in config.dot9_dir.glob("*.parquet")
+            if _DOT9_PATTERN.search(p.name)
+        )
         if config.dot9_dir.exists()
         else []
     )
