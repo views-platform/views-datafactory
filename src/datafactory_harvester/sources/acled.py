@@ -14,12 +14,15 @@ harvester skeleton (validation, storage, provenance).
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import requests
 
 from datafactory_harvester.event_validation import (
@@ -43,7 +46,7 @@ from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
     append_ledger_entry,
-    compute_file_digest,
+    compute_content_digest,
     last_digest_for_version,
 )
 
@@ -408,12 +411,42 @@ def fetch_paginated(
 
 # ---- Orchestrator ----
 
+DIGEST_FIELDS: tuple[str, ...] = ("event_id_cnty", "fatalities")
+
 
 def _snapshot_path(config: AcledConfig) -> Path:
     """Deterministic path for the raw event snapshot."""
     return (
         config.data_dir
         / f"acled_{config.start_year}_{config.end_year}.parquet"
+    )
+
+
+def _recompute_content_digest(snap_path: Path) -> str | None:
+    """Recompute content_digest from a Parquet snapshot on disk.
+
+    Uses the same algorithm as event_validation.py: sorted tuples of
+    digest fields → JSON → SHA-256. Returns None if the file cannot
+    be read (corrupted, missing columns).
+    """
+    try:
+        table = pq.read_table(
+            snap_path, columns=list(DIGEST_FIELDS),
+        )
+    except (pa.lib.ArrowInvalid, OSError):
+        logger.warning(
+            "Cannot read %s for digest — treating as cache miss",
+            snap_path,
+        )
+        return None
+    digest_data = sorted(
+        tuple(row) for row in zip(
+            *(table.column(f).to_pylist() for f in DIGEST_FIELDS),
+            strict=True,
+        )
+    )
+    return compute_content_digest(
+        json.dumps(digest_data, sort_keys=True).encode()
     )
 
 
@@ -428,10 +461,12 @@ def _year_is_cached(year: int, config: AcledConfig) -> bool:
     )
     if previous is None:
         return False
-    actual = compute_file_digest(snap_path)
+    actual = _recompute_content_digest(snap_path)
+    if actual is None:
+        return False
     if actual != previous:
         logger.warning(
-            "Year %d cached file digest mismatch "
+            "Year %d cached content digest mismatch "
             "(expected %s, got %s) — re-fetching",
             year, previous, actual,
         )
@@ -479,7 +514,7 @@ def _fetch_single_year(
         events,
         REQUIRED_FIELDS,
         FIELD_TYPES,
-        digest_fields=("event_id_cnty", "fatalities"),
+        digest_fields=DIGEST_FIELDS,
     )
 
     min_date, max_date = date_range(
