@@ -1054,3 +1054,12 @@ Nygard/Kleppmann argued for hardware upgrade (€5/month to 16 GB). Martin/Hicke
 **Resolved 2026-05-28.** Server upgraded to CPX42 (16 GB) + 16 GB swap. R&D plan for bounded-memory compilation written (`reports/rd_plan_bounded_memory_compilation.md`). Hardware addresses immediate constraint; software ensures scaling beyond current hardware. Cross-ref: C-173, C-177, C-223.
 
 **Source:** ADR-031 compliance review (2026-05-21). review-rr strategic curation 2026-05-28.
+
+
+### C-233: ~~Preflight checks netrc entry existence but not credential validity~~ RESOLVED
+
+Preflight (step 0) verified that `~/.netrc` had an entry for the zarr server but did not verify the credentials were valid. A wrong password passed preflight, the pipeline ran 30+ minutes, then failed at step 12 (`verify_remote_data.py`) with a 401 from Caddy. Same class of issue as the original missing-netrc bug: a check that should happen early was partially deferred to the end.
+
+**Resolved 2026-06-02.** Preflight now does an HTTP HEAD against the zarr server endpoint with the stored credentials. 401 → FAIL (bad credentials). ConnectionError/Timeout → WARN (credentials present, server unreachable — will retry at step 12). Test stub at `tests/test_falsification_preflight_netrc.py`.
+
+**Source:** Falsification audit F4 (2026-06-02). Cross-ref: C-131, C-138.
