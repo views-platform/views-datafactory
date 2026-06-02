@@ -6,7 +6,8 @@ Usage:
     uv run python scripts/preflight.py --data-dir data
 
 Validates that all prerequisites are met before the 30-minute
-pipeline begins: credentials and disk space.
+pipeline begins: source credentials, zarr server credentials,
+and disk space.
 Exits 0 if all pass, 1 if any fail.
 
 Called by refresh_pipeline.sh as step 0 (before harvest).
@@ -17,12 +18,14 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+from netrc import netrc
 from pathlib import Path
 
 from datafactory_provenance.source_registry import (
     PIPELINE_SOURCES,
     validate_preflight,
 )
+from datafactory_query.defaults import DEFAULT_REMOTE
 
 MIN_DISK_GB = 40
 
@@ -54,6 +57,71 @@ def main() -> int:
         label = f"{r['name']} ({src})" if src else r["name"]
         print(f"  {label:35s} {mark:4s}  {r['detail']}")
         if r["status"] != "OK":
+            any_fail = True
+
+    # Zarr server credentials (needed by step 12: verify_remote_data.py)
+    server = DEFAULT_REMOTE.server
+    netrc_path = Path.home() / ".netrc"
+    if not netrc_path.exists():
+        print(
+            f"  {'Zarr server (~/.netrc)':35s} FAIL  "
+            f"~/.netrc not found"
+        )
+        any_fail = True
+    else:
+        try:
+            nrc = netrc(str(netrc_path))
+            creds = nrc.authenticators(server)
+            if creds is None:
+                print(
+                    f"  {'Zarr server (~/.netrc)':35s} FAIL  "
+                    f"no entry for {server}"
+                )
+                any_fail = True
+            else:
+                import requests
+
+                zarr_url = f"http://{server}/grid.zarr/.zmetadata"
+                try:
+                    resp = requests.head(
+                        zarr_url,
+                        auth=(creds[0], creds[2] or ""),
+                        timeout=10,
+                    )
+                    if resp.status_code == 401:
+                        print(
+                            f"  {'Zarr server (~/.netrc)':35s} FAIL  "
+                            f"credentials rejected (401) for {server}"
+                        )
+                        any_fail = True
+                    elif resp.status_code < 400:
+                        print(
+                            f"  {'Zarr server (~/.netrc)':35s} OK    "
+                            f"authenticated as {creds[0]}"
+                        )
+                    else:
+                        print(
+                            f"  {'Zarr server (~/.netrc)':35s} WARN  "
+                            f"HTTP {resp.status_code} (credentials present, "
+                            f"server may be down)"
+                        )
+                except requests.ConnectionError:
+                    print(
+                        f"  {'Zarr server (~/.netrc)':35s} WARN  "
+                        f"cannot reach {server} (credentials present, "
+                        f"will retry at step 12)"
+                    )
+                except requests.Timeout:
+                    print(
+                        f"  {'Zarr server (~/.netrc)':35s} WARN  "
+                        f"timeout reaching {server} (credentials present, "
+                        f"will retry at step 12)"
+                    )
+        except Exception as e:
+            print(
+                f"  {'Zarr server (~/.netrc)':35s} FAIL  "
+                f"{e}"
+            )
             any_fail = True
 
     # Disk space check
