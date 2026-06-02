@@ -38,7 +38,7 @@ def run_harvest(
     Prints banner, calls fetch_fn, catches exceptions, returns result
     with timing. The calling script handles source-specific reporting.
     """
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
 
     print("=" * 60)
     print(f"{source_name} HARVEST")

@@ -54,7 +54,7 @@ def run_pipeline(
     1. If skipped: call skip_check (verify preconditions), print skip label
     2. If running: print step label, call run() with timing, catch errors
     """
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[union-attr]
 
     n = len(steps)
     step_names = [s.name for s in steps]
