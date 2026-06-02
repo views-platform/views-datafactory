@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-05-30)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30
-**Status:** 231 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 179 resolved, 49 open concerns (2 Tier 2, 9 Tier 3, 32 Tier 4, 6 deferred by design; 1 with fired trigger), 5 open disagreements. 156 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 26 resolved disagreements in archive. 31 disagreement IDs total: 26 resolved, 5 open.
+**Date:** 2026-03-17 (updated 2026-06-02)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02
+**Status:** 232 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 181 resolved, 48 open concerns (2 Tier 2, 8 Tier 3, 32 Tier 4, 6 deferred by design; 1 with fired trigger), 5 open disagreements. 158 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 26 resolved disagreements in archive. 31 disagreement IDs total: 26 resolved, 5 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -39,7 +39,7 @@
 | C-179 | 4 | Consolidation dedup uses `.to_pylist()` + Python set (ADR-031 P1) | Consolidated store exceeds ~5M rows on 8 GB machine | ADR-031 compliance |
 | C-180 | 4 | No falsification tests for non-GHS-POP compilation/viewpoint paths | Memory regression introduced in UCDP or ACLED path | Test coverage |
 | C-181 | 4 | UCDP candidate/dot9 discovery probes API even when all versions cached | UCDP rate-limits or blocks IP after repeated full-range probes | Harvest efficiency |
-| C-184 | 3 | ACLED `_year_is_cached` checks file existence, not file integrity | Truncated/corrupted Parquet accepted as valid cache hit | Harvest correctness |
+| ~~C-184~~ | ~~3~~ | ~~ACLED `_year_is_cached` checks file existence, not file integrity~~ | Resolved 2026-06-02 (PR #98: `_recompute_content_digest` verifies content) | Harvest correctness |
 | C-185 | 4 | GHS-POP caching has no digest comparison (no change detection) | JRC silently updates a GeoTIFF epoch without changing the URL | Harvest correctness |
 | C-186 | 3 | Shapefile harvester lacks outcome vocabulary; ADR-032 overstates compliance | New harvester trusts ADR-032 claim that all harvesters record failed entries | Harvest correctness |
 | C-189 | 4 | GHS-BUILT-S test coverage parity gap — 19% of combined other sources | Production incident on GHS-BUILT-S path that existing GHS-POP/ACLED tests would have caught | Test coverage |
@@ -91,7 +91,7 @@ Items that should be resolved together:
 | **Scaling headroom** | C-144, C-145, C-223 | Before consolidated store exceeds ~5M rows or next data source pushes compile past 16 GB |
 | ~~**Data integrity**~~ | ~~C-138~~, ~~C-149~~ (C-137, C-139 resolved 2026-05-26, C-149 resolved 2026-05-27, C-138 resolved 2026-05-28) | Resolved 2026-05-28: all items resolved |
 | ~~**Data boundary**~~ | ~~C-130~~, ~~C-133~~, ~~C-134~~, C-135 | Resolved 2026-05-28: C-130 resolved, C-135 demoted (C-133, C-134 resolved earlier) |
-| **Harvest correctness** | ~~C-182~~, C-184, C-185, C-186, ~~C-188~~ | Before relying on harvest caching for correctness |
+| **Harvest correctness** | ~~C-182~~, ~~C-184~~, C-185, C-186, ~~C-188~~ | Before relying on harvest caching for correctness |
 | **WET-before-DRY refactor** | ~~C-44~~, C-07, C-155, C-164, C-195, C-230 | Before WDI or next refactor sprint (V-Dem added without extraction; C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8) |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
@@ -504,19 +504,11 @@ Demoted to tech-debt backlog 2026-05-28 (review-rr strategic curation). Downstre
 
 The Hetzner CPX32 (8 GB RAM) has no swap partition or swapfile. Without swap, the Linux OOM killer is the only backstop — any process that exceeds available RAM is killed immediately (exit code 137) with no chance to degrade gracefully. The GHS-POP viewpoint loads a 6.88 GiB GeoTIFF array, leaving ~600 MB headroom for Python, tifffile buffers, and OS services. A 2 GB swapfile would convert hard kills into degraded performance. Swap setup documented in deployment guide troubleshooting section (v1.2.18). Cross-ref: C-165 (original OOM), C-170 (list accumulation OOM), C-88 (server hardening).
 
-### C-184: ACLED `_year_is_cached` checks file existence, not file integrity — [DEFER]
+### ~~C-184: ACLED `_year_is_cached` checks file existence, not file integrity~~ — [RESOLVED]
 
-| Field | Value |
-|-------|-------|
-| ID | C-184 |
-| Tier | 3 |
-| Source | Expert code review of harvest caching (2026-05-21) |
-| Trigger | Truncated or corrupted Parquet file on disk (e.g., disk full during write, partial download) with a valid ledger digest |
-| Location | `src/datafactory_harvester/sources/acled.py:435-443` (`_year_is_cached`) |
+Resolved 2026-06-02 (PR #98, v1.2.25). `_year_is_cached` now calls `_recompute_content_digest(snap_path)` which reads the Parquet file, extracts digest fields, and recomputes `content_digest` using the same algorithm as `event_validation.py`. Returns `None` on corrupted/unreadable files (ArrowInvalid, OSError), triggering cache miss. Superseded by C-232 (digest type mismatch) which was the actual root cause — the original C-184 recommendation to use `compute_file_digest` would not have worked because the ledger stores `content_digest`, not `file_digest`.
 
-`_year_is_cached` checks two conditions: (1) file exists on disk, (2) ledger has a digest for this version. Neither condition verifies that the file's content matches the ledger digest. A truncated Parquet (e.g., from a disk-full condition during write) would pass both checks and be served downstream. The UCDP candidate/dot9 harvesters have a stronger pattern: they compute the actual file digest and compare it against the ledger digest, which catches corruption. GHS-POP has the same weakness (C-185). The fix is to compute `compute_file_digest(snap_path)` and compare against `last_digest_for_version()`. Tier 3 because: (a) requires a specific failure mode (disk full during write), (b) downstream Parquet readers would likely raise on a truncated file, providing a secondary signal.
-
-Cross-ref: C-182 (`last_digest_for_version` accepts failed entries), C-185 (GHS-POP same weakness), C-44 (harvest pipeline template).
+Cross-ref: C-232 (root cause), C-185 (GHS-POP — NOT affected, verified by falsification audit).
 
 ### C-186: Shapefile harvester lacks outcome vocabulary; ADR-032 overstates compliance — [DEFER]
 
@@ -704,6 +696,22 @@ Cross-ref: C-164 (WET-before-DRY — patterns #7 and #8), C-180 (no falsificatio
 `compile_grid()` and `compile_pregridded()` always overwrite the output directory. If run twice with different inputs (e.g., viewpoint was re-built between runs with different parameters), there is no warning that the input context changed. The provenance ledger records what happened, but nothing reads the ledger to check input consistency before writing. A pre-compilation digest check — compute digests of all input files, compare against the previous compilation's input digests in the ledger — would be cheap and would catch accidental recompilation with stale or mixed inputs. Tier 4 because: (a) single-operator deployment, (b) the pipeline script runs steps in order so mixed inputs are unlikely, (c) provenance provides post-hoc audit capability.
 
 Cross-ref: C-223 (compilation memory — same functions, different concern), C-46 (no ledger write idempotency).
+
+### ~~C-232: ACLED cache digest type mismatch — `compute_file_digest` vs `content_digest`~~ — [RESOLVED]
+
+| Field | Value |
+|-------|-------|
+| ID | C-232 |
+| Tier | 1 (silent data waste — every pipeline run re-downloaded all ACLED data) |
+| Source | Expert code review of digest verification (2026-06-02), 3 falsification audits |
+| Trigger | Every pipeline run (trigger was permanently fired from commit `43b5625` through v1.2.24) |
+| Location | `src/datafactory_harvester/sources/acled.py:431` (`_year_is_cached`) |
+
+`_year_is_cached()` compared `compute_file_digest(snap_path)` (SHA-256 of Parquet file bytes) against `content_digest` from the ledger (SHA-256 of sorted event tuples serialized as JSON via `event_validation.py:196-201`). For Parquet files, these are fundamentally different values — they can never match. Every pipeline run re-downloaded all ACLED data (~2M events, 6 years, 2400+ API requests per year). Introduced in commit `43b5625` (PR #91, v1.2.23). The expert code review initially claimed GHS-POP and GHS-BUILT-S were also affected (C-195 splash zone), but 3 falsification rounds proved only ACLED is broken — TIF-based harvesters write raw bytes to disk, so `compute_file_digest(path) == compute_content_digest(data)`.
+
+**Resolved 2026-06-02 (PR #98, v1.2.25).** Fix: added `_recompute_content_digest()` which reads the Parquet back, extracts digest fields, and recomputes `content_digest` using the same algorithm. Catches `ArrowInvalid`/`OSError` on corrupted files, returning `None` (cache miss). 14 new tests, 3 falsification audits, 0 regressions (1504 tests pass). Issues: #94 (fix), #95 (non-atomic writes, deferred), #96 (latent risk in 7 other harvesters, deferred), #97 (archive subdirectory, deferred).
+
+Cross-ref: C-184 (superseded — original recommendation to use `compute_file_digest` would not have worked), C-185 (GHS-POP — NOT affected).
 
 ### D-30: Config validator extraction depth — utility functions vs declarative specs
 
