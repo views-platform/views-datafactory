@@ -8,7 +8,9 @@ sidecar coordinate files and provenance.
 from __future__ import annotations
 
 import logging
+import os
 import re
+import tempfile
 from collections import defaultdict
 from pathlib import Path
 
@@ -19,6 +21,7 @@ import pyarrow.parquet as pq
 from datafactory_compilation.aggregation import get_strategy
 from datafactory_compilation.compilation_config import CompilationConfig
 from datafactory_compilation.output import write_compilation_output
+from datafactory_compilation.preflight import check_disk_space
 from datafactory_priogrid.cell_generator import generate_grid
 from datafactory_priogrid.temporal_generator import generate_time_steps
 from datafactory_provenance import compute_file_digest
@@ -221,63 +224,93 @@ def compile_grid(config: CompilationConfig) -> Path:
     n_steps = config.temporal_config.n_steps
     n_features = len(config.features)
     dtype = np.dtype(config.output_dtype)
-    grid_array = np.full(
-        (n_steps, nrow, ncol, n_features),
-        config.fill_value,
-        dtype=dtype,
-    )
 
-    # Resolve strategies
-    strategies = [
-        get_strategy(feat.strategy) for feat in config.features
-    ]
-    feature_names = [feat.name for feat in config.features]
-
-    # Aggregate (with optional per-feature filtering)
-    for (pgid_idx, time_idx), cell_events in sorted(bins.items()):
-        row = pgid_idx // ncol
-        col = pgid_idx % ncol
-        for feat_idx, (spec, strategy_fn) in enumerate(
-            zip(config.features, strategies, strict=True)
-        ):
-            if spec.filter:
-                filtered = [
-                    e
-                    for e in cell_events
-                    if all(
-                        e.get(k) == v
-                        for k, v in spec.filter.items()
-                    )
-                ]
-            else:
-                filtered = cell_events
-            grid_array[time_idx, row, col, feat_idx] = (
-                strategy_fn(filtered, spec.value_field)
-            )
-
-    # Generate coordinate arrays
-    pgids_flat, _, _ = generate_grid(config.grid_config)
-    pgids_2d = pgids_flat.reshape(nrow, ncol)
-    time_steps = generate_time_steps(config.temporal_config)
-
-    # Write output
-    write_compilation_output(
-        grid_array=grid_array,
-        pgids_2d=pgids_2d,
-        time_steps=time_steps,
-        feature_names=feature_names,
-        output_dir=config.output_dir,
-        ledger_path=config.ledger_path,
-        dataset_id=DATASET_ID,
-        source_path=config.source_path,
-        source_digest=source_digest,
-    )
-
-    logger.info(
-        "Compiled grid: shape=%s, features=%s, output=%s",
-        grid_array.shape,
-        feature_names,
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    check_disk_space(
         config.output_dir,
+        n_steps * nrow * ncol * n_features * dtype.itemsize,
     )
+
+    # Allocate grid as memory-mapped file (ADR-037).
+    # OS pages data in/out as needed — peak RSS stays bounded
+    # regardless of feature count.
+    tmp_fd, tmp_mmap_path = tempfile.mkstemp(
+        prefix="_memmap_", suffix=".npy",
+        dir=str(config.output_dir),
+    )
+    os.close(tmp_fd)
+
+    grid_array = None
+    try:
+        grid_array = np.lib.format.open_memmap(
+            tmp_mmap_path,
+            mode="w+",
+            dtype=dtype,
+            shape=(n_steps, nrow, ncol, n_features),
+        )
+        grid_array[:] = config.fill_value
+
+        # Resolve strategies
+        strategies = [
+            get_strategy(feat.strategy)
+            for feat in config.features
+        ]
+        feature_names = [feat.name for feat in config.features]
+
+        # Aggregate (with optional per-feature filtering)
+        for (pgid_idx, time_idx), cell_events in sorted(
+            bins.items()
+        ):
+            row = pgid_idx // ncol
+            col = pgid_idx % ncol
+            for feat_idx, (spec, strategy_fn) in enumerate(
+                zip(
+                    config.features, strategies, strict=True,
+                )
+            ):
+                if spec.filter:
+                    filtered = [
+                        e
+                        for e in cell_events
+                        if all(
+                            e.get(k) == v
+                            for k, v in spec.filter.items()
+                        )
+                    ]
+                else:
+                    filtered = cell_events
+                grid_array[time_idx, row, col, feat_idx] = (
+                    strategy_fn(filtered, spec.value_field)
+                )
+
+        # Generate coordinate arrays
+        pgids_flat, _, _ = generate_grid(config.grid_config)
+        pgids_2d = pgids_flat.reshape(nrow, ncol)
+        time_steps = generate_time_steps(config.temporal_config)
+
+        # Write output
+        write_compilation_output(
+            grid_array=grid_array,
+            pgids_2d=pgids_2d,
+            time_steps=time_steps,
+            feature_names=feature_names,
+            output_dir=config.output_dir,
+            ledger_path=config.ledger_path,
+            dataset_id=DATASET_ID,
+            source_path=config.source_path,
+            source_digest=source_digest,
+        )
+
+        logger.info(
+            "Compiled grid: shape=%s, features=%s, output=%s",
+            grid_array.shape,
+            feature_names,
+            config.output_dir,
+        )
+    finally:
+        if grid_array is not None:
+            del grid_array
+        if os.path.exists(tmp_mmap_path):
+            os.unlink(tmp_mmap_path)
 
     return config.output_dir

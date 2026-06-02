@@ -235,10 +235,10 @@ class TestConsolidateAcledBeige:
 
 class TestConsolidateAcledRed:
 
-    def test_malformed_filename_raises(
+    def test_malformed_filename_skipped(
         self, tmp_path: Path,
     ) -> None:
-        """Non-ACLED filename in source dir raises ValueError."""
+        """Non-ACLED filename in source dir is silently skipped."""
         source_dir = tmp_path / "raw"
         _write_parquet(
             source_dir / "bad_name.parquet",
@@ -251,9 +251,31 @@ class TestConsolidateAcledRed:
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
         )
         with pytest.raises(
-            ValueError, match="Cannot extract version"
+            FileNotFoundError, match="No ACLED Parquet files"
         ):
             consolidate_acled(config)
+
+    def test_archive_file_coexists_with_snapshot(
+        self, tmp_path: Path,
+    ) -> None:
+        """Archive files alongside valid snapshots are ignored."""
+        source_dir = tmp_path / "raw"
+        events = _make_acled_events(5)
+        _write_parquet(
+            source_dir / "acled_2020_2020.parquet", events,
+        )
+        _write_parquet(
+            source_dir / "acled_2020_2020_20260601_193236.parquet",
+            events,
+        )
+
+        config = AcledConsolidationConfig(
+            source_dir=source_dir,
+            output_path=tmp_path / "store" / "out.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        result = consolidate_acled(config)
+        assert result.n_records_total == 5
 
     def test_corrupted_parquet_raises(
         self, tmp_path: Path,

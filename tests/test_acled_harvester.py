@@ -10,10 +10,13 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from datafactory_harvester.sources.acled import (
     ALL_EVENT_TYPES,
+    DIGEST_FIELDS,
     AcledConfig,
     _acquire_token,
     _ensure_token,
@@ -22,6 +25,10 @@ from datafactory_harvester.sources.acled import (
     fetch_acled,
     fetch_paginated,
     get_acled_credentials,
+)
+from datafactory_provenance import (
+    append_ledger_entry,
+    compute_content_digest,
 )
 
 # ---- Config Validation ----
@@ -251,6 +258,37 @@ def _make_acled_events(n: int = 3) -> list[dict]:
     ]
 
 
+def _write_cached_snapshot(
+    snap_path: Path,
+    ledger_path: Path,
+    events: list[dict],
+    version: str,
+) -> str:
+    """Write a valid Parquet snapshot and matching ledger entry."""
+    all_fields = sorted({k for ev in events for k in ev})
+    columns = {f: [ev.get(f) for ev in events] for f in all_fields}
+    pa_columns = {
+        n: pa.array(v, from_pandas=True) for n, v in columns.items()
+    }
+    snap_path.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.table(pa_columns), snap_path)
+    digest_data = sorted(
+        tuple(ev.get(f, 0) for f in DIGEST_FIELDS)
+        for ev in events
+    )
+    content_digest = compute_content_digest(
+        json.dumps(digest_data, sort_keys=True).encode()
+    )
+    append_ledger_entry(
+        ledger_path,
+        {
+            "content_digest": content_digest,
+            "version": version,
+        },
+    )
+    return content_digest
+
+
 def _mock_token_response() -> MagicMock:
     """Create a mock OAuth token response."""
     resp = MagicMock()
@@ -340,18 +378,12 @@ class TestFetchAcledGreen:
             ledger_path=tmp_path / "provenance" / "ledger.jsonl",
         )
 
-        snap_2024 = config.data_dir / "acled_2024_2024.parquet"
-        snap_2024.parent.mkdir(parents=True)
-        snap_2024.write_text("fake")
-
-        from datafactory_provenance import append_ledger_entry
-
-        append_ledger_entry(
+        cached_events = _make_acled_events(2)
+        _write_cached_snapshot(
+            config.data_dir / "acled_2024_2024.parquet",
             config.ledger_path,
-            {
-                "content_digest": "abc123",
-                "version": "2024_2024",
-            },
+            cached_events,
+            "2024_2024",
         )
 
         events = _make_acled_events(3)
@@ -402,20 +434,12 @@ class TestFetchAcledGreen:
             ledger_path=tmp_path / "provenance" / "ledger.jsonl",
         )
 
-        from datafactory_provenance import append_ledger_entry
-
         for year in (2024, 2025):
-            snap = (
-                config.data_dir / f"acled_{year}_{year}.parquet"
-            )
-            snap.parent.mkdir(parents=True, exist_ok=True)
-            snap.write_text("fake")
-            append_ledger_entry(
+            _write_cached_snapshot(
+                config.data_dir / f"acled_{year}_{year}.parquet",
                 config.ledger_path,
-                {
-                    "content_digest": f"digest_{year}",
-                    "version": f"{year}_{year}",
-                },
+                _make_acled_events(2),
+                f"{year}_{year}",
             )
 
         with (
@@ -464,24 +488,41 @@ class TestYearCacheGreen:
     def test_cached_when_snapshot_and_digest(
         self, tmp_path: Path,
     ) -> None:
-        """Year is cached when both snapshot and ledger digest exist."""
-        from datafactory_provenance import append_ledger_entry
-
+        """Year is cached when snapshot and ledger digest match."""
         config = AcledConfig(
             data_dir=tmp_path / "data",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
         )
-        snap = config.data_dir / "acled_2024_2024.parquet"
-        snap.parent.mkdir(parents=True)
-        snap.write_text("fake")
+        _write_cached_snapshot(
+            config.data_dir / "acled_2024_2024.parquet",
+            config.ledger_path,
+            _make_acled_events(3),
+            "2024_2024",
+        )
+        assert _year_is_cached(2024, config)
+
+    def test_uncached_when_digest_mismatch(
+        self, tmp_path: Path,
+    ) -> None:
+        """Year is not cached when content digest differs from ledger."""
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        _write_cached_snapshot(
+            config.data_dir / "acled_2024_2024.parquet",
+            config.ledger_path,
+            _make_acled_events(3),
+            "2024_2024",
+        )
         append_ledger_entry(
             config.ledger_path,
             {
-                "content_digest": "abc123",
+                "content_digest": "0000000000000000",
                 "version": "2024_2024",
             },
         )
-        assert _year_is_cached(2024, config)
+        assert not _year_is_cached(2024, config)
 
 
 class TestFetchAcledBeige:

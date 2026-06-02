@@ -17,12 +17,13 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from pathlib import Path
+
+from datafactory_harvester.harvest_runner import run_harvest
 
 
 def main() -> int:
     """Run the ACLED harvester."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description="Harvest ACLED data (Layer 1)"
     )
@@ -52,14 +53,14 @@ def main() -> int:
 
     if args.proof:
         return _proof_of_access(args.start_year, args.end_year)
-    else:
-        return _full_harvest(
-            args.start_year, args.end_year, args.force
-        )
+
+    return _full_harvest(args.start_year, args.end_year, args.force)
 
 
 def _proof_of_access(start_year: int, end_year: int) -> int:
     """Fetch 1 page to prove API connectivity. No storage."""
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+
     print("=" * 60)
     print("ACLED PROOF OF ACCESS")
     print(f"Date range: {start_year}-01-01 to {end_year}-12-31")
@@ -79,10 +80,7 @@ def _proof_of_access(start_year: int, end_year: int) -> int:
         print(f"[auth] FAIL: {e}")
         return 1
 
-    config = AcledConfig(
-        start_year=start_year,
-        end_year=end_year,
-    )
+    config = AcledConfig(start_year=start_year, end_year=end_year)
 
     print("[fetch] Requesting 1 page from ACLED API...")
     t0 = time.monotonic()
@@ -128,40 +126,35 @@ def _full_harvest(
     start_year: int, end_year: int, force: bool
 ) -> int:
     """Run the full ACLED harvest pipeline."""
-    from pathlib import Path
-
     from datafactory_harvester.sources.acled import (
         AcledConfig,
         fetch_acled,
     )
 
-    print("=" * 60)
-    print("ACLED HARVESTER (Layer 1)")
-    print(f"Date range: {start_year}-01-01 to {end_year}-12-31")
-    print(f"Force refresh: {force}")
-    print("=" * 60)
-    print()
-
     config = AcledConfig(
         start_year=start_year,
         end_year=end_year,
         data_dir=Path("data/raw/acled"),
-        ledger_path=Path(
-            "provenance/acled/ingestion_ledger.jsonl"
-        ),
+        ledger_path=Path("provenance/acled/ingestion_ledger.jsonl"),
     )
 
-    t0 = time.monotonic()
-    try:
-        data_dir = fetch_acled(config, force_refresh=force)
-    except Exception as e:
-        print(f"[harvest] FAIL: {e}")
-        return 1
+    result = run_harvest(
+        source_name="ACLED",
+        fetch_fn=fetch_acled,
+        config_summary={
+            "Date range": f"{start_year}-01-01 to {end_year}-12-31",
+            "Force refresh": str(force),
+        },
+        force_refresh=force,
+        fetch_kwargs={"config": config},
+    )
 
-    elapsed = time.monotonic() - t0
+    if result.outcome == "failed":
+        return 1
 
     import pyarrow.parquet as pq
 
+    data_dir = result.data
     snapshots = sorted(data_dir.glob("acled_*.parquet"))
     total_events = 0
     for snap in snapshots:
@@ -172,7 +165,7 @@ def _full_harvest(
         f"[harvest] {total_events:,} events across "
         f"{len(snapshots)} snapshots in {data_dir}"
     )
-    print(f"[harvest] Completed in {elapsed:.1f}s — PASS")
+    print(f"[harvest] Completed in {result.elapsed:.1f}s — PASS")
     print("=" * 60)
     return 0
 

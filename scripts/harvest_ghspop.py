@@ -17,14 +17,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 from pathlib import Path
+
+from datafactory_harvester.harvest_runner import run_harvest
 
 
 def main() -> int:
     """Run the GHS-POP harvester."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description="Harvest GHS-POP population grids (Layer 1)"
     )
@@ -33,10 +32,7 @@ def main() -> int:
         type=int,
         nargs="+",
         default=None,
-        help=(
-            "Epochs to download "
-            "(default: all 12 epochs 1975–2030)"
-        ),
+        help="Epochs to download (default: all 12 epochs 1975–2030)",
     )
     parser.add_argument(
         "--force",
@@ -52,53 +48,36 @@ def main() -> int:
 
     config_kwargs: dict = {
         "data_dir": Path("data/raw/ghspop"),
-        "ledger_path": Path(
-            "provenance/ghspop/ingestion_ledger.jsonl",
-        ),
+        "ledger_path": Path("provenance/ghspop/ingestion_ledger.jsonl"),
     }
     if args.epochs is not None:
         config_kwargs["epochs"] = tuple(args.epochs)
 
     config = GhsPopConfig(**config_kwargs)
+    epoch_label = str(args.epochs) if args.epochs else "all (1975–2030)"
 
-    epoch_label = (
-        str(args.epochs) if args.epochs
-        else "all (1975–2030)"
+    result = run_harvest(
+        source_name="GHS-POP",
+        fetch_fn=fetch_ghspop,
+        config_summary={
+            "Epochs": epoch_label,
+            "Output": str(config.data_dir),
+            "Ledger": str(config.ledger_path),
+        },
+        force_refresh=args.force,
+        fetch_kwargs={"config": config},
     )
 
-    print("=" * 60)
-    print("GHS-POP HARVEST (Layer 1)")
-    print(f"Epochs:  {epoch_label}")
-    print(f"Output:  {config.data_dir}")
-    print(f"Ledger:  {config.ledger_path}")
-    print("=" * 60)
-    print()
-
-    t0 = time.monotonic()
-
-    try:
-        results = fetch_ghspop(
-            config, force_refresh=args.force,
-        )
-    except Exception as e:
-        print(f"FAIL: {e}")
+    if result.outcome == "failed":
         return 1
 
-    n_cached = sum(
-        1 for r in results if r["outcome"] == "cached"
-    )
-    n_new = sum(
-        1 for r in results if r["outcome"] == "success"
-    )
+    results = result.data
+    n_cached = sum(1 for r in results if r["outcome"] == "cached")
+    n_new = sum(1 for r in results if r["outcome"] == "success")
 
-    elapsed = time.monotonic() - t0
-    print()
-    print(
-        f"{len(results)} epochs: "
-        f"{n_new} downloaded, {n_cached} cached"
-    )
+    print(f"{len(results)} epochs: {n_new} downloaded, {n_cached} cached")
     print(f"Output: {config.data_dir}")
-    print(f"Time: {elapsed:.1f}s")
+    print(f"Time: {result.elapsed:.1f}s")
     print("PASS")
     return 0
 

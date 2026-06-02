@@ -117,11 +117,11 @@ def main() -> int:
     data_vars = {}
     source_sums: dict[str, float] = {}
     for i, name in enumerate(feature_names):
-        feature_data = np.asarray(grid[:, :, :, i])
-        source_sums[name] = float(feature_data.sum())
+        feature_slice = grid[:, :, :, i]
+        source_sums[name] = float(feature_slice.sum())
         data_vars[name] = (
             ["time", "lat", "lon"],
-            feature_data,
+            feature_slice,
         )
         print(f"  {i:2d}: {name}")
 

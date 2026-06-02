@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -85,20 +84,13 @@ def _passes_filters(
 
 
 def build_ucdp_v1(
-    config: ViewpointConfig | None = None,
-    *,
-    consolidated_path: Path | None = None,
+    config: ViewpointConfig,
 ) -> ViewpointResult:
     """Build UCDP viewpoint v1 from a consolidated event store.
 
     Uses sorted-group processing to avoid materializing all events
     as Python dicts simultaneously. Peak memory is ~1 GB instead
     of ~4 GB for 2.3M events.
-
-    Args:
-        config: Full viewpoint configuration. If None, uses defaults
-            with consolidated_path.
-        consolidated_path: Shortcut — used only if config is None.
 
     Returns:
         ViewpointResult with record counts and output digest.
@@ -107,15 +99,6 @@ def build_ucdp_v1(
         FileNotFoundError: If the consolidated store doesn't exist.
         ValueError: If the store is empty or has invalid data.
     """
-    if config is None:
-        if consolidated_path is None:
-            err_msg = (
-                "Either config or consolidated_path must be provided"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        config = ViewpointConfig(consolidated_path=consolidated_path)
-
     # Validate source exists
     if not config.consolidated_path.exists():
         err_msg = (

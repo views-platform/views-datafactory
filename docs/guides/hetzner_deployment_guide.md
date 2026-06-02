@@ -533,20 +533,9 @@ backoff). If it still fails, try again later.
 Check with `df -h`.
 
 **"OOM killed" (exit code 137)** — A pipeline step exceeded
-physical RAM. The CPX32 has 8 GB and no swap by default. Add a
-2 GB swap file as a safety net:
-
-```bash
-# One-time setup (as root)
-fallocate -l 2G /swapfile
-chmod 600 /swapfile
-mkswap /swapfile
-swapon /swapfile
-echo '/swapfile none swap sw 0 0' >> /etc/fstab
-```
-
-If the pipeline routinely uses swap, investigate memory usage
-(`htop` during the run) rather than increasing swap size.
+physical RAM. The CPX32 has 8 GB and no swap by default. See the
+Swap Configuration section in `server_operations.md` for setup
+instructions (4 GB recommended for 75-feature assembly).
 
 ---
 

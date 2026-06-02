@@ -1146,9 +1146,9 @@ class TestBuildUcdpV1Red:
         with pytest.raises(FileNotFoundError, match="not found"):
             build_ucdp_v1(cfg)
 
-    def test_no_config_no_path_raises(self) -> None:
-        with pytest.raises(ValueError, match="config or consolidated_path"):
-            build_ucdp_v1(None)
+    def test_no_config_raises(self) -> None:
+        with pytest.raises(TypeError):
+            build_ucdp_v1()  # type: ignore[call-arg]
 
     def test_empty_store_raises(self, tmp_path: Path) -> None:
         # Write empty Parquet with correct schema

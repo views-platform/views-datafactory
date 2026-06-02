@@ -10,6 +10,10 @@ from datafactory_compilation.compilation_config import (
     FeatureSpec,
 )
 from datafactory_compilation.grid_compilation import compile_grid
+from datafactory_compilation.preflight import (
+    check_disk_space,
+    estimate_grid_bytes,
+)
 from datafactory_compilation.pregridded_compilation import (
     PregriddedCompilationConfig,
     PregriddedFeatureSpec,
@@ -21,7 +25,9 @@ __all__ = [
     "FeatureSpec",
     "PregriddedCompilationConfig",
     "PregriddedFeatureSpec",
+    "check_disk_space",
     "compile_grid",
     "compile_pregridded",
+    "estimate_grid_bytes",
     "get_strategy",
 ]

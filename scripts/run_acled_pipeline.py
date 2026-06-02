@@ -14,16 +14,18 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-import time
 from pathlib import Path
+
+from datafactory_harvester.pipeline_runner import (
+    PipelineStep,
+    run_pipeline,
+)
 
 STEPS = ("harvest", "consolidate", "viewpoint", "compile")
 
 
 def main() -> int:
     """Orchestrate the ACLED pipeline end-to-end."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description="Run full ACLED pipeline (Layers 1–4)",
     )
@@ -47,36 +49,26 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    skip_idx = (
-        STEPS.index(args.skip_to) if args.skip_to else 0
-    )
-
-    print("=" * 60)
-    print("ACLED PIPELINE (Layers 1–4)")
-    print(f"Range: {args.start_year}–{args.end_year}")
-    if args.skip_to:
-        print(f"Skipping to: {args.skip_to}")
-    print("=" * 60)
-    print()
-
-    t_start = time.monotonic()
-
-    # ── Step 1: Harvest ──────────────────────────────────────
-
     raw_dir = Path("data/raw/acled")
+    store_path = Path(
+        "data/consolidated/acled/acled_store.parquet",
+    )
+    viewpoint_path = Path("data/viewpoint/acled_v1.parquet")
+    output_dir = Path("data/compiled/acled")
 
-    if skip_idx < 1:
+    # ── Step closures ───────────────────────────────────────────
+
+    def harvest() -> None:
         if (
             not os.environ.get("ACLED_USERNAME")
             or not os.environ.get("ACLED_PASSWORD")
         ):
-            print(
-                "FAIL: Set ACLED_USERNAME and ACLED_PASSWORD "
+            msg = (
+                "Set ACLED_USERNAME and ACLED_PASSWORD "
                 "environment variables."
             )
-            return 1
+            raise ValueError(msg)
 
-        print("[1/4] HARVEST")
         from datafactory_harvester.sources.acled import (
             AcledConfig,
             fetch_acled,
@@ -90,15 +82,9 @@ def main() -> int:
                 "provenance/acled/ingestion_ledger.jsonl",
             ),
         )
-
-        t0 = time.monotonic()
-        try:
-            data_dir = fetch_acled(
-                config, force_refresh=args.force,
-            )
-        except Exception as e:
-            print(f"  FAIL: {e}")
-            return 1
+        data_dir = fetch_acled(
+            config, force_refresh=args.force,
+        )
 
         import pyarrow.parquet as pq
 
@@ -110,30 +96,18 @@ def main() -> int:
             f"  {total:,} events across "
             f"{len(snapshots)} snapshots → {data_dir}"
         )
-        print(f"  ({time.monotonic() - t0:.1f}s)")
-        print()
-    else:
+
+    def check_harvest() -> str:
         snapshots = sorted(raw_dir.glob("acled_*.parquet"))
         if not snapshots:
-            print(
-                f"FAIL: No ACLED snapshots in {raw_dir}. "
+            msg = (
+                f"No ACLED snapshots in {raw_dir}. "
                 f"Run without --skip-to first."
             )
-            return 1
-        print(
-            f"[1/4] HARVEST — skipped "
-            f"({len(snapshots)} snapshots in {raw_dir})"
-        )
-        print()
+            raise FileNotFoundError(msg)
+        return f"{len(snapshots)} snapshots in {raw_dir}"
 
-    # ── Step 2: Consolidate ──────────────────────────────────
-
-    store_path = Path(
-        "data/consolidated/acled/acled_store.parquet",
-    )
-
-    if skip_idx < 2:
-        print("[2/4] CONSOLIDATE")
+    def consolidate() -> None:
         from datafactory_consolidation.consolidators.acled import (
             AcledConsolidationConfig,
             consolidate_acled,
@@ -149,38 +123,19 @@ def main() -> int:
                 "provenance/consolidation/acled_ledger.jsonl",
             ),
         )
-
-        t0 = time.monotonic()
-        try:
-            result = consolidate_acled(cons_config)
-        except Exception as e:
-            print(f"  FAIL: {e}")
-            return 1
-
+        result = consolidate_acled(cons_config)
         print(
             f"  {result.n_records_total:,} records "
             f"({result.n_records_new:,} new) → {store_path}"
         )
-        print(f"  ({time.monotonic() - t0:.1f}s)")
-        print()
-    else:
+
+    def check_consolidate() -> str:
         if not store_path.exists():
-            print(
-                f"FAIL: Expected {store_path} but not found."
-            )
-            return 1
-        print(
-            f"[2/4] CONSOLIDATE — skipped "
-            f"(using {store_path})"
-        )
-        print()
+            msg = f"Expected {store_path} but not found."
+            raise FileNotFoundError(msg)
+        return f"using {store_path}"
 
-    # ── Step 3: Viewpoint ────────────────────────────────────
-
-    viewpoint_path = Path("data/viewpoint/acled_v1.parquet")
-
-    if skip_idx < 3:
-        print("[3/4] VIEWPOINT")
+    def viewpoint() -> None:
         from datafactory_viewpoint.builders.acled_v1 import (
             AcledViewpointConfig,
             build_acled_v1,
@@ -193,114 +148,111 @@ def main() -> int:
                 "provenance/viewpoint/acled_v1_ledger.jsonl",
             ),
         )
-
-        t0 = time.monotonic()
-        try:
-            result = build_acled_v1(vp_config)
-        except Exception as e:
-            print(f"  FAIL: {e}")
-            return 1
-
+        result = build_acled_v1(vp_config)
         print(
             f"  {result.n_events_output:,} events → "
             f"{viewpoint_path}"
         )
-        print(f"  ({time.monotonic() - t0:.1f}s)")
-        print()
-    else:
+
+    def check_viewpoint() -> str:
         if not viewpoint_path.exists():
-            print(
-                f"FAIL: Expected {viewpoint_path} "
-                f"but not found."
+            msg = (
+                f"Expected {viewpoint_path} but not found."
             )
-            return 1
-        print(
-            f"[3/4] VIEWPOINT — skipped "
-            f"(using {viewpoint_path})"
+            raise FileNotFoundError(msg)
+        return f"using {viewpoint_path}"
+
+    def compile_step() -> None:
+        from datafactory_compilation import compile_grid
+        from datafactory_compilation.compilation_config import (
+            CompilationConfig,
+            FeatureSpec,
         )
-        print()
+        from datafactory_priogrid import (
+            GridConfig,
+            TemporalConfig,
+        )
 
-    # ── Step 4: Compile ──────────────────────────────────────
-
-    print("[4/4] COMPILE")
-    from datafactory_compilation import compile_grid
-    from datafactory_compilation.compilation_config import (
-        CompilationConfig,
-        FeatureSpec,
-    )
-    from datafactory_priogrid import GridConfig, TemporalConfig
-
-    output_dir = Path("data/compiled/acled")
-
-    config = CompilationConfig(
-        source_path=viewpoint_path,
-        grid_config=GridConfig(),
-        temporal_config=TemporalConfig(
-            start_year=args.start_year,
-            end_year=args.end_year,
-        ),
-        features=(
-            FeatureSpec("acled_count", "count"),
-            FeatureSpec(
-                "acled_battles", "count",
-                {"event_type": "Battles"},
+        config = CompilationConfig(
+            source_path=viewpoint_path,
+            grid_config=GridConfig(),
+            temporal_config=TemporalConfig(
+                start_year=args.start_year,
+                end_year=args.end_year,
             ),
-            FeatureSpec(
-                "acled_explosions", "count",
-                {"event_type": "Explosions/Remote violence"},
+            features=(
+                FeatureSpec("acled_count", "count"),
+                FeatureSpec(
+                    "acled_battles", "count",
+                    {"event_type": "Battles"},
+                ),
+                FeatureSpec(
+                    "acled_explosions", "count",
+                    {"event_type": "Explosions/Remote violence"},
+                ),
+                FeatureSpec(
+                    "acled_vac", "count",
+                    {"event_type": "Violence against civilians"},
+                ),
+                FeatureSpec(
+                    "acled_protests", "count",
+                    {"event_type": "Protests"},
+                ),
+                FeatureSpec(
+                    "acled_riots", "count",
+                    {"event_type": "Riots"},
+                ),
+                FeatureSpec(
+                    "acled_strategic", "count",
+                    {"event_type": "Strategic developments"},
+                ),
+                FeatureSpec(
+                    "acled_fatalities", "sum_field",
+                    value_field="fatalities",
+                ),
             ),
-            FeatureSpec(
-                "acled_vac", "count",
-                {"event_type": "Violence against civilians"},
+            output_dir=output_dir,
+            ledger_path=Path(
+                "provenance/compilation/acled_ledger.jsonl",
             ),
-            FeatureSpec(
-                "acled_protests", "count",
-                {"event_type": "Protests"},
-            ),
-            FeatureSpec(
-                "acled_riots", "count",
-                {"event_type": "Riots"},
-            ),
-            FeatureSpec(
-                "acled_strategic", "count",
-                {"event_type": "Strategic developments"},
-            ),
-            FeatureSpec(
-                "acled_fatalities", "sum_field",
-                value_field="fatalities",
-            ),
-        ),
-        output_dir=output_dir,
-        ledger_path=Path(
-            "provenance/compilation/acled_ledger.jsonl",
-        ),
-        date_field="event_date",
-        lat_field="latitude",
-        lon_field="longitude",
-    )
-
-    t0 = time.monotonic()
-    try:
+            date_field="event_date",
+            lat_field="latitude",
+            lon_field="longitude",
+        )
         result_dir = compile_grid(config)
-    except Exception as e:
-        print(f"  FAIL: {e}")
+
+        import numpy as np
+
+        grid = np.load(result_dir / "grid.npy", mmap_mode="r")
+        print(f"  Grid shape: {grid.shape}")
+        print(f"  Output: {result_dir}")
+
+    # ── Run pipeline ────────────────────────────────────────────
+
+    pipeline_steps = (
+        PipelineStep("harvest", harvest, check_harvest),
+        PipelineStep(
+            "consolidate", consolidate, check_consolidate,
+        ),
+        PipelineStep("viewpoint", viewpoint, check_viewpoint),
+        PipelineStep("compile", compile_step),
+    )
+
+    result = run_pipeline(
+        source_name="ACLED",
+        steps=pipeline_steps,
+        config_summary={
+            "Layers": "1–4",
+            "Range": f"{args.start_year}–{args.end_year}",
+        },
+        skip_to=args.skip_to,
+    )
+
+    if not result.success:
         return 1
 
-    import numpy as np
-
-    grid = np.load(result_dir / "grid.npy", mmap_mode="r")
-    print(f"  Grid shape: {grid.shape}")
-    print(f"  Output: {result_dir}")
-    print(f"  ({time.monotonic() - t0:.1f}s)")
-    print()
-
-    # ── Summary ──────────────────────────────────────────────
-
-    total = time.monotonic() - t_start
     print("=" * 60)
-    print(f"ACLED PIPELINE COMPLETE ({total:.1f}s)")
-    print(f"  Grid: {result_dir / 'grid.npy'}")
-    print(f"  Shape: {grid.shape}")
+    print(f"ACLED PIPELINE COMPLETE ({result.elapsed:.1f}s)")
     print()
     print(
         "Next: uv run python scripts/verify_acled_grid.py"

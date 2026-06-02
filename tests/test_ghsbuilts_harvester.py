@@ -176,6 +176,54 @@ class TestFetchGhsBuiltSGreen:
         assert results[0]["outcome"] == "cached"
         assert mock_req.call_count == 1
 
+    def test_uncached_when_digest_mismatch(
+        self, tmp_path: Path,
+    ) -> None:
+        """File with mismatched digest triggers re-download."""
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_name = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+
+        config = GhsBuiltSConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        # Pre-populate with stale/corrupt content
+        tif_path = config.data_dir / tif_name
+        tif_path.parent.mkdir(parents=True, exist_ok=True)
+        tif_path.write_bytes(b"corrupt geotiff")
+
+        from datafactory_provenance import append_ledger_entry
+
+        append_ledger_entry(config.ledger_path, {
+            "dataset": "ghsbuilts",
+            "version": "E2020",
+            "content_digest": "wrong_digest_value",
+            "outcome": "success",
+        })
+
+        # Should re-download because digest doesn't match
+        zip_data = _make_fake_geotiff_zip(tif_name)
+        mock_resp = MagicMock()
+        mock_resp.content = zip_data
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=mock_resp,
+        ):
+            results = fetch_ghsbuilts(config)
+
+        assert results[0]["outcome"] == "success"
+        assert tif_path.read_bytes() == b"fake geotiff data"
+
     def test_multi_epoch_download(self, tmp_path: Path) -> None:
         from datafactory_harvester.sources.ghsbuilts import (
             GhsBuiltSConfig,

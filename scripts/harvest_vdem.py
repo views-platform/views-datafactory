@@ -15,15 +15,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 
+from datafactory_harvester.harvest_runner import run_harvest
 from datafactory_harvester.sources.vdem import VdemConfig, fetch_vdem
 
 
 def main() -> int:
     """Harvest V-Dem data."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description="Harvest V-Dem country-year data",
     )
@@ -34,27 +32,25 @@ def main() -> int:
     args = parser.parse_args()
 
     config = VdemConfig()
+    result = run_harvest(
+        source_name="V-Dem",
+        fetch_fn=fetch_vdem,
+        config_summary={
+            "Version": config.version,
+            "Variables": str(len(config.variables)),
+            "Output": str(config.output_path),
+        },
+        force_refresh=args.force,
+        fetch_kwargs={"config": config},
+    )
 
-    print("=" * 60)
-    print("V-Dem HARVEST")
-    print(f"Version: {config.version}")
-    print(f"Variables: {len(config.variables)}")
-    print(f"Output: {config.output_path}")
-    print("=" * 60)
-    print()
-
-    t0 = time.monotonic()
-    try:
-        result = fetch_vdem(config, force_refresh=args.force)
-    except Exception as e:
-        print(f"FAIL: {e}")
+    if result.outcome == "failed":
         return 1
 
-    elapsed = time.monotonic() - t0
-    print(f"Outcome: {result['outcome']}")
-    if "n_rows" in result:
-        print(f"Rows: {result['n_rows']:,}")
-    print(f"({elapsed:.1f}s)")
+    print(f"Outcome: {result.data['outcome']}")
+    if "n_rows" in result.data:
+        print(f"Rows: {result.data['n_rows']:,}")
+    print(f"({result.elapsed:.1f}s)")
     return 0
 
 

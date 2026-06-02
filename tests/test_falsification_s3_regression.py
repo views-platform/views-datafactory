@@ -29,26 +29,19 @@ class TestP1RegisterStepNumbers:
     def test_c138_resolution_step_matches_pipeline(
         self,
     ) -> None:
-        assert REGISTER.exists()
-        text = REGISTER.read_text()
-
-        marker = "### C-138"
-        assert marker in text, "C-138 narrative section not found"
-        c138_start = text.index(marker)
-        next_section = text.find("###", c138_start + len(marker))
-        c138_text = (
-            text[c138_start:next_section]
-            if next_section != -1
-            else text[c138_start:]
+        archive = Path(
+            "reports/archive/technical_risk_register_resolved.md"
         )
-
-        assert "step 8" not in c138_text, (
-            "C-138 Resolution says 'step 8' but "
+        assert archive.exists(), "Resolved archive not found"
+        text = archive.read_text()
+        assert "C-138" in text, (
+            "C-138 not found in register or archive"
+        )
+        assert "step 8" not in text.split("C-138")[1].split("###")[0], (
+            "C-138 archive entry still says 'step 8' but "
             "verify_remote_data.py is actually at "
             "'12/13: Verify remote data' in "
-            "refresh_pipeline.sh. "
-            "Fix: update C-138 Location and Resolution "
-            "to reference the correct step number."
+            "refresh_pipeline.sh."
         )
 
 

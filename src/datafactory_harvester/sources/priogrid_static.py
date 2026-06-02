@@ -24,6 +24,7 @@ import requests
 
 from datafactory_harvester.snapshot_storage import archive_snapshot
 from datafactory_harvester.sources import register_source
+from datafactory_harvester.validation import validate_positive_int
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -62,12 +63,7 @@ class PriogridStaticConfig:
     variables: tuple[str, ...] | None = field(default=None)
 
     def __post_init__(self) -> None:
-        if self.timeout < 1:
-            err_msg = (
-                f"timeout must be >= 1, got {self.timeout}"
-            )
-            logger.error(err_msg)
-            raise ValueError(err_msg)
+        validate_positive_int(self.timeout, "timeout")
 
 
 # ---- Helpers ----

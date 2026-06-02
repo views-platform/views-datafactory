@@ -685,9 +685,10 @@ class TestGhsPopViewpointFullFlowGreen:
         ))
         assert len(pairs) == len(set(pairs))
 
-    def test_source_dir_shortcut(self, tmp_path: Path) -> None:
-        """build_ghspop_v1(source_dir=...) convenience API works."""
+    def test_from_shortcuts_source_dir(self, tmp_path: Path) -> None:
+        """Config.from_shortcuts() convenience API works."""
         from datafactory_viewpoint.builders.ghspop_v1 import (
+            GhsPopViewpointConfig,
             build_ghspop_v1,
         )
 
@@ -703,7 +704,10 @@ class TestGhsPopViewpointFullFlowGreen:
                 prio_cols=1,
             )
 
-        result = build_ghspop_v1(source_dir=source_dir)
+        config = GhsPopViewpointConfig.from_shortcuts(
+            source_dir=source_dir,
+        )
+        result = build_ghspop_v1(config)
         assert result.output_path.exists()
         assert result.n_events_output > 0
 
@@ -928,10 +932,10 @@ class TestGhsPopViewpointRed:
             _aggregate_to_prio_grid(data)
 
     def test_no_args_raises(self) -> None:
-        """build_ghspop_v1() with no arguments raises ValueError."""
+        """build_ghspop_v1() with no arguments raises TypeError."""
         from datafactory_viewpoint.builders.ghspop_v1 import (
             build_ghspop_v1,
         )
 
-        with pytest.raises(ValueError, match="Either"):
-            build_ghspop_v1()
+        with pytest.raises(TypeError):
+            build_ghspop_v1()  # type: ignore[call-arg]

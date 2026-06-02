@@ -26,12 +26,14 @@ from pathlib import Path
 import requests as _requests
 
 from datafactory_harvester.sources import register_source
+from datafactory_harvester.validation import validate_positive_int
 from datafactory_http import request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
     append_ledger_entry,
     compute_content_digest,
+    compute_file_digest,
     last_digest_for_version,
 )
 
@@ -82,9 +84,7 @@ class GhsBuiltSConfig:
                     f"Valid epochs: {KNOWN_EPOCHS}"
                 )
                 raise ValueError(msg)
-        if self.timeout < 1:
-            msg = f"timeout must be >= 1, got {self.timeout}"
-            raise ValueError(msg)
+        validate_positive_int(self.timeout, "timeout")
 
     def _stem(self, epoch: int) -> str:
         return (
@@ -151,21 +151,29 @@ def _fetch_epoch(
     tif_path = config.data_dir / tif_name
     version = f"E{epoch}"
 
-    # Cache check
+    # Cache check: file exists + ledger digest + file integrity
     if not force_refresh and tif_path.exists():
         previous = last_digest_for_version(
             config.ledger_path, version
         )
         if previous is not None:
-            logger.info(
-                "Epoch %d cached (digest: %s)", epoch, previous
+            actual = compute_file_digest(tif_path)
+            if actual == previous:
+                logger.info(
+                    "Epoch %d cached (digest: %s)",
+                    epoch, previous,
+                )
+                return {
+                    "dataset": DATASET_ID,
+                    "epoch": epoch,
+                    "outcome": "cached",
+                    "content_digest": previous,
+                }
+            logger.warning(
+                "Epoch %d cached file digest mismatch "
+                "(expected %s, got %s) — re-downloading",
+                epoch, previous, actual,
             )
-            return {
-                "dataset": DATASET_ID,
-                "epoch": epoch,
-                "outcome": "cached",
-                "content_digest": previous,
-            }
 
     # Download
     url = config.download_url(epoch)

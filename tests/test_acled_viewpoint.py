@@ -180,14 +180,17 @@ class TestBuildAcledV1Green:
         assert entry["n_events_output"] == 3
         assert "output_digest" in entry
 
-    def test_shortcut_consolidated_path(
+    def test_from_shortcuts_consolidated_path(
         self, tmp_path: Path,
     ) -> None:
-        """Can call with just consolidated_path kwarg."""
+        """Config.from_shortcuts() convenience API works."""
         store_path = tmp_path / "store" / "store.parquet"
         _make_consolidated_store(store_path, n=3)
 
-        result = build_acled_v1(consolidated_path=store_path)
+        config = AcledViewpointConfig.from_shortcuts(
+            consolidated_path=store_path,
+        )
+        result = build_acled_v1(config)
         assert result.n_events_output == 3
 
 
@@ -221,8 +224,8 @@ class TestBuildAcledV1Beige:
             build_acled_v1(config)
 
     def test_no_args_raises(self) -> None:
-        with pytest.raises(ValueError, match="Either"):
-            build_acled_v1()
+        with pytest.raises(TypeError):
+            build_acled_v1()  # type: ignore[call-arg]
 
 
 # ---- Red Team (Adversarial) ----

@@ -453,20 +453,22 @@ class TestConsolidateUcdpBeige:
 
 class TestConsolidateUcdpRed:
 
-    def test_malformed_annual_filename_raises(self, tmp_path: Path) -> None:
+    def test_malformed_annual_filename_skipped(self, tmp_path: Path) -> None:
+        """Non-matching filenames in source dirs are silently skipped."""
         annual_dir = tmp_path / "annual"
         _write_parquet(annual_dir / "bad_name.parquet", _make_events(1))
         cfg = _config(tmp_path, annual_dir=annual_dir)
 
-        with pytest.raises(ValueError, match="Cannot extract version"):
+        with pytest.raises(FileNotFoundError, match="No source Parquet"):
             consolidate_ucdp(cfg)
 
-    def test_malformed_candidate_filename_raises(self, tmp_path: Path) -> None:
+    def test_malformed_candidate_filename_skipped(self, tmp_path: Path) -> None:
+        """Non-matching filenames in source dirs are silently skipped."""
         candidate_dir = tmp_path / "candidate"
         _write_parquet(candidate_dir / "bad_name.parquet", _make_events(1))
         cfg = _config(tmp_path, candidate_dir=candidate_dir)
 
-        with pytest.raises(ValueError, match="Cannot extract version"):
+        with pytest.raises(FileNotFoundError, match="No source Parquet"):
             consolidate_ucdp(cfg)
 
     def test_frozen_config_mutation(self) -> None:

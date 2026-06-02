@@ -169,7 +169,10 @@ def consolidate_acled(
     )
 
     source_files = (
-        sorted(config.source_dir.glob("*.parquet"))
+        sorted(
+            p for p in config.source_dir.glob("*.parquet")
+            if _SNAPSHOT_PATTERN.search(p.name)
+        )
         if config.source_dir.exists()
         else []
     )

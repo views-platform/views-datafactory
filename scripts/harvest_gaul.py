@@ -27,14 +27,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 from pathlib import Path
+
+from datafactory_harvester.harvest_runner import run_harvest
 
 
 def main() -> int:
     """Run the GAUL admin boundary harvester."""
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-
     parser = argparse.ArgumentParser(
         description="Harvest GAUL admin boundaries (Layer 1)"
     )
@@ -78,20 +77,8 @@ def main() -> int:
     args = parser.parse_args()
 
     variables = (
-        tuple(args.variables.split(","))
-        if args.variables
-        else None
+        tuple(args.variables.split(",")) if args.variables else None
     )
-
-    print("=" * 60)
-    print("GAUL ADMIN BOUNDARY HARVESTER (Layer 1)")
-    print(f"Variables: {variables or 'all 6'}")
-    print(f"Data dir:  {args.data_dir}")
-    print(f"Cache dir: {args.cache_dir}")
-    print(f"Centroids: {args.centroid_shapefile}")
-    print(f"Force:     {args.force}")
-    print("=" * 60)
-    print()
 
     from datafactory_harvester.sources.gaul_admin import (
         GaulAdminConfig,
@@ -102,40 +89,36 @@ def main() -> int:
         data_dir=args.data_dir,
         cache_dir=args.cache_dir,
         centroid_shapefile=args.centroid_shapefile,
-        ledger_path=(
-            args.provenance_dir / "ingestion_ledger.jsonl"
-        ),
+        ledger_path=args.provenance_dir / "ingestion_ledger.jsonl",
         variables=variables,
     )
 
-    t0 = time.monotonic()
-    results = fetch_gaul_admin(
-        config, force_refresh=args.force
+    result = run_harvest(
+        source_name="GAUL ADMIN BOUNDARY",
+        fetch_fn=fetch_gaul_admin,
+        config_summary={
+            "Variables": str(variables or "all 6"),
+            "Data dir": str(args.data_dir),
+            "Cache dir": str(args.cache_dir),
+            "Centroids": str(args.centroid_shapefile),
+            "Force": str(args.force),
+        },
+        force_refresh=args.force,
+        fetch_kwargs={"config": config},
     )
-    elapsed = time.monotonic() - t0
 
-    # Report
+    if result.outcome == "failed":
+        return 1
+
+    results = result.data
     n_total = len(results)
-    n_cached = sum(
-        1 for r in results
-        if r.get("outcome") == "cached"
-    )
-    n_success = sum(
-        1 for r in results
-        if r.get("outcome") == "success"
-    )
-    n_unchanged = sum(
-        1 for r in results
-        if r.get("outcome") == "unchanged"
-    )
-    n_failed = sum(
-        1 for r in results
-        if r.get("outcome") == "failed"
-    )
+    n_cached = sum(1 for r in results if r.get("outcome") == "cached")
+    n_success = sum(1 for r in results if r.get("outcome") == "success")
+    n_unchanged = sum(1 for r in results if r.get("outcome") == "unchanged")
+    n_failed = sum(1 for r in results if r.get("outcome") == "failed")
 
-    print()
     print("=" * 60)
-    print(f"COMPLETE — {elapsed:.1f}s")
+    print(f"COMPLETE — {result.elapsed:.1f}s")
     print(
         f"  {n_total} variables: "
         f"{n_cached} cached, {n_success} success, "
@@ -147,10 +130,7 @@ def main() -> int:
         n_cells = r.get("n_cells", "")
         n_fb = r.get("n_from_fallback", 0)
         if outcome == "success":
-            fb_str = (
-                f" ({n_fb} from L1 fallback)"
-                if n_fb else ""
-            )
+            fb_str = f" ({n_fb} from L1 fallback)" if n_fb else ""
             print(f"  OK: {name} — {n_cells} cells{fb_str}")
         elif outcome == "failed":
             errors = r.get("errors", [])
