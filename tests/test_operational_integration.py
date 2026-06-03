@@ -22,9 +22,6 @@ GRID_PRODUCING_SOURCES: dict[str, tuple[str, ...]] = {
         "PRIO-GRID Static",
         "PRIO-GRID Shapefile",
         "GAUL Admin",
-        # SHDI: harvester only (Sprint 1). Compilation, assembly, and
-        # pipeline script come in Sprint 2.
-        "SHDI",
     )
 }
 
