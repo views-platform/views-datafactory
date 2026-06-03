@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-06-02)
+**Date:** 2026-03-17 (updated 2026-06-03)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02
-**Status:** 234 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 183 resolved, 48 open concerns (2 Tier 2, 8 Tier 3, 32 Tier 4, 6 deferred by design; 1 with fired trigger), 5 open disagreements. 160 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 26 resolved disagreements in archive. 31 disagreement IDs total: 26 resolved, 5 open.
+**Status:** 237 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 184 resolved, 50 open concerns (2 Tier 2, 9 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 161 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -52,6 +52,11 @@
 | D-31 | — | Harvest script consolidation — single unified script vs thin delegates | Open | WET-before-DRY |
 | C-230 | 4 | Script layer (harvest + pipeline) has zero unit tests | Pattern #7/#8 extraction changes behavior with no test to catch regression | Test coverage |
 | C-231 | 4 | No compilation idempotence guard — silent recompilation with stale inputs | Operator re-runs compilation after viewpoint re-built with different parameters | Compilation correctness |
+| ~~C-235~~ | 3 | ~~Source registry declares nonexistent SHDI downstream entries~~ | Resolved: #105 removed SHDI features and phantom entries | Source registry |
+| C-236 | 4 | Status page artifact mapping requires manual update per source | Next source integration omits status page mapping | Status page |
+| C-237 | 3 | Pipeline `set -e` prevents status page from generating on failure | Pipeline fails at step 12+; status page most needed but never updates | Operational monitoring |
+| ~~D-32~~ | — | ~~`assembled` flag vs removing features from partially-integrated sources~~ | Resolved: chose removal (#105) | Source registry |
+| D-33 | — | Pipeline-path information: registry field vs standalone mapping vs convention | Open | Source registry |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
 | C-146 | 4 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
@@ -87,7 +92,8 @@ Items that should be resolved together:
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45, ~~C-175~~ | UCDP API change (C-175 resolved 2026-05-27) |
 | **Test infrastructure** | C-29, C-78, C-79, C-146 (C-60, C-169 resolved; C-146 recalibrated 3→4) | Test suite growth |
-| **Operational monitoring** | C-131, ~~C-132~~, C-136, C-147, ~~C-191~~ | Before relying on Hetzner pipeline without manual checks (C-191, C-132 resolved) |
+| **Operational monitoring** | C-131, ~~C-132~~, C-136, C-147, ~~C-191~~, C-237 | Before relying on Hetzner pipeline without manual checks (C-191, C-132 resolved) |
+| **Source registry integrity** | ~~C-235~~, C-236, ~~D-32~~, D-33 | Before next data source integration (WDI) (C-235, D-32 resolved #105) |
 | **Scaling headroom** | C-144, C-145, C-223 | Before consolidated store exceeds ~5M rows or next data source pushes compile past 16 GB |
 | ~~**Data integrity**~~ | ~~C-138~~, ~~C-149~~ (C-137, C-139 resolved 2026-05-26, C-149 resolved 2026-05-27, C-138 resolved 2026-05-28) | Resolved 2026-05-28: all items resolved |
 | ~~**Data boundary**~~ | ~~C-130~~, ~~C-133~~, ~~C-134~~, C-135 | Resolved 2026-05-28: C-130 resolved, C-135 demoted (C-133, C-134 resolved earlier) |
@@ -170,6 +176,38 @@ Every other layer exposes its core logic as an importable function: `consolidate
 **Note (2026-05-24, tech-debt-cleanup investigation):** The linear growth mechanism is now identified: lines 240-441 contain 3 source load-validate-align blocks (ACLED 59 lines, GHS-POP 66 lines, GHS-BUILT-S 77 lines = 202 lines total) that are **structurally identical** with only variable-name substitution. Each block: load grid.npy + feature_names.json + time_steps.npy → assert existence → assert_grid_shape → find temporal offset → validate bounds → print diagnostics. A parameterized `_load_source_grid(name, grid_dir, time_steps)` function (~40 lines) would replace all 3 blocks and handle the 5th source without new code. Extraction is safe (no memory or behavioral change — same np.load with mmap_mode="r"), but the function must remain in the script until C-146's testability concern is also addressed (extraction to importable package).
 
 See also C-29 (no end-to-end integration test), C-164 (cross-layer WET debt).
+
+### ~~C-235~~: Source registry declares nonexistent SHDI downstream entries — Resolved #105
+
+| Field | Value |
+|-------|-------|
+| ID | C-235 |
+| Tier | 3 |
+| Source | expert-code-review (2026-06-03), pipeline status page initiative |
+| Trigger | SHDI viewpoint implemented without removing or updating phantom downstream entries; or new developer reads registry and assumes SHDI is fully integrated |
+| Location | `src/datafactory_provenance/source_registry.py:273-278` (SHDI Viewpoint), `src/datafactory_provenance/source_registry.py:315-320` (SHDI Compilation) |
+
+`PIPELINE_SOURCES` contains `SourceEntry` declarations for "SHDI Viewpoint" (with `viewpoint/shdi_v1_ledger.jsonl`) and "SHDI Compilation" (with `compilation/shdi_ledger.jsonl`). No corresponding code exists: no `builders/shdi_v1.py`, no `compile_shdi.py`, no assembly integration. These entries create false expectation of integration completeness. The SHDI harvest entry (line 192-205) declares 4 features (`shdi_shdi`, `shdi_healthindex`, `shdi_edindex`, `shdi_incindex`) that `get_all_features()` returns, causing `verify_remote.py` to expect 79 features when the grid contains 75.
+
+The root cause is that the source registry conflates "this source will eventually produce these features" (planning document) with "these features are in the grid" (deployment document). Six experts in the 8-expert review flagged this as the core issue. See D-32 for the disagreement on the fix approach.
+
+Cross-ref: C-164 (WET debt — SHDI copied patterns), D-32 (assembled flag vs feature removal). GitHub: #101, #103.
+
+### C-237: Pipeline `set -e` prevents status page from generating on failure
+
+| Field | Value |
+|-------|-------|
+| ID | C-237 |
+| Tier | 3 |
+| Source | expert-code-review (2026-06-03), Nygard perspective |
+| Trigger | Pipeline fails at step 12+ (e.g., `verify_remote_data.py` SHDI feature mismatch); `set -e` in `refresh_pipeline.sh:47` kills the script before `generate_status.py` runs |
+| Location | `scripts/refresh_pipeline.sh:47` (`set -euo pipefail`), proposed step 14 (`generate_status.py`) |
+
+The status page is proposed as the final step in `refresh_pipeline.sh`. But the pipeline uses `set -e` — any failing step terminates the script. The status page would be most valuable precisely when something fails (showing which stage broke), but `set -e` prevents it from generating. The v1.2.26 deployment demonstrated this failure mode: `verify_remote_data.py` failed due to SHDI, and had the status page existed, it would not have generated.
+
+**Mitigation options:** (a) Run `generate_status.py` in a `trap EXIT` handler so it generates regardless of pipeline outcome. (b) Run it before `verify_remote_data.py`. (c) Append `|| true` to the status page call. Option (a) is most robust.
+
+Cross-ref: C-131 (no external monitoring for cron). GitHub: #101, #104.
 
 ### C-156: ACLED temporal range mismatch — zero-fill before 2020 in assembled grid — [DEFER]
 
@@ -683,6 +721,22 @@ The 9 harvest scripts and 4 pipeline runners have zero unit tests. The scripts a
 
 Cross-ref: C-164 (WET-before-DRY — patterns #7 and #8), C-180 (no falsification tests for non-GHS-POP paths), C-189 (test coverage parity gap).
 
+### C-236: Status page artifact mapping requires manual update per source — [DEFER]
+
+| Field | Value |
+|-------|-------|
+| ID | C-236 |
+| Tier | 4 |
+| Source | expert-code-review (2026-06-03), Feathers + Ousterhout perspectives |
+| Trigger | Next source integration (e.g., WDI) adds source to registry and pipeline but omits artifact mapping in `generate_status.py` |
+| Location | `scripts/generate_status.py` (proposed — artifact path mapping dict) |
+
+The status page will contain a hardcoded mapping from source names to artifact paths per pipeline stage. This mapping must be manually updated whenever a new source is integrated. The same pipeline-path information also exists in `docs/guides/data_source_integration_guide.md:22-25`, `refresh_pipeline.sh` (implicit in step ordering), and `test_operational_integration.py:22-28` (exclusion list). Four locations for the same information is an information leakage risk. Tier 4 because: (a) single-developer project, (b) impact is "wrong status page" not "wrong data," (c) the status page itself can derive some answers from filesystem state.
+
+Long-term mitigation: standardize artifact output paths by convention (e.g., `data/compiled/{source_id}/grid.npy`) so the status page derives paths instead of hardcoding them. Short-term: add a test that all sources with features in the registry have an entry in the artifact mapping.
+
+Cross-ref: C-164 (cross-layer WET debt), C-155 (no shared verify framework), D-33 (pipeline-path location). GitHub: #101, #102.
+
 ### C-231: No compilation idempotence guard — silent recompilation with stale inputs — [DEFER]
 
 | Field | Value |
@@ -724,6 +778,32 @@ Martin/Beck advocate extracting simple utility functions (`validate_positive_int
 Ousterhout argues the 9 harvest scripts should be merged into one deep `harvest.py` with `--source acled|vdem|shdi|...` dispatch via the existing Registry. The scripts are shallow modules (pure boilerplate) and 9 copies of a shallow module is worse than 1. Nygard counters that a single script creates a single failure domain — a bug in shared argparse handling blocks all 9 sources. Feathers proposes a middle path: extract a shared `HarvestRunner` function, but keep source-specific scripts as 5-10 line thin delegates that call it. This satisfies both deep-module design (Ousterhout) and blast-radius isolation (Nygard). **No resolution yet — the middle path (shared runner + thin delegates) appears to be the pragmatic choice, but extraction hasn't started.**
 
 **Source:** Expert code review of C-164 (2026-05-30). Cross-ref: C-164 (pattern #8), C-230 (script layer zero tests).
+
+### ~~D-32~~: `assembled` flag vs removing features from partially-integrated sources — Resolved #105
+
+**Positions:**
+
+- **Add `assembled: bool` to `SourceEntry`** (#103 proposal): SHDI keeps its features in the registry but gets `assembled=False`. `get_all_features()` filters by default. Pro: registry remains a planning document; features are declared even before code exists. Con: adds a second source of truth (flag vs filesystem); flag can drift from reality; every `get_all_features()` caller must understand the default.
+
+- **Remove SHDI features and phantom downstream entries** (Martin, Hickey, Kleppmann): Delete SHDI's `features` tuple and the SHDI Viewpoint / SHDI Compilation entries from `PIPELINE_SOURCES`. Re-add when code exists. Pro: zero code changes to `get_all_features()`; registry stops lying; simpler. Con: registry loses its planning role; source exists in registry with no features (confusing?).
+
+- **Create separate function `get_assembled_features()`** (Kleppmann): Leave `get_all_features()` unchanged (returns all 79). Add a new function for consumers that need only assembled features. Pro: no breaking change, explicit semantics. Con: two functions for overlapping concepts.
+
+**Key tension:** Is the source registry a planning document or a deployment document? The `assembled` flag says both; removing features says deployment-only. The answer determines whether future sources should be declared before or after their code is written.
+
+**Source:** expert-code-review (2026-06-03). Cross-ref: C-235, D-30 (config validator depth).
+
+### D-33: Pipeline-path information — registry field vs standalone mapping vs convention
+
+**Positions:**
+
+- **Add `pipeline_path` field to `SourceEntry`** (Ousterhout, GoF): An enum or literal `"event" | "raster" | "static"` on the harvest-level entry. One source of truth. `generate_status.py`, `test_operational_integration.py`, and future tools derive behavior from it. Pro: eliminates information leakage across 4 files. Con: registry grows; pipeline path is a reporting/operational concern, not a data-model concern.
+
+- **Keep as standalone mapping in `generate_status.py`** (plan proposal, WET-before-DRY): The status page script owns its own mapping. Extract to registry only when a second consumer needs it. Pro: keeps registry simple; one consumer, one mapping. Con: mapping will drift; `test_operational_integration.py` already needs the same information and hardcodes its own version.
+
+- **Derive from conventions** (Hickey): Standardize artifact paths (`data/compiled/{source_id}/grid.npy`). The status page probes predictable paths instead of maintaining a mapping. Pro: zero maintenance; self-healing. Con: requires all sources to follow the convention (they currently don't); retrofit cost.
+
+**Source:** expert-code-review (2026-06-03). Cross-ref: C-236 (artifact mapping maintenance), C-164 (cross-layer WET).
 
 ---
 

@@ -67,11 +67,11 @@ class TestF3DocumentationIndices:
             "index table was not updated."
         )
 
-    def test_sources_readme_feature_count_79(self) -> None:
+    def test_sources_readme_feature_count_75(self) -> None:
         readme = (DOCS / "sources" / "README.md").read_text()
-        assert "79" in readme.split("Total features")[1], (
+        assert "75" in readme.split("Total features")[1], (
             "docs/sources/README.md total feature count is not "
-            "79 — should be 79 after SHDI (4 features added). "
+            "75 — SHDI is harvester-only, no grid features yet."
         )
 
     def test_adrs_readme_lists_035(self) -> None:
