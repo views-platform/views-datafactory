@@ -177,7 +177,7 @@ Every other layer exposes its core logic as an importable function: `consolidate
 
 See also C-29 (no end-to-end integration test), C-164 (cross-layer WET debt).
 
-### C-235: Source registry declares nonexistent SHDI downstream entries
+### ~~C-235~~: Source registry declares nonexistent SHDI downstream entries — Resolved #105
 
 | Field | Value |
 |-------|-------|
@@ -779,7 +779,7 @@ Ousterhout argues the 9 harvest scripts should be merged into one deep `harvest.
 
 **Source:** Expert code review of C-164 (2026-05-30). Cross-ref: C-164 (pattern #8), C-230 (script layer zero tests).
 
-### D-32: `assembled` flag vs removing features from partially-integrated sources
+### ~~D-32~~: `assembled` flag vs removing features from partially-integrated sources — Resolved #105
 
 **Positions:**
 
