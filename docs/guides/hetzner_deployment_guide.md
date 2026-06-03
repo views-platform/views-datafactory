@@ -237,6 +237,7 @@ mkdir -p /srv/views-data
 # Symlink the exports into it
 ln -sf ~/views-datafactory/data/assembled/grid.zarr /srv/views-data/grid.zarr
 ln -sf ~/views-datafactory/data/compiled/dataframe.parquet /srv/views-data/dataframe.parquet
+ln -sf ~/views-datafactory/data/status.html /srv/views-data/status.html
 ```
 
 **Important:** Caddy runs as user `caddy`, so it must be able to traverse
@@ -350,13 +351,33 @@ Add this line (runs on the 21st of every month at midnight UTC):
 # shells before reaching env var exports.
 ```
 
-### 4.3 Verify cron is set
+### 4.3 Add daily status page cron
+
+The pipeline runs monthly, but the status page should refresh daily to
+catch staleness. Add a second cron entry (runs at 06:00 UTC every day):
+
+```bash
+crontab -e
+```
+
+Add this line:
+
+```
+0 6 * * * cd /home/views-deploy/views-datafactory && bash -c 'source ~/.profile && uv run python scripts/generate_status.py --output data/status.html' 2>&1 | logger -t views-status
+# Output goes to syslog: grep views-status /var/log/syslog
+```
+
+The status page is also regenerated after every pipeline run via an EXIT
+trap in `refresh_pipeline.sh` — this daily cron catches staleness between
+monthly runs.
+
+### 4.4 Verify cron is set
 
 ```bash
 crontab -l
 ```
 
-### 4.4 Test manually
+### 4.5 Test manually
 
 ```bash
 cd ~/views-datafactory
@@ -877,6 +898,7 @@ chown views-deploy:views-deploy /home/views-deploy/.views-deploy-tag
 # -sf overwrites the old symlink atomically.
 ln -sf /home/views-deploy/views-datafactory/data/assembled/grid.zarr /srv/views-data/grid.zarr
 ln -sf /home/views-deploy/views-datafactory/data/compiled/dataframe.parquet /srv/views-data/dataframe.parquet
+ln -sf /home/views-deploy/views-datafactory/data/status.html /srv/views-data/status.html
 
 # Caddy runs as the 'caddy' user. To follow the symlinks, it must be
 # able to traverse /home/views-deploy/ (execute permission on directory).
@@ -894,6 +916,7 @@ chmod o+x /home/views-deploy
 crontab -u views-deploy -l 2>/dev/null | {
     cat
     echo "0 0 21 * * cd /home/views-deploy/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log"
+    echo "0 6 * * * cd /home/views-deploy/views-datafactory && bash -c 'source ~/.profile && uv run python scripts/generate_status.py --output data/status.html' 2>&1 | logger -t views-status"
 } | crontab -u views-deploy -
 
 # Remove from root's crontab:
@@ -947,6 +970,7 @@ mv /home/views-deploy/views-datafactory/data /root/views-datafactory/data
 # Restore symlinks to root's paths
 ln -sf /root/views-datafactory/data/assembled/grid.zarr /srv/views-data/grid.zarr
 ln -sf /root/views-datafactory/data/compiled/dataframe.parquet /srv/views-data/dataframe.parquet
+ln -sf /root/views-datafactory/data/status.html /srv/views-data/status.html
 
 # Restore root's cron
 crontab -e  # Re-add the pipeline line
