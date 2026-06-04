@@ -19,6 +19,11 @@
 #  11.  Run health check
 #  12.  Verify remote data correctness (C-138)
 #
+# Status page (EXIT trap):
+#   generate_status.py runs on exit — success or failure — via
+#   trap EXIT. This ensures the status page reflects the pipeline's
+#   final state even when a step crashes (C-237).
+#
 # Deployment gate:
 #   Before running any steps, the script reads ~/.views-deploy-tag
 #   to find which tagged release to run (e.g., "v1.1.0"). It then
@@ -79,6 +84,19 @@ on_failure() {
     fi
 }
 trap on_failure ERR
+
+# ---- Status page (C-237) ----
+# Runs on exit regardless of success or failure. The status page is
+# most valuable when a step has failed — it shows which stage broke.
+# || echo ensures generation failure doesn't mask the real exit code.
+generate_status_on_exit() {
+    echo
+    echo "── Generating status page ──"
+    uv run python scripts/generate_status.py \
+        --output data/status.html \
+        || echo "Warning: status page generation failed (non-fatal)"
+}
+trap generate_status_on_exit EXIT
 
 # ---- Deployment gate (C-98) ----
 # The pipeline only runs a specific tagged release. Operators set the

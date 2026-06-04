@@ -1063,3 +1063,12 @@ Preflight (step 0) verified that `~/.netrc` had an entry for the zarr server but
 **Resolved 2026-06-02.** Preflight now does an HTTP HEAD against the zarr server endpoint with the stored credentials. 401 → FAIL (bad credentials). ConnectionError/Timeout → WARN (credentials present, server unreachable — will retry at step 12). Test stub at `tests/test_falsification_preflight_netrc.py`.
 
 **Source:** Falsification audit F4 (2026-06-02). Cross-ref: C-131, C-138.
+
+
+### C-234: ~~Local `~/.netrc` has stale duplicate entry for zarr server~~ RESOLVED
+
+Local development machine `~/.netrc` had two entries for `204.168.219.108` — the first with a wrong password, the second with the correct one. Python's `netrc` module uses the first match. The wrong password was copied to the server during v1.2.26 deployment, causing a 401 at preflight. Two failed deployment attempts before the correct password was identified.
+
+**Resolved 2026-06-03.** Stale first entry removed from local `~/.netrc`. Only the correct entry remains. Verified: preflight passes with `OK authenticated as views`.
+
+**Source:** v1.2.26 deployment (2026-06-02). Cross-ref: C-233.
