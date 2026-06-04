@@ -35,6 +35,9 @@ Thumbs.db
 # ruff
 .ruff_cache/
 
+# Generated HTML (status page output)
+status.html
+
 # Operational artifacts (regenerable)
 provenance/
 reports/audit/
