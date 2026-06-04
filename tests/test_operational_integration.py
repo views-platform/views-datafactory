@@ -34,6 +34,32 @@ def _base_id(name: str) -> str:
     return name.split()[0].lower().replace("-", "")
 
 
+class TestRefreshPipelineStatusPage:
+    """EXIT trap must generate status page on success and failure
+    (C-237)."""
+
+    def test_exit_trap_function_exists(self) -> None:
+        content = REFRESH_SCRIPT.read_text()
+        assert "generate_status_on_exit()" in content, (
+            "refresh_pipeline.sh must define "
+            "generate_status_on_exit() function (C-237)"
+        )
+
+    def test_exit_trap_is_registered(self) -> None:
+        content = REFRESH_SCRIPT.read_text()
+        assert "trap generate_status_on_exit EXIT" in content, (
+            "refresh_pipeline.sh must register "
+            "generate_status_on_exit as EXIT trap (C-237)"
+        )
+
+    def test_status_output_path(self) -> None:
+        content = REFRESH_SCRIPT.read_text()
+        assert "--output data/status.html" in content, (
+            "Status page must write to data/status.html "
+            "(symlinked by Caddy)"
+        )
+
+
 class TestRefreshPipelineSourceCoverage:
     """Every grid-producing source in PIPELINE_SOURCES must be
     referenced in refresh_pipeline.sh."""
