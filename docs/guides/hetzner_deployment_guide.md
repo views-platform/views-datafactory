@@ -266,11 +266,13 @@ TLS certificate. No manual cert management needed.
 ```
 data.views.uu.se {
     root * /srv/views-data
-    file_server browse
 
-    basicauth {
+    @protected not path /status.html
+    basicauth @protected {
         views <paste-bcrypt-hash-here>
     }
+
+    file_server browse
 
     header Access-Control-Allow-Origin *
     header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
@@ -288,16 +290,25 @@ single-user access.
 ```
 :80 {
     root * /srv/views-data
-    file_server browse
 
-    basicauth {
+    # Public pages: status.html is accessible without auth (ADR-038).
+    # Add future public pages to this matcher.
+    @protected not path /status.html
+    basicauth @protected {
         views <paste-bcrypt-hash-here>
     }
+
+    file_server browse
 
     header Access-Control-Allow-Origin *
     header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
 }
 ```
+
+The `@protected` matcher exempts `/status.html` from authentication
+(ADR-038). Data artifacts (grid.zarr, dataframe.parquet) remain
+auth-gated. To add more public pages, extend the matcher:
+`@protected not path /status.html /health.html`.
 
 Upgrade to Option A when a domain name is available.
 
