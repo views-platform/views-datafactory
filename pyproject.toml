@@ -1,6 +1,6 @@
 [project]
 name = "views-datafactory"
-version = "1.2.26"
+version = "1.2.27"
 description = "Data factory for the VIEWS conflict forecasting platform — provenance, harvesting, consolidation, viewpoint construction, compilation, and assembly."
 readme = "README.md"
 requires-python = ">=3.12"
