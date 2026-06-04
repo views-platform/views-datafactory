@@ -191,6 +191,7 @@ class TestCheckStage:
             slo_hours=744,
         )
         assert result["status"] == "ok"
+        assert result["timestamp"] is not None
 
     def test_artifact_exists_stale_returns_yellow(
         self, tmp_path: Path,
@@ -217,6 +218,7 @@ class TestCheckStage:
             slo_hours=744,
         )
         assert result["status"] == "stale"
+        assert result["timestamp"] is not None
 
     def test_artifact_missing_returns_red(
         self, tmp_path: Path,
@@ -287,6 +289,162 @@ class TestCheckStage:
         assert result["status"] == "ok"
 
 
+class TestCheckStageBeige:
+    """Realistic misuse: missing ledgers, empty directories."""
+
+    def test_missing_ledger_artifact_present(
+        self, tmp_path: Path,
+    ) -> None:
+        data = tmp_path / "data"
+        data.mkdir()
+        (data / "store.parquet").write_text("x")
+        sa = StageArtifact(
+            artifact="store.parquet",
+            ledger="nonexistent/ledger.jsonl",
+        )
+        result = check_stage(
+            artifact=sa,
+            data_dir=data,
+            provenance_dir=tmp_path,
+            now=datetime.now(tz=UTC),
+            slo_hours=744,
+        )
+        assert result["status"] == "ok"
+        assert result["timestamp"] is None
+
+    def test_harvest_glob_empty_directory(
+        self, tmp_path: Path,
+    ) -> None:
+        data = tmp_path / "data"
+        raw = data / "raw" / "test"
+        raw.mkdir(parents=True)
+        sa = StageArtifact(
+            data_glob="raw/test/*.parquet",
+        )
+        result = check_stage(
+            artifact=sa,
+            data_dir=data,
+            provenance_dir=tmp_path,
+            now=datetime.now(tz=UTC),
+            slo_hours=744,
+        )
+        assert result["status"] == "missing"
+
+    def test_feature_names_json_empty_list(
+        self, tmp_path: Path,
+    ) -> None:
+        data = tmp_path / "data"
+        assembled = data / "assembled"
+        assembled.mkdir(parents=True)
+        (assembled / "feature_names.json").write_text("[]")
+        sa = StageArtifact(features=("ucdp_count",))
+        result = check_stage(
+            artifact=sa,
+            data_dir=data,
+            provenance_dir=tmp_path,
+            now=datetime.now(tz=UTC),
+            slo_hours=None,
+        )
+        assert result["status"] == "missing"
+
+    def test_feature_not_in_feature_names(
+        self, tmp_path: Path,
+    ) -> None:
+        data = tmp_path / "data"
+        assembled = data / "assembled"
+        assembled.mkdir(parents=True)
+        names = json.dumps(["acled_count", "acled_fatalities"])
+        (assembled / "feature_names.json").write_text(names)
+        sa = StageArtifact(
+            features=("ucdp_count", "acled_count"),
+        )
+        result = check_stage(
+            artifact=sa,
+            data_dir=data,
+            provenance_dir=tmp_path,
+            now=datetime.now(tz=UTC),
+            slo_hours=None,
+        )
+        assert result["status"] == "missing"
+
+
+class TestCheckStageRed:
+    """Adversarial: corrupt ledgers, bad timestamps."""
+
+    def test_corrupt_ledger_json(
+        self, tmp_path: Path,
+    ) -> None:
+        data = tmp_path / "data"
+        data.mkdir()
+        (data / "store.parquet").write_text("x")
+        prov = tmp_path / "prov"
+        prov.mkdir()
+        ledger = prov / "ledger.jsonl"
+        ledger.write_text("NOT VALID JSON\n{broken\n")
+        sa = StageArtifact(
+            artifact="store.parquet",
+            ledger="ledger.jsonl",
+        )
+        result = check_stage(
+            artifact=sa,
+            data_dir=data,
+            provenance_dir=prov,
+            now=datetime.now(tz=UTC),
+            slo_hours=744,
+        )
+        assert result["status"] == "ok"
+        assert result["timestamp"] is None
+
+    def test_unparseable_timestamp(
+        self, tmp_path: Path,
+    ) -> None:
+        data = tmp_path / "data"
+        data.mkdir()
+        (data / "store.parquet").write_text("x")
+        prov = tmp_path / "prov"
+        prov.mkdir()
+        ledger = prov / "ledger.jsonl"
+        entry = {"timestamp": "not-a-date", "outcome": "success"}
+        ledger.write_text(json.dumps(entry) + "\n")
+        sa = StageArtifact(
+            artifact="store.parquet",
+            ledger="ledger.jsonl",
+        )
+        result = check_stage(
+            artifact=sa,
+            data_dir=data,
+            provenance_dir=prov,
+            now=datetime.now(tz=UTC),
+            slo_hours=744,
+        )
+        assert result["status"] == "ok"
+
+    def test_ledger_entry_missing_timestamp_key(
+        self, tmp_path: Path,
+    ) -> None:
+        data = tmp_path / "data"
+        data.mkdir()
+        (data / "store.parquet").write_text("x")
+        prov = tmp_path / "prov"
+        prov.mkdir()
+        ledger = prov / "ledger.jsonl"
+        entry = {"outcome": "success", "source": "test"}
+        ledger.write_text(json.dumps(entry) + "\n")
+        sa = StageArtifact(
+            artifact="store.parquet",
+            ledger="ledger.jsonl",
+        )
+        result = check_stage(
+            artifact=sa,
+            data_dir=data,
+            provenance_dir=prov,
+            now=datetime.now(tz=UTC),
+            slo_hours=744,
+        )
+        assert result["status"] == "ok"
+        assert result["timestamp"] is None
+
+
 class TestGenerateHtml:
     """generate_html() produces valid HTML with the status matrix."""
 
@@ -349,6 +507,28 @@ class TestGenerateHtml:
             datetime.now(tz=UTC),
         )
         assert "75" in html
+
+
+class TestSourceCards:
+    """Data card links point to files that exist in the repo."""
+
+    def test_all_source_cards_exist(self) -> None:
+        repo_root = Path(__file__).parent.parent
+        cards = _mod._SOURCE_CARDS
+        for source, card_path in cards.items():
+            full = repo_root / card_path
+            assert full.exists(), (
+                f"_SOURCE_CARDS[{source!r}] points to "
+                f"{card_path!r} which does not exist"
+            )
+
+    def test_all_source_stages_have_card(self) -> None:
+        cards = _mod._SOURCE_CARDS
+        for source in SOURCE_STAGES:
+            assert source in cards, (
+                f"SOURCE_STAGES has {source!r} but "
+                f"_SOURCE_CARDS does not"
+            )
 
 
 class TestScriptStructure:

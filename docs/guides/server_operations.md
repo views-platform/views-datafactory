@@ -17,6 +17,8 @@ For initial setup, see `hetzner_deployment_guide.md`.
 | Check last failure | `sudo -u views-deploy cat /home/views-deploy/views-datafactory/logs/pipeline_failure.json` |
 | List raw data | `sudo -u views-deploy ls -la /home/views-deploy/views-datafactory/data/raw/ucdp_annual/` |
 | Check grid totals | See "Verify data" section below |
+| View pipeline status page | `http://204.168.219.108/status.html` (public, no auth — ADR-038) |
+| Regenerate status page | `sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/generate_status.py --output data/status.html'` |
 
 ---
 
