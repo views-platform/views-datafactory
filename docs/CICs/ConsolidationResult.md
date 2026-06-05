@@ -31,8 +31,8 @@ Provides a structured summary of what consolidation produced: how many sources w
 - Carries `n_sources`: number of source files processed
 - Carries `n_records_total`: total records in the store after consolidation
 - Carries `n_records_new`: records added in this run (0 if idempotent re-run)
-- Carries `n_records_before`: records in the store before this run
 - Carries `output_digest`: SHA-256 content digest of the output file
+- Carries `n_records_before`: records in the store before this run
 
 ---
 
@@ -42,8 +42,8 @@ Provides a structured summary of what consolidation produced: how many sources w
 - `n_sources`: int, number of source files consolidated
 - `n_records_total`: int, total records in the store
 - `n_records_new`: int, newly added records
-- `n_records_before`: int, records in the store before this run
 - `output_digest`: str, content digest of the output
+- `n_records_before`: int, records in the store before this run
 
 All fields are required. No defaults.
 
