@@ -8,8 +8,8 @@ Usage:
 
 Replaces centroid-in-polygon with area-majority spatial join:
 for each 0.5° PRIO-GRID cell, assigns the GAUL polygon with the
-largest intersection area. Recovers 149 coastal cells whose
-centroids fall in water (C-149).
+largest intersection area. Recovers 9,481 coastal cells globally
+whose centroids fall in water (C-149, ADR-039).
 
 Produces three Parquet files with (gid, value) schema:
     gaul0_code.parquet  — GAUL country code
@@ -19,7 +19,7 @@ Produces three Parquet files with (gid, value) schema:
 Dependencies: shapely 2.x, pyshp (both already installed).
 No geopandas, no GDAL (ADR-030 compliance).
 
-See: ADR-039 (draft), investigation #115, issue #118.
+See: ADR-039, investigation #115, issue #118.
 """
 
 from __future__ import annotations
