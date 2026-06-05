@@ -127,6 +127,14 @@ fi
 git checkout -- uv.lock 2>/dev/null || true
 git checkout "$DEPLOY_TAG" --quiet
 
+# ---- Concurrent execution guard (C-147) ----
+LOCK_FILE="/var/lock/views-pipeline.lock"
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+    echo "FATAL: Another pipeline run is already in progress (lock: $LOCK_FILE)"
+    exit 1
+fi
+
 PIPELINE_START=$(date +%s)
 PIPELINE_START_ISO=$(date -Iseconds)
 

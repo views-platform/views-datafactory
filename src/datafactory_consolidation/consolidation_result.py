@@ -15,6 +15,7 @@ class ConsolidationResult:
         n_sources: Number of source files consolidated.
         n_records_total: Total records in the store after consolidation.
         n_records_new: Records added in this run (0 if idempotent re-run).
+        n_records_before: Records in the store before this run.
         output_digest: SHA-256 content digest of the output file.
     """
 
@@ -22,4 +23,5 @@ class ConsolidationResult:
     n_sources: int
     n_records_total: int
     n_records_new: int
+    n_records_before: int
     output_digest: str

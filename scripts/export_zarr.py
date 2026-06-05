@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
 import time
 from datetime import UTC, datetime
@@ -200,44 +202,49 @@ def main() -> int:
         for name in feature_names
     }
 
-    # Remove existing store if present
-    if output.exists():
-        import shutil
-
-        shutil.rmtree(output)
-
-    ds.to_zarr(
-        output,
-        mode="w",
-        encoding=encoding,
-    )
-
-    # Ensure consolidated metadata for HTTP serving
+    # Atomic swap (C-144): write to .tmp, verify, then rename into
+    # the live path. Shrinks the consumer-visible gap from ~60s to <1ms.
     import zarr
 
-    zarr.consolidate_metadata(str(output))
+    tmp_output = output.parent / (output.name + ".tmp")
 
-    # Round-trip integrity check: read back the zarr store and verify
-    # feature sums match the input grid. Catches silent data loss during
-    # export (e.g., partial writes, chunking bugs, stale stores).
-    # Uses zarr directly and sums one feature at a time to stay within
-    # the 8 GB RAM budget on the production server.
-    print()
-    print("Round-trip integrity check...")
-    store = zarr.open(str(output), mode="r")
-    n_checked = 0
-    for name in feature_names:
-        zarr_sum = float(np.array(store[name]).sum())
-        src_sum = source_sums[name]
-        if abs(src_sum - zarr_sum) > 0.5:
-            print(
-                f"FAIL: {name} sum mismatch — "
-                f"grid={src_sum:.1f}, zarr={zarr_sum:.1f}"
-            )
-            return 1
-        n_checked += 1
-    del store
-    print(f"  {n_checked} features verified (sums match)")
+    if tmp_output.exists():
+        shutil.rmtree(tmp_output)
+
+    try:
+        ds.to_zarr(
+            tmp_output,
+            mode="w",
+            encoding=encoding,
+        )
+        zarr.consolidate_metadata(str(tmp_output))
+
+        print()
+        print("Round-trip integrity check...")
+        store = zarr.open(str(tmp_output), mode="r")
+        n_checked = 0
+        for name in feature_names:
+            zarr_sum = float(np.array(store[name]).sum())
+            src_sum = source_sums[name]
+            if abs(src_sum - zarr_sum) > 0.5:
+                print(
+                    f"FAIL: {name} sum mismatch — "
+                    f"grid={src_sum:.1f}, zarr={zarr_sum:.1f}"
+                )
+                del store
+                shutil.rmtree(tmp_output)
+                return 1
+            n_checked += 1
+        del store
+        print(f"  {n_checked} features verified (sums match)")
+
+        if output.exists():
+            shutil.rmtree(output)
+        os.rename(str(tmp_output), str(output))
+    except BaseException:
+        if tmp_output.exists():
+            shutil.rmtree(tmp_output)
+        raise
 
     elapsed = time.monotonic() - t0
 

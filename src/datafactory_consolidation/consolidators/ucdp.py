@@ -411,6 +411,13 @@ def consolidate_ucdp(
     )
     n_new_raw = new_table.num_rows
 
+    expected_raw = sum(m["n_records"] for m in source_manifest)
+    if n_new_raw != expected_raw:
+        raise RuntimeError(
+            f"Row count mismatch after concat: "
+            f"expected {expected_raw}, got {n_new_raw}"
+        )
+
     # Read existing store and deduplicate (vintage-aware, ADR-017)
     existing = read_store(config.output_path)
     if existing is not None:
@@ -461,6 +468,14 @@ def consolidate_ucdp(
         n_new = n_new_raw
         n_before = 0
 
+    expected_total = n_before + n_new
+    if combined.num_rows != expected_total:
+        raise RuntimeError(
+            f"Row count mismatch after merge: "
+            f"expected {n_before} + {n_new} = {expected_total}, "
+            f"got {combined.num_rows}"
+        )
+
     # Write consolidated store
     output_digest = write_store(combined, config.output_path)
 
@@ -498,6 +513,7 @@ def consolidate_ucdp(
         n_sources=len(source_manifest),
         n_records_total=n_total,
         n_records_new=n_new,
+        n_records_before=n_before,
         output_digest=output_digest,
     )
 
