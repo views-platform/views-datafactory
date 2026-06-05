@@ -5,7 +5,7 @@
 **Risk register:** C-149 (Tier 2 — silent data gap)
 **Started:** 2026-06-04
 **Investigators:** Simon Polichinel von der Maase, Claude Code
-**Status:** Investigation phase — evidence gathered, pre-analysis plan registered
+**Status:** Complete — ADR-039 accepted, pipeline integrated, all consumers verified
 
 ---
 

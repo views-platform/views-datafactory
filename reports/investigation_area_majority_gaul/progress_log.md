@@ -185,6 +185,26 @@ made the swap transparent.
 
 ---
 
-## Next expected entry
+## 2026-06-05 — Phase 5: Documentation (#122)
 
-Phase 5: Documentation (#122). ADR-039, CIC updates, C-149 resolution, issue #115 closure.
+**Actions taken:**
+- Finalized ADR-039 at `docs/ADRs/039_area_majority_gaul_assignment.md` (status: Accepted)
+  - Updated with actual H1-H5 results, resolved all 4 open questions, documented name file gap
+- Updated CIC `grid_to_country_month.md`: revised section 3 guarantee (excluded cell counts), added ADR-039 to related ADRs, updated last-reviewed date
+- Updated C-149 resolution in risk register archive: added root cause fix reference to ADR-039
+- Set investigation README status to "Complete"
+
+**ADR-039 key content:**
+- Decision: precomputed area-majority lookup table via shapely, run once per GAUL version
+- Validation results table with all 5 hypotheses
+- 4 considered alternatives (runtime, Rust, geopandas, DuckDB) with rejection rationale
+- Resolved questions section replacing the former open questions
+- Name file gap documented as known negative consequence
+
+**What went well:** Clean documentation phase. All artifacts already existed in draft form from the investigation structure.
+
+---
+
+## Investigation complete
+
+All 5 phases finished. 39 tests across unit, hypothesis, integration, and splash-zone categories. ADR-039 accepted. C-149 root cause resolved.

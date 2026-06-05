@@ -726,9 +726,9 @@ The falsification test `test_register_header_count` in `test_falsification_v1221
 
 603 PRIO-GRID cells in `africa_me_legacy` (and ~1,800 in `land`) have centroids that fall outside any FAO GAUL polygon — coastal cells, small islands, boundary edge cases. These cells are assigned `gaul0_code = -1` during assembly. `grid_to_countr...
 
-**Resolved 2026-05-27.** Added verification tests (`test_model_parity.py::TestCMParity`, `test_pipeline_consistency.py::TestPGMCMAggregation`) that explicitly account for the gap.
+**Resolved 2026-05-27.** Added verification tests (`test_model_parity.py::TestCMParity`, `test_pipeline_consistency.py::TestPGMCMAggregation`) that explicitly account for the gap. **Root cause fixed 2026-06-05** via ADR-039: area-majority spatial join recovers 9,481 coastal cells globally (149 in Africa+ME). Centroid-in-polygon replaced by polygon intersection with largest overlap. 39 tests across 4 phases verify correctness. See `reports/investigation_area_majority_gaul/`.
 
-**Source:** Pipeline verification audit 2026-04-30. Cross-ref: C-125 (CM aggregation implementation), C-139 (aggregate total checks).
+**Source:** Pipeline verification audit 2026-04-30. Cross-ref: C-125 (CM aggregation implementation), C-139 (aggregate total checks), ADR-039.
 
 
 ### C-129: ~~Partition boundaries (month IDs) have no single source of truth~~ RESOLVED
