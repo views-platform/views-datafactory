@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-22
+**Last reviewed:** 2026-06-05
 **Related ADRs:** ADR-008, ADR-013
 
 ---
@@ -31,6 +31,7 @@ Provides a structured summary of what consolidation produced: how many sources w
 - Carries `n_sources`: number of source files processed
 - Carries `n_records_total`: total records in the store after consolidation
 - Carries `n_records_new`: records added in this run (0 if idempotent re-run)
+- Carries `n_records_before`: records in the store before this run
 - Carries `output_digest`: SHA-256 content digest of the output file
 
 ---
@@ -41,6 +42,7 @@ Provides a structured summary of what consolidation produced: how many sources w
 - `n_sources`: int, number of source files consolidated
 - `n_records_total`: int, total records in the store
 - `n_records_new`: int, newly added records
+- `n_records_before`: int, records in the store before this run
 - `output_digest`: str, content digest of the output
 
 All fields are required. No defaults.
@@ -92,6 +94,7 @@ result.n_records_new = 0  # AttributeError (frozen)
 ## 10. Test Alignment
 
 - **Green:** Correct counts after consolidation, digest non-empty
+- **Green:** `n_records_before` correct after incremental consolidation (C-146)
 - **Beige:** Idempotent re-run produces n_records_new=0
 
 Tests in `tests/test_consolidation.py`.
