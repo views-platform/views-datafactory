@@ -35,6 +35,8 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import zarr
+
 
 def main() -> int:
     """Export assembled grid to zarr."""
@@ -203,9 +205,7 @@ def main() -> int:
     }
 
     # Atomic swap (C-144): write to .tmp, verify, then rename into
-    # the live path. Shrinks the consumer-visible gap from ~60s to <1ms.
-    import zarr
-
+    # the live path. Shrinks the consumer-visible gap to a single rename.
     tmp_output = output.parent / (output.name + ".tmp")
 
     if tmp_output.exists():
@@ -238,10 +238,15 @@ def main() -> int:
         del store
         print(f"  {n_checked} features verified (sums match)")
 
+        old_output = output.parent / (output.name + ".old")
+        if old_output.exists():
+            shutil.rmtree(old_output)
         if output.exists():
-            shutil.rmtree(output)
+            os.rename(str(output), str(old_output))
         os.rename(str(tmp_output), str(output))
-    except BaseException:
+        if old_output.exists():
+            shutil.rmtree(old_output)
+    except Exception:
         if tmp_output.exists():
             shutil.rmtree(tmp_output)
         raise

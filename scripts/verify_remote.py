@@ -415,7 +415,9 @@ def main() -> int:
     step = "11/11  Status page"
     status_url = f"{base_url}/status.html"
     try:
-        resp = requests.get(status_url, timeout=10)
+        no_auth_status = requests.Session()
+        no_auth_status.trust_env = False
+        resp = no_auth_status.get(status_url, timeout=10)
         if resp.status_code == 200:
             ok = _result(step, True, "status page public, HTTP 200")
         elif resp.status_code == 401:

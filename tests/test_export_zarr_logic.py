@@ -266,14 +266,17 @@ class TestAtomicZarrSwap:
 
         assert old_sum != new_sum
 
-        shutil.rmtree(output)
+        old_output = tmp_path / "grid.zarr.old"
+        os.rename(str(output), str(old_output))
         os.rename(str(tmp_output), str(output))
+        shutil.rmtree(old_output)
 
         ds_back = xr.open_zarr(output)
         assert float(ds_back["var_a"].values.sum()) == pytest.approx(
             new_sum, abs=0.5
         )
         assert not tmp_output.exists()
+        assert not old_output.exists()
 
     def test_tmp_cleaned_on_write_failure(
         self, tmp_path: Path
