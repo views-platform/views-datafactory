@@ -102,7 +102,7 @@ def main() -> int:
     print()
 
     # ---- Check 1: Connectivity ----
-    step = " 1/10  Connectivity"
+    step = " 1/11  Connectivity"
     try:
         sock = socket.create_connection((server, port), timeout=10)
         sock.close()
@@ -119,7 +119,7 @@ def main() -> int:
     # ---- Check 2: Auth enforcement ----
     # Use a fresh Session with trust_env=False to prevent
     # auto-reading ~/.netrc credentials for this test.
-    step = " 2/10  Auth enforcement"
+    step = " 2/11  Auth enforcement"
     try:
         no_auth = requests.Session()
         no_auth.trust_env = False
@@ -138,7 +138,7 @@ def main() -> int:
         n_failed += 1
 
     # ---- Check 3: Netrc credentials ----
-    step = " 3/10  Netrc credentials"
+    step = " 3/11  Netrc credentials"
     auth_tuple = None
     try:
         netrc_path = Path.home() / ".netrc"
@@ -176,7 +176,7 @@ def main() -> int:
         return 1
 
     # ---- Check 4: Metadata ----
-    step = " 4/10  Metadata"
+    step = " 4/11  Metadata"
     metadata = None
     try:
         resp = requests.get(
@@ -204,7 +204,7 @@ def main() -> int:
         n_failed += 1
 
     # ---- Check 5: Dataset attributes ----
-    step = " 5/10  Dataset attributes"
+    step = " 5/11  Dataset attributes"
     if metadata:
         try:
             attrs = metadata["metadata"][".zattrs"]
@@ -251,7 +251,7 @@ def main() -> int:
         n_failed += 1
 
     # ---- Check 6: Dimensions ----
-    step = " 6/10  Dimensions"
+    step = " 6/11  Dimensions"
     if metadata:
         try:
             meta = metadata["metadata"]
@@ -286,7 +286,7 @@ def main() -> int:
         n_failed += 1
 
     # ---- Check 7: Variables ----
-    step = " 7/10  Variables"
+    step = " 7/11  Variables"
     if metadata:
         try:
             meta_keys = metadata.get("metadata", {})
@@ -325,7 +325,7 @@ def main() -> int:
     # ---- Check 8: Data access (xarray) ----
     # Reads netrc credentials and wraps them in aiohttp.BasicAuth
     # (required by fsspec's aiohttp backend — C-96).
-    step = " 8/10  Data access"
+    step = " 8/11  Data access"
     ds = None
     try:
         import aiohttp
@@ -357,7 +357,7 @@ def main() -> int:
         n_failed += 1
 
     # ---- Check 9: Data sanity ----
-    step = " 9/10  Data sanity"
+    step = " 9/11  Data sanity"
     if ds is not None:
         try:
             import numpy as np
@@ -389,7 +389,7 @@ def main() -> int:
         n_failed += 1
 
     # ---- Check 10: Parquet ----
-    step = "10/10  Parquet"
+    step = "10/11  Parquet"
     try:
         resp = requests.head(
             parquet_url,
@@ -401,6 +401,32 @@ def main() -> int:
             ok = _result(
                 step, True,
                 f"dataframe.parquet available ({size_mb:.0f} MB)",
+            )
+        else:
+            ok = _result(step, False, f"HTTP {resp.status_code}")
+    except Exception as e:
+        ok = _result(step, False, str(e))
+    if ok:
+        n_passed += 1
+    else:
+        n_failed += 1
+
+    # ---- Check 11: Status page (public, no auth) ----
+    step = "11/11  Status page"
+    status_url = f"{base_url}/status.html"
+    try:
+        resp = requests.get(status_url, timeout=10)
+        if resp.status_code == 200:
+            ok = _result(step, True, "status page public, HTTP 200")
+        elif resp.status_code == 401:
+            ok = _result(
+                step, False,
+                "behind auth — Caddyfile @protected not applied",
+            )
+        elif resp.status_code == 404:
+            ok = _result(
+                step, False,
+                "not found — output path or symlink wrong",
             )
         else:
             ok = _result(step, False, f"HTTP {resp.status_code}")

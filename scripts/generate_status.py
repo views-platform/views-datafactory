@@ -4,9 +4,7 @@
 Usage:
     uv run python scripts/generate_status.py
     uv run python scripts/generate_status.py \
-        --data-dir /srv/views-data/data \
-        --provenance-dir /srv/views-data/provenance \
-        --output /srv/views-data/www/status.html
+        --output data/status.html
 
 Reads provenance ledgers and checks filesystem artifacts to produce
 a source-by-stage matrix. Each cell shows whether the artifact

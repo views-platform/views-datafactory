@@ -95,6 +95,11 @@ generate_status_on_exit() {
     uv run python scripts/generate_status.py \
         --output data/status.html \
         || echo "Warning: status page generation failed (non-fatal)"
+    if [ -f "data/status.html" ]; then
+        echo "  Status page written to data/status.html"
+    else
+        echo "  WARNING: data/status.html not found after generation"
+    fi
 }
 trap generate_status_on_exit EXIT
 
