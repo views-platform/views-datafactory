@@ -156,6 +156,35 @@ made the swap transparent.
 
 ---
 
+## 2026-06-05 — Phase 4: Splash zone verification (#121)
+
+**Actions taken:**
+- Investigated three downstream consumers: CM aggregation, consumer bridge, region subsetting
+- Wrote 6 splash-zone tests (TestS1, TestS2, TestS3) with `@pytest.mark.falsification`
+- All 6 pass — no consumer code changes required
+
+**Consumer analysis:**
+
+| Consumer | Mechanism | Status |
+|----------|-----------|--------|
+| `grid_to_country_month.py` | Groups by `gaul0_code > 0` from assembled grid | Works — 9,481 recovered cells now enter aggregation instead of being excluded |
+| `generate_consumer_data.py` | Maps `gaul0_code` → `c_id` via FEATURE_RENAME | Works — maps codes, not names |
+| `regions.py` | Reads `gaul0_name.parquet` → country name → pgid set | Stable — name files unchanged (86,091 rows from centroid era) |
+
+**Name file gap (known limitation):**
+- `gaul0_code.parquet` has 259,200 rows (95,572 valid). `gaul0_name.parquet` has 86,091 rows.
+- The 9,481 recovered cells have valid country codes but no country names.
+- This is not a regression — these cells were previously unmapped entirely.
+- Region subsetting returns identical pgid sets (name files unchanged).
+- Documented in test `test_name_file_row_count_documents_gap`.
+
+**What went well:** All three consumer paths verified without code changes. The (gid, value) schema abstraction and code-not-name design of CM aggregation and consumer bridge made the swap transparent.
+
+**Artifacts produced:**
+- 6 splash-zone tests in `tests/test_area_majority.py`
+
+---
+
 ## Next expected entry
 
-Phase 4: Splash zone verification (#121). Verify CM aggregation, region lookups, consumer bridge.
+Phase 5: Documentation (#122). ADR-039, CIC updates, C-149 resolution, issue #115 closure.

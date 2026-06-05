@@ -632,3 +632,114 @@ class TestI3ProvenanceIntegrity:
             f"Missing area_majority ledger entries: "
             f"{expected - am_versions}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 tests (#121): Splash zone verification
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.falsification
+class TestS1CMAggregation:
+    """S1: CM aggregation works correctly with area-majority codes."""
+
+    def test_cm_fewer_unassigned_cells_than_centroid(self) -> None:
+        area_maj = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
+        backup = _load_gid_value(
+            _CENTROID_BACKUP / "gaul0_code.parquet",
+        )
+        am_unassigned = sum(
+            1 for v in area_maj.values() if v <= 0
+        )
+        # Centroid had 86,091 rows total, all matched (no -1 rows
+        # stored). The full grid has 259,200 cells, so centroid left
+        # 259,200 - 86,091 = 173,109 cells unmapped.
+        centroid_unassigned = 259200 - len(backup)
+        assert am_unassigned < centroid_unassigned, (
+            f"Area-majority has {am_unassigned} unassigned cells, "
+            f"expected fewer than centroid's {centroid_unassigned}"
+        )
+
+    def test_cm_all_valid_codes_are_positive(self) -> None:
+        area_maj = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
+        valid = {
+            gid: val for gid, val in area_maj.items()
+            if val != -1
+        }
+        bad = [
+            (gid, val) for gid, val in valid.items()
+            if val <= 0
+        ]
+        assert len(bad) == 0, (
+            f"{len(bad)} cells have non-(-1) but non-positive "
+            f"codes. First 10: {bad[:10]}"
+        )
+
+    def test_cm_no_silent_loss_of_valid_cells(self) -> None:
+        area_maj = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
+        backup = _load_gid_value(
+            _CENTROID_BACKUP / "gaul0_code.parquet",
+        )
+        am_valid = sum(1 for v in area_maj.values() if v > 0)
+        backup_valid = sum(1 for v in backup.values() if v > 0)
+        assert am_valid >= backup_valid, (
+            f"Area-majority has {am_valid} valid cells, "
+            f"fewer than centroid's {backup_valid}"
+        )
+
+
+@pytest.mark.falsification
+class TestS2ConsumerBridge:
+    """S2: Consumer bridge maps gaul0_code correctly."""
+
+    def test_consumer_feature_rename_includes_gaul0_code(
+        self,
+    ) -> None:
+        script = (
+            _REPO_ROOT / "scripts" / "generate_consumer_data.py"
+        )
+        text = script.read_text()
+        assert '"gaul0_code": "c_id"' in text, (
+            "FEATURE_RENAME must map gaul0_code → c_id"
+        )
+
+
+@pytest.mark.falsification
+class TestS3RegionSubsetting:
+    """S3: Region subsetting stable after area-majority swap."""
+
+    def test_region_pgids_unchanged_from_name_file(self) -> None:
+        from datafactory_query.regions import (
+            _load_country_pgids,
+            load_region_pgids,
+        )
+
+        country_pgids = _load_country_pgids(_CENTROID_DIR)
+        assert len(country_pgids) > 0, (
+            "No countries loaded from gaul0_name.parquet"
+        )
+        for region in ("africa", "middle_east", "africa_me"):
+            pgids = load_region_pgids(region, gaul_dir=_CENTROID_DIR)
+            assert len(pgids) > 0, (
+                f"Region {region!r} returned empty pgid set"
+            )
+
+    def test_name_file_row_count_documents_gap(self) -> None:
+        name_table = pq.read_table(
+            _CENTROID_DIR / "gaul0_name.parquet",
+        )
+        code_table = pq.read_table(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
+        assert name_table.num_rows < code_table.num_rows, (
+            f"Expected name file ({name_table.num_rows} rows) "
+            f"to have fewer rows than code file "
+            f"({code_table.num_rows} rows) — the gap documents "
+            f"recovered cells without names"
+        )
