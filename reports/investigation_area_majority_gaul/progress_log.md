@@ -126,6 +126,36 @@ The benchmark was on 500 cells; the full grid has more dense-polygon regions
 
 ---
 
+## 2026-06-05 — Phase 3: Pipeline integration (#120)
+
+**Actions taken:**
+- Backed up centroid code files to `data/raw/gaul_admin/centroid_backup/`
+- Ran area-majority generation to canonical `data/raw/gaul_admin/` directory
+- Updated `scripts/refresh_pipeline.sh` to run `generate_area_majority_gaul.py` after `harvest_gaul.py`
+- Wrote 5 integration tests (TestI1, TestI2, TestI3) with `@pytest.mark.falsification`
+- Updated H-tests (H1, H2, H3) to compare against centroid backup baseline
+
+**Integration approach:**
+- Harvester continues to run (downloads shapefiles, produces name files + iso3_code)
+- Area-majority script runs immediately after harvester, overwriting code files only
+- Name files (`gaul0_name.parquet`, etc.) unchanged — Phase 4 concern
+- Assembly script requires zero code changes (reads (gid, value) pairs)
+
+**Test updates:**
+- H-tests now compare `centroid_backup/` (original 86,091-row centroid) against `data/raw/gaul_admin/` (259,200-row area-majority)
+- 5 new integration tests: assembly compatibility (row count, gid superset), pipeline wiring (script order, output dir), provenance integrity
+
+**What went well:** Zero code changes to assembly, harvester, source registry, or consumers.
+Only `refresh_pipeline.sh` needed a 3-line addition. The (gid, value) schema abstraction
+made the swap transparent.
+
+**Artifacts produced:**
+- Centroid backup at `data/raw/gaul_admin/centroid_backup/` (86,091-row originals)
+- Area-majority code files at canonical `data/raw/gaul_admin/` (259,200 rows, 95,572 valid)
+- Provenance entries in `provenance/gaul_admin/ingestion_ledger.jsonl` with `method: area_majority`
+
+---
+
 ## Next expected entry
 
-Phase 3: Pipeline integration (#120). Wire area-majority output into assembly.
+Phase 4: Splash zone verification (#121). Verify CM aggregation, region lookups, consumer bridge.

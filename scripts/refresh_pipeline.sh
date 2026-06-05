@@ -150,6 +150,9 @@ uv run python scripts/harvest_ucdp.py
 uv run python scripts/harvest_priogrid.py
 uv run python scripts/harvest_shapefile.py
 uv run python scripts/harvest_gaul.py
+uv run python scripts/generate_area_majority_gaul.py \
+    --data-dir data/raw/gaul_admin \
+    --ledger-path provenance/gaul_admin/ingestion_ledger.jsonl
 uv run python scripts/harvest_acled.py
 uv run python scripts/harvest_ghspop.py
 uv run python scripts/harvest_ghsbuilts.py

@@ -400,6 +400,7 @@ class TestGenerationScriptRed:
 
 _CENTROID_DIR = Path("data/raw/gaul_admin")
 _AREA_MAJ_DIR = Path("data/raw/gaul_admin_area_majority")
+_CENTROID_BACKUP = _CENTROID_DIR / "centroid_backup"
 
 
 def _load_gid_value(parquet_path: Path) -> dict[int, int]:
@@ -415,8 +416,12 @@ class TestH1CoastalCellRecovery:
     """H1: All coastal cells with centroid in water get valid codes."""
 
     def test_recovered_cells_have_valid_codes(self) -> None:
-        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
-        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        centroid = _load_gid_value(
+            _CENTROID_BACKUP / "gaul0_code.parquet",
+        )
+        area_maj = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
         centroid_gids = set(centroid.keys())
         recovered = {
             gid: val for gid, val in area_maj.items()
@@ -428,8 +433,12 @@ class TestH1CoastalCellRecovery:
             )
 
     def test_recovered_cell_count_exceeds_zero(self) -> None:
-        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
-        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        centroid = _load_gid_value(
+            _CENTROID_BACKUP / "gaul0_code.parquet",
+        )
+        area_maj = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
         centroid_gids = set(centroid.keys())
         recovered = [
             gid for gid, val in area_maj.items()
@@ -445,25 +454,38 @@ class TestH2NoAssignmentLoss:
     """H2: No cell with valid centroid assignment loses it."""
 
     def test_no_valid_cell_loses_assignment(self) -> None:
-        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
-        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        centroid = _load_gid_value(
+            _CENTROID_BACKUP / "gaul0_code.parquet",
+        )
+        area_maj = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
         lost = [
             gid for gid, val in centroid.items()
             if val > 0 and area_maj.get(gid, -1) <= 0
         ]
         assert len(lost) == 0, (
-            f"H2 falsified: {len(lost)} cells lost valid assignment. "
-            f"First 10: {lost[:10]}"
+            f"H2 falsified: {len(lost)} cells lost valid "
+            f"assignment. First 10: {lost[:10]}"
         )
 
     def test_valid_cell_count_increases(self) -> None:
-        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
-        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
-        centroid_valid = sum(1 for v in centroid.values() if v > 0)
-        area_maj_valid = sum(1 for v in area_maj.values() if v > 0)
+        centroid = _load_gid_value(
+            _CENTROID_BACKUP / "gaul0_code.parquet",
+        )
+        area_maj = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
+        centroid_valid = sum(
+            1 for v in centroid.values() if v > 0
+        )
+        area_maj_valid = sum(
+            1 for v in area_maj.values() if v > 0
+        )
         assert area_maj_valid >= centroid_valid, (
-            f"H2 falsified: area-majority has fewer valid cells "
-            f"({area_maj_valid}) than centroid ({centroid_valid})"
+            f"H2 falsified: area-majority has fewer valid "
+            f"cells ({area_maj_valid}) than centroid "
+            f"({centroid_valid})"
         )
 
 
@@ -472,15 +494,20 @@ class TestH3BorderRedistribution:
     """H3: 100-2,000 border cells change assignment."""
 
     def test_redistribution_count_in_expected_range(self) -> None:
-        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
-        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        centroid = _load_gid_value(
+            _CENTROID_BACKUP / "gaul0_code.parquet",
+        )
+        area_maj = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
         changed = [
             gid for gid in centroid
-            if gid in area_maj and centroid[gid] != area_maj[gid]
+            if gid in area_maj
+            and centroid[gid] != area_maj[gid]
         ]
         assert 100 <= len(changed) <= 2000, (
-            f"H3 falsified: {len(changed)} cells changed assignment "
-            f"(expected 100-2,000)"
+            f"H3 falsified: {len(changed)} cells changed "
+            f"assignment (expected 100-2,000)"
         )
 
 
@@ -506,3 +533,102 @@ class TestH5FormatCompatibility:
             assert path.exists(), (
                 f"Missing area-majority file: {path}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 tests (#120): Pipeline integration
+# ---------------------------------------------------------------------------
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_PIPELINE_SCRIPT = _REPO_ROOT / "scripts" / "refresh_pipeline.sh"
+_GAUL_LEDGER = (
+    _REPO_ROOT / "provenance" / "gaul_admin" / "ingestion_ledger.jsonl"
+)
+
+
+@pytest.mark.falsification
+class TestI1AssemblyCompatibility:
+    """I1: Area-majority files in canonical dir after integration."""
+
+    def test_canonical_dir_has_full_grid_row_count(self) -> None:
+        for level in ("gaul0_code", "gaul1_code", "gaul2_code"):
+            t = pq.read_table(_CENTROID_DIR / f"{level}.parquet")
+            assert t.num_rows == 259200, (
+                f"{level}: expected 259,200 rows, "
+                f"got {t.num_rows}"
+            )
+
+    def test_canonical_gids_are_superset_of_backup(self) -> None:
+        canonical = _load_gid_value(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
+        backup = _load_gid_value(
+            _CENTROID_BACKUP / "gaul0_code.parquet",
+        )
+        missing = set(backup.keys()) - set(canonical.keys())
+        assert len(missing) == 0, (
+            f"{len(missing)} backup gids missing from "
+            f"canonical. First 10: {sorted(missing)[:10]}"
+        )
+
+
+@pytest.mark.falsification
+class TestI2PipelineWiring:
+    """I2: refresh_pipeline.sh runs area-majority after harvest."""
+
+    def test_refresh_pipeline_runs_area_majority_after_harvest(
+        self,
+    ) -> None:
+        text = _PIPELINE_SCRIPT.read_text()
+        harvest_pos = text.find("harvest_gaul.py")
+        area_maj_pos = text.find("generate_area_majority_gaul.py")
+        assert harvest_pos >= 0, (
+            "harvest_gaul.py not found in refresh_pipeline.sh"
+        )
+        assert area_maj_pos >= 0, (
+            "generate_area_majority_gaul.py not found in "
+            "refresh_pipeline.sh"
+        )
+        assert area_maj_pos > harvest_pos, (
+            "area-majority must run after harvest_gaul.py"
+        )
+
+    def test_area_majority_overwrites_to_gaul_admin_dir(
+        self,
+    ) -> None:
+        text = _PIPELINE_SCRIPT.read_text()
+        idx = text.find("generate_area_majority_gaul.py")
+        assert idx >= 0
+        after = text[idx:idx + 300]
+        assert "data/raw/gaul_admin" in after, (
+            "area-majority script must write to "
+            "data/raw/gaul_admin"
+        )
+
+
+@pytest.mark.falsification
+class TestI3ProvenanceIntegrity:
+    """I3: Provenance ledger records area-majority method."""
+
+    def test_area_majority_ledger_has_all_three_levels(
+        self,
+    ) -> None:
+        import json
+
+        assert _GAUL_LEDGER.exists(), (
+            f"Ledger not found: {_GAUL_LEDGER}"
+        )
+        entries = [
+            json.loads(line)
+            for line in _GAUL_LEDGER.read_text().strip().splitlines()
+        ]
+        am_entries = [
+            e for e in entries
+            if e.get("method") == "area_majority"
+        ]
+        am_versions = {e["version"] for e in am_entries}
+        expected = {"gaul0_code", "gaul1_code", "gaul2_code"}
+        assert am_versions >= expected, (
+            f"Missing area_majority ledger entries: "
+            f"{expected - am_versions}"
+        )
