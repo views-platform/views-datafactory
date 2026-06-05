@@ -1,8 +1,8 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-06-05)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05
-**Status:** 241 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 184 resolved, 54 open concerns (3 Tier 2, 10 Tier 3, 35 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 161 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05
+**Status:** 243 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 184 resolved, 56 open concerns (4 Tier 2, 11 Tier 3, 35 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 161 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -59,6 +59,8 @@
 | C-239 | 2 | Issue #104 paths produce silent wrong status page | Developer sets up daily cron using #104's --data-dir/--provenance-dir commands | Operational monitoring |
 | C-240 | 4 | generate_status.py docstring specifies nonexistent /www/ path | Developer follows script's usage example verbatim | Status page |
 | C-241 | 4 | No invariant for intensive feature conservation across resolution or aggregation | First consumer aggregates intensive features (HDI, built-up fraction) to country-month or grid resolution changes | Aggregation correctness |
+| C-242 | 2 | ADR-040 count conservation invariants accepted but zero test enforcement | Code change modifies skip/exclusion logic in compilation or CM aggregation | Count conservation |
+| C-243 | 3 | ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality) | Area-majority join (#118) changes gaul assignment method, or new admin system added | Count conservation |
 | ~~D-32~~ | — | ~~`assembled` flag vs removing features from partially-integrated sources~~ | Resolved: chose removal (#105) | Source registry |
 | D-33 | — | Pipeline-path information: registry field vs standalone mapping vs convention | Open | Source registry |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
@@ -102,6 +104,7 @@ Items that should be resolved together:
 | ~~**Data integrity**~~ | ~~C-138~~, ~~C-149~~ (C-137, C-139 resolved 2026-05-26, C-149 resolved 2026-05-27, C-138 resolved 2026-05-28) | Resolved 2026-05-28: all items resolved |
 | ~~**Data boundary**~~ | ~~C-130~~, ~~C-133~~, ~~C-134~~, C-135 | Resolved 2026-05-28: C-130 resolved, C-135 demoted (C-133, C-134 resolved earlier) |
 | **Harvest correctness** | ~~C-182~~, ~~C-184~~, C-185, C-186, ~~C-188~~ | Before relying on harvest caching for correctness |
+| **Count conservation** | C-241, C-242, C-243 | Before area-majority join (#118) merges or next data source adds count features |
 | **WET-before-DRY refactor** | ~~C-44~~, C-07, C-155, C-164, C-195, C-230 | Before WDI or next refactor sprint (V-Dem added without extraction; C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8) |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
 | **Migration scope** | ~~C-125~~, C-126 | Before claiming full viewser replacement for the fleet |
@@ -146,6 +149,25 @@ Issue #104 specifies `--data-dir /srv/views-data` and `--provenance-dir /srv/vie
 **Resolution:** Close or rewrite #104. The correct invocation uses relative paths from the repo root (as the deployment guide line 377 and refresh_pipeline.sh line 95-96 already do): `uv run python scripts/generate_status.py --output data/status.html` (with defaults for `--data-dir` and `--provenance-dir` resolving to `data/` and `provenance/` relative to cwd).
 
 Cross-ref: C-238 (stale Caddy claims in same issue), C-237 (status page generation/delivery), C-240 (docstring path).
+
+
+### C-242: ADR-040 count conservation invariants accepted but zero test enforcement
+
+| Field | Value |
+|-------|-------|
+| ID | C-242 |
+| Tier | 2 |
+| Source | test-review (2026-06-05), area-majority investigation effort |
+| Trigger | Code change modifies skip/exclusion logic in `_place_events_columnar` or `grid_to_country_month` without a conservation assertion to catch the regression |
+| Location | `src/datafactory_compilation/grid_compilation.py:103-151` (skip variables, no assertion), `src/datafactory_adapters/grid_to_country_month.py:73-99` (exclusion count, no accounting equation), `docs/ADRs/040_count_conservation_and_hierarchical_reconciliation.md` §Validation |
+
+ADR-040 mandates `placed + excluded = input` at every layer boundary (Invariant 1). The variables already exist: `n_skipped_spatial` and `n_skipped_temporal` in `grid_compilation.py:103-151`, and `n_excluded` with `excluded_mask` in `grid_to_country_month.py:73-99`. But these are used only for warning-level logging — no assertion verifies the equation, and no test checks it. The ADR creates a governance expectation that the codebase does not enforce. This is the same structural pattern that allowed C-149: skip counts exist but are informational, not load-bearing.
+
+**Impact:** Tier 2 because a code change that breaks the accounting (adds a new skip reason, changes the exclusion filter, introduces an off-by-one) would silently violate the conservation invariant with no signal. The ADR creates false confidence that counts are conserved.
+
+**Resolution:** (1) Add assertions at both layer boundaries: `assert n_placed + n_skipped_spatial + n_skipped_temporal == table.num_rows` in compilation, and `assert abs(grid_total - (cm_total + excluded_total)) < atol` in CM aggregation. (2) Create `tests/test_count_conservation.py` with synthetic-data tests that verify both equations independently of real data.
+
+Cross-ref: C-241 (intensive feature gap — different invariant), C-243 (hierarchical reconciliation test gap), ADR-040.
 
 
 ## Tier 3 — Improve Quality
@@ -257,6 +279,22 @@ Three documentation/governance gaps discovered during the status page understand
 **Resolution:** (1) Update #104 body to reference ADR-038 and #124 for Caddy changes, or close #104 with a pointer to #123. (2) Ensure daily cron setup is explicitly covered by one of the fix issues. (3) Update #123 to acknowledge that the status page requires manual post-pipeline server steps and that these were not completed during the v1.2.27 deployment.
 
 Cross-ref: C-237 (status page generation + delivery verification), C-131 (external monitoring for pipeline cron). GitHub: #104, #123, #124, #125, #126.
+
+### C-243: ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)
+
+| Field | Value |
+|-------|-------|
+| ID | C-243 |
+| Tier | 3 |
+| Source | test-review (2026-06-05), area-majority investigation effort |
+| Trigger | Area-majority join (#118) changes the gaul0/1/2 assignment method, or a new admin system is added to the reconciliation family table |
+| Location | `tests/test_pipeline_consistency.py` (no reconciliation test), ADR-040 §Validation (hierarchical reconciliation test mandated) |
+
+ADR-040 Invariant 2 requires that within the GAUL reconciliation family, summing count features grouped by gaul0, gaul1, or gaul2 must produce identical totals. No test verifies this. The `gaul1_to_gaul0` mapping is derivable from the assembled grid (each cell has `gaul0_code`, `gaul1_code`, `gaul2_code` channels), but no test checks that grouping by gaul2 then re-grouping by parent gaul1 then re-grouping by parent gaul0 produces the same total as direct gaul0 grouping. If the spatial join assigns a cell to gaul1=X but gaul0=Y where Y does not contain X, the hierarchy is broken silently.
+
+**Resolution:** Add a hierarchical reconciliation test to `tests/test_pipeline_consistency.py` or a new `tests/test_count_conservation.py`: load assembled grid, group by gaul0/1/2, verify sums match within float tolerance.
+
+Cross-ref: C-242 (conservation equation untested), C-241 (intensive feature gap), ADR-040.
 
 ### C-156: ACLED temporal range mismatch — zero-fill before 2020 in assembled grid — [DEFER]
 
