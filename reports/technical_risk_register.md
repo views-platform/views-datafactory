@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-06-05)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05
-**Status:** 244 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 184 resolved, 57 open concerns (4 Tier 2, 11 Tier 3, 36 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 161 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
+**Status:** 245 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 184 resolved, 58 open concerns (4 Tier 2, 12 Tier 3, 36 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 161 resolved concerns as full entries + 19 early-archive reference rows + 4 demoted in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -62,6 +62,7 @@
 | C-242 | 2 | ADR-040 count conservation invariants accepted but zero test enforcement | Code change modifies skip/exclusion logic in compilation or CM aggregation | Count conservation |
 | C-243 | 3 | ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality) | Area-majority join (#118) changes gaul assignment method, or new admin system added | Count conservation |
 | C-244 | 4 | 4 CICs + ADR-025 not updated after ADR-040 acceptance | Investigation branch merges without updating CICs/ADRs to reference ADR-040 | Count conservation |
+| C-245 | 3 | Name file gap — 9,481 recovered cells have codes but no country names | Consumer calls `load_region_pgids()` expecting recovered coastal cells in region results | Data completeness |
 | ~~D-32~~ | — | ~~`assembled` flag vs removing features from partially-integrated sources~~ | Resolved: chose removal (#105) | Source registry |
 | D-33 | — | Pipeline-path information: registry field vs standalone mapping vs convention | Open | Source registry |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
@@ -874,6 +875,20 @@ ADR-040 (accepted 2026-06-05) establishes two constitutional invariants affectin
 **Resolution:** Batch-update all 5 documents in a single commit: add ADR-040 to Related ADRs, add conservation guarantees to Section 3, update Section 10 test alignment. Documentation-only change with zero code risk.
 
 Cross-ref: C-242 (conservation assertions untested), C-243 (hierarchical reconciliation untested), ADR-040.
+
+### C-245: Name file gap — 9,481 recovered cells have codes but no country names
+
+| Field | Value |
+|-------|-------|
+| ID | C-245 |
+| Tier | 3 |
+| Source | Area-majority investigation Phase 4 splash zone (#121), ADR-039 |
+| Trigger | A developer or consumer calls `load_region_pgids("Ethiopia")` expecting all Ethiopian cells including the 9,481 recovered coastal ones, and gets only the centroid-era subset |
+| Location | `data/raw/gaul_admin/gaul0_name.parquet` (86,091 rows), `data/raw/gaul_admin/gaul0_code.parquet` (259,200 rows, 95,572 valid), `src/datafactory_query/regions.py:163` (`_load_country_pgids`) |
+
+After ADR-039 (area-majority assignment), `gaul0_code.parquet` has 259,200 rows with 95,572 valid country codes. But `gaul0_name.parquet` still has 86,091 rows from the centroid era — only cells whose centroids fall inside a GAUL polygon have names. The 9,481 recovered coastal cells have valid `gaul0_code` values (they enter CM aggregation correctly) but no corresponding `gaul0_name` entry. `regions.py:_load_country_pgids()` reads `gaul0_name.parquet` to build the country-name-to-pgid mapping, so recovered cells are invisible to region subsetting by country name. Not a regression — these cells were previously unmapped entirely. Fixing requires extending `generate_area_majority_gaul.py` to also produce name files, or running a separate name lookup against the GAUL shapefile.
+
+Cross-ref: C-149 (resolved — the root cause this gap is a residual of), ADR-039.
 
 ### C-231: No compilation idempotence guard — silent recompilation with stale inputs — [DEFER]
 
