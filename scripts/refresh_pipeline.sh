@@ -95,6 +95,11 @@ generate_status_on_exit() {
     uv run python scripts/generate_status.py \
         --output data/status.html \
         || echo "Warning: status page generation failed (non-fatal)"
+    if [ -f "data/status.html" ]; then
+        echo "  Status page written to data/status.html"
+    else
+        echo "  WARNING: data/status.html not found after generation"
+    fi
 }
 trap generate_status_on_exit EXIT
 
@@ -127,6 +132,14 @@ fi
 git checkout -- uv.lock 2>/dev/null || true
 git checkout "$DEPLOY_TAG" --quiet
 
+# ---- Concurrent execution guard (C-147) ----
+LOCK_FILE="/var/lock/views-pipeline.lock"
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+    echo "FATAL: Another pipeline run is already in progress (lock: $LOCK_FILE)"
+    exit 1
+fi
+
 PIPELINE_START=$(date +%s)
 PIPELINE_START_ISO=$(date -Iseconds)
 
@@ -150,6 +163,9 @@ uv run python scripts/harvest_ucdp.py
 uv run python scripts/harvest_priogrid.py
 uv run python scripts/harvest_shapefile.py
 uv run python scripts/harvest_gaul.py
+uv run python scripts/generate_area_majority_gaul.py \
+    --data-dir data/raw/gaul_admin \
+    --ledger-path provenance/gaul_admin/ingestion_ledger.jsonl
 uv run python scripts/harvest_acled.py
 uv run python scripts/harvest_ghspop.py
 uv run python scripts/harvest_ghsbuilts.py

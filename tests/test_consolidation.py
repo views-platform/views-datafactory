@@ -576,3 +576,83 @@ class TestVintageAwarenessGreen:
         assert result.n_records_total == 3
         table = pq.read_table(cfg.output_path)
         assert "_harvest_digest" in table.column_names
+
+
+class TestRowCountInvariants:
+    """C-146: consolidation must assert row-count arithmetic."""
+
+    def test_result_includes_n_records_before(
+        self, tmp_path: Path
+    ) -> None:
+        """ConsolidationResult exposes n_records_before."""
+        events = _make_events(5)
+        annual_dir = _setup_annual(tmp_path, events)
+        cfg = _config(tmp_path, annual_dir=annual_dir)
+
+        result = consolidate_ucdp(cfg)
+
+        assert hasattr(result, "n_records_before")
+        assert result.n_records_before == 0
+
+    def test_merge_arithmetic(self, tmp_path: Path) -> None:
+        """n_records_total == n_records_before + n_records_new."""
+        annual_events = _make_events(5, id_start=1)
+        candidate_events = _make_events(3, id_start=100)
+
+        annual_dir = _setup_annual(tmp_path, annual_events)
+        cfg = _config(tmp_path, annual_dir=annual_dir)
+        r1 = consolidate_ucdp(cfg)
+
+        candidate_dir = _setup_candidate(tmp_path, candidate_events)
+        cfg2 = _config(
+            tmp_path,
+            annual_dir=annual_dir,
+            candidate_dir=candidate_dir,
+        )
+        r2 = consolidate_ucdp(cfg2)
+
+        assert r2.n_records_before == r1.n_records_total
+        assert r2.n_records_total == r2.n_records_before + r2.n_records_new
+
+    def test_concat_preserves_all_source_rows(
+        self, tmp_path: Path
+    ) -> None:
+        """Total rows == sum of individual source file rows."""
+        annual_events = _make_events(5, id_start=1)
+        candidate_events = _make_events(3, id_start=100)
+        dot9_events = _make_events(4, id_start=200)
+
+        annual_dir = _setup_annual(tmp_path, annual_events)
+        candidate_dir = _setup_candidate(tmp_path, candidate_events)
+        dot9_dir = _setup_dot9(tmp_path, dot9_events)
+        cfg = _config(
+            tmp_path,
+            annual_dir=annual_dir,
+            candidate_dir=candidate_dir,
+            dot9_dir=dot9_dir,
+        )
+
+        result = consolidate_ucdp(cfg)
+
+        assert result.n_records_total == 5 + 3 + 4
+
+    def test_concat_mismatch_raises(
+        self, tmp_path: Path
+    ) -> None:
+        """Row-count mismatch after concat raises RuntimeError."""
+        events = _make_events(5)
+        annual_dir = _setup_annual(tmp_path, events)
+        cfg = _config(tmp_path, annual_dir=annual_dir)
+
+        original_concat = pa.concat_tables
+
+        def drop_one_row(*args, **kwargs):
+            result = original_concat(*args, **kwargs)
+            return result.slice(0, result.num_rows - 1)
+
+        with (
+            pytest.raises(RuntimeError, match="[Rr]ow count"),
+            pytest.MonkeyPatch.context() as mp,
+        ):
+            mp.setattr(pa, "concat_tables", drop_one_row)
+            consolidate_ucdp(cfg)

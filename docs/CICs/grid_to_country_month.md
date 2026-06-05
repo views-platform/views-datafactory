@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-04-30
-**Related ADRs:** ADR-012, ADR-025
+**Last reviewed:** 2026-06-05
+**Related ADRs:** ADR-012, ADR-025, ADR-039
 
 ---
 
@@ -29,7 +29,7 @@ This is the bridge between grid-native data (one row per cell per month) and cou
 
 - Guarantees that the output DataFrame has a `(month_id, country_id)` MultiIndex
 - Guarantees that the country feature column is excluded from the output (it becomes the index)
-- Guarantees that cells with country_id <= 0 are excluded from aggregation. This includes ocean cells AND land cells whose PRIO-GRID centroids fall outside any FAO GAUL polygon (coastal cells, small islands). In `africa_me_legacy`, 603 of 13,110 cells have `gaul0_code = -1` and are excluded, carrying ~4% of total fatalities. See C-149 in the risk register.
+- Guarantees that cells with country_id <= 0 are excluded from aggregation. This includes ocean cells and any land cells not overlapping a GAUL polygon. Since ADR-039 (area-majority assignment), the excluded set is substantially smaller — the exclusion guarantee is unchanged, only the input data improved.
 - Guarantees that aggregation is summation (groupby sum) — no averaging, no counting
 - Guarantees `ValueError` if the specified country feature is not in `feature_names`
 - Reuses `_flatten_grid()` from `grid_to_dataframe` for the initial flattening step
@@ -55,7 +55,7 @@ Assumptions not met cause immediate `ValueError`.
 - Returns a `pd.DataFrame` with `(month_id, country_id)` MultiIndex
 - One column per feature except the country feature
 - All values are sums over grid cells belonging to each (month, country) group
-- Emits `UserWarning` when excluded cells (country_id <= 0) have nonzero event feature values (features starting with `ged_` or `acled_`). The warning includes the count of excluded cell-months and how many carry events. See C-149.
+- Emits `UserWarning` when excluded cells (country_id <= 0) have nonzero event feature values (features starting with `ged_` or `acled_`). The warning includes the count of excluded cell-months and how many carry events. Since ADR-039, the number of excluded cells with events is substantially reduced.
 
 ---
 

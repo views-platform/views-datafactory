@@ -326,6 +326,7 @@ def consolidate_acled(
         n_sources=len(source_manifest),
         n_records_total=n_total,
         n_records_new=n_new,
+        n_records_before=n_before,
         output_digest=output_digest,
     )
 

@@ -1,0 +1,316 @@
+#!/usr/bin/env python3
+"""Generate area-majority GAUL assignments for all PRIO-GRID cells.
+
+Usage:
+    uv run python scripts/generate_area_majority_gaul.py
+    uv run python scripts/generate_area_majority_gaul.py --data-dir data/raw/gaul_admin
+    uv run python scripts/generate_area_majority_gaul.py --dry-run
+
+Replaces centroid-in-polygon with area-majority spatial join:
+for each 0.5° PRIO-GRID cell, assigns the GAUL polygon with the
+largest intersection area. Recovers 9,481 coastal cells globally
+whose centroids fall in water (C-149, ADR-039).
+
+Produces three Parquet files with (gid, value) schema:
+    gaul0_code.parquet  — GAUL country code
+    gaul1_code.parquet  — GAUL admin-1 code
+    gaul2_code.parquet  — GAUL admin-2 code
+
+Dependencies: shapely 2.x, pyshp (both already installed).
+No geopandas, no GDAL (ADR-030 compliance).
+
+See: ADR-039, investigation #115, issue #118.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import time
+from pathlib import Path
+
+import pyarrow as pa
+import pyarrow.parquet as pq
+import shapefile as shp
+from shapely import make_valid
+from shapely.geometry import box as shapely_box
+from shapely.geometry import shape
+from shapely.strtree import STRtree
+
+from datafactory_provenance import (
+    DIGEST_SCHEME,
+    LEDGER_VERSION,
+    append_ledger_entry,
+    compute_content_digest,
+)
+
+logger = logging.getLogger(__name__)
+
+DATASET_ID = "gaul_admin_area_majority"
+
+
+def area_majority_join(
+    cells: list[tuple[int, float, float]],
+    gaul_polys: list,
+    gaul_records: list[dict],
+    field_name: str = "gaul0_code",
+) -> dict[int, int]:
+    """Assign each cell to the GAUL polygon with the largest intersection area.
+
+    Args:
+        cells: List of (gid, centroid_lon, centroid_lat).
+        gaul_polys: List of shapely Polygon/MultiPolygon geometries.
+        gaul_records: List of dicts, one per polygon, containing field_name.
+        field_name: Which GAUL field to extract (default: gaul0_code).
+
+    Returns:
+        Dict mapping gid → GAUL code (int). Cells with no polygon
+        overlap get -1.
+    """
+    if not cells:
+        return {}
+
+    valid_polys = [make_valid(p) for p in gaul_polys]
+    tree = STRtree(valid_polys)
+
+    result: dict[int, int] = {}
+    for gid, lon, lat in cells:
+        cell = shapely_box(lon - 0.25, lat - 0.25, lon + 0.25, lat + 0.25)
+        indices = tree.query(cell, predicate="intersects")
+
+        if len(indices) == 0:
+            result[gid] = -1
+            continue
+
+        if len(indices) == 1:
+            idx = int(indices[0])
+            area = cell.intersection(valid_polys[idx]).area
+            if area > 0:
+                result[gid] = int(gaul_records[idx][field_name])
+            else:
+                result[gid] = -1
+            continue
+
+        best_code = -1
+        best_area = 0.0
+        for idx in indices:
+            idx = int(idx)
+            area = cell.intersection(valid_polys[idx]).area
+            if area > best_area:
+                best_area = area
+                best_code = int(gaul_records[idx][field_name])
+            elif area == best_area and area > 0:
+                candidate = int(gaul_records[idx][field_name])
+                best_code = min(best_code, candidate)
+
+        result[gid] = best_code
+
+    return result
+
+
+def _load_gaul_polygons(
+    shp_path: Path,
+    field_names: list[str],
+) -> tuple[list, list[dict]]:
+    """Load GAUL polygons and records from a shapefile."""
+    polygons = []
+    records = []
+    with shp.Reader(str(shp_path)) as sf:
+        dbf_fields = [f[0] for f in sf.fields[1:]]
+        field_indices = []
+        for fn in field_names:
+            if fn not in dbf_fields:
+                msg = f"Field {fn!r} not in shapefile. Available: {dbf_fields}"
+                raise ValueError(msg)
+            field_indices.append(dbf_fields.index(fn))
+
+        for sr in sf.iterShapeRecords():
+            geo = sr.shape.__geo_interface__
+            if geo["type"] == "Null":
+                continue
+            polygons.append(shape(geo))
+            records.append(
+                {fn: sr.record[idx]
+                 for fn, idx in zip(field_names, field_indices, strict=True)}
+            )
+
+    logger.info("Loaded %d GAUL polygons from %s", len(polygons), shp_path.name)
+    return polygons, records
+
+
+def _load_centroids(centroid_path: Path) -> list[tuple[int, float, float]]:
+    """Load PRIO-GRID centroids from shapefile."""
+    if not centroid_path.exists():
+        msg = f"Centroid shapefile not found: {centroid_path}"
+        raise FileNotFoundError(msg)
+
+    centroids: list[tuple[int, float, float]] = []
+    with shp.Reader(str(centroid_path)) as sf:
+        fields = [f[0] for f in sf.fields[1:]]
+        gid_idx = fields.index("gid")
+        for sr in sf.iterShapeRecords():
+            gid = int(sr.record[gid_idx])
+            lon, lat = sr.shape.points[0]
+            centroids.append((gid, lon, lat))
+
+    logger.info("Loaded %d centroids", len(centroids))
+    return centroids
+
+
+def _write_area_majority_parquet(
+    var_name: str,
+    assignments: dict[int, int],
+    data_dir: Path,
+    ledger_path: Path,
+    *,
+    method: str = "area_majority",
+    gaul_version: str = "GAUL_2024",
+) -> dict:
+    """Write area-majority assignments as Parquet (gid, value)."""
+    snap_path = data_dir / f"{var_name}.parquet"
+
+    gids = sorted(assignments.keys())
+    values = [assignments[gid] for gid in gids]
+
+    table = pa.table({
+        "gid": pa.array(gids, type=pa.int32()),
+        "value": pa.array(values, type=pa.int32()),
+    })
+
+    content_bytes = json.dumps(
+        list(zip(gids, values, strict=True)),
+        sort_keys=True,
+    ).encode()
+    content_digest = compute_content_digest(content_bytes)
+
+    snap_path.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(table, snap_path, compression="snappy")
+
+    n_valid = sum(1 for v in values if v > 0)
+    n_unassigned = sum(1 for v in values if v == -1)
+
+    append_ledger_entry(ledger_path, {
+        "dataset": DATASET_ID,
+        "version": var_name,
+        "method": method,
+        "gaul_version": gaul_version,
+        "n_cells": len(gids),
+        "n_valid": n_valid,
+        "n_unassigned": n_unassigned,
+        "content_digest": content_digest,
+        "ledger_version": LEDGER_VERSION,
+        "digest_algorithm": DIGEST_SCHEME,
+    })
+
+    logger.info(
+        "%s: %d cells (%d valid, %d unassigned), digest=%s",
+        var_name, len(gids), n_valid, n_unassigned, content_digest,
+    )
+    return {
+        "variable": var_name,
+        "n_cells": len(gids),
+        "n_valid": n_valid,
+        "n_unassigned": n_unassigned,
+        "digest": content_digest,
+    }
+
+
+GAUL_VARIABLES = [
+    ("gaul0_code", ["gaul0_code"]),
+    ("gaul1_code", ["gaul1_code"]),
+    ("gaul2_code", ["gaul2_code"]),
+]
+
+
+def main(
+    data_dir: Path = Path("data/raw/gaul_admin"),
+    cache_dir: Path = Path("data/raw/gaul_admin/shapefiles"),
+    centroid_path: Path = Path("data/raw/priogrid/shapefile/priogrid_centroid.shp"),
+    ledger_path: Path = Path("provenance/gaul_admin/ingestion_ledger.jsonl"),
+    *,
+    dry_run: bool = False,
+) -> list[dict]:
+    """Generate area-majority GAUL assignments for all PRIO-GRID cells."""
+    l2_shp = list(cache_dir.glob("**/GAUL_2024_L2*.shp"))
+    if not l2_shp:
+        msg = f"No GAUL L2 shapefile in {cache_dir}. Run harvest_gaul.py first."
+        raise FileNotFoundError(msg)
+    l2_shp_path = l2_shp[0]
+
+    centroids = _load_centroids(centroid_path)
+    logger.info("Computing area-majority join for %d cells...", len(centroids))
+
+    results = []
+    for var_name, fields in GAUL_VARIABLES:
+        t0 = time.monotonic()
+        polygons, records = _load_gaul_polygons(l2_shp_path, fields)
+        assignments = area_majority_join(
+            centroids, polygons, records, field_name=fields[0],
+        )
+        elapsed = time.monotonic() - t0
+        rate = len(centroids) / elapsed
+        logger.info("%s: %.1fs (%.0f cells/sec)", var_name, elapsed, rate)
+
+        if dry_run:
+            n_valid = sum(1 for v in assignments.values() if v > 0)
+            logger.info(
+                "[DRY RUN] %s: %d valid, %d unassigned",
+                var_name, n_valid, len(assignments) - n_valid,
+            )
+            results.append({
+                "variable": var_name,
+                "n_cells": len(assignments),
+                "dry_run": True,
+            })
+        else:
+            result = _write_area_majority_parquet(
+                var_name, assignments, data_dir, ledger_path,
+            )
+            results.append(result)
+
+    return results
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--data-dir", type=Path,
+        default=Path("data/raw/gaul_admin"),
+    )
+    parser.add_argument(
+        "--cache-dir", type=Path,
+        default=Path("data/raw/gaul_admin/shapefiles"),
+    )
+    parser.add_argument(
+        "--centroid-path", type=Path,
+        default=Path("data/raw/priogrid/shapefile/priogrid_centroid.shp"),
+    )
+    parser.add_argument(
+        "--ledger-path", type=Path,
+        default=Path("provenance/gaul_admin/ingestion_ledger.jsonl"),
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Compute but don't write files",
+    )
+    args = parser.parse_args()
+
+    results = main(
+        data_dir=args.data_dir,
+        cache_dir=args.cache_dir,
+        centroid_path=args.centroid_path,
+        ledger_path=args.ledger_path,
+        dry_run=args.dry_run,
+    )
+
+    for r in results:
+        print(json.dumps(r))

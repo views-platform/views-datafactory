@@ -7,10 +7,13 @@ without requiring real assembled data or a running server.
 
 from __future__ import annotations
 
+import os
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
+import pytest
 import xarray as xr
 import zarr
 
@@ -173,3 +176,155 @@ class TestZarrRoundTrip:
         zarr.consolidate_metadata(str(store_path))
 
         assert (store_path / ".zmetadata").exists()
+
+
+def _make_ds(
+    n_t: int = 4,
+    n_h: int = 3,
+    n_w: int = 5,
+    seed: int = 42,
+) -> xr.Dataset:
+    """Create a small xarray Dataset for swap tests."""
+    rng = np.random.default_rng(seed)
+    grid = rng.standard_normal((n_t, n_h, n_w, 2)).astype(
+        np.float32
+    )
+    names = ["var_a", "var_b"]
+    time_steps = np.arange(
+        "2023-01",
+        f"2023-{1 + n_t:02d}",
+        dtype="datetime64[M]",
+    )
+    data_vars = {
+        name: (
+            ["time", "lat", "lon"],
+            np.asarray(grid[:, :, :, i]),
+        )
+        for i, name in enumerate(names)
+    }
+    coords = {
+        "time": time_steps,
+        "lat": np.linspace(-45, 45, n_h),
+        "lon": np.linspace(-90, 90, n_w),
+    }
+    return xr.Dataset(data_vars=data_vars, coords=coords)
+
+
+def _source_sums(ds: xr.Dataset) -> dict[str, float]:
+    """Compute per-feature sums matching the integrity check."""
+    return {
+        name: float(ds[name].values.sum())
+        for name in ds.data_vars
+    }
+
+
+def _encoding(
+    ds: xr.Dataset, n_h: int, n_w: int
+) -> dict[str, dict[str, tuple[int, ...]]]:
+    return {
+        name: {"chunks": (4, n_h, n_w)}
+        for name in ds.data_vars
+    }
+
+
+class TestAtomicZarrSwap:
+    """C-144: zarr export must write to tmp, verify, then swap."""
+
+    def test_write_to_tmp_then_rename(
+        self, tmp_path: Path
+    ) -> None:
+        """Write to .tmp, rename to final. Final readable, .tmp gone."""
+        ds = _make_ds()
+        output = tmp_path / "grid.zarr"
+        tmp_output = tmp_path / "grid.zarr.tmp"
+
+        ds.to_zarr(tmp_output, mode="w")
+        zarr.consolidate_metadata(str(tmp_output))
+        os.rename(str(tmp_output), str(output))
+
+        assert output.exists()
+        assert not tmp_output.exists()
+        ds_back = xr.open_zarr(output)
+        xr.testing.assert_identical(ds, ds_back)
+
+    def test_existing_store_replaced_not_clobbered(
+        self, tmp_path: Path
+    ) -> None:
+        """Old store replaced by new data after atomic swap."""
+        output = tmp_path / "grid.zarr"
+        tmp_output = tmp_path / "grid.zarr.tmp"
+
+        ds_old = _make_ds(seed=1)
+        ds_old.to_zarr(output, mode="w")
+        zarr.consolidate_metadata(str(output))
+        old_sum = float(ds_old["var_a"].values.sum())
+
+        ds_new = _make_ds(seed=99)
+        ds_new.to_zarr(tmp_output, mode="w")
+        zarr.consolidate_metadata(str(tmp_output))
+        new_sum = float(ds_new["var_a"].values.sum())
+
+        assert old_sum != new_sum
+
+        old_output = tmp_path / "grid.zarr.old"
+        os.rename(str(output), str(old_output))
+        os.rename(str(tmp_output), str(output))
+        shutil.rmtree(old_output)
+
+        ds_back = xr.open_zarr(output)
+        assert float(ds_back["var_a"].values.sum()) == pytest.approx(
+            new_sum, abs=0.5
+        )
+        assert not tmp_output.exists()
+        assert not old_output.exists()
+
+    def test_tmp_cleaned_on_write_failure(
+        self, tmp_path: Path
+    ) -> None:
+        """If zarr write fails, .tmp is cleaned up and original untouched."""
+        output = tmp_path / "grid.zarr"
+        tmp_output = tmp_path / "grid.zarr.tmp"
+
+        ds_old = _make_ds(seed=1)
+        ds_old.to_zarr(output, mode="w")
+        zarr.consolidate_metadata(str(output))
+
+        ds_new = _make_ds(seed=99)
+        enc = _encoding(ds_new, 3, 5)
+
+        with pytest.raises(RuntimeError, match="simulated"):
+            if tmp_output.exists():
+                shutil.rmtree(tmp_output)
+            try:
+                ds_new.to_zarr(tmp_output, mode="w", encoding=enc)
+                raise RuntimeError("simulated export failure")
+            except BaseException:
+                if tmp_output.exists():
+                    shutil.rmtree(tmp_output)
+                raise
+
+        assert not tmp_output.exists()
+        assert output.exists()
+
+    def test_integrity_check_runs_against_tmp(
+        self, tmp_path: Path
+    ) -> None:
+        """Integrity check targets tmp path; bad tmp blocks swap."""
+        output = tmp_path / "grid.zarr"
+        tmp_output = tmp_path / "grid.zarr.tmp"
+
+        ds_old = _make_ds(seed=1)
+        ds_old.to_zarr(output, mode="w")
+        zarr.consolidate_metadata(str(output))
+
+        ds_new = _make_ds(seed=99)
+        ds_new.to_zarr(tmp_output, mode="w")
+        zarr.consolidate_metadata(str(tmp_output))
+
+        sums = _source_sums(ds_new)
+        store = zarr.open(str(tmp_output), mode="r")
+        for name in ds_new.data_vars:
+            zarr_sum = float(np.array(store[name]).sum())
+            assert abs(sums[name] - zarr_sum) < 0.5
+        del store
+

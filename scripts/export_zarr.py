@@ -28,10 +28,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+
+import zarr
 
 
 def main() -> int:
@@ -200,44 +204,52 @@ def main() -> int:
         for name in feature_names
     }
 
-    # Remove existing store if present
-    if output.exists():
-        import shutil
+    # Atomic swap (C-144): write to .tmp, verify, then rename into
+    # the live path. Shrinks the consumer-visible gap to a single rename.
+    tmp_output = output.parent / (output.name + ".tmp")
 
-        shutil.rmtree(output)
+    if tmp_output.exists():
+        shutil.rmtree(tmp_output)
 
-    ds.to_zarr(
-        output,
-        mode="w",
-        encoding=encoding,
-    )
+    try:
+        ds.to_zarr(
+            tmp_output,
+            mode="w",
+            encoding=encoding,
+        )
+        zarr.consolidate_metadata(str(tmp_output))
 
-    # Ensure consolidated metadata for HTTP serving
-    import zarr
+        print()
+        print("Round-trip integrity check...")
+        store = zarr.open(str(tmp_output), mode="r")
+        n_checked = 0
+        for name in feature_names:
+            zarr_sum = float(np.array(store[name]).sum())
+            src_sum = source_sums[name]
+            if abs(src_sum - zarr_sum) > 0.5:
+                print(
+                    f"FAIL: {name} sum mismatch — "
+                    f"grid={src_sum:.1f}, zarr={zarr_sum:.1f}"
+                )
+                del store
+                shutil.rmtree(tmp_output)
+                return 1
+            n_checked += 1
+        del store
+        print(f"  {n_checked} features verified (sums match)")
 
-    zarr.consolidate_metadata(str(output))
-
-    # Round-trip integrity check: read back the zarr store and verify
-    # feature sums match the input grid. Catches silent data loss during
-    # export (e.g., partial writes, chunking bugs, stale stores).
-    # Uses zarr directly and sums one feature at a time to stay within
-    # the 8 GB RAM budget on the production server.
-    print()
-    print("Round-trip integrity check...")
-    store = zarr.open(str(output), mode="r")
-    n_checked = 0
-    for name in feature_names:
-        zarr_sum = float(np.array(store[name]).sum())
-        src_sum = source_sums[name]
-        if abs(src_sum - zarr_sum) > 0.5:
-            print(
-                f"FAIL: {name} sum mismatch — "
-                f"grid={src_sum:.1f}, zarr={zarr_sum:.1f}"
-            )
-            return 1
-        n_checked += 1
-    del store
-    print(f"  {n_checked} features verified (sums match)")
+        old_output = output.parent / (output.name + ".old")
+        if old_output.exists():
+            shutil.rmtree(old_output)
+        if output.exists():
+            os.rename(str(output), str(old_output))
+        os.rename(str(tmp_output), str(output))
+        if old_output.exists():
+            shutil.rmtree(old_output)
+    except Exception:
+        if tmp_output.exists():
+            shutil.rmtree(tmp_output)
+        raise
 
     elapsed = time.monotonic() - t0
 
