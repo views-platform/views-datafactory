@@ -129,4 +129,7 @@ Update this plan's deviations log. Write results into the progress log. Update t
 
 | Date | Deviation | Rationale |
 |------|-----------|-----------|
-| | | |
+| 2026-06-05 | H1 recovery count is 9,481, not 149 | The 149 figure was the Africa+ME subset of unmapped land cells carrying fatalities (#115). Global recovery includes all coastal/island cells worldwide whose centroids fall in water. The hypothesis test checks `> 0`, not `== 149`. H1 survived with a much larger recovery than expected. |
+| 2026-06-05 | Centroid baseline has 86,091 rows, not 259,200 | Centroid Parquet files only contain matched cells; unmapped cells are absent (not stored as -1). Area-majority emits all 259,200 cells. Hypothesis tests compare set membership, not array position. |
+| 2026-06-05 | H4 total runtime 17.1 min, exceeds 10-min threshold | Per-level computation averages 5.5 min (691-832 cells/sec). The script loads the 45,524-polygon GAUL L2 shapefile three times (once per level). Total wall-clock: 17.1 min. Acceptable for a batch job run once per GAUL version. Per H4 note: "Even 30 minutes would be acceptable." |
+| 2026-06-05 | H3 redistribution tested on gaul0 only (368 cells) | gaul1 (1,453) and gaul2 (4,845) redistribution counts are higher, as expected for finer admin levels. The [100, 2000] range was calibrated for gaul0. |

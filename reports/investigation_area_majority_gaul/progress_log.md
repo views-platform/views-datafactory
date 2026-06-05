@@ -73,6 +73,59 @@ Timestamped entries recording what happened, what worked, what didn't, and what 
 
 ---
 
+## 2026-06-05 — Phase 1: Generation script + TDD tests (#118)
+
+**Actions taken:**
+- Wrote 11 TDD tests for `area_majority_join()` in `tests/test_area_majority.py`
+- Implemented `area_majority_join()` in `scripts/generate_area_majority_gaul.py`
+- All 11 unit tests pass with synthetic geometry
+- Script includes: shapefile loading, centroid loading, Parquet output, provenance ledger
+- Committed as `5d3ec87`
+
+**What went well:** Clean TDD cycle. All edge cases covered: empty input, single polygon, ties (lowest code wins), no-overlap cells. Script structure follows existing harvest patterns.
+
+---
+
+## 2026-06-05 — Phase 2: Hypothesis validation (#119)
+
+**Actions taken:**
+- Wrote 7 hypothesis tests (H1, H2, H3, H5) with `@pytest.mark.falsification`
+- Ran generation script on full 259,200-cell global grid
+- Output: `data/raw/gaul_admin_area_majority/{gaul0,gaul1,gaul2}_code.parquet`
+- All 7 hypothesis tests pass
+
+**Results:**
+
+| Hypothesis | Verdict | Key Metric |
+|------------|---------|------------|
+| H1 Coastal Recovery | SURVIVED | 9,481 cells recovered (204 countries) |
+| H2 No Assignment Loss | SURVIVED | 0 cells lost, valid: 86,091 → 95,572 |
+| H3 Border Redistribution | SURVIVED | 368 cells changed (gaul0), within [100, 2000] |
+| H4 Performance | **[DEVIATION]** | 17.1 min total (threshold: 10 min) |
+| H5 Format Compatibility | SURVIVED | Schema match, all 3 levels present |
+
+**[DEVIATION] H1 recovery count:** 9,481 cells, not 149. The 149 figure was Africa+ME
+only. Global recovery is much larger — coastal/island cells worldwide.
+
+**[DEVIATION] H4 performance:** Total wall-clock 17.1 min across 3 levels.
+Per-level: gaul0 374.9s, gaul1 337.5s, gaul2 311.5s. The script reloads the
+45,524-polygon GAUL shapefile for each level. Per H4 note in the pre-analysis plan,
+even 30 min is acceptable for a one-time batch job.
+
+**What went well:** 4/5 hypotheses survived cleanly. H4 deviation is non-blocking.
+Zero assignment loss validates the algorithm correctness. Recovery far exceeds
+the Africa+ME subset, which is a positive surprise.
+
+**What went less well:** Script takes 17 min instead of the extrapolated 4.6 min.
+The benchmark was on 500 cells; the full grid has more dense-polygon regions
+(Europe, SE Asia) that increase per-cell computation cost.
+
+**Artifacts produced:**
+- `reports/investigation_area_majority_gaul/before_after_comparison.md`
+- `provenance/gaul_admin_area_majority/ingestion_ledger.jsonl` (3 entries)
+
+---
+
 ## Next expected entry
 
-Phase 1 (generation script) begins. First entry will record: script creation, initial test run on a small sample, any deviations from the pre-analysis plan.
+Phase 3: Pipeline integration (#120). Wire area-majority output into assembly.

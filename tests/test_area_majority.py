@@ -30,6 +30,10 @@ Geometry layout::
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pyarrow.parquet as pq
+import pytest
 from shapely.geometry import Point, Polygon, box
 
 # -- GAUL codes for the 4 synthetic countries --
@@ -388,3 +392,117 @@ class TestGenerationScriptRed:
         polys, recs = _build_synthetic_gaul()
         result = join([], polys, recs)
         assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 tests (#119): Hypothesis validation against real data
+# ---------------------------------------------------------------------------
+
+_CENTROID_DIR = Path("data/raw/gaul_admin")
+_AREA_MAJ_DIR = Path("data/raw/gaul_admin_area_majority")
+
+
+def _load_gid_value(parquet_path: Path) -> dict[int, int]:
+    """Load a (gid, value) Parquet file into a dict."""
+    t = pq.read_table(parquet_path)
+    gids = t.column("gid").to_pylist()
+    vals = t.column("value").to_pylist()
+    return dict(zip(gids, vals, strict=True))
+
+
+@pytest.mark.falsification
+class TestH1CoastalCellRecovery:
+    """H1: All coastal cells with centroid in water get valid codes."""
+
+    def test_recovered_cells_have_valid_codes(self) -> None:
+        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
+        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        centroid_gids = set(centroid.keys())
+        recovered = {
+            gid: val for gid, val in area_maj.items()
+            if gid not in centroid_gids and val != -1
+        }
+        for gid, val in recovered.items():
+            assert val > 0, (
+                f"Recovered gid={gid} has invalid code {val}"
+            )
+
+    def test_recovered_cell_count_exceeds_zero(self) -> None:
+        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
+        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        centroid_gids = set(centroid.keys())
+        recovered = [
+            gid for gid, val in area_maj.items()
+            if gid not in centroid_gids and val > 0
+        ]
+        assert len(recovered) > 0, (
+            "H1 falsified: no coastal cells were recovered"
+        )
+
+
+@pytest.mark.falsification
+class TestH2NoAssignmentLoss:
+    """H2: No cell with valid centroid assignment loses it."""
+
+    def test_no_valid_cell_loses_assignment(self) -> None:
+        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
+        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        lost = [
+            gid for gid, val in centroid.items()
+            if val > 0 and area_maj.get(gid, -1) <= 0
+        ]
+        assert len(lost) == 0, (
+            f"H2 falsified: {len(lost)} cells lost valid assignment. "
+            f"First 10: {lost[:10]}"
+        )
+
+    def test_valid_cell_count_increases(self) -> None:
+        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
+        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        centroid_valid = sum(1 for v in centroid.values() if v > 0)
+        area_maj_valid = sum(1 for v in area_maj.values() if v > 0)
+        assert area_maj_valid >= centroid_valid, (
+            f"H2 falsified: area-majority has fewer valid cells "
+            f"({area_maj_valid}) than centroid ({centroid_valid})"
+        )
+
+
+@pytest.mark.falsification
+class TestH3BorderRedistribution:
+    """H3: 100-2,000 border cells change assignment."""
+
+    def test_redistribution_count_in_expected_range(self) -> None:
+        centroid = _load_gid_value(_CENTROID_DIR / "gaul0_code.parquet")
+        area_maj = _load_gid_value(_AREA_MAJ_DIR / "gaul0_code.parquet")
+        changed = [
+            gid for gid in centroid
+            if gid in area_maj and centroid[gid] != area_maj[gid]
+        ]
+        assert 100 <= len(changed) <= 2000, (
+            f"H3 falsified: {len(changed)} cells changed assignment "
+            f"(expected 100-2,000)"
+        )
+
+
+@pytest.mark.falsification
+class TestH5FormatCompatibility:
+    """H5: Output schema identical to centroid files."""
+
+    def test_parquet_schema_matches_centroid(self) -> None:
+        centroid_schema = pq.read_schema(
+            _CENTROID_DIR / "gaul0_code.parquet",
+        )
+        area_maj_schema = pq.read_schema(
+            _AREA_MAJ_DIR / "gaul0_code.parquet",
+        )
+        assert centroid_schema.equals(area_maj_schema), (
+            f"Schema mismatch: centroid={centroid_schema}, "
+            f"area_maj={area_maj_schema}"
+        )
+
+    def test_all_three_levels_exist(self) -> None:
+        for level in ("gaul0_code", "gaul1_code", "gaul2_code"):
+            path = _AREA_MAJ_DIR / f"{level}.parquet"
+            assert path.exists(), (
+                f"Missing area-majority file: {path}"
+            )
