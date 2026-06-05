@@ -240,3 +240,151 @@ class TestAreaMajorityFixtures:
         _, recs = _build_synthetic_gaul()
         codes = [r["gaul0_code"] for r in recs]
         assert len(codes) == len(set(codes))
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 tests (#118): area_majority_join() — TDD
+# ---------------------------------------------------------------------------
+
+def _import_area_majority_join():
+    """Import area_majority_join from the generation script."""
+    import importlib.util
+    from pathlib import Path
+
+    script = (
+        Path(__file__).resolve().parent.parent
+        / "scripts" / "generate_area_majority_gaul.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "generate_area_majority_gaul", script,
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.area_majority_join
+
+
+class TestGenerationScriptGreen:
+    """Happy-path tests for area_majority_join()."""
+
+    def test_coastal_cell_gets_valid_assignment(self) -> None:
+        """Coastal cell (centroid in water) must be recovered by area-majority."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = join(cells, polys, recs)
+        assert result[GID_COASTAL] == GAUL_D, (
+            f"Coastal cell should be D ({GAUL_D}), "
+            f"got {result[GID_COASTAL]}"
+        )
+
+    def test_inland_cell_preserved(self) -> None:
+        """Inland cell must keep its centroid-era assignment."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = join(cells, polys, recs)
+        assert result[GID_INLAND] == GAUL_A, (
+            f"Inland cell should stay A ({GAUL_A}), got {result[GID_INLAND]}"
+        )
+
+    def test_border_cell_gets_majority_country(self) -> None:
+        """Border cell must be assigned to D (76% area), not C (centroid)."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = join(cells, polys, recs)
+        assert result[GID_BORDER] == GAUL_D, (
+            f"Border cell should be D ({GAUL_D}), got {result[GID_BORDER]}"
+        )
+
+    def test_output_covers_all_cells(self) -> None:
+        """Result must contain an entry for every input cell."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = join(cells, polys, recs)
+        expected_gids = {gid for gid, _, _ in cells}
+        assert set(result.keys()) == expected_gids
+
+    def test_all_assignments_match_area_majority_oracle(self) -> None:
+        """Every cell assignment must match the reference oracle."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = join(cells, polys, recs)
+        oracle = _expected_area_majority_assignments()
+        for gid in oracle:
+            assert result[gid] == oracle[gid], (
+                f"gid={gid}: join gave {result[gid]}, oracle says {oracle[gid]}"
+            )
+
+    def test_all_codes_are_known_gaul_or_minus_one(self) -> None:
+        """No garbage codes — every value is a known GAUL code or -1."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = join(cells, polys, recs)
+        valid_codes = {r["gaul0_code"] for r in recs} | {-1}
+        for gid, code in result.items():
+            assert code in valid_codes, (
+                f"gid={gid} got unknown code {code}, valid: {valid_codes}"
+            )
+
+
+class TestGenerationScriptBeige:
+    """Edge-case tests for area_majority_join()."""
+
+    def test_no_overlap_returns_minus_one(self) -> None:
+        """A cell entirely outside all polygons gets -1."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        water_cell = [(999, 5.0, -5.0)]  # far from any polygon
+        result = join(water_cell, polys, recs)
+        assert result[999] == -1
+
+    def test_single_overlap_assigns_directly(self) -> None:
+        """A cell overlapping exactly one polygon gets that code."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        # Cell deep inside A — only one polygon overlaps
+        inland_only = [(1, 0.25, 1.5)]
+        result = join(inland_only, polys, recs)
+        assert result[1] == GAUL_A
+
+    def test_tied_areas_use_lowest_gaul_code(self) -> None:
+        """When two polygons have equal intersection area, lowest code wins."""
+        join = _import_area_majority_join()
+        # Two equal-sized polygons splitting a cell exactly in half
+        poly_left = box(0.0, 0.0, 0.5, 1.0)
+        poly_right = box(0.5, 0.0, 1.0, 1.0)
+        polys = [poly_left, poly_right]
+        recs = [{"gaul0_code": 500}, {"gaul0_code": 200}]
+        # Cell centered at (0.5, 0.5) — straddles the boundary equally
+        cells = [(1, 0.5, 0.5)]
+        result = join(cells, polys, recs)
+        assert result[1] == 200, (
+            f"Tied areas should pick lowest code (200), got {result[1]}"
+        )
+
+
+class TestGenerationScriptRed:
+    """Failure-mode tests for area_majority_join()."""
+
+    def test_invalid_geometry_handled(self) -> None:
+        """Invalid polygons (bowtie) must be fixed, not crash."""
+        join = _import_area_majority_join()
+        # Bowtie polygon — self-intersecting, invalid
+        bowtie = Polygon([(0, 0), (1, 1), (1, 0), (0, 1)])
+        assert not bowtie.is_valid
+        polys = [bowtie]
+        recs = [{"gaul0_code": 100}]
+        cells = [(1, 0.5, 0.5)]
+        result = join(cells, polys, recs)
+        assert 1 in result  # must not crash
+
+    def test_empty_input_returns_empty(self) -> None:
+        """Zero cells in → empty dict out."""
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul()
+        result = join([], polys, recs)
+        assert result == {}
