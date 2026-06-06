@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-05-19
-**Related ADRs:** ADR-003, ADR-009, ADR-011, ADR-012, ADR-029
+**Last reviewed:** 2026-06-06
+**Related ADRs:** ADR-003, ADR-009, ADR-011, ADR-012, ADR-029, ADR-040
 
 ---
 
@@ -36,6 +36,7 @@ Assembly is the final stage of the data graph — it combines compiled UCDP, com
 - `ghspop_grid_dir` defaults to None — assembly works without GHS-POP for local development
 - `ghsbuilts_grid_dir` defaults to None — assembly works without GHS-BUILT-S for local development
 - `vdem_grid_dir` defaults to None — assembly works without V-Dem for local development
+- Assembly must contribute all cells from each compiled source grid to the assembled grid without cell loss (ADR-040, Invariant 1)
 
 ---
 
@@ -132,7 +133,7 @@ dirs = [d for d in Path("data/compiled").iterdir() if d.is_dir()]  # Violates AD
 
 - **Green:** Default construction, frozen enforcement, acled_grid_dir defaults to None, ghspop_grid_dir defaults to None, accepts Path
 - **Beige:** Empty admin fields rejection, duplicate admin fields rejection, invalid dtype rejection, margin below 1.0 rejection
-- **Red:** (via integration tests) Assembly with nonexistent acled/ghspop dir fails loud; assembly without acled/ghspop backward-compatible
+- **Red:** (via integration tests) Assembly with nonexistent acled/ghspop dir fails loud; assembly without acled/ghspop backward-compatible; cell-count conservation (ADR-040)
 
 Tests in `tests/test_assemble.py`.
 

@@ -20,6 +20,10 @@ import pyarrow.parquet as pq
 
 from datafactory_compilation.aggregation import get_strategy
 from datafactory_compilation.compilation_config import CompilationConfig
+from datafactory_compilation.conservation import (
+    PlacementAccounting,
+    assert_placement_conservation,
+)
 from datafactory_compilation.output import write_compilation_output
 from datafactory_compilation.preflight import check_disk_space
 from datafactory_priogrid.cell_generator import generate_grid
@@ -139,6 +143,14 @@ def _place_events(
 
         pgid_idx = pgid - 1
         row_bins[i] = (pgid_idx, time_idx)
+
+    # ADR-040 Invariant 1: placed + excluded = input
+    assert_placement_conservation(PlacementAccounting(
+        n_input=n_rows,
+        n_placed=len(row_bins),
+        n_skipped_spatial=n_skipped_spatial,
+        n_skipped_temporal=n_skipped_temporal,
+    ))
 
     if n_skipped_spatial > 0:
         logger.warning(
