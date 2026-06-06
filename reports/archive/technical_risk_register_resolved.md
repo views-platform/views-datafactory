@@ -1133,3 +1133,27 @@ Resolved 2026-06-06. Issue #104 closed with comment pointing to #123 as the supe
 Resolved 2026-06-06 (commit dd69544). Docstring updated to show `--output data/status.html` matching actual deployment usage.
 
 **Source:** falsification audit (2026-06-04, G1). Cross-ref: C-239, C-238.
+
+### C-242: ~~ADR-040 count conservation invariants accepted but zero test enforcement~~ RESOLVED
+
+Resolved 2026-06-06 (PR #135). Runtime assertions added at both layer boundaries: `assert_placement_conservation()` in `grid_compilation.py` (exact integer `==` for row counts) and `assert_cm_conservation()` in `grid_to_country_month.py` (`np.allclose(rtol=1e-6, atol=1e-4)` for float32 sums). Uses `if/raise RuntimeError` — not `assert` (stripped with `-O`). 10 tests in `tests/test_count_conservation.py` (Green/Beige/Red).
+
+**Source:** test-review (2026-06-05). Cross-ref: C-243, C-241.
+
+### C-243: ~~ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)~~ RESOLVED
+
+Resolved 2026-06-06 (PR #135). `check_nesting()` and `assert_hierarchical_reconciliation()` in `src/datafactory_adapters/_reconciliation.py`. 6 tests in `tests/test_hierarchical_reconciliation.py` (Green/Beige/Red + real-data skipif).
+
+**Source:** test-review (2026-06-05). Cross-ref: C-242, C-241.
+
+### C-244: ~~4 CICs + ADR-025 not updated after ADR-040 acceptance~~ RESOLVED
+
+Resolved 2026-06-06 (PR #135). All 5 documents updated: grid_to_country_month.md, CompilationConfig.md, AssemblyConfig.md, GaulAdminConfig.md (Related ADRs + Section 3 + Section 10), ADR-025 (back-reference + unmapped cells subsection).
+
+**Source:** review-base-docs (2026-06-05). Cross-ref: C-242, C-243.
+
+### C-245: ~~Name file gap — 9,481 recovered cells have codes but no country names~~ RESOLVED
+
+Resolved 2026-06-06 (PR #135). `generate_area_majority_gaul.py` extended with OCP `dtype` parameter and CRP variable list split to produce 4 name Parquet files (`gaul0_name`, `gaul1_name`, `gaul2_name`, `iso3_code`). Name files need regeneration on server.
+
+**Source:** Area-majority investigation Phase 4 (#121). Cross-ref: C-149, ADR-039.

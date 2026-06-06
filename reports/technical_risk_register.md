@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-06-06)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06
-**Status:** 245 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 188 resolved, 51 open concerns (3 Tier 2, 10 Tier 3, 32 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 165 resolved concerns as full entries + 19 early-archive reference rows + 7 demoted in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
+**Status:** 245 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 192 resolved, 47 open concerns (2 Tier 2, 8 Tier 3, 31 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 169 resolved concerns as full entries + 19 early-archive reference rows + 7 demoted in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -55,10 +55,10 @@
 | ~~C-239~~ | ~~2~~ | ~~Issue #104 paths produce silent wrong status page~~ | Resolved 2026-06-06 (#104 closed, superseded by #123) | Operational monitoring |
 | ~~C-240~~ | ~~4~~ | ~~generate_status.py docstring specifies nonexistent /www/ path~~ | Resolved 2026-06-06 (commit dd69544, docstring updated) | Status page |
 | C-241 | 4 | No invariant for intensive feature conservation across resolution or aggregation | First consumer aggregates intensive features (HDI, built-up fraction) to country-month or grid resolution changes | Aggregation correctness |
-| C-242 | 2 | ADR-040 count conservation invariants accepted but zero test enforcement | Code change modifies skip/exclusion logic in compilation or CM aggregation | Count conservation |
-| C-243 | 3 | ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality) | Area-majority join (#118) changes gaul assignment method, or new admin system added | Count conservation |
-| C-244 | 4 | 4 CICs + ADR-025 not updated after ADR-040 acceptance | Investigation branch merges without updating CICs/ADRs to reference ADR-040 | Count conservation |
-| C-245 | 3 | Name file gap — 9,481 recovered cells have codes but no country names | Consumer calls `load_region_pgids()` expecting recovered coastal cells in region results | Data completeness |
+| ~~C-242~~ | ~~2~~ | ~~ADR-040 count conservation invariants accepted but zero test enforcement~~ | Resolved 2026-06-06 (PR #135: 10 tests + runtime assertions) | Count conservation |
+| ~~C-243~~ | ~~3~~ | ~~ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)~~ | Resolved 2026-06-06 (PR #135: 6 tests + check_nesting + assert_hierarchical_reconciliation) | Count conservation |
+| ~~C-244~~ | ~~4~~ | ~~4 CICs + ADR-025 not updated after ADR-040 acceptance~~ | Resolved 2026-06-06 (PR #135: 4 CICs + ADR-025 updated) | Count conservation |
+| ~~C-245~~ | ~~3~~ | ~~Name file gap — 9,481 recovered cells have codes but no country names~~ | Resolved 2026-06-06 (PR #135: area-majority script generates name Parquet files) | Data completeness |
 | D-33 | — | Pipeline-path information: registry field vs standalone mapping vs convention | Open | Source registry |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
@@ -93,7 +93,7 @@ Items that should be resolved together:
 | **Source registry integrity** | C-236, D-33 (C-235, D-32 resolved #105) | Before next data source integration (WDI) |
 | **Scaling headroom** | C-144, C-145, C-223 | Before consolidated store exceeds ~5M rows or next data source pushes compile past 16 GB |
 | **Harvest correctness** | C-185 (C-182, C-184, C-186, C-188 resolved) | Before relying on harvest caching for correctness |
-| **Count conservation** | C-241, C-242, C-243, C-244 | Before area-majority join (#118) merges or next data source adds count features |
+| **Count conservation** | C-241 (C-242, C-243, C-244 resolved PR #135) | C-241 deferred: intensive feature conservation |
 | **WET-before-DRY refactor** | C-07, C-155, C-164, C-195, C-230 (C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8) | Before WDI or next refactor sprint |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
 | **Migration scope** | C-126 (C-125 resolved) | Before claiming full viewser replacement for the fleet |
@@ -128,23 +128,11 @@ Resolved 2026-06-06 (review-rr strategic curation). Issue #104 closed with comme
 **Source:** falsification audit (2026-06-04, G4). Cross-ref: C-238 (resolved same session), C-237 (delivery gap, still open), C-240 (resolved, docstring fixed).
 
 
-### C-242: ADR-040 count conservation invariants accepted but zero test enforcement
+### ~~C-242: ADR-040 count conservation invariants accepted but zero test enforcement~~ RESOLVED
 
-| Field | Value |
-|-------|-------|
-| ID | C-242 |
-| Tier | 2 |
-| Source | test-review (2026-06-05), area-majority investigation effort |
-| Trigger | Code change modifies skip/exclusion logic in `_place_events_columnar` or `grid_to_country_month` without a conservation assertion to catch the regression |
-| Location | `src/datafactory_compilation/grid_compilation.py:103-151` (skip variables, no assertion), `src/datafactory_adapters/grid_to_country_month.py:73-99` (exclusion count, no accounting equation), `docs/ADRs/040_count_conservation_and_hierarchical_reconciliation.md` §Validation |
+Resolved 2026-06-06 (PR #135). Runtime assertions added at both layer boundaries: `assert_placement_conservation()` in `grid_compilation.py` (exact integer equality) and `assert_cm_conservation()` in `grid_to_country_month.py` (`np.allclose` for float32 sums). Uses `if/raise RuntimeError` — not `assert`. 10 tests in `tests/test_count_conservation.py` (Green/Beige/Red tiers).
 
-ADR-040 mandates `placed + excluded = input` at every layer boundary (Invariant 1). The variables already exist: `n_skipped_spatial` and `n_skipped_temporal` in `grid_compilation.py:103-151`, and `n_excluded` with `excluded_mask` in `grid_to_country_month.py:73-99`. But these are used only for warning-level logging — no assertion verifies the equation, and no test checks it. The ADR creates a governance expectation that the codebase does not enforce. This is the same structural pattern that allowed C-149: skip counts exist but are informational, not load-bearing.
-
-**Impact:** Tier 2 because a code change that breaks the accounting (adds a new skip reason, changes the exclusion filter, introduces an off-by-one) would silently violate the conservation invariant with no signal. The ADR creates false confidence that counts are conserved.
-
-**Resolution:** (1) Add assertions at both layer boundaries: `assert n_placed + n_skipped_spatial + n_skipped_temporal == table.num_rows` in compilation, and `assert abs(grid_total - (cm_total + excluded_total)) < atol` in CM aggregation. (2) Create `tests/test_count_conservation.py` with synthetic-data tests that verify both equations independently of real data.
-
-Cross-ref: C-241 (intensive feature gap — different invariant), C-243 (hierarchical reconciliation test gap), ADR-040.
+Cross-ref: C-241 (intensive feature gap — different invariant, still open), C-243 (resolved same PR), ADR-040.
 
 
 ## Tier 3 — Improve Quality
@@ -223,21 +211,11 @@ Resolved 2026-06-06 (review-rr strategic curation). Issue #104 closed with comme
 
 **Source:** falsification audit (2026-06-04, F2+F4). Cross-ref: C-237 (delivery gap, still open), C-239 (resolved same session).
 
-### C-243: ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)
+### ~~C-243: ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)~~ RESOLVED
 
-| Field | Value |
-|-------|-------|
-| ID | C-243 |
-| Tier | 3 |
-| Source | test-review (2026-06-05), area-majority investigation effort |
-| Trigger | Area-majority join (#118) changes the gaul0/1/2 assignment method, or a new admin system is added to the reconciliation family table |
-| Location | `tests/test_pipeline_consistency.py` (no reconciliation test), ADR-040 §Validation (hierarchical reconciliation test mandated) |
+Resolved 2026-06-06 (PR #135). `check_nesting()` and `assert_hierarchical_reconciliation()` added in `src/datafactory_adapters/_reconciliation.py`. 6 tests in `tests/test_hierarchical_reconciliation.py` (Green/Beige/Red tiers + real-data skipif test). Tests verify nesting (every L2→L1 and L1→L0 mapping is unique) and sum reconciliation (grouping by any level produces identical totals).
 
-ADR-040 Invariant 2 requires that within the GAUL reconciliation family, summing count features grouped by gaul0, gaul1, or gaul2 must produce identical totals. No test verifies this. The `gaul1_to_gaul0` mapping is derivable from the assembled grid (each cell has `gaul0_code`, `gaul1_code`, `gaul2_code` channels), but no test checks that grouping by gaul2 then re-grouping by parent gaul1 then re-grouping by parent gaul0 produces the same total as direct gaul0 grouping. If the spatial join assigns a cell to gaul1=X but gaul0=Y where Y does not contain X, the hierarchy is broken silently.
-
-**Resolution:** Add a hierarchical reconciliation test to `tests/test_pipeline_consistency.py` or a new `tests/test_count_conservation.py`: load assembled grid, group by gaul0/1/2, verify sums match within float tolerance.
-
-Cross-ref: C-242 (conservation equation untested), C-241 (intensive feature gap), ADR-040.
+Cross-ref: C-242 (resolved same PR), C-241 (intensive feature gap, still open), ADR-040.
 
 ### C-156: ACLED temporal range mismatch — zero-fill before 2020 in assembled grid — [DEFER]
 
@@ -387,17 +365,9 @@ Cross-ref: C-144 (compilation to_pydict), C-145 (viewpoint full store load), C-1
 
 ---
 
-### C-245: Name file gap — 9,481 recovered cells have codes but no country names
+### ~~C-245: Name file gap — 9,481 recovered cells have codes but no country names~~ RESOLVED
 
-| Field | Value |
-|-------|-------|
-| ID | C-245 |
-| Tier | 3 |
-| Source | Area-majority investigation Phase 4 splash zone (#121), ADR-039 |
-| Trigger | A developer or consumer calls `load_region_pgids("Ethiopia")` expecting all Ethiopian cells including the 9,481 recovered coastal ones, and gets only the centroid-era subset |
-| Location | `data/raw/gaul_admin/gaul0_name.parquet` (86,091 rows), `data/raw/gaul_admin/gaul0_code.parquet` (259,200 rows, 95,572 valid), `src/datafactory_query/regions.py:163` (`_load_country_pgids`) |
-
-After ADR-039 (area-majority assignment), `gaul0_code.parquet` has 259,200 rows with 95,572 valid country codes. But `gaul0_name.parquet` still has 86,091 rows from the centroid era — only cells whose centroids fall inside a GAUL polygon have names. The 9,481 recovered coastal cells have valid `gaul0_code` values (they enter CM aggregation correctly) but no corresponding `gaul0_name` entry. `regions.py:_load_country_pgids()` reads `gaul0_name.parquet` to build the country-name-to-pgid mapping, so recovered cells are invisible to region subsetting by country name. Not a regression — these cells were previously unmapped entirely. Fixing requires extending `generate_area_majority_gaul.py` to also produce name files, or running a separate name lookup against the GAUL shapefile.
+Resolved 2026-06-06 (PR #135). `generate_area_majority_gaul.py` extended to produce 4 name Parquet files (`gaul0_name`, `gaul1_name`, `gaul2_name`, `iso3_code`) using OCP `dtype=pa.utf8()` parameter. `GAUL_VARIABLES` split into `GAUL_CODE_VARIABLES` + `GAUL_NAME_VARIABLES` (CRP). Name files need regeneration on server to close the gap (`test_name_file_row_count_matches_code_file` is xfail until then).
 
 Cross-ref: C-149 (resolved — the root cause this gap is a residual of), ADR-039.
 
@@ -782,21 +752,11 @@ Currently this is not acute: `grid_to_country_month.py` sums all features includ
 
 Cross-ref: ADR-040 (scope boundary table, "Intensive feature conservation"), ADR-024 (Invariant 6: country-level broadcast for V-Dem), ADR-035 (GHS-BUILT-S integration).
 
-### C-244: 4 CICs + ADR-025 not updated after ADR-040 acceptance
+### ~~C-244: 4 CICs + ADR-025 not updated after ADR-040 acceptance~~ RESOLVED
 
-| Field | Value |
-|-------|-------|
-| ID | C-244 |
-| Tier | 4 |
-| Source | review-base-docs (2026-06-05) |
-| Trigger | Investigation branch merges to development without updating the 4 CICs and ADR-025 to reference ADR-040 |
-| Location | `docs/CICs/grid_to_country_month.md` (Related ADRs, Section 3), `docs/CICs/CompilationConfig.md` (Related ADRs, Section 3), `docs/CICs/AssemblyConfig.md` (Related ADRs, Section 3), `docs/CICs/GaulAdminConfig.md` (Related ADRs, Section 3, Section 10), `docs/ADRs/025_country_identity_gaul.md` (lines 96-102, references) |
+Resolved 2026-06-06 (PR #135). All 5 documents updated: ADR-040 added to Related ADRs, conservation guarantees in Section 3, test alignment in Section 10 for grid_to_country_month.md, CompilationConfig.md, AssemblyConfig.md, GaulAdminConfig.md, and ADR-025 back-reference added.
 
-ADR-040 (accepted 2026-06-05) establishes two constitutional invariants affecting all pipeline layer boundaries. Four CICs governing the stages where these invariants apply do not reference ADR-040 and do not include the mandated guarantees in their Section 3 contracts: grid_to_country_month (missing conservation equation), CompilationConfig (missing accounting equation), AssemblyConfig (missing cell-loss guarantee), GaulAdminConfig (missing hierarchical consistency, Section 10 still says "Tests: not yet written"). ADR-025, which ADR-040 builds on extensively, does not back-reference ADR-040. A developer consulting these CICs would not know count conservation is architecturally required at their layer boundary.
-
-**Resolution:** Batch-update all 5 documents in a single commit: add ADR-040 to Related ADRs, add conservation guarantees to Section 3, update Section 10 test alignment. Documentation-only change with zero code risk.
-
-Cross-ref: C-242 (conservation assertions untested), C-243 (hierarchical reconciliation untested), ADR-040.
+Cross-ref: C-242 (resolved same PR), C-243 (resolved same PR), ADR-040.
 
 ### C-231: No compilation idempotence guard — silent recompilation with stale inputs — [DEFER]
 
