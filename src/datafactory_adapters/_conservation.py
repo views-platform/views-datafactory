@@ -32,9 +32,9 @@ def assert_cm_conservation(
         return
 
     for i in indices:
-        grid_total = float(np.nansum(flat_data_all[:, i]))
-        land_total = float(np.nansum(flat_data_land[:, i]))
-        excl_total = float(np.nansum(excluded_data[:, i]))
+        grid_total = float(np.nansum(flat_data_all[:, i], dtype=np.float64))
+        land_total = float(np.nansum(flat_data_land[:, i], dtype=np.float64))
+        excl_total = float(np.nansum(excluded_data[:, i], dtype=np.float64))
         recon = land_total + excl_total
 
         if not np.allclose(grid_total, recon, rtol=1e-6, atol=1e-4):

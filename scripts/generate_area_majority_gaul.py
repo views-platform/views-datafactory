@@ -119,6 +119,53 @@ def area_majority_join(
     return result
 
 
+def _compute_cell_polygon_map(
+    cells: list[tuple[int, float, float]],
+    gaul_polys: list,
+) -> dict[int, int]:
+    """Map each cell to the polygon index with the largest intersection area.
+
+    Returns:
+        Dict mapping gid → polygon index. Cells with no overlap get -1.
+        Ties broken by lowest polygon index (deterministic, field-independent).
+    """
+    if not cells:
+        return {}
+
+    valid_polys = [make_valid(p) for p in gaul_polys]
+    tree = STRtree(valid_polys)
+
+    result: dict[int, int] = {}
+    for gid, lon, lat in cells:
+        cell = shapely_box(lon - 0.25, lat - 0.25, lon + 0.25, lat + 0.25)
+        indices = tree.query(cell, predicate="intersects")
+
+        if len(indices) == 0:
+            result[gid] = -1
+            continue
+
+        if len(indices) == 1:
+            idx = int(indices[0])
+            area = cell.intersection(valid_polys[idx]).area
+            result[gid] = idx if area > 0 else -1
+            continue
+
+        best_idx = -1
+        best_area = 0.0
+        for idx in indices:
+            idx = int(idx)
+            area = cell.intersection(valid_polys[idx]).area
+            if area > best_area:
+                best_area = area
+                best_idx = idx
+            elif area == best_area and area > 0 and idx < best_idx:
+                best_idx = idx
+
+        result[gid] = best_idx
+
+    return result
+
+
 def _load_gaul_polygons(
     shp_path: Path,
     field_names: list[str],
@@ -261,28 +308,37 @@ def main(
     l2_shp_path = l2_shp[0]
 
     centroids = _load_centroids(centroid_path)
-    logger.info("Computing area-majority join for %d cells...", len(centroids))
+
+    all_field_names = [f for _, fields in GAUL_CODE_VARIABLES + GAUL_NAME_VARIABLES
+                       for f in fields]
+    polygons, records = _load_gaul_polygons(l2_shp_path, all_field_names)
+
+    t0 = time.monotonic()
+    cell_poly_map = _compute_cell_polygon_map(centroids, polygons)
+    elapsed = time.monotonic() - t0
+    rate = len(centroids) / elapsed
+    logger.info(
+        "Area-majority join: %d cells, %.1fs (%.0f cells/sec)",
+        len(centroids), elapsed, rate,
+    )
 
     results = []
 
     all_variables = [
-        (var_name, fields, _INT32, -1)
+        (var_name, fields[0], _INT32, -1)
         for var_name, fields in GAUL_CODE_VARIABLES
     ] + [
-        (var_name, fields, _UTF8, "")
+        (var_name, fields[0], _UTF8, "")
         for var_name, fields in GAUL_NAME_VARIABLES
     ]
 
-    for var_name, fields, dtype, default in all_variables:
-        t0 = time.monotonic()
-        polygons, records = _load_gaul_polygons(l2_shp_path, fields)
-        assignments = area_majority_join(
-            centroids, polygons, records,
-            field_name=fields[0], default=default,
-        )
-        elapsed = time.monotonic() - t0
-        rate = len(centroids) / elapsed
-        logger.info("%s: %.1fs (%.0f cells/sec)", var_name, elapsed, rate)
+    for var_name, field_name, dtype, default in all_variables:
+        assignments: dict[int, int] | dict[int, str] = {}
+        for gid, poly_idx in cell_poly_map.items():
+            if poly_idx == -1:
+                assignments[gid] = default
+            else:
+                assignments[gid] = records[poly_idx][field_name]
 
         if dry_run:
             if pa.types.is_integer(dtype):
