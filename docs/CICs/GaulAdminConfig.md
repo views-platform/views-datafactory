@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-23
-**Related ADRs:** ADR-009, ADR-012
+**Last reviewed:** 2026-06-06
+**Related ADRs:** ADR-009, ADR-012, ADR-025, ADR-040
 
 ---
 
@@ -31,6 +31,8 @@ Governs shapefile download URLs, centroid shapefile path, storage paths, timeout
 - Guarantees `timeout >= 1`
 - Provides sensible defaults (FAO GCS URLs, standard paths)
 - `variables` field: `None` means all 7 admin variables; tuple means subset
+- GAUL codes (`gaul0_code`) serve as the authoritative country identity column (ADR-025)
+- GAUL levels (L0, L1, L2) form a reconciliation family: hierarchical reconciliation is mandatory across levels (ADR-040, Invariant 2)
 
 ---
 
@@ -101,7 +103,7 @@ cfg.timeout = 120  # AttributeError (frozen)
 
 - **Green:** Config defaults, config immutability, source registration
 - **Beige:** Timeout < 1
-- **Red:** Missing centroid shapefile, missing shapefile fields
+- **Red:** Missing centroid shapefile, missing shapefile fields; GAUL hierarchy consistency (every L2 unit nests within exactly one L1, every L1 within exactly one L0) per ADR-040
 
 Tests: not yet written (harvester is script-tested via `scripts/harvest_gaul.py`).
 

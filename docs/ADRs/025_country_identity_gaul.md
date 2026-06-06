@@ -99,6 +99,8 @@ The spatial join assigns `gaul0_code = -1` to PRIO-GRID cells whose centroids fa
 
 These cells appear in PGM output (grid-level queries) but are **excluded from CM aggregation** by `grid_to_country_month()`, which filters on `country_ids > 0`. This creates a systematic gap: CM fatality totals are ~4% lower than PGM totals for the same region and time range. The gap is not uniform — months with high coastal conflict (e.g., piracy, port city violence) show larger differences.
 
+ADR-040 elevates this from a documented gap to an architectural invariant: the accounting equation `cm_total + excluded_total = grid_total` must hold for all extensive features. The conservation assertion in `grid_to_country_month()` enforces this at runtime.
+
 Pipeline verification tests (`test_model_parity.py::TestCMParity`) account for this gap explicitly. See C-149 in the risk register.
 
 ---
@@ -109,6 +111,7 @@ Pipeline verification tests (`test_model_parity.py::TestCMParity`) account for t
 - HydraNet ADR-030 §2.1: Standard Identity Registry (`priogrid_gid`, `row`, `col`, `month_id`, `c_id`)
 - `bright_starship/scripts/audit_data_parity.py`: Parity audit confirming 1 c_id per pgid (factory) vs 7 (viewser)
 - `reports/consumer_parity_investigation.md`: Overall parity findings
+- ADR-040: Count Conservation and Hierarchical Reconciliation — elevates the unmapped-cell accounting from a documented gap to an architectural invariant
 - FAO GAUL 2024: `https://www.fao.org/agroinformatics/training-and-resources/data-sets/data-set-detail/global-gaul-new-2024-release/en` (CC-BY-4.0)
 - Gleditsch & Ward (1999): State system membership list
 - Weidmann, Kuse, Gleditsch (2010): CShapes dataset

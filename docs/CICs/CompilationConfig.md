@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-04-08
-**Related ADRs:** ADR-001, ADR-003, ADR-009, ADR-012, ADR-024
+**Last reviewed:** 2026-06-06
+**Related ADRs:** ADR-001, ADR-003, ADR-009, ADR-012, ADR-024, ADR-040
 
 ---
 
@@ -35,6 +35,7 @@ Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, 
 - Guarantees grid and temporal configs use standard defaults when not overridden
 - Provides default features: `FeatureSpec("event_count", "count")` and `FeatureSpec("fatalities", "sum_field")`
 - Grid output uses canonical `[T, H, W, C]` dimension order (time, height, width, channels)
+- The compiler (`compile_grid`) enforces count conservation (ADR-040) for all features compiled from this config: `placed + skipped_spatial + skipped_temporal = input_rows`
 
 ---
 
@@ -136,7 +137,7 @@ features = [(col, "count") for col in table.column_names]  # Violates ADR-003
 
 - **Green:** Default config values, frozen enforcement, correct feature defaults
 - **Beige:** Empty features rejection, source path validated at compile time (not config time)
-- **Red:** (via TestCompileGridRed) NaN coordinates, missing fields, empty Parquet, malformed dates
+- **Red:** (via TestCompileGridRed) NaN coordinates, missing fields, empty Parquet, malformed dates; placement conservation assertion (ADR-040)
 
 Tests in `tests/test_compiler.py`.
 

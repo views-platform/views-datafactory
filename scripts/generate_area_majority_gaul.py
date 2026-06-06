@@ -11,10 +11,14 @@ for each 0.5° PRIO-GRID cell, assigns the GAUL polygon with the
 largest intersection area. Recovers 9,481 coastal cells globally
 whose centroids fall in water (C-149, ADR-039).
 
-Produces three Parquet files with (gid, value) schema:
-    gaul0_code.parquet  — GAUL country code
-    gaul1_code.parquet  — GAUL admin-1 code
-    gaul2_code.parquet  — GAUL admin-2 code
+Produces seven Parquet files with (gid, value) schema:
+    gaul0_code.parquet  — GAUL country code (int32)
+    gaul1_code.parquet  — GAUL admin-1 code (int32)
+    gaul2_code.parquet  — GAUL admin-2 code (int32)
+    gaul0_name.parquet  — GAUL country name (utf8)
+    gaul1_name.parquet  — GAUL admin-1 name (utf8)
+    gaul2_name.parquet  — GAUL admin-2 name (utf8)
+    iso3_code.parquet   — ISO 3166-1 alpha-3 code (utf8)
 
 Dependencies: shapely 2.x, pyshp (both already installed).
 No geopandas, no GDAL (ADR-030 compliance).
@@ -48,6 +52,8 @@ from datafactory_provenance import (
 logger = logging.getLogger(__name__)
 
 DATASET_ID = "gaul_admin_area_majority"
+_INT32 = pa.int32()
+_UTF8 = pa.utf8()
 
 
 def area_majority_join(
@@ -55,7 +61,9 @@ def area_majority_join(
     gaul_polys: list,
     gaul_records: list[dict],
     field_name: str = "gaul0_code",
-) -> dict[int, int]:
+    *,
+    default: int | str = -1,
+) -> dict[int, int] | dict[int, str]:
     """Assign each cell to the GAUL polygon with the largest intersection area.
 
     Args:
@@ -63,10 +71,11 @@ def area_majority_join(
         gaul_polys: List of shapely Polygon/MultiPolygon geometries.
         gaul_records: List of dicts, one per polygon, containing field_name.
         field_name: Which GAUL field to extract (default: gaul0_code).
+        default: Sentinel value for cells with no polygon overlap.
 
     Returns:
-        Dict mapping gid → GAUL code (int). Cells with no polygon
-        overlap get -1.
+        Dict mapping gid → field value. Cells with no polygon
+        overlap get the default sentinel.
     """
     if not cells:
         return {}
@@ -74,34 +83,35 @@ def area_majority_join(
     valid_polys = [make_valid(p) for p in gaul_polys]
     tree = STRtree(valid_polys)
 
-    result: dict[int, int] = {}
+    result: dict[int, int] | dict[int, str] = {}
     for gid, lon, lat in cells:
         cell = shapely_box(lon - 0.25, lat - 0.25, lon + 0.25, lat + 0.25)
         indices = tree.query(cell, predicate="intersects")
 
         if len(indices) == 0:
-            result[gid] = -1
+            result[gid] = default
             continue
 
         if len(indices) == 1:
             idx = int(indices[0])
             area = cell.intersection(valid_polys[idx]).area
             if area > 0:
-                result[gid] = int(gaul_records[idx][field_name])
+                result[gid] = gaul_records[idx][field_name]
             else:
-                result[gid] = -1
+                result[gid] = default
             continue
 
-        best_code = -1
+        best_code = default
         best_area = 0.0
         for idx in indices:
             idx = int(idx)
             area = cell.intersection(valid_polys[idx]).area
             if area > best_area:
                 best_area = area
-                best_code = int(gaul_records[idx][field_name])
+                best_code = gaul_records[idx][field_name]
             elif area == best_area and area > 0:
-                candidate = int(gaul_records[idx][field_name])
+                candidate = gaul_records[idx][field_name]
+                # Tiebreaker: numeric min for codes, lexicographic for names
                 best_code = min(best_code, candidate)
 
         result[gid] = best_code
@@ -160,10 +170,11 @@ def _load_centroids(centroid_path: Path) -> list[tuple[int, float, float]]:
 
 def _write_area_majority_parquet(
     var_name: str,
-    assignments: dict[int, int],
+    assignments: dict[int, int] | dict[int, str],
     data_dir: Path,
     ledger_path: Path,
     *,
+    dtype: pa.DataType = _INT32,
     method: str = "area_majority",
     gaul_version: str = "GAUL_2024",
 ) -> dict:
@@ -175,7 +186,7 @@ def _write_area_majority_parquet(
 
     table = pa.table({
         "gid": pa.array(gids, type=pa.int32()),
-        "value": pa.array(values, type=pa.int32()),
+        "value": pa.array(values, type=dtype),
     })
 
     content_bytes = json.dumps(
@@ -187,8 +198,12 @@ def _write_area_majority_parquet(
     snap_path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(table, snap_path, compression="snappy")
 
-    n_valid = sum(1 for v in values if v > 0)
-    n_unassigned = sum(1 for v in values if v == -1)
+    if pa.types.is_integer(dtype):
+        n_valid = sum(1 for v in values if v > 0)
+        n_unassigned = sum(1 for v in values if v == -1)
+    else:
+        n_valid = sum(1 for v in values if v)
+        n_unassigned = sum(1 for v in values if not v)
 
     append_ledger_entry(ledger_path, {
         "dataset": DATASET_ID,
@@ -216,10 +231,17 @@ def _write_area_majority_parquet(
     }
 
 
-GAUL_VARIABLES = [
+GAUL_CODE_VARIABLES = [
     ("gaul0_code", ["gaul0_code"]),
     ("gaul1_code", ["gaul1_code"]),
     ("gaul2_code", ["gaul2_code"]),
+]
+
+GAUL_NAME_VARIABLES = [
+    ("gaul0_name", ["gaul0_name"]),
+    ("gaul1_name", ["gaul1_name"]),
+    ("gaul2_name", ["gaul2_name"]),
+    ("iso3_code", ["iso3_code"]),
 ]
 
 
@@ -242,18 +264,31 @@ def main(
     logger.info("Computing area-majority join for %d cells...", len(centroids))
 
     results = []
-    for var_name, fields in GAUL_VARIABLES:
+
+    all_variables = [
+        (var_name, fields, _INT32, -1)
+        for var_name, fields in GAUL_CODE_VARIABLES
+    ] + [
+        (var_name, fields, _UTF8, "")
+        for var_name, fields in GAUL_NAME_VARIABLES
+    ]
+
+    for var_name, fields, dtype, default in all_variables:
         t0 = time.monotonic()
         polygons, records = _load_gaul_polygons(l2_shp_path, fields)
         assignments = area_majority_join(
-            centroids, polygons, records, field_name=fields[0],
+            centroids, polygons, records,
+            field_name=fields[0], default=default,
         )
         elapsed = time.monotonic() - t0
         rate = len(centroids) / elapsed
         logger.info("%s: %.1fs (%.0f cells/sec)", var_name, elapsed, rate)
 
         if dry_run:
-            n_valid = sum(1 for v in assignments.values() if v > 0)
+            if pa.types.is_integer(dtype):
+                n_valid = sum(1 for v in assignments.values() if v > 0)
+            else:
+                n_valid = sum(1 for v in assignments.values() if v)
             logger.info(
                 "[DRY RUN] %s: %d valid, %d unassigned",
                 var_name, n_valid, len(assignments) - n_valid,
@@ -266,6 +301,7 @@ def main(
         else:
             result = _write_area_majority_parquet(
                 var_name, assignments, data_dir, ledger_path,
+                dtype=dtype,
             )
             results.append(result)
 

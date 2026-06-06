@@ -30,8 +30,10 @@ Geometry layout::
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from shapely.geometry import Point, Polygon, box
@@ -395,6 +397,78 @@ class TestGenerationScriptRed:
 
 
 # ---------------------------------------------------------------------------
+# Name file generation tests (#132)
+# ---------------------------------------------------------------------------
+
+
+class TestWriteParquetDtype:
+    """OCP: _write_area_majority_parquet supports int32 and utf8."""
+
+    def test_write_parquet_int_dtype_unchanged(self, tmp_path: Path) -> None:
+        """Existing integer behavior preserved with default dtype."""
+        sys.path.insert(0, str(Path("scripts")))
+        from generate_area_majority_gaul import _write_area_majority_parquet
+
+        ledger_path = tmp_path / "ledger.jsonl"
+        ledger_path.touch()
+        result = _write_area_majority_parquet(
+            "test_code", {1: 10, 2: 20, 3: -1},
+            tmp_path, ledger_path,
+        )
+        t = pq.read_table(tmp_path / "test_code.parquet")
+        assert t.schema.field("value").type == pa.int32()
+        assert result["n_valid"] == 2
+        assert result["n_unassigned"] == 1
+
+    def test_write_parquet_string_dtype(self, tmp_path: Path) -> None:
+        """String values written with pa.utf8() dtype."""
+        sys.path.insert(0, str(Path("scripts")))
+        from generate_area_majority_gaul import _write_area_majority_parquet
+
+        ledger_path = tmp_path / "ledger.jsonl"
+        ledger_path.touch()
+        result = _write_area_majority_parquet(
+            "test_name", {1: "Ethiopia", 2: "Kenya", 3: ""},
+            tmp_path, ledger_path, dtype=pa.utf8(),
+        )
+        t = pq.read_table(tmp_path / "test_name.parquet")
+        assert t.schema.field("value").type == pa.utf8()
+        assert result["n_valid"] == 2
+        assert result["n_unassigned"] == 1
+
+    def test_string_validity_counting(self, tmp_path: Path) -> None:
+        """Non-empty = valid, empty = unassigned for string dtype."""
+        sys.path.insert(0, str(Path("scripts")))
+        from generate_area_majority_gaul import _write_area_majority_parquet
+
+        ledger_path = tmp_path / "ledger.jsonl"
+        ledger_path.touch()
+        result = _write_area_majority_parquet(
+            "test_count", {1: "A", 2: "", 3: "B", 4: "", 5: "C"},
+            tmp_path, ledger_path, dtype=pa.utf8(),
+        )
+        assert result["n_valid"] == 3
+        assert result["n_unassigned"] == 2
+
+
+class TestVariableListSeparation:
+    """CRP: code and name variable lists are disjoint."""
+
+    def test_name_variables_separate_from_code(self) -> None:
+        sys.path.insert(0, str(Path("scripts")))
+        from generate_area_majority_gaul import (
+            GAUL_CODE_VARIABLES,
+            GAUL_NAME_VARIABLES,
+        )
+
+        code_names = {v[0] for v in GAUL_CODE_VARIABLES}
+        name_names = {v[0] for v in GAUL_NAME_VARIABLES}
+        assert code_names.isdisjoint(name_names), (
+            f"Overlap: {code_names & name_names}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Phase 2 tests (#119): Hypothesis validation against real data
 # ---------------------------------------------------------------------------
 
@@ -730,16 +804,20 @@ class TestS3RegionSubsetting:
                 f"Region {region!r} returned empty pgid set"
             )
 
-    def test_name_file_row_count_documents_gap(self) -> None:
+    @pytest.mark.xfail(
+        reason="#132: name files not yet regenerated — "
+        "run generate_area_majority_gaul.py to close the gap",
+        strict=False,
+    )
+    def test_name_file_row_count_matches_code_file(self) -> None:
         name_table = pq.read_table(
             _CENTROID_DIR / "gaul0_name.parquet",
         )
         code_table = pq.read_table(
             _CENTROID_DIR / "gaul0_code.parquet",
         )
-        assert name_table.num_rows < code_table.num_rows, (
-            f"Expected name file ({name_table.num_rows} rows) "
-            f"to have fewer rows than code file "
-            f"({code_table.num_rows} rows) — the gap documents "
-            f"recovered cells without names"
+        assert name_table.num_rows == code_table.num_rows, (
+            f"Name file ({name_table.num_rows} rows) should match "
+            f"code file ({code_table.num_rows} rows) after "
+            f"area-majority name generation (#132)"
         )

@@ -1072,3 +1072,88 @@ Local development machine `~/.netrc` had two entries for `204.168.219.108` — t
 **Resolved 2026-06-03.** Stale first entry removed from local `~/.netrc`. Only the correct entry remains. Verified: preflight passes with `OK authenticated as views`.
 
 **Source:** v1.2.26 deployment (2026-06-02). Cross-ref: C-233.
+
+
+### C-184: ~~ACLED `_year_is_cached` checks file existence, not file integrity~~ RESOLVED
+
+Resolved 2026-06-02 (PR #98, v1.2.25). `_year_is_cached` now calls `_recompute_content_digest(snap_path)` which reads the Parquet file, extracts digest fields, and recomputes `content_digest` using the same algorithm as `event_validation.py`. Returns `None` on corrupted/unreadable files (ArrowInvalid, OSError), triggering cache miss. Superseded by C-232 (digest type mismatch) which was the actual root cause — the original C-184 recommendation to use `compute_file_digest` would not have worked because the ledger stores `content_digest`, not `file_digest`.
+
+Cross-ref: C-232 (root cause), C-185 (GHS-POP — NOT affected, verified by falsification audit).
+
+### C-225: ~~SHDI version drift in docs — "v8.3" in two files, code defaults to "v10.2"~~ RESOLVED
+
+Resolved 2026-05-29. Both version strings corrected to "v10.2" in `docs/ADRs/README.md:135` and `docs/guides/consumer_data_guide.md:421`.
+
+### C-226: ~~SHDI shapefile download failure writes no ledger entry~~ RESOLVED
+
+Resolved 2026-05-29. Try/except added around shapefile download with `"failed"` ledger entry before re-raise (shdi.py:331-348).
+
+### C-227: ~~SHDI `_parse_and_merge` inner join can silently drop rows~~ RESOLVED
+
+Resolved 2026-05-29. Added fail-loud row-count guard in `_parse_and_merge` (`shdi.py:478-490`): after each inner join step, compares `result.num_rows` against `expected_rows`. If any rows are lost, logs error with percentage and raises `ValueError` with "coverage mismatch" message. Test: `test_indicator_row_mismatch_raises`. Live API confirmed all 4 indicators have identical 62,531-row key sets — guard passes today, will fire if GDL changes.
+
+### C-228: ~~Dead `download_url` property on `ShdiConfig`~~ RESOLVED
+
+Resolved 2026-05-29. Removed `download_url` property from `ShdiConfig` and replaced `test_download_url_includes_indicators` with `test_indicator_url_includes_variable`.
+
+### C-229: ~~`docs/sources/shdi.md` claims "1 request per run"~~ RESOLVED
+
+Resolved 2026-05-29. Updated to "5 requests per run — one per indicator plus shapefile."
+
+### C-232: ~~ACLED cache digest type mismatch — `compute_file_digest` vs `content_digest`~~ RESOLVED
+
+| Field | Value |
+|-------|-------|
+| ID | C-232 |
+| Tier | 1 (silent data waste — every pipeline run re-downloaded all ACLED data) |
+| Source | Expert code review of digest verification (2026-06-02), 3 falsification audits |
+| Trigger | Every pipeline run (trigger was permanently fired from commit `43b5625` through v1.2.24) |
+| Location | `src/datafactory_harvester/sources/acled.py:431` (`_year_is_cached`) |
+
+`_year_is_cached()` compared `compute_file_digest(snap_path)` (SHA-256 of Parquet file bytes) against `content_digest` from the ledger (SHA-256 of sorted event tuples serialized as JSON via `event_validation.py:196-201`). For Parquet files, these are fundamentally different values — they can never match. Every pipeline run re-downloaded all ACLED data (~2M events, 6 years, 2400+ API requests per year). Introduced in commit `43b5625` (PR #91, v1.2.23). The expert code review initially claimed GHS-POP and GHS-BUILT-S were also affected (C-195 splash zone), but 3 falsification rounds proved only ACLED is broken — TIF-based harvesters write raw bytes to disk, so `compute_file_digest(path) == compute_content_digest(data)`.
+
+**Resolved 2026-06-02 (PR #98, v1.2.25).** Fix: added `_recompute_content_digest()` which reads the Parquet back, extracts digest fields, and recomputes `content_digest` using the same algorithm. Catches `ArrowInvalid`/`OSError` on corrupted files, returning `None` (cache miss). 14 new tests, 3 falsification audits, 0 regressions (1504 tests pass). Issues: #94 (fix), #95 (non-atomic writes, deferred), #96 (latent risk in 7 other harvesters, deferred), #97 (archive subdirectory, deferred).
+
+Cross-ref: C-184 (superseded), C-185 (GHS-POP — NOT affected).
+
+### C-238: ~~Issue #104 stale Caddy claims + orphaned daily cron requirement~~ RESOLVED
+
+Resolved 2026-06-06. Issue #104 closed with comment pointing to #123 as the superseding issue. The stale Caddy claims, wrong paths, and orphaned daily cron requirement in #104 can no longer mislead developers.
+
+**Source:** falsification audit (2026-06-04, F2+F4). Cross-ref: C-237, C-239.
+
+### C-239: ~~Issue #104 paths produce silent wrong status page~~ RESOLVED
+
+Resolved 2026-06-06. Issue #104 closed with comment pointing to #123 as the superseding issue. The wrong `--data-dir` and `--provenance-dir` paths can no longer mislead developers.
+
+**Source:** falsification audit (2026-06-04, G4). Cross-ref: C-238, C-237, C-240.
+
+### C-240: ~~generate_status.py docstring specifies nonexistent /www/ path~~ RESOLVED
+
+Resolved 2026-06-06 (commit dd69544). Docstring updated to show `--output data/status.html` matching actual deployment usage.
+
+**Source:** falsification audit (2026-06-04, G1). Cross-ref: C-239, C-238.
+
+### C-242: ~~ADR-040 count conservation invariants accepted but zero test enforcement~~ RESOLVED
+
+Resolved 2026-06-06 (PR #135). Runtime assertions added at both layer boundaries: `assert_placement_conservation()` in `grid_compilation.py` (exact integer `==` for row counts) and `assert_cm_conservation()` in `grid_to_country_month.py` (`np.allclose(rtol=1e-6, atol=1e-4)` for float32 sums). Uses `if/raise RuntimeError` — not `assert` (stripped with `-O`). 10 tests in `tests/test_count_conservation.py` (Green/Beige/Red).
+
+**Source:** test-review (2026-06-05). Cross-ref: C-243, C-241.
+
+### C-243: ~~ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)~~ RESOLVED
+
+Resolved 2026-06-06 (PR #135). `check_nesting()` and `assert_hierarchical_reconciliation()` in `src/datafactory_adapters/_reconciliation.py`. 6 tests in `tests/test_hierarchical_reconciliation.py` (Green/Beige/Red + real-data skipif).
+
+**Source:** test-review (2026-06-05). Cross-ref: C-242, C-241.
+
+### C-244: ~~4 CICs + ADR-025 not updated after ADR-040 acceptance~~ RESOLVED
+
+Resolved 2026-06-06 (PR #135). All 5 documents updated: grid_to_country_month.md, CompilationConfig.md, AssemblyConfig.md, GaulAdminConfig.md (Related ADRs + Section 3 + Section 10), ADR-025 (back-reference + unmapped cells subsection).
+
+**Source:** review-base-docs (2026-06-05). Cross-ref: C-242, C-243.
+
+### C-245: ~~Name file gap — 9,481 recovered cells have codes but no country names~~ RESOLVED
+
+Resolved 2026-06-06 (PR #135). `generate_area_majority_gaul.py` extended with OCP `dtype` parameter and CRP variable list split to produce 4 name Parquet files (`gaul0_name`, `gaul1_name`, `gaul2_name`, `iso3_code`). Name files need regeneration on server.
+
+**Source:** Area-majority investigation Phase 4 (#121). Cross-ref: C-149, ADR-039.

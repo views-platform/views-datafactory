@@ -9,6 +9,10 @@ from datafactory_compilation.compilation_config import (
     CompilationConfig,
     FeatureSpec,
 )
+from datafactory_compilation.conservation import (
+    PlacementAccounting,
+    assert_placement_conservation,
+)
 from datafactory_compilation.grid_compilation import compile_grid
 from datafactory_compilation.preflight import (
     check_disk_space,
@@ -23,8 +27,10 @@ from datafactory_compilation.pregridded_compilation import (
 __all__ = [
     "CompilationConfig",
     "FeatureSpec",
+    "PlacementAccounting",
     "PregriddedCompilationConfig",
     "PregriddedFeatureSpec",
+    "assert_placement_conservation",
     "check_disk_space",
     "compile_grid",
     "compile_pregridded",
