@@ -111,9 +111,9 @@ def area_majority_join(
                 best_code = gaul_records[idx][field_name]
             elif area == best_area and area > 0:
                 candidate = gaul_records[idx][field_name]
-                if isinstance(best_code, type(candidate)):
+                if type(best_code) is type(candidate):
                     best_code = min(best_code, candidate)
-                elif best_code == default:
+                elif best_code is default:
                     best_code = candidate
 
         result[gid] = best_code

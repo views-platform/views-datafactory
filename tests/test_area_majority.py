@@ -36,7 +36,7 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-from shapely.geometry import Point, Polygon, box
+from shapely.geometry import MultiPolygon, Point, Polygon, box
 
 # -- GAUL codes for the 4 synthetic countries --
 GAUL_A = 100
@@ -406,8 +406,8 @@ class TestGenerationScriptRed:
         result = join(
             cells, polys, recs, field_name="gaul0_name", default="",
         )
-        assert result[1] in ("Alpha", "Bravo"), (
-            f"Expected a string value, got {result[1]!r}"
+        assert result[1] == "Alpha", (
+            f"Tiebreaker should pick lexicographic min 'Alpha', got {result[1]!r}"
         )
 
 
@@ -1002,9 +1002,8 @@ class TestCellPolygonMapRed:
 
     def test_multipolygon_input(self) -> None:
         """MultiPolygon geometry (common in GAUL L2) works correctly."""
-        from shapely.geometry import MultiPolygon as ShapelyMultiPolygon
         cpm = _import_compute_cell_polygon_map()
-        mp = ShapelyMultiPolygon([box(0, 0, 0.4, 1), box(0.6, 0, 1.0, 1)])
+        mp = MultiPolygon([box(0, 0, 0.4, 1), box(0.6, 0, 1.0, 1)])
         cells = [(1, 0.2, 0.5), (2, 0.8, 0.5)]
         result = cpm(cells, [mp])
         assert result[1] == 0
