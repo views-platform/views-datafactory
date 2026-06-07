@@ -395,6 +395,21 @@ class TestGenerationScriptRed:
         result = join([], polys, recs)
         assert result == {}
 
+    def test_string_field_tiebreaker_no_crash(self) -> None:
+        """C-248: string field with area tie must not raise TypeError."""
+        join = _import_area_majority_join()
+        left = box(0.0, 0.0, 0.5, 1.0)
+        right = box(0.5, 0.0, 1.0, 1.0)
+        polys = [left, right]
+        recs = [{"gaul0_name": "Alpha"}, {"gaul0_name": "Bravo"}]
+        cells = [(1, 0.5, 0.5)]  # equal split → tiebreaker fires
+        result = join(
+            cells, polys, recs, field_name="gaul0_name", default="",
+        )
+        assert result[1] in ("Alpha", "Bravo"), (
+            f"Expected a string value, got {result[1]!r}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Name file generation tests (#132)
@@ -821,3 +836,226 @@ class TestS3RegionSubsetting:
             f"code file ({code_table.num_rows} rows) after "
             f"area-majority name generation (#132)"
         )
+
+
+# ---------------------------------------------------------------------------
+# C-246 tests (#136): _compute_cell_polygon_map() — TDD
+# ---------------------------------------------------------------------------
+
+
+def _import_compute_cell_polygon_map():
+    """Import _compute_cell_polygon_map from the generation script."""
+    import importlib.util
+
+    script = (
+        Path(__file__).resolve().parent.parent
+        / "scripts" / "generate_area_majority_gaul.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "generate_area_majority_gaul", script,
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod._compute_cell_polygon_map
+
+
+def _build_synthetic_gaul_multifield() -> tuple[list, list[dict]]:
+    """Build 4 country polygons with multi-field records.
+
+    Same geometry as _build_synthetic_gaul() but records include
+    gaul0_code, gaul0_name, and gaul1_code to verify that
+    _compute_cell_polygon_map returns polygon indices, not field values.
+    """
+    c_peninsula = box(0.5, 0.4, 0.8, 0.6)
+    polygons = [
+        box(0.0, 1.0, 1.0, 2.0),
+        box(1.0, 1.0, 2.0, 2.0),
+        box(0.0, 0.0, 0.5, 1.0).union(c_peninsula),
+        box(0.5, 0.0, 2.0, 1.0).difference(c_peninsula),
+    ]
+    records = [
+        {"gaul0_code": GAUL_A, "gaul0_name": "Alpha", "gaul1_code": 1001},
+        {"gaul0_code": GAUL_B, "gaul0_name": "Bravo", "gaul1_code": 2001},
+        {"gaul0_code": GAUL_C, "gaul0_name": "Charlie", "gaul1_code": 3001},
+        {"gaul0_code": GAUL_D, "gaul0_name": "Delta", "gaul1_code": 4001},
+    ]
+    return polygons, records
+
+
+class TestCellPolygonMapGreen:
+    """Happy-path tests for _compute_cell_polygon_map() (C-246)."""
+
+    def test_inland_cell_maps_to_polygon(self) -> None:
+        """Inland cell (fully inside A) maps to polygon index 0."""
+        cpm = _import_compute_cell_polygon_map()
+        polys, _ = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = cpm(cells, polys)
+        assert result[GID_INLAND] == 0, (
+            f"Inland cell should map to poly index 0 (A), got {result[GID_INLAND]}"
+        )
+
+    def test_border_cell_maps_to_majority_polygon(self) -> None:
+        """Border cell maps to polygon index 3 (D has 76% area)."""
+        cpm = _import_compute_cell_polygon_map()
+        polys, _ = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = cpm(cells, polys)
+        assert result[GID_BORDER] == 3, (
+            f"Border cell should map to poly index 3 (D), got {result[GID_BORDER]}"
+        )
+
+    def test_coastal_cell_maps_to_polygon(self) -> None:
+        """Coastal cell (centroid in water) still maps to a valid polygon."""
+        cpm = _import_compute_cell_polygon_map()
+        polys, _ = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = cpm(cells, polys)
+        assert result[GID_COASTAL] != -1, (
+            "Coastal cell should map to a polygon via area overlap"
+        )
+
+    def test_output_covers_all_cells(self) -> None:
+        """Result has an entry for every input GID."""
+        cpm = _import_compute_cell_polygon_map()
+        polys, _ = _build_synthetic_gaul()
+        cells = _build_synthetic_cells()
+        result = cpm(cells, polys)
+        expected_gids = {gid for gid, _, _ in cells}
+        assert set(result.keys()) == expected_gids
+
+    def test_returns_polygon_indices_not_field_values(self) -> None:
+        """All returned values are polygon indices (0-3), not GAUL codes."""
+        cpm = _import_compute_cell_polygon_map()
+        polys, _ = _build_synthetic_gaul_multifield()
+        cells = _build_synthetic_cells()
+        result = cpm(cells, polys)
+        gaul_codes = {GAUL_A, GAUL_B, GAUL_C, GAUL_D}
+        for gid, poly_idx in result.items():
+            if poly_idx == -1:
+                continue
+            assert 0 <= poly_idx < len(polys), (
+                f"gid={gid}: poly_idx={poly_idx} out of range [0, {len(polys)})"
+            )
+            assert poly_idx not in gaul_codes, (
+                f"gid={gid}: returned GAUL code {poly_idx}, not a polygon index"
+            )
+
+    def test_no_overlap_returns_minus_one(self) -> None:
+        """Cell far from any polygon gets -1."""
+        cpm = _import_compute_cell_polygon_map()
+        polys, _ = _build_synthetic_gaul()
+        far_cell = [(999, 50.0, 50.0)]
+        result = cpm(far_cell, polys)
+        assert result[999] == -1
+
+
+class TestCellPolygonMapBeige:
+    """Edge-case tests for _compute_cell_polygon_map() (C-246)."""
+
+    def test_empty_cells_returns_empty(self) -> None:
+        cpm = _import_compute_cell_polygon_map()
+        polys, _ = _build_synthetic_gaul()
+        assert cpm([], polys) == {}
+
+    def test_single_cell_single_polygon(self) -> None:
+        """Trivial 1x1 case: one cell fully inside one polygon."""
+        cpm = _import_compute_cell_polygon_map()
+        poly = box(0, 0, 2, 2)
+        cells = [(1, 1.0, 1.0)]
+        result = cpm(cells, [poly])
+        assert result[1] == 0
+
+    def test_tie_broken_by_lowest_polygon_index(self) -> None:
+        """Two polygons with equal area → lowest index wins."""
+        cpm = _import_compute_cell_polygon_map()
+        left = box(0.0, 0.0, 0.5, 1.0)
+        right = box(0.5, 0.0, 1.0, 1.0)
+        cells = [(1, 0.5, 0.5)]  # centroid on the boundary, equal split
+        result = cpm(cells, [left, right])
+        assert result[1] == 0, (
+            f"Equal-area tie should go to polygon index 0, got {result[1]}"
+        )
+
+    def test_touching_but_zero_area_intersection(self) -> None:
+        """Polygon that shares only an edge (zero area) is not assigned."""
+        cpm = _import_compute_cell_polygon_map()
+        poly = box(1.0, 0.0, 2.0, 1.0)
+        cells = [(1, 0.5, 0.5)]  # cell is [0.25, 0.75] x [0.25, 0.75]
+        result = cpm(cells, [poly])
+        assert result[1] == -1, (
+            "Zero-area intersection should not assign a polygon"
+        )
+
+
+class TestCellPolygonMapRed:
+    """Failure-mode tests for _compute_cell_polygon_map() (C-246)."""
+
+    def test_invalid_polygon_handled(self) -> None:
+        """Self-intersecting (bowtie) polygon is fixed by make_valid."""
+        cpm = _import_compute_cell_polygon_map()
+        bowtie = Polygon([(0, 0), (1, 1), (1, 0), (0, 1)])
+        assert not bowtie.is_valid
+        cells = [(1, 0.5, 0.5)]
+        result = cpm(cells, [bowtie])
+        assert 1 in result  # must not crash
+
+    def test_multipolygon_input(self) -> None:
+        """MultiPolygon geometry (common in GAUL L2) works correctly."""
+        from shapely.geometry import MultiPolygon as ShapelyMultiPolygon
+        cpm = _import_compute_cell_polygon_map()
+        mp = ShapelyMultiPolygon([box(0, 0, 0.4, 1), box(0.6, 0, 1.0, 1)])
+        cells = [(1, 0.2, 0.5), (2, 0.8, 0.5)]
+        result = cpm(cells, [mp])
+        assert result[1] == 0
+        assert result[2] == 0
+
+
+class TestCellPolygonMapEquivalence:
+    """Cross-check _compute_cell_polygon_map against area_majority_join (C-246)."""
+
+    def test_polygon_map_plus_records_equals_join(self) -> None:
+        """records[cell_poly_map[gid]] == area_majority_join result for all cells."""
+        cpm = _import_compute_cell_polygon_map()
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul_multifield()
+        cells = _build_synthetic_cells()
+
+        poly_map = cpm(cells, polys)
+        join_result = join(cells, polys, recs, field_name="gaul0_code")
+
+        for gid, _, _ in cells:
+            poly_idx = poly_map[gid]
+            expected = -1 if poly_idx == -1 else recs[poly_idx]["gaul0_code"]
+            assert expected == join_result[gid], (
+                f"gid={gid}: poly_map→records gives {expected}, "
+                f"join gives {join_result[gid]}"
+            )
+
+    def test_tiebreaker_consistency(self) -> None:
+        """For monotonically increasing codes, polygon-index and
+        field-value tiebreakers agree."""
+        cpm = _import_compute_cell_polygon_map()
+        join = _import_area_majority_join()
+        left = box(0.0, 0.0, 0.5, 1.0)
+        right = box(0.5, 0.0, 1.0, 1.0)
+        polys = [left, right]
+        recs = [{"gaul0_code": 10}, {"gaul0_code": 20}]
+        cells = [(1, 0.5, 0.5)]
+
+        poly_idx = cpm(cells, polys)[1]
+        join_val = join(cells, polys, recs)[1]
+        assert recs[poly_idx]["gaul0_code"] == join_val, (
+            f"Tiebreakers disagree: poly_map→{recs[poly_idx]['gaul0_code']}, "
+            f"join→{join_val}"
+        )
+
+    def test_sentinel_consistency(self) -> None:
+        """Both paths return sentinel for cells with no polygon overlap."""
+        cpm = _import_compute_cell_polygon_map()
+        join = _import_area_majority_join()
+        polys, recs = _build_synthetic_gaul_multifield()
+        far_cell = [(999, 50.0, 50.0)]
+
+        assert cpm(far_cell, polys)[999] == -1
+        assert join(far_cell, polys, recs)[999] == -1
