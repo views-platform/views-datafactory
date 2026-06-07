@@ -43,7 +43,7 @@ The ACLED consolidator tags raw harvester snapshots with source metadata and wri
 | `_harvest_digest` | Content digest of the source Parquet file | `"sha256:a1b2c3d4..."` |
 | `_harvest_timestamp` | UTC timestamp of when the source was fetched | `"2026-05-03T10:00:00Z"` |
 
-**Deduplication:** On `(event_id_cnty, _harvest_digest)`. Identical re-fetches are skipped; updated snapshots with different digests are preserved.
+**Deduplication:** On `event_id_cnty` alone. When the same event appears in multiple source files (e.g., overlapping year-range fetches), the version from the most recent harvest is kept. This differs from UCDP (ADR-015), which preserves multiple vintages per event — ACLED has a single source type with no vintage semantics. *(Updated 2026-06-07: changed from `(event_id_cnty, _harvest_digest)` to fix cross-file duplication; see #138.)*
 
 **Fields preserved:** All fields from the API response. No columns are dropped.
 

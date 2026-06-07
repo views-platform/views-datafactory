@@ -6,6 +6,7 @@ Uses synthetic Parquet snapshots mimicking ACLED harvester output.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pyarrow as pa
@@ -346,3 +347,203 @@ class TestAcledConsolidatorRegistration:
         )
 
         assert "acled" in list_consolidators()
+
+
+# ---- Cross-File Dedup (C-251, #138) ----
+
+
+def _make_config(
+    tmp_path: Path, source_dir: Path,
+) -> AcledConsolidationConfig:
+    """Build consolidation config pointing at tmp directories."""
+    return AcledConsolidationConfig(
+        source_dir=source_dir,
+        harvest_ledger_path=(
+            tmp_path / "prov" / "harvest.jsonl"
+        ),
+        output_path=(
+            tmp_path / "store" / "acled_store.parquet"
+        ),
+        ledger_path=(
+            tmp_path / "prov" / "consolidation.jsonl"
+        ),
+    )
+
+
+class TestConsolidateAcledCrossFileDedup:
+    """Cross-file dedup: same event_id_cnty in different files."""
+
+    def test_overlapping_files_no_double_count(
+        self, tmp_path: Path,
+    ) -> None:
+        """Two files with overlapping events produce no duplicates.
+
+        acled_2020_2025.parquet has 5 events (ids 1-5).
+        acled_2025_2025.parquet has 3 of those same events (ids 3-5).
+        Result should have exactly 5 unique events.
+        """
+        source_dir = tmp_path / "raw"
+        range_events = _make_acled_events(5, id_start=1)
+        _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            range_events,
+        )
+        overlap_events = _make_acled_events(3, id_start=3)
+        _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            overlap_events,
+        )
+
+        config = _make_config(tmp_path, source_dir)
+        result = consolidate_acled(config)
+
+        assert result.n_records_total == 5
+
+        store = read_store(result.output_path)
+        eids = store.column("event_id_cnty").to_pylist()
+        assert len(eids) == len(set(eids))
+
+    def test_latest_harvest_wins(
+        self, tmp_path: Path,
+    ) -> None:
+        """Same event in two files with different data — latest wins.
+
+        Old file has fatalities=0, new file has fatalities=99.
+        """
+        source_dir = tmp_path / "raw"
+
+        old_events = [
+            {
+                "event_id_cnty": "SOM0001",
+                "event_date": "2025-01-15",
+                "event_type": "Battles",
+                "sub_event_type": "Armed clash",
+                "actor1": "Group A",
+                "actor2": "Group B",
+                "country": "Somalia",
+                "admin1": "Banadir",
+                "latitude": 2.0,
+                "longitude": 45.0,
+                "fatalities": 0,
+                "notes": "old version",
+                "source": "Test",
+                "source_scale": "National",
+            },
+        ]
+        new_events = [
+            {
+                **old_events[0],
+                "fatalities": 99,
+                "notes": "updated version",
+            },
+        ]
+        _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            old_events,
+        )
+        _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            new_events,
+        )
+
+        config = _make_config(tmp_path, source_dir)
+        result = consolidate_acled(config)
+
+        assert result.n_records_total == 1
+        store = read_store(result.output_path)
+        fatalities = store.column("fatalities").to_pylist()
+        assert fatalities == [99]
+
+    def test_overlap_detection_warns(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Overlapping year ranges produce a warning."""
+        source_dir = tmp_path / "raw"
+        _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            _make_acled_events(3, id_start=1),
+        )
+        _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            _make_acled_events(2, id_start=10),
+        )
+
+        config = _make_config(tmp_path, source_dir)
+        with caplog.at_level(logging.WARNING):
+            consolidate_acled(config)
+
+        overlap_warnings = [
+            r for r in caplog.records
+            if "overlap" in r.message.lower()
+        ]
+        assert len(overlap_warnings) >= 1
+
+    def test_full_overlap_subset(
+        self, tmp_path: Path,
+    ) -> None:
+        """Range file + subset file with identical events.
+
+        acled_2020_2025.parquet has events for ids 1-10.
+        acled_2025_2025.parquet has same events for ids 8-10.
+        Store should contain exactly 10 events.
+        """
+        source_dir = tmp_path / "raw"
+        all_events = _make_acled_events(10, id_start=1)
+        _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            all_events,
+        )
+        subset_events = _make_acled_events(3, id_start=8)
+        _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            subset_events,
+        )
+
+        config = _make_config(tmp_path, source_dir)
+        result = consolidate_acled(config)
+
+        assert result.n_records_total == 10
+        store = read_store(result.output_path)
+        eids = store.column("event_id_cnty").to_pylist()
+        assert len(eids) == len(set(eids))
+
+    def test_disjoint_files_no_dedup(
+        self, tmp_path: Path,
+    ) -> None:
+        """Two files with non-overlapping events preserve all."""
+        source_dir = tmp_path / "raw"
+        _write_parquet(
+            source_dir / "acled_2020_2020.parquet",
+            _make_acled_events(5, id_start=1),
+        )
+        _write_parquet(
+            source_dir / "acled_2021_2021.parquet",
+            _make_acled_events(5, id_start=100),
+        )
+
+        config = _make_config(tmp_path, source_dir)
+        result = consolidate_acled(config)
+
+        assert result.n_records_total == 10
+
+    def test_idempotent_with_overlapping_source_files(
+        self, tmp_path: Path,
+    ) -> None:
+        """Consolidate twice with overlapping files — second adds 0."""
+        source_dir = tmp_path / "raw"
+        _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            _make_acled_events(5, id_start=1),
+        )
+        _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            _make_acled_events(3, id_start=3),
+        )
+
+        config = _make_config(tmp_path, source_dir)
+        r1 = consolidate_acled(config)
+        r2 = consolidate_acled(config)
+
+        assert r1.n_records_total == 5
+        assert r2.n_records_new == 0
+        assert r2.n_records_total == 5
