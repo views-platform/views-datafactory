@@ -136,6 +136,30 @@ def main() -> int:
         "pgid": (["lat", "lon"], pgids),
     }
 
+    # Source-digest gate: verify grid.npy matches assembly provenance
+    # before exporting. Prevents serving stale data (C-253).
+    from datafactory_provenance import compute_file_digest
+
+    print("Computing grid digest (streaming)...")
+    grid_digest = compute_file_digest(grid_path)
+    print(f"  grid.npy digest: {grid_digest}")
+
+    if provenance_path.exists():
+        prov = json.loads(provenance_path.read_text())
+        recorded = prov.get("output_digest")
+        if recorded and recorded != grid_digest:
+            print(
+                f"ABORT: grid.npy digest ({grid_digest}) does "
+                f"not match provenance.json ({recorded}). "
+                f"grid.npy was modified after assembly — "
+                f"re-run: uv run python scripts/assemble_grid.py"
+            )
+            return 1
+        if recorded:
+            print(f"  provenance.json digest: {recorded} — MATCH")
+    else:
+        print("  provenance.json not found — skipping gate")
+
     # Provenance metadata
     attrs = {
         "title": (
@@ -147,11 +171,8 @@ def main() -> int:
         "source": "views-datafactory",
         "n_features": n_f,
         "feature_order": feature_names,
+        "source_digest": grid_digest,
     }
-    if provenance_path.exists():
-        prov = json.loads(provenance_path.read_text())
-        if "output_digest" in prov:
-            attrs["source_digest"] = prov["output_digest"]
 
     # Freshness indicator (D-03): consumers can check when data
     # was last exported. ISO 8601 UTC timestamp.
@@ -250,6 +271,12 @@ def main() -> int:
         if tmp_output.exists():
             shutil.rmtree(tmp_output)
         raise
+
+    # Clear assembly sentinel — this export matches the current grid
+    sentinel = args.input / ".exports_required"
+    if sentinel.exists():
+        sentinel.unlink()
+        print("  Cleared .exports_required sentinel")
 
     elapsed = time.monotonic() - t0
 

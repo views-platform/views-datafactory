@@ -76,11 +76,20 @@ def main() -> int:
 
     # Export freshness check (ADR-018 SLO)
     zarr_path = args.data_dir / "assembled" / "grid.zarr"
-    freshness = check_export_freshness(zarr_path, now)
+    provenance_path = args.data_dir / "assembled" / "provenance.json"
+    freshness = check_export_freshness(
+        zarr_path, now, provenance_path=provenance_path,
+    )
     if not freshness["export_slo_met"]:
         any_issues = True
     if freshness.get("data_boundary_current") is False:
         any_issues = True
+    if freshness.get("content_fresh") is False:
+        any_issues = True
+
+    # Sentinel check: assembly ran but exports not yet done (C-253)
+    sentinel_path = args.data_dir / "assembled" / ".exports_required"
+    sentinel_exists = sentinel_path.exists()
 
     if args.json:
         output = {
@@ -89,6 +98,8 @@ def main() -> int:
             "freshness_slo_hours": FRESHNESS_SLO_HOURS,
             "export_age_hours": freshness["export_age_hours"],
             "export_slo_met": freshness["export_slo_met"],
+            "content_fresh": freshness.get("content_fresh"),
+            "exports_required_sentinel": sentinel_exists,
             "last_valid_month_id": freshness.get(
                 "last_valid_month_id"
             ),
@@ -137,6 +148,34 @@ def main() -> int:
             f"{'Data boundary':20s} "
             f"last_valid_month_id missing from zarr attrs"
         )
+
+    # Content freshness (digest match)
+    content_fresh = freshness.get("content_fresh")
+    if content_fresh is True:
+        print(
+            f"  [{'OK':7s}] "
+            f"{'Content freshness':20s} "
+            f"zarr digest matches assembly"
+        )
+    elif content_fresh is False:
+        any_issues = True
+        print(
+            f"! [{'STALE':7s}] "
+            f"{'Content freshness':20s} "
+            f"zarr digest does NOT match assembly — "
+            f"re-export: uv run python scripts/export_zarr.py"
+        )
+
+    # Sentinel check
+    if sentinel_exists:
+        any_issues = True
+        print(
+            f"! [{'PENDING':7s}] "
+            f"{'Export sentinel':20s} "
+            f".exports_required present — "
+            f"assembly ran but exports not yet done"
+        )
+
     print()
 
     for result in results:

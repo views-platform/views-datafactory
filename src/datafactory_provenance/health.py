@@ -19,6 +19,7 @@ __all__ = [
     "check_export_freshness",
     "read_last_entries",
     "report_ledger",
+    "verify_source_digest",
 ]
 
 # Freshness SLO: maximum acceptable age of exported data (ADR-018).
@@ -159,10 +160,62 @@ def report_ledger(
     }
 
 
-def check_export_freshness(
-    zarr_path: Path, now: datetime
+def verify_source_digest(
+    source_path: Path,
+    recorded_digest: str,
+    *,
+    algorithm: str = "sha256",
+    truncate: int = 16,
 ) -> dict:
-    """Check export_timestamp in zarr attrs against SLO."""
+    """Verify a derived artifact's source digest matches the actual source.
+
+    Compares *recorded_digest* (stored in a derived artifact's
+    metadata) against the current content digest of *source_path*.
+
+    Returns dict with: match, actual_digest, recorded_digest, detail.
+    """
+    from datafactory_provenance.digests_and_ledgers import (
+        compute_file_digest,
+    )
+
+    if not source_path.exists():
+        return {
+            "match": False,
+            "actual_digest": None,
+            "recorded_digest": recorded_digest,
+            "detail": f"Source file not found: {source_path}",
+        }
+
+    actual = compute_file_digest(
+        source_path, algorithm=algorithm, truncate=truncate,
+    )
+    match = actual == recorded_digest
+    if match:
+        detail = f"Digest match: {actual}"
+    else:
+        detail = (
+            f"Digest MISMATCH: source={actual}, "
+            f"recorded={recorded_digest}"
+        )
+    return {
+        "match": match,
+        "actual_digest": actual,
+        "recorded_digest": recorded_digest,
+        "detail": detail,
+    }
+
+
+def check_export_freshness(
+    zarr_path: Path,
+    now: datetime,
+    provenance_path: Path | None = None,
+) -> dict:
+    """Check export timestamp and content freshness against SLO.
+
+    When *provenance_path* is provided (or defaults to
+    ``zarr_path.parent / "provenance.json"``), also compares the
+    assembly digest against the zarr's recorded source digest.
+    """
     zattrs_path = zarr_path / ".zattrs"
     if not zattrs_path.exists():
         return {
@@ -229,4 +282,29 @@ def check_export_freshness(
         "data_boundary_current": data_boundary_current,
         "detail": detail,
     }
+
+    # Content-based staleness: compare assembly digest against
+    # the zarr's recorded source digest (C-255).
+    if provenance_path is None:
+        provenance_path = zarr_path.parent / "provenance.json"
+    zarr_digest = attrs.get("source_digest")
+    if provenance_path.exists() and zarr_digest:
+        try:
+            prov = json.loads(provenance_path.read_text())
+            prov_digest = prov.get("output_digest")
+            if prov_digest:
+                result["source_digest_match"] = (
+                    prov_digest == zarr_digest
+                )
+                result["content_fresh"] = (
+                    prov_digest == zarr_digest
+                )
+                if not result["content_fresh"]:
+                    result["detail"] += (
+                        " — CONTENT STALE: zarr source_digest "
+                        "does not match assembly output_digest"
+                    )
+        except (json.JSONDecodeError, OSError):
+            pass
+
     return result
