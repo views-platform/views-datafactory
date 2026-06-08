@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-17 (updated 2026-06-07)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07
-**Status:** 250 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 197 resolved, 50 open concerns (2 Tier 2, 9 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 21 struck-through in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
+**Status:** 252 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 198 resolved, 51 open concerns (3 Tier 2, 9 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 21 struck-through in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -60,6 +60,8 @@
 | ~~C-248~~ | ~~4~~ | ~~`area_majority_join` string tiebreaker crashes on mixed types~~ | Resolved 2026-06-07 (#136: type-safe tiebreaker + regression test) | GAUL data integrity |
 | C-249 | 4 | Float64 CM conservation fix has no regression guard | Developer reverts `dtype=np.float64` in `_conservation.py` | Count conservation |
 | C-250 | 4 | Hierarchical reconciliation not wired into any production code path | GAUL hierarchy corruption (L2→L1 nesting violation) introduced in new GAUL release | GAUL data integrity |
+| ~~C-251~~ | ~~1~~ | ~~ACLED consolidator cross-file event duplication (2× overcounting)~~ | Resolved 2026-06-07 (#138: dedup on event_id_cnty alone + overlap detection + 6 tests) | ACLED consolidation |
+| C-252 | 2 | ACLED cross-run dedup drops updated events (first-seen wins, not latest) | ACLED revises a past event and operator re-consolidates with existing store | ACLED consolidation |
 | ~~C-242~~ | ~~2~~ | ~~ADR-040 count conservation invariants accepted but zero test enforcement~~ | Resolved 2026-06-06 (PR #135: 10 tests + runtime assertions) | Count conservation |
 | ~~C-243~~ | ~~3~~ | ~~ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)~~ | Resolved 2026-06-06 (PR #135: 6 tests + check_nesting + assert_hierarchical_reconciliation) | Count conservation |
 | ~~C-244~~ | ~~4~~ | ~~4 CICs + ADR-025 not updated after ADR-040 acceptance~~ | Resolved 2026-06-06 (PR #135: 4 CICs + ADR-025 updated) | Count conservation |
@@ -108,6 +110,22 @@ Items that should be resolved together:
 
 ## Tier 1 — Fix Immediately
 
+### ~~C-251: ACLED consolidator cross-file event duplication (2× overcounting)~~ — RESOLVED
+
+The ACLED consolidator deduplicated on `(event_id_cnty, _harvest_digest)`, where `_harvest_digest` is a per-file content digest. When the same event appeared in two source files (`acled_2020_2025.parquet` and `acled_2025_2025.parquet`), each file had a different digest, so both copies survived dedup. All 411,089 ACLED events for 2025 were double-counted in the assembled grid (822,178 instead of 411,089). Silent data corruption with no error signal.
+
+Root cause: the UCDP vintage pattern (ADR-017) was incorrectly applied to ACLED, which has a single source type with no vintage semantics. The dedup key should have been `event_id_cnty` alone from the start.
+
+| Field | Value |
+|-------|-------|
+| ID | C-251 |
+| Tier | 1 — silent data corruption, no error signal |
+| Source | Visual audit investigation + manual data inspection, 2026-06-07 |
+| Trigger | Multiple ACLED harvest files covering overlapping year ranges |
+| Location | `src/datafactory_consolidation/consolidators/acled.py:252-270` |
+
+**Resolution (2026-06-07):** Changed dedup key to `event_id_cnty` alone. Added cross-file dedup within new data (keeps latest harvest per event). Added `_check_year_overlap()` warning for overlapping source files. Added 6 red-team tests. Updated ADR-028. See #138.
+
 ---
 
 ## Tier 2 — Fix Before Sharing Server Access
@@ -125,6 +143,23 @@ The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-
 **Trigger:** Hetzner server reboots and cron daemon fails to restart, or `views-deploy` user is removed during server maintenance.
 **Location:** Server crontab (`views-deploy` user), `scripts/refresh_pipeline.sh:61-72` (failure trap), `docs/ADRs/018_operational_resilience.md:76,90`.
 **Source:** Falsification audit P1/P2 (2026-04-22).
+
+
+### C-252: ACLED cross-run dedup drops updated events (first-seen wins, not latest)
+
+The ACLED consolidator's cross-run dedup path (existing-store merge at lines 309-321) drops new rows when `event_id_cnty` already exists in the store. This contradicts the within-run dedup (`_dedup_by_event_id`) which keeps the latest harvest. If ACLED revises a past event (corrected fatalities, reclassified event_type, updated coordinates), the corrected version is silently dropped in favor of the stale version. ADR-028 states "the version from the most recent harvest is kept" — the cross-run path violates this.
+
+Mitigating factor: current operational pattern deletes and rebuilds the store from all raw files, so cross-file dedup (stage 1) handles most cases. The risk materializes only when the store already exists from a prior run and new data arrives with a corrected event.
+
+| Field | Value |
+|-------|-------|
+| ID | C-252 |
+| Tier | 2 — silent data staleness when ACLED revises events, no error signal |
+| Source | review-diff, 2026-06-07 |
+| Trigger | ACLED revises a past event (corrected fatalities, reclassified type) and operator re-consolidates incrementally against existing store |
+| Location | `src/datafactory_consolidation/consolidators/acled.py:309-321` |
+
+Cross-ref: C-251 (resolved — same-run cross-file duplication, different path).
 
 
 ### ~~C-239: Issue #104 paths produce silent wrong status page~~ RESOLVED
