@@ -124,7 +124,7 @@ def main() -> int:
             })
             print("PASS")
             return 0
-        elif not verdict.should_skip and verdict.reason:
+        else:
             print(f"{verdict.reason} — re-exporting")
 
     import numpy as np

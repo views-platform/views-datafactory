@@ -152,6 +152,18 @@ def _load_source_grid(
     return grid, features, offset
 
 
+def _composite_parquet_digest(directory: Path) -> str | None:
+    """SHA-256 digest of sorted Parquet files in *directory*."""
+    from datafactory_provenance import compute_content_digest, compute_file_digest
+
+    files = sorted(directory.glob("*.parquet"))
+    if not files:
+        return None
+    return compute_content_digest(
+        b"|".join(compute_file_digest(f).encode() for f in files)
+    )
+
+
 def main() -> int:
     """Assemble the canonical grid."""
     sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
@@ -324,7 +336,6 @@ def main() -> int:
             LEDGER_VERSION,
             append_ledger_entry,
             check_assembly_skip,
-            compute_content_digest,
             compute_file_digest,
         )
 
@@ -350,28 +361,14 @@ def main() -> int:
                 config.vdem_grid_dir / "grid.npy"
             )
 
-        static_files = sorted(config.static_dir.glob("*.parquet"))
-        if static_files:
-            current_digests["static_digest"] = (
-                compute_content_digest(
-                    b"|".join(
-                        compute_file_digest(f).encode()
-                        for f in static_files
-                    )
-                )
-            )
+        static_digest = _composite_parquet_digest(config.static_dir)
+        if static_digest is not None:
+            current_digests["static_digest"] = static_digest
 
         if has_admin:
-            admin_files = sorted(config.admin_dir.glob("*.parquet"))
-            if admin_files:
-                current_digests["admin_digest"] = (
-                    compute_content_digest(
-                        b"|".join(
-                            compute_file_digest(f).encode()
-                            for f in admin_files
-                        )
-                    )
-                )
+            admin_digest = _composite_parquet_digest(config.admin_dir)
+            if admin_digest is not None:
+                current_digests["admin_digest"] = admin_digest
 
         verdict = check_assembly_skip(
             current_digests, prov_path, output_grid,
@@ -687,7 +684,6 @@ def main() -> int:
         DIGEST_SCHEME,
         LEDGER_VERSION,
         append_ledger_entry,
-        compute_content_digest,
         compute_file_digest,
     )
 
@@ -712,26 +708,10 @@ def main() -> int:
         if has_vdem else None
     )
 
-    static_files = sorted(config.static_dir.glob("*.parquet"))
-    static_digest = (
-        compute_content_digest(
-            b"|".join(
-                compute_file_digest(f).encode()
-                for f in static_files
-            )
-        )
-        if static_files else None
-    )
-
-    admin_files = sorted(config.admin_dir.glob("*.parquet"))
+    static_digest = _composite_parquet_digest(config.static_dir)
     admin_digest = (
-        compute_content_digest(
-            b"|".join(
-                compute_file_digest(f).encode()
-                for f in admin_files
-            )
-        )
-        if has_admin and admin_files else None
+        _composite_parquet_digest(config.admin_dir)
+        if has_admin else None
     )
 
     # Data boundaries
