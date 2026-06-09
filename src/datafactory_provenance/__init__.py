@@ -24,6 +24,11 @@ from datafactory_provenance.health import (
     verify_source_digest,
 )
 from datafactory_provenance.registry import Registry
+from datafactory_provenance.skip import (
+    SkipVerdict,
+    check_assembly_skip,
+    check_export_skip,
+)
 from datafactory_provenance.source_registry import (
     PIPELINE_SOURCES,
     SourceEntry,
@@ -40,10 +45,13 @@ __all__ = [
     "PIPELINE_SOURCES",
     "Registry",
     "SOURCE_SLO",
+    "SkipVerdict",
     "SourceEntry",
     "VIEWS_EPOCH_YEAR",
     "append_ledger_entry",
+    "check_assembly_skip",
     "check_export_freshness",
+    "check_export_skip",
     "compute_content_digest",
     "compute_file_digest",
     "file_lock",

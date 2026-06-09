@@ -138,6 +138,18 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-037** -- Bounded-Memory Compilation via Memory-Mapped Arrays
   Replace `np.full()` with `np.lib.format.open_memmap()` in compilation. Peak RSS drops from grid-size to ~200 MB regardless of feature count. Pre-flight disk space check. Follows `assemble_grid.py` precedent.
 
+- **ADR-038** -- Public Pipeline Status via Caddy Path Exemption
+  Exposes `data/status.html` at a public URL via a Caddy path exemption, bypassing auth for the status page only.
+
+- **ADR-039** -- Area-Majority GAUL Assignment with Precomputed Table
+  Replaces centroid-based GAUL assignment with area-majority spatial join. Precomputed lookup table (259,200 cells) eliminates coastal misassignment.
+
+- **ADR-040** -- Count Conservation and Hierarchical Reconciliation
+  Guarantees event counts are conserved through the assembly pipeline and that admin-level aggregations reconcile with grid-level totals.
+
+- **ADR-041** -- Content-Addressed Skip for Assembly and Export
+  SHA-256 digest comparison skips redundant assembly and export when inputs are unchanged. Key-set equality detects source addition/removal; output integrity check prevents serving corrupt artifacts. Extends ADR-032 pattern.
+
 These must comply with the constitutional ADRs above.
 
 ---
