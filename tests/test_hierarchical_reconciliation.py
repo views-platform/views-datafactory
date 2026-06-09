@@ -101,15 +101,12 @@ class TestBeigeHierarchy:
 class TestRedHierarchy:
     """Failure modes for hierarchy reconciliation."""
 
-    def test_sum_mismatch_raises(self) -> None:
+    def test_cross_level_nesting_violation_raises(self) -> None:
         from datafactory_adapters._reconciliation import (
             assert_hierarchical_reconciliation,
         )
 
-        # Valid nesting but tampered L1 codes to create sum mismatch
-        # Cell 0: L0=1, L1=10 → country 1 gets event 5.0
-        # Cell 1: L0=1, L1=20 → but L1=20 is country 2's province
-        # The nesting check catches this: L1=20 maps to both L0=1 and L0=2
+        # L1=20 appears under both L0=1 and L0=2 — nesting violation
         gaul0 = np.array([1, 1, 2, 2])
         gaul1 = np.array([10, 20, 20, 21])  # L1=20 maps to L0=1 AND L0=2
         gaul2 = np.array([100, 200, 201, 210])

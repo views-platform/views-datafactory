@@ -13,6 +13,7 @@ import numpy as np
 
 __all__ = ["assert_cm_conservation"]
 
+# Extend when new count/sum sources are added (e.g. WDI).
 _EXTENSIVE_PREFIXES = ("ged_", "acled_")
 
 
