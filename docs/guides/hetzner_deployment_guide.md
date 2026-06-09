@@ -323,18 +323,26 @@ systemctl status caddy    # Check it's running
 ### 3.6 Test
 
 ```bash
-# From the server — should return 401 (auth required)
+# Status page — should return 200 (public, no auth — ADR-038)
+curl -s -o /dev/null -w "%{http_code}" http://localhost/status.html
+
+# Data artifacts — should return 401 (auth required)
 curl -s -o /dev/null -w "%{http_code}" http://localhost/grid.zarr/.zmetadata
 
-# From the server — should return zarr JSON metadata
+# Data artifacts with auth — should return zarr JSON metadata
 curl -s -u views http://localhost/grid.zarr/.zmetadata | head -10
 
-# From your laptop — should return 401
-curl -s -o /dev/null -w "%{http_code}" http://204.168.219.108/grid.zarr/.zmetadata
+# From your laptop — status page public
+curl -s -o /dev/null -w "%{http_code}" http://204.168.219.108/status.html
 
-# From your laptop — should return zarr JSON metadata
-curl -s -u views http://204.168.219.108/grid.zarr/.zmetadata | head -10
+# From your laptop — data requires auth
+curl -s -o /dev/null -w "%{http_code}" http://204.168.219.108/grid.zarr/.zmetadata
 ```
+
+**Critical:** If the status page returns 401 instead of 200, the
+Caddyfile is missing the `@protected not path /status.html` matcher.
+If it returns 404, the symlink in step 3.2 is missing or broken —
+verify with `ls -la /srv/views-data/status.html`.
 
 ---
 

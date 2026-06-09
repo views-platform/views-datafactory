@@ -1,8 +1,9 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-06-08)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08
-**Status:** 258 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 198 resolved, 57 open concerns (1 Tier 1, 7 Tier 2, 10 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 21 struck-through in active register + 27 resolved disagreements in archive. 35 disagreement IDs total: 27 resolved, 8 open.
+**Date:** 2026-03-17 (updated 2026-06-09)
+**Last update:** ADR-041 content-addressed skip — resolved C-259, C-260, C-261, C-262, D-36
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09
+**Status:** 262 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 204 resolved, 55 open concerns (0 Tier 1, 6 Tier 2, 10 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 10 open disagreements. 170 resolved concerns as full entries + 19 early-archive reference rows + 25 struck-through in active register + 27 resolved disagreements in archive. 37 disagreement IDs total: 28 resolved, 9 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -13,7 +14,9 @@
 
 | ID | Tier | Title | Trigger | Package |
 |----|------|-------|---------|---------|
-| C-253 | 1 | Export scripts have no source-digest verification — stale data served silently | Operator re-runs assembly without re-running export scripts | Artifact consistency |
+| ~~C-253~~ | ~~1~~ | ~~Export scripts have no source-digest verification — stale data served silently~~ | Resolved 2026-06-09 (commit 975b401: source-digest gates in export_zarr.py + generate_consumer_data.py) | Artifact consistency |
+| ~~C-259~~ | ~~1~~ | ~~Assembly skip logic does not digest static/admin inputs — false skip serves stale grid~~ | Resolved 2026-06-09 (ADR-041: composite static/admin digests in provenance + check_assembly_skip) | Artifact consistency |
+| ~~C-262~~ | ~~1~~ | ~~Skip path serves corrupt output — no output integrity verification on skip~~ | Resolved 2026-06-09 (ADR-041: check_assembly_skip verifies output_digest on skip path) | Artifact consistency |
 | C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before granting additional SSH users | Server hardening |
 | C-121 | 4 | Phase 6.4 documented but unexecuted (lessons from C-87) | Before executing Phase 6.4 | Server hardening |
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
@@ -40,6 +43,7 @@
 | C-185 | 4 | GHS-POP caching has no digest comparison (no change detection) | JRC silently updates a GeoTIFF epoch without changing the URL | Harvest correctness |
 | ~~C-186~~ | ~~3~~ | ~~Shapefile harvester lacks outcome vocabulary~~ | Resolved 2026-05-31 (outcome vocabulary added, ADR-032 updated) | Harvest correctness |
 | C-189 | 4 | GHS-BUILT-S test coverage parity gap — 19% of combined other sources | Production incident on GHS-BUILT-S path that existing GHS-POP/ACLED tests would have caught | Test coverage |
+| ~~C-261~~ | ~~3~~ | ~~No provenance ledger entry for skip events — audit trail has temporal gaps~~ | Resolved 2026-06-09 (ADR-041: ledger entries for both skip and success, --force flag added) | Artifact consistency |
 | C-256 | 3 | No definition of "data soundness" as a testable property | Next time operator asks "is this safe to deploy?" and must integrate pytest + visual audits + check_health.py + manual inspection | Data soundness |
 | C-223 | 3 | Compilation pipeline allocates full grid in RAM (bounded-memory R&D) | Next data source (WDI: 20-50 features) pushes single-source compile past 16 GB | Scaling headroom |
 | C-224 | 4 | No server backup or disaster recovery plan | Disk failure or accidental data deletion on Hetzner server | Server hardening |
@@ -65,7 +69,8 @@
 | ~~C-251~~ | ~~1~~ | ~~ACLED consolidator cross-file event duplication (2× overcounting)~~ | Resolved 2026-06-07 (#138: dedup on event_id_cnty alone + overlap detection + 6 tests) | ACLED consolidation |
 | C-252 | 2 | ACLED cross-run dedup drops updated events (first-seen wins, not latest) | ACLED revises a past event and operator re-consolidates with existing store | ACLED consolidation |
 | C-254 | 2 | Consumer parquet has zero provenance — no audit trail for training data | Consumer bridge expanded to include ACLED features, or model trains on stale parquet after grid correction | Artifact consistency |
-| C-255 | 2 | Health check reports "SLO MET" for content-stale artifacts (time-fresh, content-wrong) | check_health.py runs after mid-cycle grid correction where exports were not re-run | Artifact consistency |
+| ~~C-255~~ | ~~2~~ | ~~Health check reports "SLO MET" for content-stale artifacts (time-fresh, content-wrong)~~ | Resolved 2026-06-09 (commit 975b401: check_export_freshness compares source_digest) | Artifact consistency |
+| ~~C-260~~ | ~~2~~ | ~~Assembly skip logic ignores source removal — `all()` checks only current keys~~ | Resolved 2026-06-09 (ADR-041: check_assembly_skip uses key-set equality, not subset) | Artifact consistency |
 | C-257 | 2 | No input data validation at system boundary — DGP assumptions untested | ACLED or UCDP changes data model (e.g., multi-day events, new date_prec values) | Data soundness |
 | C-258 | 2 | Count conservation not enforced at consolidation or viewpoint boundaries | Bug in consolidation dedup or viewpoint survivorship/distribution changes event counts without detection | Data soundness |
 | ~~C-242~~ | ~~2~~ | ~~ADR-040 count conservation invariants accepted but zero test enforcement~~ | Resolved 2026-06-06 (PR #135: 10 tests + runtime assertions) | Count conservation |
@@ -75,6 +80,8 @@
 | D-33 | — | Pipeline-path information: registry field vs standalone mapping vs convention | Open | Source registry |
 | D-34 | — | Provenance enforcement location: library gate vs pipeline gate vs both | Open | Artifact consistency |
 | D-35 | — | Test scope: exhaustive verification vs minimum viable testing | Open | Data soundness |
+| D-36 | — | Skip decision location: inline in script vs. provenance package function | Open | Artifact consistency |
+| D-37 | — | Code identity in skip decisions: include git hash or not | Open | Artifact consistency |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
 | C-146 | 4 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
@@ -112,7 +119,7 @@ Items that should be resolved together:
 | **GAUL data integrity** | C-247, C-250 (C-246, C-248 resolved #136) | Before deploying refactored area-majority script to production |
 | **WET-before-DRY refactor** | C-07, C-155, C-164, C-195, C-230 (C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8) | Before WDI or next refactor sprint |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
-| **Artifact consistency** | C-253, C-254, C-255, C-231, D-34 | Before any manual out-of-band re-assembly or grid correction, or before expanding consumer bridge beyond UCDP-only features |
+| **Artifact consistency** | ~~C-253~~, C-254, ~~C-255~~, ~~C-259~~, ~~C-260~~, ~~C-261~~, ~~C-262~~, C-231, D-34, D-36, D-37 | Before expanding consumer bridge beyond UCDP-only features |
 | **Data soundness** | C-256, C-257, C-258, D-35 | Before next data source integration (WDI) or next consolidation/viewpoint change |
 | **Migration scope** | C-126 (C-125 resolved) | Before claiming full viewser replacement for the fleet |
 
@@ -138,19 +145,63 @@ Root cause: the UCDP vintage pattern (ADR-017) was incorrectly applied to ACLED,
 
 ---
 
-### C-253: Export scripts have no source-digest verification — stale data served silently
+### ~~C-253~~: Export scripts have no source-digest verification — stale data served silently — RESOLVED
+
+Resolved 2026-06-09 (commit 975b401, branch `chore/pre-deploy-drift-detection`). Source-digest gates added to both export scripts:
+
+- `export_zarr.py` (lines 172-194): calls `compute_file_digest(grid_path)` and compares against `provenance.json["output_digest"]`. ABORTs with exit code 1 on mismatch, preventing stale data export.
+- `generate_consumer_data.py` (lines 206-234): same digest gate pattern. ABORTs if grid.npy doesn't match its provenance.
+- `health.py:check_export_freshness()` (lines 208-310): now compares `zarr/.zattrs["source_digest"]` against assembly `provenance.json["output_digest"]` — content-based staleness detection (C-255).
+
+The ACLED dedup incident vector (stale zarr after grid correction) is now structurally blocked. Both automated runs and manual out-of-band re-assembly are covered.
+
+**Note:** The original concern is resolved, but the content-addressed skip feature on `feat/content-addressed-skip` introduces a new Tier 1 concern (C-259) — the skip logic does not digest static/admin inputs, creating a different vector for stale data.
+
+See also C-259 (new: skip logic completeness gap), C-147 (no pipeline orchestrator), C-231 (compilation idempotence guard). Part of causal cluster: **Artifact consistency**.
+
+
+### ~~C-259: Assembly skip logic does not digest static/admin inputs — false skip serves stale grid~~
+
+**Resolved 2026-06-09:** ADR-041 implementation adds composite static/admin digests (sorted `*.parquet` file digests hashed together) to both the provenance write and the skip comparison. `check_assembly_skip` in `datafactory_provenance/skip.py` includes `static_digest` and `admin_digest` in key-set comparison. Integration tests `test_static_change_triggers_rebuild` and `test_admin_change_triggers_rebuild` verify the fix.
 
 | Field | Value |
 |-------|-------|
-| ID | C-253 |
-| Tier | 1 — silent data corruption served to consumers, no error signal |
-| Source | expert-review (2026-06-08), derived-artifact drift audit |
-| Trigger | Operator re-runs assembly (e.g., after a consolidation fix) without re-running `export_zarr.py` and `generate_consumer_data.py` |
-| Location | `scripts/export_zarr.py:151-154` (reads provenance decoratively, no digest verification), `scripts/generate_consumer_data.py` (entire file — zero provenance awareness) |
+| ID | C-259 |
+| Tier | ~~1~~ → Resolved |
+| Source | content-addressed skip investigation (2026-06-09) |
+| Trigger | Static or admin Parquet files updated (e.g., new GAUL release, updated landarea/mountainous values) and operator runs assembly with `--skip-if-unchanged` |
+| Location | `scripts/assemble_grid.py` (skip logic), `src/datafactory_provenance/skip.py` (check_assembly_skip) |
 
-`export_zarr.py` copies `provenance.json["output_digest"]` into zarr `.zattrs["source_digest"]` but never calls `compute_file_digest()` on the grid it actually reads. The provenance is decorative — it describes what was true when assembly ran, not what is true now. `generate_consumer_data.py` has zero provenance awareness: no digest, no manifest, no freshness check. When assembly produces a new `grid.npy` with a corrected digest, both scripts silently export from whatever file exists on disk. The ACLED dedup incident (2026-06-07) is direct evidence: zarr served 822,178 doubled events while `grid.npy` contained the correct 411,089 — the server served corrupt data with no detection mechanism. This affects all data sources, not just ACLED. The `refresh_pipeline.sh` sequential ordering masks the problem during automated runs, but every manual out-of-band re-assembly creates the same vector. Neither `check_export_freshness()` (time-only) nor `report_ledger()` (no export ledger exists) can detect this.
+The content-addressed skip logic in `assemble_grid.py` computes SHA256 digests of 5 compiled grid.npy files and compares them against the previous run's `provenance.json`. If all 5 match, it skips assembly. However, the assembly also reads static Parquet files (landarea, mountainous, etc. from `--static-dir`) and admin boundary Parquet files (gaul0_code, gaul1_code, etc. from `--admin-dir`). These inputs are NOT included in the digest set. If someone updates a static or admin file, the skip logic would incorrectly report "all input digests match" and exit early, serving a grid built from stale Parquet data.
 
-See also C-147 (no pipeline orchestrator — same root cause: implicit ordering), C-231 (no compilation idempotence guard — same pattern at compilation layer), C-255 (health check false assurance). Part of causal cluster: **Artifact consistency**.
+The provenance-writing section (lines 784-853) records `static_dir` and `admin_dir` as path strings in the provenance but does NOT compute or store their digests — there is nothing to compare against even if the skip logic tried to check them.
+
+This is the same class of bug as C-253 (stale data served silently) but introduced by the skip feature rather than by missing digest gates.
+
+See also ~~C-253~~ (resolved — same bug class at export boundary), C-260 (source removal false skip — same skip logic), C-261 (no provenance for skips), C-262 (corrupt output passes skip). Part of causal cluster: **Artifact consistency**.
+
+
+### ~~C-262: Skip path serves corrupt output — no output integrity verification on skip~~
+
+**Resolved 2026-06-09:** ADR-041 implementation adds output integrity verification to the skip path. `check_assembly_skip` computes `compute_file_digest(output_path)` and compares against `provenance["output_digest"]`. If they don't match, `should_skip=False` with `output_valid=False` — assembly rebuilds. Integration test `test_corrupt_output_triggers_rebuild` verifies the fix. `--force` flag added per ADR-032 precedent.
+
+| Field | Value |
+|-------|-------|
+| ID | C-262 |
+| Tier | ~~1~~ → Resolved |
+| Source | expert-code-review (2026-06-09), Nygard perspective |
+| Trigger | Disk-full condition or `kill -9` during grid.npy write, followed by `--skip-if-unchanged` on the next pipeline run |
+| Location | `src/datafactory_provenance/skip.py` (check_assembly_skip output integrity check) |
+
+The skip path at `assemble_grid.py:314` checks `prov_path.exists() and (config.output_dir / "grid.npy").exists()` — both conditions can be true even if `grid.npy` is truncated (partial write from a disk-full condition or process kill). It then compares source digests at lines 341-343 — all match because the source digests describe *inputs*, not the *output*. Assembly skips, and the truncated `grid.npy` is served to consumers.
+
+This failure mode is **self-reinforcing**: every subsequent run with `--skip-if-unchanged` also skips because inputs haven't changed. The corrupt output persists indefinitely. There is no `--force` flag to bypass the skip cache (ADR-032 mandates this as a safety valve), and no health check verifies `grid.npy` integrity between assembly and export.
+
+The fix is to add output integrity verification to the skip path: after determining all input digests match, call `compute_file_digest(output_dir / "grid.npy")` and compare against `provenance.json["output_digest"]`. If they don't match, the output is corrupt — fall through to rebuild.
+
+This is distinct from C-259 (which is about missing *input* digests for static/admin). C-262 is about missing *output* verification on the skip path itself.
+
+See also C-259 (missing input digests), C-261 (no `--force` flag), ADR-032 (harvest idempotence — mandates `--force`). Part of causal cluster: **Artifact consistency**.
 
 ---
 
@@ -188,34 +239,51 @@ Mitigating factor: current operational pattern deletes and rebuilds the store fr
 Cross-ref: C-251 (resolved — same-run cross-file duplication, different path).
 
 
-### C-254: Consumer parquet has zero provenance — no audit trail for training data
+### C-254: Consumer parquet has zero provenance — no audit trail for training data — [PARTIALLY RESOLVED]
 
 | Field | Value |
 |-------|-------|
 | ID | C-254 |
 | Tier | 2 — structural fragility; becomes Tier 1 when consumer bridge expands beyond UCDP-only features |
-| Source | expert-review (2026-06-08), derived-artifact drift audit |
+| Source | expert-review (2026-06-08), derived-artifact drift audit; content-addressed skip investigation (2026-06-09) |
 | Trigger | Consumer bridge expanded to include ACLED or other features (`FEATURE_RENAME` dict in `generate_consumer_data.py:45-50`), or model trains on stale parquet after a mid-cycle grid correction |
-| Location | `scripts/generate_consumer_data.py` (entire file — no digest, no manifest, no ledger entry) |
+| Location | `scripts/generate_consumer_data.py` (no ledger entry, no manifest — only digest gate), `scripts/export_dataframe.py` (zero provenance infrastructure — no digest, no gate, no ledger) |
 
 `generate_consumer_data.py` calls `load_dataset()` at line 120, transforms the result, and writes parquet at line 237. It records nothing about what data version it read, when, or from what source. There is no way to determine what grid version a consumer parquet was generated from — no sidecar manifest, no parquet metadata, no provenance ledger entry. Currently low-risk because the consumer bridge only exports UCDP features (`ged_sb_best`, `ged_ns_best`, `ged_os_best`, `gaul0_code`) renamed to VIEWSER convention. But the R&D roadmap plans to expand this bridge. When ACLED or other features are added, the same stale-export vector that caused C-253 applies to training data with no forensic capability. A model suspected of training on stale data has no audit trail.
 
-See also C-253 (export digest verification — same root cause), C-06 (provenance composability — deferred by design). Part of causal cluster: **Artifact consistency**.
+**Partially resolved (2026-06-09, commit 975b401):** `generate_consumer_data.py` now has a source-digest gate (lines 206-234) that ABORTs if `grid.npy` doesn't match its provenance. This prevents serving stale data but does NOT create an audit trail — no ledger entry, no manifest, no record of what was exported when. The "stale data served" vector is closed; the "no forensics" vector remains open.
+
+**Additional location (2026-06-09, content-addressed skip investigation):** `scripts/export_dataframe.py` has zero provenance infrastructure — no `compute_file_digest()`, no digest gate, no ledger entry, no skip logic. It reads assembled data and writes DataFrame output with no provenance awareness at all.
+
+See also ~~C-253~~ (resolved — digest gates added), C-06 (provenance composability — deferred by design). Part of causal cluster: **Artifact consistency**.
 
 
-### C-255: Health check reports "SLO MET" for content-stale artifacts (time-fresh, content-wrong)
+### ~~C-255~~: Health check reports "SLO MET" for content-stale artifacts (time-fresh, content-wrong) — RESOLVED
+
+Resolved 2026-06-09 (commit 975b401, branch `chore/pre-deploy-drift-detection`). `check_export_freshness()` (lines 208-310 in `health.py`) now compares `zarr/.zattrs["source_digest"]` against `provenance.json["output_digest"]` — content-based staleness detection. The function reports `content_fresh: bool` separately from `time_fresh: bool`, decomplecting the two concerns as Hickey recommended. The `verify_source_digest()` function (lines 163-205) provides the reusable building block.
+
+The ACLED dedup incident vector is now detectable: a zarr with a stale `source_digest` would be flagged even if the `export_timestamp` is within SLO.
+
+See also ~~C-253~~ (resolved — root cause), D-34 (enforcement location disagreement, still open). Part of causal cluster: **Artifact consistency**.
+
+
+### ~~C-260: Assembly skip logic ignores source removal — `all()` checks only current keys~~
+
+**Resolved 2026-06-09:** ADR-041 implementation replaces the inline `all()` with `check_assembly_skip`, which compares the full key set in both directions (current vs prev). If `current_keys != prev_digest_keys`, the function returns `should_skip=False` with `missing_keys` or `changed_keys` populated. Unit test `test_no_skip_when_source_removed` and `test_no_skip_when_source_added` verify both directions.
 
 | Field | Value |
 |-------|-------|
-| ID | C-255 |
-| Tier | 2 — false assurance is worse than no assurance; actively prevents investigation |
-| Source | expert-review (2026-06-08), derived-artifact drift audit (Nygard + Hickey perspectives) |
-| Trigger | `check_health.py` runs after a mid-cycle grid correction where assembly was re-run but exports were not |
-| Location | `src/datafactory_provenance/health.py:162-232` (`check_export_freshness`), `scripts/check_health.py` (Step 11 of pipeline) |
+| ID | C-260 |
+| Tier | ~~2~~ → Resolved |
+| Source | content-addressed skip investigation (2026-06-09) |
+| Trigger | A source is removed from the assembly CLI args (e.g., `--acled-grid` removed) while `--skip-if-unchanged` is active |
+| Location | `src/datafactory_provenance/skip.py` (check_assembly_skip key-set equality) |
 
-`check_export_freshness()` reads `zarr/.zattrs["export_timestamp"]`, computes age in hours, and compares against `FRESHNESS_SLO_HOURS = 168`. It reports "SLO MET" if the export is less than 7 days old. It does NOT compare `zarr/.zattrs["source_digest"]` against `provenance.json["output_digest"]`. During the ACLED dedup incident, the zarr was exported 2026-06-05 (3 days old, well within SLO) but contained pre-fix data — `check_export_freshness()` would have reported "SLO MET" and "data_boundary_current: True." The operator sees green and assumes correctness. Time-based freshness and content-based freshness are conflated into a single "SLO MET" signal — Hickey identifies this as complecting two different concerns. The fix is to add a `content_fresh: bool` field that verifies `source_digest` match, reported separately from `time_fresh: bool`.
+The skip logic's `all()` check iterates only over `current_digests.items()` — the keys present in the current run. It does NOT check whether `prev_src` (from `provenance.json`) contains keys that are absent from `current_digests`. If a source was part of the previous assembly but is removed from the current invocation (e.g., operator drops `--acled-grid`), the old digest key persists in `prev_src` but is never compared. The `all()` check succeeds for all *current* keys, and the skip proceeds, serving a grid that still contains the removed source's data from the previous run.
 
-See also C-253 (root cause — no digest verification at export boundary), D-34 (disagreement on enforcement location). Part of causal cluster: **Artifact consistency**.
+This is a realistic scenario during source integration/removal and during debugging when operators selectively disable sources.
+
+See also C-259 (static/admin not digested — same skip logic), C-261 (no provenance for skips). Part of causal cluster: **Artifact consistency**.
 
 
 ### C-257: No input data validation at system boundary — DGP assumptions untested
@@ -277,6 +345,27 @@ Cross-ref: C-230 (script layer has zero unit tests), ADR-039 (area-majority spat
 ---
 
 ## Tier 3 — Improve Quality
+
+### ~~C-261: No provenance ledger entry for skip events — audit trail has temporal gaps~~
+
+**Resolved 2026-06-09:** ADR-041 implementation adds ledger entries for both skip (`outcome: "unchanged"`) and success (`outcome: "success"`) in both assembly and export. `--force` flag added to both scripts, bypassing skip entirely per ADR-032 precedent. Integration tests `test_skip_records_ledger_entry` and `test_export_skip_records_ledger_entry` verify ledger writes. `test_force_flag_bypasses_skip` and `test_export_force_bypasses_skip` verify the override.
+
+| Field | Value |
+|-------|-------|
+| ID | C-261 |
+| Tier | ~~3~~ → Resolved |
+| Source | content-addressed skip investigation (2026-06-09) |
+| Trigger | Operator investigates a data freshness question and cannot determine from the ledger whether the pipeline ran and found no changes, or simply didn't run |
+| Location | `scripts/assemble_grid.py`, `scripts/export_zarr.py`, `src/datafactory_provenance/skip.py` |
+
+When the content-addressed skip logic determines that inputs haven't changed, both `assemble_grid.py` and `export_zarr.py` print "SKIP: ..." and return 0. Neither script appends a ledger entry recording the skip event. The provenance trail has temporal gaps — there is no way to distinguish "pipeline ran at 21:00, nothing changed" from "pipeline didn't run at 21:00."
+
+The established pattern from ADR-032 (harvest idempotence and caching) records `"outcome": "unchanged"` in ledger entries when a harvest finds no new data. The skip logic should follow this vocabulary: `success` (work done), `unchanged` (inputs matched, work skipped), `cached` (output reused), `failed` (error).
+
+Additionally, the skip logic has no `--force` flag to bypass caching, which ADR-032 mandates as a safety valve ("all cache layers must be bypassable with `--force`"). A corrupted `provenance.json` with matching digests would permanently prevent rebuild with no override mechanism.
+
+See also C-259 (skip completeness gap), C-260 (source removal), ADR-032 (harvest idempotence — the model pattern). Part of causal cluster: **Artifact consistency**.
+
 
 ### C-256: No definition of "data soundness" as a testable property
 
@@ -495,6 +584,8 @@ Extraction risks identified (failure mode analysis):
 - FM-4 (Pattern #3): Config-or-shortcut resolution varies (V-Dem accepts 2 shortcuts, others accept 1) → mitigated by per-config `@classmethod from_shortcuts()`.
 
 Recommended extraction order (TDD): #1 (config validators, trivial, low risk) → #8 (harvest wrappers, moderate, characterize first) → #7 (pipeline runners, moderate) → #3 (viewpoint scaffolding, low risk but low payoff) → #6 (provenance, HIGH risk, DEFER to C-06).
+
+**Note (2026-06-09, content-addressed skip investigation):** A 9th WET pattern identified: digest comparison logic ("compare current digest against recorded digest, decide whether to skip/gate/detect"). This pattern appears in 5 locations: (a) `assemble_grid.py:312-357` (assembly skip), (b) `export_zarr.py:96-119` (export skip), (c) `export_zarr.py:172-194` (export digest gate), (d) `generate_consumer_data.py:206-234` (consumer digest gate), (e) `health.py:208-310` (`check_export_freshness` drift detection). Each implements the same "load provenance JSON, extract digest key, compare against computed/stored digest" logic independently. When the skip feature ships, this should be factored into `datafactory_provenance` as a reusable function (e.g., `should_skip()` or `compare_digests()`) — aligns with C-261 (no skip provenance) and the broader pattern extraction plan.
 
 **Source:** WET-before-DRY inventory audit after GHS-POP Phase 4 completion (2026-05-19), updated GHS-BUILT-S (2026-05-22), tech-debt-cleanup investigation (2026-05-24), v1.2.21 maintenance sprint (2026-05-25), expert code review C-164 (2026-05-30).
 
@@ -1046,6 +1137,30 @@ Cross-ref: C-253 (the concrete concern this disagreement addresses), C-147 (no p
 | Resolution | Unresolved. Recommendation from audit: start with minimum viable testing (count conservation at all layer boundaries, digest gates on derived artifacts), then add generative/synthetic tests for the highest-risk paths (ACLED dedup, UCDP survivorship). Exhaustive per-cell verification is infeasible at 259k cells × 456 months. |
 
 Cross-ref: C-256 (no testable definition of data soundness), C-258 (count conservation gaps at consolidation/viewpoint). Part of work package: **Data soundness**.
+
+
+### ~~D-36: Skip decision location — inline in script vs. provenance package function~~
+
+| Field | Value |
+|-------|-------|
+| ID | D-36 |
+| Source | expert-code-review (2026-06-09), Martin/Ousterhout vs Beck/Hickey |
+| Perspectives | Martin/Ousterhout (extract to `datafactory_provenance` — the 5-location WET pattern crossed the abstraction threshold; the provenance.json schema is leaked to all consumers; a `should_skip()` function with a clean interface would concentrate the complexity), Beck/Hickey (premature — only 2 scripts use skip today; the user's WET-before-DRY preference says write 3 times before abstracting; extracting a broken pattern is worse than duplicating a broken pattern; fix C-259/C-260/C-262 first, then extract) |
+| Resolution | **Resolved 2026-06-09.** Followed the Beck/Hickey recommendation: fixed correctness gaps (C-259, C-260, C-261, C-262) first, then extracted to `datafactory_provenance/skip.py` with `check_assembly_skip` and `check_export_skip`. Martin/Ousterhout were right about the threshold (5 locations); Beck/Hickey were right about the order (fix then extract). Both sides vindicated. See ADR-041. |
+
+Cross-ref: C-164 (WET debt — digest comparison is pattern #9), C-259/C-260/C-262 (correctness gaps that should be fixed before extraction). Part of work package: **Artifact consistency**.
+
+
+### D-37: Code identity in skip decisions — include git hash or not
+
+| Field | Value |
+|-------|-------|
+| ID | D-37 |
+| Source | expert-code-review (2026-06-09), Hickey vs Nygard |
+| Perspectives | Hickey (the skip logic conflates data identity with code identity — a bug fix to assembly code would be masked by unchanged input digests; a `code_version` field in provenance.json decomplects the two concerns), Nygard (adding code version creates operational cost — every code deployment invalidates the skip cache, defeating the feature; documentation changes and unrelated fixes would trigger unnecessary rebuilds; the false-negative cost is already manageable) |
+| Resolution | Unresolved. Pragmatic middle ground proposed: hash the specific script file (`sha256sum assemble_grid.py`) rather than the repo HEAD. This catches assembly code changes without invalidating on unrelated commits. Not blocking for initial ship — acceptable to defer. |
+
+Cross-ref: C-259 (skip completeness — same skip logic), D-36 (skip decision location — same feature). Part of work package: **Artifact consistency**.
 
 ---
 

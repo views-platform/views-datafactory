@@ -215,6 +215,19 @@ def main() -> int:
         default=defaults.output_dir,
         help="Output directory",
     )
+    parser.add_argument(
+        "--skip-if-unchanged",
+        action="store_true",
+        help=(
+            "Skip assembly if all input source digests match "
+            "the previous provenance.json"
+        ),
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force rebuild, bypassing content-addressed skip",
+    )
     args = parser.parse_args()
 
     config = AssemblyConfig(
@@ -299,6 +312,88 @@ def main() -> int:
     print(f"Output:      {config.output_dir}")
     print("=" * 60)
     print()
+
+    # Content-addressed skip (ADR-041): compare input digests against
+    # previous run, verify output integrity, record outcome in ledger.
+    if args.skip_if_unchanged and not args.force:
+        prov_path = config.output_dir / "provenance.json"
+        output_grid = config.output_dir / "grid.npy"
+
+        from datafactory_provenance import (
+            DIGEST_SCHEME,
+            LEDGER_VERSION,
+            append_ledger_entry,
+            check_assembly_skip,
+            compute_content_digest,
+            compute_file_digest,
+        )
+
+        current_digests = {
+            "ucdp_digest": compute_file_digest(
+                config.ucdp_grid_dir / "grid.npy"
+            ),
+        }
+        if has_acled:
+            current_digests["acled_digest"] = compute_file_digest(
+                config.acled_grid_dir / "grid.npy"
+            )
+        if has_ghspop:
+            current_digests["ghspop_digest"] = compute_file_digest(
+                config.ghspop_grid_dir / "grid.npy"
+            )
+        if has_ghsbuilts:
+            current_digests["ghsbuilts_digest"] = compute_file_digest(
+                config.ghsbuilts_grid_dir / "grid.npy"
+            )
+        if has_vdem:
+            current_digests["vdem_digest"] = compute_file_digest(
+                config.vdem_grid_dir / "grid.npy"
+            )
+
+        static_files = sorted(config.static_dir.glob("*.parquet"))
+        if static_files:
+            current_digests["static_digest"] = (
+                compute_content_digest(
+                    b"|".join(
+                        compute_file_digest(f).encode()
+                        for f in static_files
+                    )
+                )
+            )
+
+        if has_admin:
+            admin_files = sorted(config.admin_dir.glob("*.parquet"))
+            if admin_files:
+                current_digests["admin_digest"] = (
+                    compute_content_digest(
+                        b"|".join(
+                            compute_file_digest(f).encode()
+                            for f in admin_files
+                        )
+                    )
+                )
+
+        verdict = check_assembly_skip(
+            current_digests, prov_path, output_grid,
+        )
+
+        if verdict.should_skip:
+            print("SKIP: all input digests match previous assembly")
+            for k, v in current_digests.items():
+                print(f"  {k}: {v}")
+            print(f"Output unchanged: {output_grid}")
+            ledger_path = config.output_dir / "ledger.jsonl"
+            append_ledger_entry(ledger_path, {
+                "stage": "assembly",
+                "outcome": "unchanged",
+                "input_digests": current_digests,
+                "ledger_version": LEDGER_VERSION,
+                "digest_algorithm": DIGEST_SCHEME,
+            })
+            print("PASS")
+            return 0
+        else:
+            print(f"Input changed: {verdict.reason} — rebuilding")
 
     import pyarrow.parquet as pq
 
@@ -588,7 +683,13 @@ def main() -> int:
     )
 
     # Provenance
-    from datafactory_provenance import compute_file_digest
+    from datafactory_provenance import (
+        DIGEST_SCHEME,
+        LEDGER_VERSION,
+        append_ledger_entry,
+        compute_content_digest,
+        compute_file_digest,
+    )
 
     output_digest = compute_file_digest(
         config.output_dir / "grid.npy"
@@ -609,6 +710,28 @@ def main() -> int:
     vdem_digest = (
         compute_file_digest(config.vdem_grid_dir / "grid.npy")
         if has_vdem else None
+    )
+
+    static_files = sorted(config.static_dir.glob("*.parquet"))
+    static_digest = (
+        compute_content_digest(
+            b"|".join(
+                compute_file_digest(f).encode()
+                for f in static_files
+            )
+        )
+        if static_files else None
+    )
+
+    admin_files = sorted(config.admin_dir.glob("*.parquet"))
+    admin_digest = (
+        compute_content_digest(
+            b"|".join(
+                compute_file_digest(f).encode()
+                for f in admin_files
+            )
+        )
+        if has_admin and admin_files else None
     )
 
     # Data boundaries
@@ -766,8 +889,10 @@ def main() -> int:
                 vdem_offset if has_vdem else None
             ),
             "static_dir": str(config.static_dir),
+            "static_digest": static_digest,
             "static_variables": static_names,
             "admin_dir": str(config.admin_dir),
+            "admin_digest": admin_digest,
             "admin_variables": admin_names,
         },
         "output_shape": [n_t, n_h, n_w, n_total],
@@ -796,6 +921,19 @@ def main() -> int:
     (config.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)
     )
+
+    input_digests = {
+        k: v for k, v in provenance["sources"].items()
+        if k.endswith("_digest") and v is not None
+    }
+    append_ledger_entry(config.output_dir / "ledger.jsonl", {
+        "stage": "assembly",
+        "outcome": "success",
+        "output_digest": output_digest,
+        "input_digests": input_digests,
+        "ledger_version": LEDGER_VERSION,
+        "digest_algorithm": DIGEST_SCHEME,
+    })
 
     # Signal that derived artifacts (zarr, consumer parquet) need
     # re-export. Export scripts clear this after success (C-253).

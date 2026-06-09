@@ -63,6 +63,19 @@ def main() -> int:
         default=12,
         help="Temporal chunk size in months (default: 12)",
     )
+    parser.add_argument(
+        "--skip-if-unchanged",
+        action="store_true",
+        help=(
+            "Skip export if assembly digest matches the "
+            "zarr store's source_digest"
+        ),
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force export, bypassing content-addressed skip",
+    )
     args = parser.parse_args()
 
     grid_path = args.input / "grid.npy"
@@ -84,6 +97,35 @@ def main() -> int:
     print(f"Chunks: {args.chunks_time} months (time)")
     print("=" * 60)
     print()
+
+    # Content-addressed skip (ADR-041): compare assembly digest
+    # against zarr store, record outcome in ledger.
+    if args.skip_if_unchanged and not args.force:
+        from datafactory_provenance import (
+            DIGEST_SCHEME,
+            LEDGER_VERSION,
+            append_ledger_entry,
+            check_export_skip,
+        )
+
+        verdict = check_export_skip(provenance_path, output)
+        if verdict.should_skip:
+            print(f"SKIP: {verdict.reason}")
+            sentinel = args.input / ".exports_required"
+            if sentinel.exists():
+                sentinel.unlink()
+                print("  Cleared .exports_required sentinel")
+            ledger_path = args.input / "export_ledger.jsonl"
+            append_ledger_entry(ledger_path, {
+                "stage": "export",
+                "outcome": "unchanged",
+                "ledger_version": LEDGER_VERSION,
+                "digest_algorithm": DIGEST_SCHEME,
+            })
+            print("PASS")
+            return 0
+        elif not verdict.should_skip and verdict.reason:
+            print(f"{verdict.reason} — re-exporting")
 
     import numpy as np
     import xarray as xr

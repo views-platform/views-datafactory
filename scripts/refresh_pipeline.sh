@@ -221,13 +221,14 @@ uv run python scripts/assemble_grid.py \
     --acled-grid data/compiled/acled \
     --ghspop-grid data/compiled/ghspop \
     --ghsbuilts-grid data/compiled/ghsbuilts \
-    --vdem-grid data/compiled/vdem
+    --vdem-grid data/compiled/vdem \
+    --skip-if-unchanged
 echo
 
 # Step 10: Export
 CURRENT_STEP="10/13: Export consumer formats"
 echo "── $CURRENT_STEP ──"
-uv run python scripts/export_zarr.py
+uv run python scripts/export_zarr.py --skip-if-unchanged
 uv run python scripts/export_dataframe.py
 echo
 
