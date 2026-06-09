@@ -21,6 +21,7 @@ from datafactory_provenance.health import (
     check_export_freshness,
     read_last_entries,
     report_ledger,
+    verify_source_digest,
 )
 from datafactory_provenance.registry import Registry
 from datafactory_provenance.source_registry import (
@@ -54,6 +55,7 @@ __all__ = [
     "read_last_entries",
     "report_ledger",
     "validate_preflight",
+    "verify_source_digest",
 ]
 
 from importlib.metadata import version as _pkg_version

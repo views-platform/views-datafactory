@@ -125,6 +125,63 @@ def _get_harvest_metadata(
     return digest, timestamp
 
 
+def _check_year_overlap(
+    source_files: list[Path],
+) -> list[str]:
+    """Detect overlapping year ranges among source files."""
+    ranges = []
+    for p in source_files:
+        m = _SNAPSHOT_PATTERN.search(p.name)
+        if m:
+            ranges.append(
+                (int(m.group(1)), int(m.group(2)), p.name)
+            )
+    warnings = []
+    for i, (s1, e1, n1) in enumerate(ranges):
+        for s2, e2, n2 in ranges[i + 1 :]:
+            if s1 <= e2 and s2 <= e1:
+                overlap_start = max(s1, s2)
+                overlap_end = min(e1, e2)
+                warnings.append(
+                    f"Overlapping year ranges: {n1} "
+                    f"({s1}-{e1}) and {n2} ({s2}-{e2}), "
+                    f"overlap: {overlap_start}-{overlap_end}"
+                )
+    return warnings
+
+
+def _dedup_by_event_id(table: pa.Table) -> pa.Table:
+    """Deduplicate table on event_id_cnty, keeping latest harvest.
+
+    When the same event appears in multiple source files, keep the
+    row with the latest _harvest_timestamp. ACLED has no vintage
+    semantics — only the most recent version of each event matters.
+    """
+    eids = table.column("event_id_cnty").to_pylist()
+    if len(eids) == len(set(eids)):
+        return table
+
+    timestamps = table.column(
+        "_harvest_timestamp"
+    ).to_pylist()
+    seen: dict[str, int] = {}
+    for i, (eid, ts) in enumerate(
+        zip(eids, timestamps, strict=True)
+    ):
+        if eid not in seen or ts > timestamps[seen[eid]]:
+            seen[eid] = i
+
+    keep_indices = sorted(seen.values())
+    n_removed = len(eids) - len(keep_indices)
+    logger.warning(
+        "Cross-file dedup: %d duplicate events removed, "
+        "%d unique events retained",
+        n_removed,
+        len(keep_indices),
+    )
+    return table.take(keep_indices)
+
+
 @dataclass(frozen=True)
 class AcledConsolidationConfig:
     """Configuration for ACLED consolidation."""
@@ -147,8 +204,8 @@ def consolidate_acled(
     """Consolidate ACLED harvester snapshots into a single store.
 
     Tags each record with source metadata. Deduplicates on
-    (event_id_cnty, _harvest_digest) so identical re-fetches
-    are skipped but updated snapshots are preserved.
+    event_id_cnty alone — ACLED has no vintage semantics, so
+    only the latest version of each event is kept.
 
     Args:
         config: Consolidation configuration. Uses defaults if None.
@@ -183,6 +240,9 @@ def consolidate_acled(
         )
         logger.error(err_msg)
         raise FileNotFoundError(err_msg)
+
+    for warning in _check_year_overlap(source_files):
+        logger.warning(warning)
 
     tagged_tables: list[pa.Table] = []
     source_manifest: list[dict] = []
@@ -243,6 +303,7 @@ def consolidate_acled(
     new_table = pa.concat_tables(
         tagged_tables, promote_options="default"
     )
+    new_table = _dedup_by_event_id(new_table)
     n_new_raw = new_table.num_rows
 
     existing = read_store(config.output_path)
@@ -250,23 +311,13 @@ def consolidate_acled(
         n_before = existing.num_rows
 
         existing_keys = set(
-            zip(
-                existing.column("event_id_cnty").to_pylist(),
-                existing.column("_harvest_digest").to_pylist(),
-                strict=True,
-            )
+            existing.column("event_id_cnty").to_pylist()
         )
 
         new_ids = new_table.column("event_id_cnty").to_pylist()
-        new_digests = new_table.column(
-            "_harvest_digest"
-        ).to_pylist()
 
         keep_mask = [
-            (eid, edigest) not in existing_keys
-            for eid, edigest in zip(
-                new_ids, new_digests, strict=True
-            )
+            eid not in existing_keys for eid in new_ids
         ]
         new_filtered = new_table.filter(keep_mask)
         n_new = new_filtered.num_rows

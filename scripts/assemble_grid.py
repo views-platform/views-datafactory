@@ -33,6 +33,7 @@ import shutil
 import sys
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import ClassVar
 
@@ -795,6 +796,17 @@ def main() -> int:
     (config.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2)
     )
+
+    # Signal that derived artifacts (zarr, consumer parquet) need
+    # re-export. Export scripts clear this after success (C-253).
+    sentinel = config.output_dir / ".exports_required"
+    sentinel.write_text(json.dumps({
+        "grid_digest": output_digest,
+        "assembled_at": provenance.get(
+            "assembled_at",
+            datetime.now(tz=UTC).isoformat(),
+        ),
+    }))
 
     elapsed = time.monotonic() - t0
     size_gb = (config.output_dir / "grid.npy").stat().st_size / 1e9

@@ -16,6 +16,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from datafactory_adapters._conservation import assert_cm_conservation
 from datafactory_adapters.grid_to_dataframe import _flatten_grid
 
 logger = logging.getLogger(__name__)
@@ -93,6 +94,14 @@ def grid_to_country_month(
                     UserWarning,
                     stacklevel=2,
                 )
+
+    # ADR-040 Invariant 1: grid_total = land_total + excluded_total
+    assert_cm_conservation(
+        feature_names,
+        flat_data,
+        flat_data[land_mask],
+        flat_data[excluded_mask],
+    )
 
     flat_data = flat_data[land_mask]
     all_month_ids = all_month_ids[land_mask]

@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-06-05
-**Related ADRs:** ADR-012, ADR-025, ADR-039
+**Last reviewed:** 2026-06-06
+**Related ADRs:** ADR-012, ADR-025, ADR-039, ADR-040
 
 ---
 
@@ -32,6 +32,7 @@ This is the bridge between grid-native data (one row per cell per month) and cou
 - Guarantees that cells with country_id <= 0 are excluded from aggregation. This includes ocean cells and any land cells not overlapping a GAUL polygon. Since ADR-039 (area-majority assignment), the excluded set is substantially smaller — the exclusion guarantee is unchanged, only the input data improved.
 - Guarantees that aggregation is summation (groupby sum) — no averaging, no counting
 - Guarantees `ValueError` if the specified country feature is not in `feature_names`
+- Guarantees count conservation for extensive features (ADR-040): `sum(country totals) + sum(excluded cell values) = sum(all grid cells)`. Excluded cells are quantified and logged, never silently dropped.
 - Reuses `_flatten_grid()` from `grid_to_dataframe` for the initial flattening step
 
 ---
@@ -110,7 +111,7 @@ df.loc[(500, 12345)]  # 12345 is a pgid, not a country_id
 
 - **Green:** Correct aggregation with default country feature, correct MultiIndex shape
 - **Beige:** Missing country feature raises ValueError, all-ocean grid produces empty DataFrame
-- **Red:** Aggregation correctness: manual sum of known cells matches grouped output
+- **Red:** Aggregation correctness: manual sum of known cells matches grouped output; count conservation equation verified per ADR-040 (`grid_total = cm_total + excluded_total` for all extensive features)
 
 Tests in `tests/test_grid_to_country_month.py` (if present).
 

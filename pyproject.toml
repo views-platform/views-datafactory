@@ -70,4 +70,5 @@ markers = [
     "falsification: empirical data finding — skipped unless --run-falsification is passed",
     "consumer: purple_alien parity tests — skipped unless --run-consumer is passed",
     "slow: performance tests — runs in normal suite, use -m slow to run only these",
+    "synthetic: end-to-end pipeline test on synthetic data with known-answer values",
 ]
