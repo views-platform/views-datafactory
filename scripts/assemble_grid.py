@@ -941,7 +941,6 @@ def main() -> int:
         return 0
     finally:
         if not _ledger_written:
-            config.output_dir.mkdir(parents=True, exist_ok=True)
             with contextlib.suppress(Exception):
                 append_ledger_entry(_ledger_path, {
                     "stage": "assembly",
