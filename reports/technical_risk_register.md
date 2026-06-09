@@ -1,8 +1,8 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-06-07)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07
-**Status:** 252 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 198 resolved, 51 open concerns (3 Tier 2, 9 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 6 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 21 struck-through in active register + 27 resolved disagreements in archive. 33 disagreement IDs total: 27 resolved, 6 open.
+**Date:** 2026-03-17 (updated 2026-06-08)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08
+**Status:** 258 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 198 resolved, 57 open concerns (1 Tier 1, 7 Tier 2, 10 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 21 struck-through in active register + 27 resolved disagreements in archive. 35 disagreement IDs total: 27 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -13,6 +13,7 @@
 
 | ID | Tier | Title | Trigger | Package |
 |----|------|-------|---------|---------|
+| C-253 | 1 | Export scripts have no source-digest verification — stale data served silently | Operator re-runs assembly without re-running export scripts | Artifact consistency |
 | C-88 | 2 | SSH not restricted to PRIO/Uppsala IPs | Before granting additional SSH users | Server hardening |
 | C-121 | 4 | Phase 6.4 documented but unexecuted (lessons from C-87) | Before executing Phase 6.4 | Server hardening |
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
@@ -39,6 +40,7 @@
 | C-185 | 4 | GHS-POP caching has no digest comparison (no change detection) | JRC silently updates a GeoTIFF epoch without changing the URL | Harvest correctness |
 | ~~C-186~~ | ~~3~~ | ~~Shapefile harvester lacks outcome vocabulary~~ | Resolved 2026-05-31 (outcome vocabulary added, ADR-032 updated) | Harvest correctness |
 | C-189 | 4 | GHS-BUILT-S test coverage parity gap — 19% of combined other sources | Production incident on GHS-BUILT-S path that existing GHS-POP/ACLED tests would have caught | Test coverage |
+| C-256 | 3 | No definition of "data soundness" as a testable property | Next time operator asks "is this safe to deploy?" and must integrate pytest + visual audits + check_health.py + manual inspection | Data soundness |
 | C-223 | 3 | Compilation pipeline allocates full grid in RAM (bounded-memory R&D) | Next data source (WDI: 20-50 features) pushes single-source compile past 16 GB | Scaling headroom |
 | C-224 | 4 | No server backup or disaster recovery plan | Disk failure or accidental data deletion on Hetzner server | Server hardening |
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
@@ -62,11 +64,17 @@
 | C-250 | 4 | Hierarchical reconciliation not wired into any production code path | GAUL hierarchy corruption (L2→L1 nesting violation) introduced in new GAUL release | GAUL data integrity |
 | ~~C-251~~ | ~~1~~ | ~~ACLED consolidator cross-file event duplication (2× overcounting)~~ | Resolved 2026-06-07 (#138: dedup on event_id_cnty alone + overlap detection + 6 tests) | ACLED consolidation |
 | C-252 | 2 | ACLED cross-run dedup drops updated events (first-seen wins, not latest) | ACLED revises a past event and operator re-consolidates with existing store | ACLED consolidation |
+| C-254 | 2 | Consumer parquet has zero provenance — no audit trail for training data | Consumer bridge expanded to include ACLED features, or model trains on stale parquet after grid correction | Artifact consistency |
+| C-255 | 2 | Health check reports "SLO MET" for content-stale artifacts (time-fresh, content-wrong) | check_health.py runs after mid-cycle grid correction where exports were not re-run | Artifact consistency |
+| C-257 | 2 | No input data validation at system boundary — DGP assumptions untested | ACLED or UCDP changes data model (e.g., multi-day events, new date_prec values) | Data soundness |
+| C-258 | 2 | Count conservation not enforced at consolidation or viewpoint boundaries | Bug in consolidation dedup or viewpoint survivorship/distribution changes event counts without detection | Data soundness |
 | ~~C-242~~ | ~~2~~ | ~~ADR-040 count conservation invariants accepted but zero test enforcement~~ | Resolved 2026-06-06 (PR #135: 10 tests + runtime assertions) | Count conservation |
 | ~~C-243~~ | ~~3~~ | ~~ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)~~ | Resolved 2026-06-06 (PR #135: 6 tests + check_nesting + assert_hierarchical_reconciliation) | Count conservation |
 | ~~C-244~~ | ~~4~~ | ~~4 CICs + ADR-025 not updated after ADR-040 acceptance~~ | Resolved 2026-06-06 (PR #135: 4 CICs + ADR-025 updated) | Count conservation |
 | ~~C-245~~ | ~~3~~ | ~~Name file gap — 9,481 recovered cells have codes but no country names~~ | Resolved 2026-06-06 (PR #135: area-majority script generates name Parquet files) | Data completeness |
 | D-33 | — | Pipeline-path information: registry field vs standalone mapping vs convention | Open | Source registry |
+| D-34 | — | Provenance enforcement location: library gate vs pipeline gate vs both | Open | Artifact consistency |
+| D-35 | — | Test scope: exhaustive verification vs minimum viable testing | Open | Data soundness |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
 | C-146 | 4 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
@@ -104,6 +112,8 @@ Items that should be resolved together:
 | **GAUL data integrity** | C-247, C-250 (C-246, C-248 resolved #136) | Before deploying refactored area-majority script to production |
 | **WET-before-DRY refactor** | C-07, C-155, C-164, C-195, C-230 (C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8) | Before WDI or next refactor sprint |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
+| **Artifact consistency** | C-253, C-254, C-255, C-231, D-34 | Before any manual out-of-band re-assembly or grid correction, or before expanding consumer bridge beyond UCDP-only features |
+| **Data soundness** | C-256, C-257, C-258, D-35 | Before next data source integration (WDI) or next consolidation/viewpoint change |
 | **Migration scope** | C-126 (C-125 resolved) | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -125,6 +135,22 @@ Root cause: the UCDP vintage pattern (ADR-017) was incorrectly applied to ACLED,
 | Location | `src/datafactory_consolidation/consolidators/acled.py:252-270` |
 
 **Resolution (2026-06-07):** Changed dedup key to `event_id_cnty` alone. Added cross-file dedup within new data (keeps latest harvest per event). Added `_check_year_overlap()` warning for overlapping source files. Added 6 red-team tests. Updated ADR-028. See #138.
+
+---
+
+### C-253: Export scripts have no source-digest verification — stale data served silently
+
+| Field | Value |
+|-------|-------|
+| ID | C-253 |
+| Tier | 1 — silent data corruption served to consumers, no error signal |
+| Source | expert-review (2026-06-08), derived-artifact drift audit |
+| Trigger | Operator re-runs assembly (e.g., after a consolidation fix) without re-running `export_zarr.py` and `generate_consumer_data.py` |
+| Location | `scripts/export_zarr.py:151-154` (reads provenance decoratively, no digest verification), `scripts/generate_consumer_data.py` (entire file — zero provenance awareness) |
+
+`export_zarr.py` copies `provenance.json["output_digest"]` into zarr `.zattrs["source_digest"]` but never calls `compute_file_digest()` on the grid it actually reads. The provenance is decorative — it describes what was true when assembly ran, not what is true now. `generate_consumer_data.py` has zero provenance awareness: no digest, no manifest, no freshness check. When assembly produces a new `grid.npy` with a corrected digest, both scripts silently export from whatever file exists on disk. The ACLED dedup incident (2026-06-07) is direct evidence: zarr served 822,178 doubled events while `grid.npy` contained the correct 411,089 — the server served corrupt data with no detection mechanism. This affects all data sources, not just ACLED. The `refresh_pipeline.sh` sequential ordering masks the problem during automated runs, but every manual out-of-band re-assembly creates the same vector. Neither `check_export_freshness()` (time-only) nor `report_ledger()` (no export ledger exists) can detect this.
+
+See also C-147 (no pipeline orchestrator — same root cause: implicit ordering), C-231 (no compilation idempotence guard — same pattern at compilation layer), C-255 (health check false assurance). Part of causal cluster: **Artifact consistency**.
 
 ---
 
@@ -162,6 +188,66 @@ Mitigating factor: current operational pattern deletes and rebuilds the store fr
 Cross-ref: C-251 (resolved — same-run cross-file duplication, different path).
 
 
+### C-254: Consumer parquet has zero provenance — no audit trail for training data
+
+| Field | Value |
+|-------|-------|
+| ID | C-254 |
+| Tier | 2 — structural fragility; becomes Tier 1 when consumer bridge expands beyond UCDP-only features |
+| Source | expert-review (2026-06-08), derived-artifact drift audit |
+| Trigger | Consumer bridge expanded to include ACLED or other features (`FEATURE_RENAME` dict in `generate_consumer_data.py:45-50`), or model trains on stale parquet after a mid-cycle grid correction |
+| Location | `scripts/generate_consumer_data.py` (entire file — no digest, no manifest, no ledger entry) |
+
+`generate_consumer_data.py` calls `load_dataset()` at line 120, transforms the result, and writes parquet at line 237. It records nothing about what data version it read, when, or from what source. There is no way to determine what grid version a consumer parquet was generated from — no sidecar manifest, no parquet metadata, no provenance ledger entry. Currently low-risk because the consumer bridge only exports UCDP features (`ged_sb_best`, `ged_ns_best`, `ged_os_best`, `gaul0_code`) renamed to VIEWSER convention. But the R&D roadmap plans to expand this bridge. When ACLED or other features are added, the same stale-export vector that caused C-253 applies to training data with no forensic capability. A model suspected of training on stale data has no audit trail.
+
+See also C-253 (export digest verification — same root cause), C-06 (provenance composability — deferred by design). Part of causal cluster: **Artifact consistency**.
+
+
+### C-255: Health check reports "SLO MET" for content-stale artifacts (time-fresh, content-wrong)
+
+| Field | Value |
+|-------|-------|
+| ID | C-255 |
+| Tier | 2 — false assurance is worse than no assurance; actively prevents investigation |
+| Source | expert-review (2026-06-08), derived-artifact drift audit (Nygard + Hickey perspectives) |
+| Trigger | `check_health.py` runs after a mid-cycle grid correction where assembly was re-run but exports were not |
+| Location | `src/datafactory_provenance/health.py:162-232` (`check_export_freshness`), `scripts/check_health.py` (Step 11 of pipeline) |
+
+`check_export_freshness()` reads `zarr/.zattrs["export_timestamp"]`, computes age in hours, and compares against `FRESHNESS_SLO_HOURS = 168`. It reports "SLO MET" if the export is less than 7 days old. It does NOT compare `zarr/.zattrs["source_digest"]` against `provenance.json["output_digest"]`. During the ACLED dedup incident, the zarr was exported 2026-06-05 (3 days old, well within SLO) but contained pre-fix data — `check_export_freshness()` would have reported "SLO MET" and "data_boundary_current: True." The operator sees green and assumes correctness. Time-based freshness and content-based freshness are conflated into a single "SLO MET" signal — Hickey identifies this as complecting two different concerns. The fix is to add a `content_fresh: bool` field that verifies `source_digest` match, reported separately from `time_fresh: bool`.
+
+See also C-253 (root cause — no digest verification at export boundary), D-34 (disagreement on enforcement location). Part of causal cluster: **Artifact consistency**.
+
+
+### C-257: No input data validation at system boundary — DGP assumptions untested
+
+| Field | Value |
+|-------|-------|
+| ID | C-257 |
+| Tier | 2 — structural fragility; silent corruption if any source changes its data model |
+| Source | expert-method-review (2026-06-08), McElreath perspective |
+| Trigger | ACLED or UCDP changes their data model (e.g., ACLED introduces multi-day events, UCDP adds a new `date_prec` value, GHS-POP switches from float to int encoding) |
+| Location | `src/datafactory_harvester/sources/` (all source modules — acled.py, ucdp_annual.py, ghspop.py, ghsbuilts.py, vdem.py) |
+
+The harvest layer trusts that external sources send data matching the pipeline's DGP assumptions. No test verifies incoming ACLED events have single dates (not ranges, per ADR-028), UCDP coordinates are non-null and within valid spatial bounds, UCDP `date_prec` values fall within the expected set `{1,2,3,4,5}`, or GHS-POP raster values are non-negative. These are assumptions about the data-generating process, not the pipeline code. If a source silently changes its data model — ACLED introducing multi-day events, UCDP adding a new precision category, GHS-POP switching encoding — the pipeline would process invalid data without detection, producing silent corruption downstream. Breck et al. 2019 ("Data Validation for ML") calls these "data unit tests" and identifies them as the highest-priority data testing investment. Currently mitigated only by manual inspection during visual audits, which is neither systematic nor automated. The ACLED harvester does validate `event_id_cnty` presence (for dedup), but does not validate event content against DGP assumptions.
+
+See also C-36 (UCDP API contract has no schema versioning — related but narrower), C-45 (no Parquet schema evolution strategy), C-153 (ACLED API has no TotalCount). Part of causal cluster: **Data soundness**.
+
+
+### C-258: Count conservation not enforced at consolidation or viewpoint boundaries
+
+| Field | Value |
+|-------|-------|
+| ID | C-258 |
+| Tier | 2 — structural fragility; the ACLED dedup incident (C-251) was exactly this failure class |
+| Source | expert-method-review (2026-06-08), Betancourt perspective |
+| Trigger | Bug introduced in consolidation dedup logic or viewpoint survivorship/temporal-distribution logic that changes event counts without detection |
+| Location | `src/datafactory_consolidation/consolidators/acled.py:252-270` (dedup), `src/datafactory_consolidation/consolidators/ucdp.py` (dedup), `src/datafactory_viewpoint/builders/ucdp_v1.py` (survivorship + temporal distribution) |
+
+ADR-040 count conservation (`placed + excluded = input`) is enforced at compilation (`assert_placement_conservation` in `grid_compilation.py`) and country-month aggregation (`assert_cm_conservation` in `grid_to_country_month.py`). But consolidation and viewpoint have no conservation accounting. Consolidation removes duplicates — but nothing verifies `input_records = output_records + duplicates_removed`. Viewpoint applies survivorship (removes records) and temporal distribution (expands summary events) — but neither transformation records the expected count delta. The ACLED dedup incident (C-251, now resolved) was a conservation violation at the consolidation boundary: input had 411,089 unique events but output had 822,178 because duplicates were retained instead of removed. If `input - duplicates_removed = output` had been enforced, the doubled count would have been caught immediately. The consolidation ledger entry records `n_records_total` but not `n_duplicates_removed`, making post-hoc verification impossible without re-reading the source files.
+
+See also C-242 (resolved — conservation at compilation/CM boundaries, different layers), C-251 (resolved — the incident that demonstrates this gap). Part of causal cluster: **Data soundness**.
+
+
 ### ~~C-239: Issue #104 paths produce silent wrong status page~~ RESOLVED
 
 Resolved 2026-06-06 (review-rr strategic curation). Issue #104 closed with comment pointing to #123 as the superseding issue. The wrong `--data-dir` and `--provenance-dir` paths can no longer mislead developers because the issue is closed. The docstring path was also fixed (C-240, commit dd69544).
@@ -191,6 +277,22 @@ Cross-ref: C-230 (script layer has zero unit tests), ADR-039 (area-majority spat
 ---
 
 ## Tier 3 — Improve Quality
+
+### C-256: No definition of "data soundness" as a testable property
+
+| Field | Value |
+|-------|-------|
+| ID | C-256 |
+| Tier | 3 — organizational/maintainability gap affecting multiple operators and the deploy decision |
+| Source | expert-method-review (2026-06-08), synthesis of Betancourt/Gelman/Gneiting/Hyndman perspectives |
+| Trigger | Next time an operator asks "is this safe to deploy?" and must manually integrate results from pytest, visual audits, `check_health.py`, and manual data inspection |
+| Location | No artifact exists; concept is implicit across `tests/test_falsification_deploy_readiness.py`, `scripts/check_health.py`, `src/datafactory_provenance/health.py`, and operator knowledge |
+
+"Data soundness" is used informally across ADRs, test names, and operational procedures but has no formal definition as a testable property. Without a definition, testing is reactive (add a test per incident) rather than systematic (test against a specification). The expert-method-review proposes a four-part definition: data is sound if (a) all count conservation invariants hold at every boundary, (b) all derived artifact digests match their sources, (c) no feature-month parity exceeds float32 tolerance, (d) no temporal coherence anomaly is flagged. This should be codified in an ADR and implemented as a single `check_deploy_readiness.py` script returning PASS/FAIL. Currently, the operator must mentally integrate 4+ signal sources with no composite score.
+
+See also C-253 (digest gates — component b), C-258 (conservation at all boundaries — component a), C-255 (health check false assurance — symptom of missing definition). Part of causal cluster: **Data soundness**.
+
+---
 
 ### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
 14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
@@ -839,7 +941,7 @@ Cross-ref: C-242 (resolved same PR), C-243 (resolved same PR), ADR-040.
 
 `compile_grid()` and `compile_pregridded()` always overwrite the output directory. If run twice with different inputs (e.g., viewpoint was re-built between runs with different parameters), there is no warning that the input context changed. The provenance ledger records what happened, but nothing reads the ledger to check input consistency before writing. A pre-compilation digest check — compute digests of all input files, compare against the previous compilation's input digests in the ledger — would be cheap and would catch accidental recompilation with stale or mixed inputs. Tier 4 because: (a) single-operator deployment, (b) the pipeline script runs steps in order so mixed inputs are unlikely, (c) provenance provides post-hoc audit capability.
 
-Cross-ref: C-223 (compilation memory — same functions, different concern), C-46 (no ledger write idempotency).
+Cross-ref: C-223 (compilation memory — same functions, different concern), C-46 (no ledger write idempotency), C-253 (same pattern at export layer — no digest verification). Part of causal cluster: **Artifact consistency**.
 
 ### ~~C-232~~ — Resolved 2026-06-02 (PR #98, v1.2.25). See archive.
 
@@ -920,6 +1022,30 @@ Ousterhout argues the 9 harvest scripts should be merged into one deep `harvest.
 - **Derive from conventions** (Hickey): Standardize artifact paths (`data/compiled/{source_id}/grid.npy`). The status page probes predictable paths instead of maintaining a mapping. Pro: zero maintenance; self-healing. Con: requires all sources to follow the convention (they currently don't); retrofit cost.
 
 **Source:** expert-code-review (2026-06-03). Cross-ref: C-236 (artifact mapping maintenance), C-164 (cross-layer WET).
+
+### D-34: Provenance enforcement location — library gate vs pipeline gate vs both
+
+| Field | Value |
+|-------|-------|
+| ID | D-34 |
+| Source | expert-review (2026-06-08), derived-artifact drift audit |
+| Perspectives | Martin/Ousterhout (library-level `require_fresh_source()` in `datafactory_provenance` — centralized, testable, impossible to bypass if wired correctly), Nygard (pipeline-level gate — move health check before export in `refresh_pipeline.sh` to catch bugs even if scripts are faulty), Hickey (both, separated — library provides mechanism, pipeline provides policy; conflating them prevents independent reasoning) |
+| Resolution | Unresolved. Recommendation from audit: library gate first (covers the common failure mode — manual out-of-band re-runs), pipeline gate second (catches script-level bugs). The ACLED incident would have been caught by either approach. |
+
+Cross-ref: C-253 (the concrete concern this disagreement addresses), C-147 (no pipeline orchestrator — related structural gap).
+
+---
+
+### D-35: Test scope — exhaustive verification vs minimum viable testing
+
+| Field | Value |
+|-------|-------|
+| ID | D-35 |
+| Source | expert-method-review (2026-06-08), data soundness audit |
+| Perspectives | Betancourt/Gelman (exhaustive computational faithfulness — verify every intermediate representation against the DGP, posterior predictive checks at each boundary), Hyndman (minimum viable testing — count conservation at boundaries plus known-answer tests on synthetic data is sufficient; exhaustive checking costs more than the bugs it catches), McElreath (generative model — write a DGP simulator and test the pipeline against synthetic data with known answers; covers both camps) |
+| Resolution | Unresolved. Recommendation from audit: start with minimum viable testing (count conservation at all layer boundaries, digest gates on derived artifacts), then add generative/synthetic tests for the highest-risk paths (ACLED dedup, UCDP survivorship). Exhaustive per-cell verification is infeasible at 259k cells × 456 months. |
+
+Cross-ref: C-256 (no testable definition of data soundness), C-258 (count conservation gaps at consolidation/viewpoint). Part of work package: **Data soundness**.
 
 ---
 

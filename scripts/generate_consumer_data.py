@@ -203,6 +203,36 @@ def main() -> int:
     if not _is_remote(data_dir):
         data_dir = Path(data_dir)
 
+    # Source-digest gate: verify grid.npy matches assembly provenance
+    # before generating consumer data. Prevents stale exports (C-254).
+    grid_digest: str | None = None
+    if not _is_remote(data_dir):
+        grid_path = Path(data_dir) / "grid.npy"
+        prov_path = Path(data_dir) / "provenance.json"
+        if grid_path.exists():
+            from datafactory_provenance import compute_file_digest
+
+            print("Computing grid digest (streaming)...")
+            grid_digest = compute_file_digest(grid_path)
+            print(f"  grid.npy digest: {grid_digest}")
+            if prov_path.exists():
+                import json
+
+                prov = json.loads(prov_path.read_text())
+                recorded = prov.get("output_digest")
+                if recorded and recorded != grid_digest:
+                    print(
+                        f"ABORT: grid.npy digest ({grid_digest}) "
+                        f"does not match provenance.json "
+                        f"({recorded}). Re-run assembly."
+                    )
+                    return 1
+                if recorded:
+                    print(
+                        f"  provenance.json digest: {recorded}"
+                        f" — MATCH"
+                    )
+
     print("=" * 60)
     print("CONSUMER DATA GENERATOR")
     print(f"Source: {data_dir}")
@@ -243,6 +273,36 @@ def main() -> int:
         print(f"  Size: {out_path.stat().st_size / 1e6:.1f} MB")
         print(f"  Time: {elapsed:.1f}s")
         print()
+
+    # Write provenance manifest (C-254)
+    import json
+    from datetime import UTC, datetime
+
+    manifest: dict = {
+        "generation_timestamp": datetime.now(tz=UTC).isoformat(),
+        "source_grid_digest": grid_digest,
+        "feature_mapping": FEATURE_RENAME,
+        "output_files": {},
+    }
+    for name in partitions:
+        pq_path = output_dir / f"{name}_viewser_df.parquet"
+        if pq_path.exists():
+            from datafactory_provenance import compute_file_digest
+
+            manifest["output_files"][str(pq_path)] = (
+                compute_file_digest(pq_path)
+            )
+
+    manifest_path = output_dir / "provenance.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+    print(f"Provenance manifest: {manifest_path}")
+
+    # Clear assembly sentinel if present
+    if not _is_remote(data_dir):
+        sentinel = Path(data_dir) / ".exports_required"
+        if sentinel.exists():
+            sentinel.unlink()
+            print("Cleared .exports_required sentinel")
 
     print("=" * 60)
     print("DONE")
