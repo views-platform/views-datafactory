@@ -27,6 +27,7 @@ categorical (embedding / one-hot), not continuous.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import shutil
@@ -392,6 +393,23 @@ def main() -> int:
         else:
             print(f"Input changed: {verdict.reason} — rebuilding")
 
+    from datafactory_provenance import (
+        DIGEST_SCHEME,
+        LEDGER_VERSION,
+        append_ledger_entry,
+        compute_file_digest,
+    )
+    _ledger_path = config.output_dir / "ledger.jsonl"
+
+    def _write_failed_entry() -> None:
+        with contextlib.suppress(Exception):
+            append_ledger_entry(_ledger_path, {
+                "stage": "assembly",
+                "outcome": "failed",
+                "ledger_version": LEDGER_VERSION,
+                "digest_algorithm": DIGEST_SCHEME,
+            })
+
     import pyarrow.parquet as pq
 
     t0 = time.monotonic()
@@ -415,6 +433,7 @@ def main() -> int:
             "ACLED", config.acled_grid_dir, time_steps, n_t,
         )
         if acled_result is None:
+            _write_failed_entry()
             return 1
         acled_grid, acled_features, acled_offset = acled_result
     else:
@@ -426,6 +445,7 @@ def main() -> int:
             "GHS-POP", config.ghspop_grid_dir, time_steps, n_t,
         )
         if ghspop_result is None:
+            _write_failed_entry()
             return 1
         ghspop_grid, ghspop_features, ghspop_offset = ghspop_result
     else:
@@ -438,6 +458,7 @@ def main() -> int:
             time_steps, n_t,
         )
         if ghsbuilts_result is None:
+            _write_failed_entry()
             return 1
         ghsbuilts_grid, ghsbuilts_features, ghsbuilts_offset = (
             ghsbuilts_result
@@ -454,6 +475,7 @@ def main() -> int:
             time_steps, n_t,
         )
         if vdem_result is None:
+            _write_failed_entry()
             return 1
         vdem_grid, vdem_features, vdem_offset = vdem_result
     else:
@@ -578,6 +600,7 @@ def main() -> int:
             f"({free_bytes / 1e9:.1f} GB free, "
             f"need {expected_bytes * margin / 1e9:.1f} GB)"
         )
+        _write_failed_entry()
         return 1
 
     try:
@@ -669,9 +692,9 @@ def main() -> int:
         del assembled  # release mmap before rename
         os.rename(str(tmp_path), str(output_path))
     except BaseException:
-        # Clean up partial tmp file on any failure
         if tmp_path.exists():
             tmp_path.unlink()
+        _write_failed_entry()
         raise
     np.save(config.output_dir / "pgids.npy", pgids)
     np.save(config.output_dir / "time_steps.npy", time_steps)
@@ -680,13 +703,6 @@ def main() -> int:
     )
 
     # Provenance
-    from datafactory_provenance import (
-        DIGEST_SCHEME,
-        LEDGER_VERSION,
-        append_ledger_entry,
-        compute_file_digest,
-    )
-
     output_digest = compute_file_digest(
         config.output_dir / "grid.npy"
     )

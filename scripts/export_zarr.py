@@ -27,6 +27,7 @@ caddy). Consumers open it with:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import shutil
@@ -127,6 +128,22 @@ def main() -> int:
         else:
             print(f"{verdict.reason} — re-exporting")
 
+    from datafactory_provenance import (
+        DIGEST_SCHEME,
+        LEDGER_VERSION,
+        append_ledger_entry,
+    )
+    _ledger_path = args.input / "export_ledger.jsonl"
+
+    def _write_failed_entry() -> None:
+        with contextlib.suppress(Exception):
+            append_ledger_entry(_ledger_path, {
+                "stage": "export",
+                "outcome": "failed",
+                "ledger_version": LEDGER_VERSION,
+                "digest_algorithm": DIGEST_SCHEME,
+            })
+
     import numpy as np
     import xarray as xr
 
@@ -196,6 +213,7 @@ def main() -> int:
                 f"grid.npy was modified after assembly — "
                 f"re-run: uv run python scripts/assemble_grid.py"
             )
+            _write_failed_entry()
             return 1
         if recorded:
             print(f"  provenance.json digest: {recorded} — MATCH")
@@ -296,6 +314,7 @@ def main() -> int:
                 )
                 del store
                 shutil.rmtree(tmp_output)
+                _write_failed_entry()
                 return 1
             n_checked += 1
         del store
@@ -312,6 +331,7 @@ def main() -> int:
     except Exception:
         if tmp_output.exists():
             shutil.rmtree(tmp_output)
+        _write_failed_entry()
         raise
 
     # Clear assembly sentinel — this export matches the current grid
@@ -335,6 +355,15 @@ def main() -> int:
     print(f"Chunks: {args.chunks_time} months x "
           f"{n_h} lat x {n_w} lon")
     print(f"Time: {elapsed:.1f}s")
+
+    append_ledger_entry(_ledger_path, {
+        "stage": "export",
+        "outcome": "success",
+        "source_digest": grid_digest,
+        "ledger_version": LEDGER_VERSION,
+        "digest_algorithm": DIGEST_SCHEME,
+    })
+
     print("PASS")
     return 0
 

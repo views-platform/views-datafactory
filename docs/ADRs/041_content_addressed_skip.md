@@ -70,7 +70,7 @@ This produces a single digest that changes when any constituent file changes, is
 
 ### Outcome vocabulary and ledger entries
 
-Following ADR-032, every run records a ledger entry:
+Following ADR-032, every run that reaches the work phase records a ledger entry. Runs that fail pre-validation (missing arguments, wrong paths) exit before work begins and are not recorded.
 
 | Outcome | Meaning |
 |---------|---------|
