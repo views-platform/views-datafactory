@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 import pyarrow as pa
@@ -437,14 +438,14 @@ class TestConsolidateAcledCrossFileDedup:
                 "notes": "updated version",
             },
         ]
-        _write_parquet(
-            source_dir / "acled_2020_2025.parquet",
-            old_events,
-        )
-        _write_parquet(
-            source_dir / "acled_2025_2025.parquet",
-            new_events,
-        )
+        old_path = source_dir / "acled_2020_2025.parquet"
+        new_path = source_dir / "acled_2025_2025.parquet"
+        _write_parquet(old_path, old_events)
+        _write_parquet(new_path, new_events)
+        # Guarantee distinct mtimes — filesystem resolution can
+        # make both files appear same-second, causing tie in dedup.
+        os.utime(old_path, (1_000_000, 1_000_000))
+        os.utime(new_path, (2_000_000, 2_000_000))
 
         config = _make_config(tmp_path, source_dir)
         result = consolidate_acled(config)

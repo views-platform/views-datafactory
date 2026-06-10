@@ -323,18 +323,26 @@ systemctl status caddy    # Check it's running
 ### 3.6 Test
 
 ```bash
-# From the server — should return 401 (auth required)
+# Status page — should return 200 (public, no auth — ADR-038)
+curl -s -o /dev/null -w "%{http_code}" http://localhost/status.html
+
+# Data artifacts — should return 401 (auth required)
 curl -s -o /dev/null -w "%{http_code}" http://localhost/grid.zarr/.zmetadata
 
-# From the server — should return zarr JSON metadata
+# Data artifacts with auth — should return zarr JSON metadata
 curl -s -u views http://localhost/grid.zarr/.zmetadata | head -10
 
-# From your laptop — should return 401
-curl -s -o /dev/null -w "%{http_code}" http://204.168.219.108/grid.zarr/.zmetadata
+# From your laptop — status page public
+curl -s -o /dev/null -w "%{http_code}" http://204.168.219.108/status.html
 
-# From your laptop — should return zarr JSON metadata
-curl -s -u views http://204.168.219.108/grid.zarr/.zmetadata | head -10
+# From your laptop — data requires auth
+curl -s -o /dev/null -w "%{http_code}" http://204.168.219.108/grid.zarr/.zmetadata
 ```
+
+**Critical:** If the status page returns 401 instead of 200, the
+Caddyfile is missing the `@protected not path /status.html` matcher.
+If it returns 404, the symlink in step 3.2 is missing or broken —
+verify with `ls -la /srv/views-data/status.html`.
 
 ---
 
@@ -394,6 +402,96 @@ crontab -l
 cd ~/views-datafactory
 bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 ```
+
+### 4.6 Configure external monitoring (C-131)
+
+The pipeline cron runs silently. If cron dies, the server reboots without
+re-enabling cron, or `views-deploy` is deleted, nobody is alerted.
+`refresh_pipeline.sh` pings an external monitoring URL on successful
+completion (lines 251-254). The operator must create the external check
+and set `HEARTBEAT_URL` on the server.
+
+We use [healthchecks.io](https://healthchecks.io) (free tier: 20 checks).
+See ADR-018 for the rationale.
+
+#### Create the check
+
+1. Log in to healthchecks.io (credentials in PRIO password manager,
+   project: `views-datafactory`)
+2. Create a check (or verify the existing one):
+   - **Name:** `views-datafactory pipeline refresh`
+   - **Period:** 30 days (matches the `0 0 21 * *` cron)
+   - **Grace period:** 48 hours (pipeline runs 2-3 hours; 48h covers
+     delays, restarts, and weekend non-response)
+   - **Tags:** `views`, `datafactory`, `hetzner`
+3. Copy the ping URL: `https://hc-ping.com/<uuid>`
+
+#### Set the environment variable
+
+```bash
+# Run as a named admin user, not as views-deploy directly
+sudo -u views-deploy bash -c 'source ~/.profile && \
+  echo "export HEARTBEAT_URL=https://hc-ping.com/<uuid>" >> ~/.profile'
+```
+
+Verify:
+
+```bash
+sudo -u views-deploy bash -c 'source ~/.profile && echo $HEARTBEAT_URL'
+# Expected: https://hc-ping.com/<uuid>
+```
+
+The variable must be in `~/.profile`, not `~/.bashrc` — same reason as
+`UCDP_API_TOKEN` (cron runs non-interactive shells where `.bashrc` exits
+early; see section 4.2 note).
+
+#### How it works
+
+After a successful pipeline run, `refresh_pipeline.sh` does:
+
+```bash
+if [ -n "${HEARTBEAT_URL:-}" ]; then
+    curl -fsS --max-time 10 "$HEARTBEAT_URL" >/dev/null 2>&1 || true
+fi
+```
+
+- If `HEARTBEAT_URL` is unset: nothing happens (safe default).
+- If the curl fails: the pipeline still succeeds (`|| true`).
+- healthchecks.io expects a ping every 30 days. If no ping arrives
+  within 30 days + 48 hours grace, it sends an alert.
+
+#### What to do when healthchecks.io alerts
+
+A missed-ping alert means the pipeline did not complete successfully
+within the expected window. Check in this order:
+
+1. **SSH to the server** and check if cron ran:
+   ```bash
+   sudo -u views-deploy bash -c 'cat ~/views-datafactory/logs/refresh.log | tail -50'
+   ```
+2. **Check the failure sentinel:**
+   ```bash
+   sudo -u views-deploy bash -c 'cat ~/views-datafactory/logs/pipeline_failure.json 2>/dev/null || echo "No failure sentinel"'
+   ```
+3. **Check if cron is running:**
+   ```bash
+   sudo -u views-deploy crontab -l
+   systemctl status cron
+   ```
+4. **Check the status page** — it is generated on every exit (success
+   or failure) via the EXIT trap:
+   ```bash
+   curl -s http://204.168.219.108/status.html | head -20
+   ```
+
+If the server is unreachable, check Hetzner Cloud console for the
+server status (views-datafactory-00, Helsinki, CPX32).
+
+#### Verify monitoring is working
+
+After the next successful pipeline run (manual or cron on the 21st),
+check healthchecks.io — it should show a green status with the ping
+timestamp matching the pipeline completion time.
 
 ---
 
@@ -582,7 +680,7 @@ After completing all phases, you have:
    - Zarr store — lazy loading, subset access, xarray interface
    - Parquet file — full download, pandas interface
 5. **Monthly refresh** — cron job runs the pipeline automatically
-6. **Monitoring** — `check_health.py` reports data freshness
+6. **Monitoring** — `check_health.py` reports data freshness; healthchecks.io alerts on missed pipeline runs (section 4.6)
 
 Consumers access the data with:
 ```python

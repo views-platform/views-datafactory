@@ -6,7 +6,7 @@
 #
 # This script runs the entire data pipeline end-to-end:
 #   0.  Pre-flight checks (credentials, disk space)
-#   1.  Harvest raw data from UCDP, PRIO-GRID, GAUL, ACLED, GHS-POP, GHS-BUILT-S, V-Dem
+#   1.  Harvest raw data from UCDP, PRIO-GRID, GAUL, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI
 #   2.  Consolidate UCDP sources into event store
 #   3.  Build viewpoint (survivorship + distribution + filtering)
 #   4.  Compile UCDP grid
@@ -170,6 +170,7 @@ uv run python scripts/harvest_acled.py
 uv run python scripts/harvest_ghspop.py
 uv run python scripts/harvest_ghsbuilts.py
 uv run python scripts/harvest_vdem.py
+uv run python scripts/harvest_shdi.py
 echo
 
 # Step 2: Consolidate
@@ -221,13 +222,14 @@ uv run python scripts/assemble_grid.py \
     --acled-grid data/compiled/acled \
     --ghspop-grid data/compiled/ghspop \
     --ghsbuilts-grid data/compiled/ghsbuilts \
-    --vdem-grid data/compiled/vdem
+    --vdem-grid data/compiled/vdem \
+    --skip-if-unchanged
 echo
 
 # Step 10: Export
 CURRENT_STEP="10/13: Export consumer formats"
 echo "── $CURRENT_STEP ──"
-uv run python scripts/export_zarr.py
+uv run python scripts/export_zarr.py --skip-if-unchanged
 uv run python scripts/export_dataframe.py
 echo
 

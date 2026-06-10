@@ -41,7 +41,7 @@ Operators MAY serve last-known-good compiled data when a harvest fails, provided
 
 - Does NOT add automatic fallback to the pipeline code.
 - Does NOT modify ADR-008 or ADR-011.
-- Does NOT define alerting infrastructure (that is an operational concern outside this repo).
+- Does NOT define alerting infrastructure in code (monitoring is an operational concern — see "External monitoring" in Implementation Notes for the chosen service).
 - Does NOT authorize silent staleness — every use of stale data must be explicit and logged.
 
 ---
@@ -94,6 +94,20 @@ When the system reaches production deployment, the following should be implement
 - Monitoring: check provenance ledger for `outcome: "failed"` entries.
 - Alerting: fire when no successful compilation exists within the staleness threshold.
 - Freshness indicator: compute from the timestamp of the last successful compilation ledger entry.
+
+### External monitoring (implemented v1.2.29)
+
+ADR-018 originally stated "Does NOT define alerting infrastructure (that is an operational concern outside this repo)." The code-level mechanism was added in v1.2.7 (`refresh_pipeline.sh` pings `$HEARTBEAT_URL` on success), but the operator-side setup was deferred.
+
+As of v1.2.29, the monitoring is fully configured:
+
+- **Service:** [healthchecks.io](https://healthchecks.io) (free tier). Chosen because: no infrastructure to maintain, simple HTTP ping model, generous free tier (20 checks), email/webhook alerts out of the box.
+- **Check:** `views-datafactory pipeline refresh`, 30-day period, 48-hour grace.
+- **Mechanism:** `refresh_pipeline.sh:251-254` sends `curl -fsS "$HEARTBEAT_URL"` after successful completion. The curl is fire-and-forget (`|| true`) — monitoring failure never breaks the pipeline.
+- **Server config:** `HEARTBEAT_URL` is set in `~/.profile` for `views-deploy` (not `.bashrc` — cron runs non-interactive shells).
+- **Setup guide:** `docs/guides/hetzner_deployment_guide.md`, section 4.6.
+
+This resolves C-131 (no external monitoring for cron job failure). The monitoring detects: cron daemon crashes, server reboots without re-enabling cron, `views-deploy` user deletion, and pipeline failures that prevent the success ping.
 
 ### Per-source SLO (implemented v1.2.7)
 
