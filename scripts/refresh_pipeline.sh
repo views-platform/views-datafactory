@@ -170,6 +170,7 @@ uv run python scripts/harvest_acled.py
 uv run python scripts/harvest_ghspop.py
 uv run python scripts/harvest_ghsbuilts.py
 uv run python scripts/harvest_vdem.py
+uv run python scripts/harvest_shdi.py
 echo
 
 # Step 2: Consolidate

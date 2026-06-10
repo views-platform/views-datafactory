@@ -90,8 +90,8 @@ def get_last_valid_month_id(
 # boundaries used by consumer scripts, examples, and tests.
 # Forecasting is excluded (computed dynamically from current date).
 _partitions_raw: dict[str, dict[str, tuple[int, int]]] = {
-    "calibration": {"train": (121, 444), "test": (445, 492)},
-    "validation": {"train": (121, 492), "test": (493, 540)},
+    "calibration": {"train": (121, 456), "test": (457, 504)},
+    "validation": {"train": (121, 504), "test": (505, 552)},
 }
 PARTITIONS: MappingProxyType[
     str, MappingProxyType[str, tuple[int, int]]

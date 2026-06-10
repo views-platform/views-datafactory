@@ -161,15 +161,15 @@ class TestPartitionBoundaries:
 
     def test_calibration_matches_models(self) -> None:
         cal = PARTITIONS["calibration"]
-        assert cal["train"] == (121, 444)
-        assert cal["test"] == (445, 492)
+        assert cal["train"] == (121, 456)
+        assert cal["test"] == (457, 504)
         assert cal["train"] == _DEFAULTS_PARTITIONS["calibration"]["train"]
         assert cal["test"] == _DEFAULTS_PARTITIONS["calibration"]["test"]
 
     def test_validation_matches_models(self) -> None:
         val = PARTITIONS["validation"]
-        assert val["train"] == (121, 492)
-        assert val["test"] == (493, 540)
+        assert val["train"] == (121, 504)
+        assert val["test"] == (505, 552)
         assert val["train"] == _DEFAULTS_PARTITIONS["validation"]["train"]
         assert val["test"] == _DEFAULTS_PARTITIONS["validation"]["test"]
 

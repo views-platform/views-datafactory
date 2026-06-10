@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-06-09)
-**Last update:** C-263 — assembly finally mkdir masking risk (falsification round 4)
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09
-**Status:** 263 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 205 resolved, 55 open concerns (0 Tier 1, 6 Tier 2, 10 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 10 open disagreements. 170 resolved concerns as full entries + 19 early-archive reference rows + 25 struck-through in active register + 27 resolved disagreements in archive. 37 disagreement IDs total: 28 resolved, 9 open.
+**Last update:** C-265 — SHDI harvest missing from refresh_pipeline.sh (pipeline gap audit 2026-06-10)
+**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10
+**Status:** 265 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 204 resolved, 57 open concerns (0 Tier 1, 7 Tier 2, 11 Tier 3, 33 Tier 4, 6 deferred by design; 1 with fired trigger), 9 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 28 struck-through in active register + 28 resolved disagreements in archive. 37 disagreement IDs total: 29 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -80,7 +80,7 @@
 | D-33 | — | Pipeline-path information: registry field vs standalone mapping vs convention | Open | Source registry |
 | D-34 | — | Provenance enforcement location: library gate vs pipeline gate vs both | Open | Artifact consistency |
 | D-35 | — | Test scope: exhaustive verification vs minimum viable testing | Open | Data soundness |
-| D-36 | — | Skip decision location: inline in script vs. provenance package function | Open | Artifact consistency |
+| ~~D-36~~ | ~~—~~ | ~~Skip decision location: inline in script vs. provenance package function~~ | Resolved 2026-06-09 (ADR-041: extracted to provenance/skip.py) | Artifact consistency |
 | D-37 | — | Code identity in skip decisions: include git hash or not | Open | Artifact consistency |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
 | C-145 | 3 | Viewpoint builder loads full consolidated store into memory | Consolidated store exceeds ~5M rows on constrained hardware | Viewpoint memory |
@@ -94,6 +94,8 @@
 | C-173 | 4 | Hetzner server memory headroom (CPX42 + swap) | Software optimization needed before next large source | Server hardening |
 | C-164 | 3 | Cross-layer WET debt: 6 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI integration or next data source | WET-before-DRY |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
+| C-265 | 2 | SHDI harvest missing from `refresh_pipeline.sh` — status page RED, data never collected | Pipeline runs on server; SHDI remains permanently unharvested while status page reports failure | Pipeline completeness |
+| C-264 | 3 | Factory/models partition boundary drift — 4 alignment tests failing | Factory partitions updated without coordinating with views-models, or model training uses mismatched partitions | Cross-repo alignment |
 | ~~C-263~~ | ~~3~~ | ~~Assembly finally block `mkdir` outside `contextlib.suppress` — can mask original exception~~ | Resolved 2026-06-10 (removed redundant mkdir — append_ledger_entry handles directory creation internally) | Ledger reliability |
 | ~~C-159~~ | ~~4~~ | ~~ACLED snapshot archiving and revision comparison paths untested~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
@@ -112,7 +114,7 @@ Items that should be resolved together:
 | **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
 | **UCDP schema defense** | C-36, C-37, C-45, ~~C-175~~ | UCDP API change (C-175 resolved 2026-05-27) |
 | **Test infrastructure** | C-29, C-79, C-146 (C-60, C-169 resolved; C-78 demoted; C-146 recalibrated 3→4) | Test suite growth |
-| **Operational monitoring** | C-131, C-136, C-147, C-237 (C-132, C-191 resolved; C-238, C-239 resolved 2026-06-06) | Before relying on Hetzner pipeline without manual checks |
+| **Operational monitoring** | C-131, C-136, C-147, C-237, C-265 (C-132, C-191 resolved; C-238, C-239 resolved 2026-06-06) | Before relying on Hetzner pipeline without manual checks |
 | **Source registry integrity** | C-236, D-33 (C-235, D-32 resolved #105) | Before next data source integration (WDI) |
 | **Scaling headroom** | C-144, C-145, C-223 | Before consolidated store exceeds ~5M rows or next data source pushes compile past 16 GB |
 | **Harvest correctness** | C-185 (C-182, C-184, C-186, C-188 resolved) | Before relying on harvest caching for correctness |
@@ -342,6 +344,24 @@ Cross-ref: C-241 (intensive feature gap — different invariant, still open), C-
 | Location | `scripts/generate_area_majority_gaul.py:122-166` (`_compute_cell_polygon_map`) |
 
 Cross-ref: C-230 (script layer has zero unit tests), ADR-039 (area-majority spatial join).
+
+---
+
+### C-265: SHDI harvest missing from `refresh_pipeline.sh` — status page RED, data never collected
+
+`scripts/refresh_pipeline.sh` has zero mentions of SHDI. The harvester exists (`scripts/harvest_shdi.py`), and `scripts/generate_status.py` knows about SHDI (line 70: `"SHDI": "docs/sources/shdi.md"`, line 227: `data_glob="raw/shdi/*.parquet"`, `ledger="shdi/ingestion_ledger.jsonl"`). The pipeline ran on the server 2026-06-09, completing all wired-in steps, but SHDI was never harvested because the script never calls the harvester. The status page at `http://204.168.219.108/status.html` correctly reports SHDI harvest as RED/Missing — the monitoring is right, the pipeline is incomplete.
+
+This is structural fragility: the pipeline script is the single source of truth for what gets harvested in production, and SHDI was never added to it. Every future pipeline run will reproduce the same gap.
+
+| Field | Value |
+|-------|-------|
+| Trigger | Pipeline runs on server; SHDI remains permanently unharvested while status page reports failure |
+| ID | C-265 |
+| Tier | 2 |
+| Source | Pipeline gap audit (2026-06-10) |
+| Location | `scripts/refresh_pipeline.sh` (missing SHDI harvest step); `scripts/harvest_shdi.py` (exists, never called); `scripts/generate_status.py:70,227` (monitors SHDI, finds nothing) |
+
+Cross-ref: C-236 (status page artifact mapping requires manual update per source), C-164 (cross-layer WET debt — SHDI is the 6th source copied without wiring).
 
 ---
 
@@ -633,6 +653,22 @@ Cross-ref: C-245 (resolved — name file gap), C-246 (untested production code p
 Resolved 2026-06-06 (PR #135). `generate_area_majority_gaul.py` extended to produce 4 name Parquet files (`gaul0_name`, `gaul1_name`, `gaul2_name`, `iso3_code`) using OCP `dtype=pa.utf8()` parameter. `GAUL_VARIABLES` split into `GAUL_CODE_VARIABLES` + `GAUL_NAME_VARIABLES` (CRP). Name files need regeneration on server to close the gap (`test_name_file_row_count_matches_code_file` is xfail until then).
 
 Cross-ref: C-149 (resolved — the root cause this gap is a residual of), ADR-039.
+
+---
+
+### C-264: Factory/models partition boundary drift — 4 alignment tests failing
+
+`datafactory_query.defaults.PARTITIONS` defined calibration/validation boundaries that no longer match the partition configs in `views-models`. Factory had `calibration: train=(121,444), test=(445,492), validation: train=(121,492), test=(493,540)`. Models updated to `calibration: train=(121,456), test=(457,504), validation: train=(121,504), test=(505,552)`. All 5 integrated models (`bright_starship`, `heavy_freighter`, `heavy_strider`, `light_strider`, `shining_codex`) agreed on the new boundaries, but the factory wasn't updated. Four `TestPartitionAlignment` tests failed as a result.
+
+| Field | Value |
+|-------|-------|
+| Trigger | Factory partitions updated without coordinating with views-models, or model training uses mismatched partitions |
+| ID | C-264 |
+| Tier | 3 |
+| Source | Deploy-readiness falsification (2026-06-10) |
+| Location | `src/datafactory_query/defaults.py:92-94` (`_partitions_raw`), `tests/test_structural_invariants.py:121-205` (`TestPartitionAlignment`) |
+
+Cross-ref: C-29 (no end-to-end integration test).
 
 ---
 
