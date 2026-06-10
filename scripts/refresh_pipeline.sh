@@ -6,7 +6,7 @@
 #
 # This script runs the entire data pipeline end-to-end:
 #   0.  Pre-flight checks (credentials, disk space)
-#   1.  Harvest raw data from UCDP, PRIO-GRID, GAUL, ACLED, GHS-POP, GHS-BUILT-S, V-Dem
+#   1.  Harvest raw data from UCDP, PRIO-GRID, GAUL, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI
 #   2.  Consolidate UCDP sources into event store
 #   3.  Build viewpoint (survivorship + distribution + filtering)
 #   4.  Compile UCDP grid
