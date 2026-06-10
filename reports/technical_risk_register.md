@@ -774,7 +774,7 @@ Every other layer exposes its core logic as an importable function: `consolidate
 
 See also C-29 (no end-to-end integration test), C-164 (cross-layer WET debt).
 
-### C-121: Phase 6.4 (SSH IP restriction) is documented but unexecuted — [DEFER]
+### ~~C-121: Phase 6.4 (SSH IP restriction) is documented but unexecuted~~ — DEMOTED
 Phase 6.4 of `hetzner_deployment_guide.md` documents SSH IP restriction via Hetzner Cloud Firewall or ufw, but has never been executed end-to-end. C-87 surfaced the same pattern: Phase 6.3 was documented in March but only executed today (2026-04-10), revealing a missing `passwd` step that locked the new user out of `sudo`. The fix took 30 minutes; the bug was in the documentation since v1.0. **Lesson: untested documentation is broken documentation.** Phase 6.4 should be audited and ideally dry-run before the first real execution. **Trigger: before executing Phase 6.4 (which itself is blocked on PRIO IT CIDRs).** Resolution: walk through Phase 6.4 line-by-line, verify each command, add missing edge cases, then execute on the server.
 **Source:** Lessons from C-87 incident, 2026-04-10
 
@@ -1228,7 +1228,7 @@ Cross-ref: C-243 (resolved — test existence), C-246 (untested production code 
 
 Cross-ref: C-267 (event_store crash-safety — same provenance layer).
 
-### C-272: TemporalConfig CIC Section 6 failure modes untested — [DEFER]
+### ~~C-272: TemporalConfig CIC Section 6 failure modes untested~~ — DEMOTED
 
 `TemporalConfig` CIC documents failure modes for `month=0`, `month=13`, `start_month > end_month`. No test exercises these boundary conditions. The `__post_init__` validation in `TemporalConfig` rejects these values, but the rejection behavior is untested. Tier 4 because: (a) frozen dataclass `__post_init__` is a standard pattern unlikely to regress, (b) single-developer project, (c) the CIC itself serves as documentation.
 
@@ -1290,7 +1290,7 @@ UCDP candidate and dot9 harvesting fetches multiple versions via per-version API
 
 Cross-ref: C-181 (discovery probes even when cached), C-70 (no circuit breaker).
 
-### C-277: check_disk_space() RuntimeError path untested — [DEFER]
+### ~~C-277: check_disk_space() RuntimeError path untested~~ — DEMOTED
 
 `check_disk_space()` in `preflight.py` raises `RuntimeError` when available disk is below the threshold. No test exercises this path. Tier 4 because: (a) preflight runs before any data processing, (b) the RuntimeError produces a loud failure, (c) the check is a simple `shutil.disk_usage` comparison.
 
@@ -1302,7 +1302,7 @@ Cross-ref: C-181 (discovery probes even when cached), C-70 (no circuit breaker).
 | Source | test-review (2026-06-10) |
 | Location | `scripts/preflight.py` (`check_disk_space`) |
 
-### C-278: ConsolidationResult / ViewpointResult have no frozen-mutation tests — [DEFER]
+### ~~C-278: ConsolidationResult / ViewpointResult have no frozen-mutation tests~~ — DEMOTED
 
 `ConsolidationResult` and `ViewpointResult` are frozen dataclasses that carry pipeline stage outputs. No test verifies their immutability — i.e., that attempting to assign to a field raises `FrozenInstanceError`. Tier 4 because: (a) `@dataclass(frozen=True)` is enforced by Python's dataclass machinery, (b) a regression would require removing the `frozen=True` flag, which would be visible in code review.
 
