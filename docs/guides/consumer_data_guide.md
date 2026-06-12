@@ -189,6 +189,7 @@ Predefined macro-regions:
 | Name | Coverage |
 |------|----------|
 | `"land"` | All land cells (64,818 cells) — **default** |
+| `"land_gaul"` | Land cells with GAUL coverage (64,736 cells). Excludes 82 sub-Antarctic islands outside FAO GAUL 2024. Use when every cell must carry complete country metadata. |
 | `"global"` | All 259,200 cells including ocean |
 | `"africa"` | 56 African countries |
 | `"middle_east"` | 14 Middle Eastern countries |
