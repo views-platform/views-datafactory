@@ -8,7 +8,8 @@
     "nearest_admin1": "Southland Region",
     "nearest_admin2": "Southland District",
     "distance_deg": 11.4047,
-    "search_radius": 10.0
+    "search_radius": 10.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 51798,
@@ -19,7 +20,8 @@
     "nearest_admin1": "Southland Region",
     "nearest_admin2": "Southland District",
     "distance_deg": 11.0813,
-    "search_radius": 10.0
+    "search_radius": 10.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 53979,
@@ -30,7 +32,8 @@
     "nearest_admin1": "Southland Region",
     "nearest_admin2": "Southland District",
     "distance_deg": 5.7158,
-    "search_radius": 10.0
+    "search_radius": 10.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 54699,
@@ -41,7 +44,8 @@
     "nearest_admin1": "Southland Region",
     "nearest_admin2": "Southland District",
     "distance_deg": 5.2327,
-    "search_radius": 5.0
+    "search_radius": 5.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 56852,
@@ -52,7 +56,8 @@
     "nearest_admin1": "Southland Region",
     "nearest_admin2": "Southland District",
     "distance_deg": 3.8481,
-    "search_radius": 5.0
+    "search_radius": 5.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 56853,
@@ -63,7 +68,8 @@
     "nearest_admin1": "Southland Region",
     "nearest_admin2": "Southland District",
     "distance_deg": 3.6626,
-    "search_radius": 5.0
+    "search_radius": 5.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 58318,
@@ -74,7 +80,8 @@
     "nearest_admin1": "Canterbury Region",
     "nearest_admin2": "Christchurch City",
     "distance_deg": 8.1793,
-    "search_radius": 10.0
+    "search_radius": 10.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 62356,
@@ -85,7 +92,8 @@
     "nearest_admin1": "Administrative Unit Not Available",
     "nearest_admin2": "Administrative Unit Not Available",
     "distance_deg": 12.4379,
-    "search_radius": 20.0
+    "search_radius": 20.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 94776,
@@ -97,7 +105,8 @@
     "nearest_admin2": "Atsimo Atsinanana",
     "distance_deg": 0.3412,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 99027,
@@ -109,7 +118,8 @@
     "nearest_admin2": "Khorixas",
     "distance_deg": 0.3434,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 107733,
@@ -121,7 +131,8 @@
     "nearest_admin2": "Boeny",
     "distance_deg": 0.3415,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 107742,
@@ -133,7 +144,8 @@
     "nearest_admin2": "Sava",
     "distance_deg": 0.2644,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 110367,
@@ -145,7 +157,8 @@
     "nearest_admin2": "Ca\u00f1ete",
     "distance_deg": 0.3394,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 112944,
@@ -157,7 +170,8 @@
     "nearest_admin2": "Tiwi Islands",
     "distance_deg": 0.3128,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 114769,
@@ -169,7 +183,8 @@
     "nearest_admin2": "Coruripe",
     "distance_deg": 0.344,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 116931,
@@ -181,7 +196,8 @@
     "nearest_admin2": "Ipojuca",
     "distance_deg": 0.3183,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 118753,
@@ -193,7 +209,8 @@
     "nearest_admin2": "Administrative Unit Not Available",
     "distance_deg": 0.2593,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 121625,
@@ -205,7 +222,8 @@
     "nearest_admin2": "Pomio District",
     "distance_deg": 0.3463,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 123748,
@@ -217,7 +235,8 @@
     "nearest_admin2": "Kaimana",
     "distance_deg": 0.4016,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 124038,
@@ -229,7 +248,8 @@
     "nearest_admin2": "Contralmirante Villar",
     "distance_deg": 0.3526,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 124425,
@@ -241,7 +261,8 @@
     "nearest_admin2": "Seruyan",
     "distance_deg": 0.3812,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 124759,
@@ -253,7 +274,8 @@
     "nearest_admin2": "Guayaquil",
     "distance_deg": 0.3196,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 126561,
@@ -265,7 +287,8 @@
     "nearest_admin2": "Kepulauan Mentawai",
     "distance_deg": 0.3433,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 126624,
@@ -277,7 +300,8 @@
     "nearest_admin2": "Sorong Selatan",
     "distance_deg": 0.3397,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 128012,
@@ -289,7 +313,8 @@
     "nearest_admin2": "Bangka",
     "distance_deg": 0.2797,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 129079,
@@ -301,7 +326,8 @@
     "nearest_admin2": "San Vicente",
     "distance_deg": 0.2866,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 129387,
@@ -313,7 +339,8 @@
     "nearest_admin2": "Administrative Unit Not Available",
     "distance_deg": 0.3291,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 129574,
@@ -325,7 +352,8 @@
     "nearest_admin2": "Administrative Unit Not Available",
     "distance_deg": 0.309,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 130919,
@@ -337,7 +365,8 @@
     "nearest_admin2": "Kutai Timur",
     "distance_deg": 0.3445,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 131639,
@@ -349,7 +378,8 @@
     "nearest_admin2": "Berau",
     "distance_deg": 0.343,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 132525,
@@ -361,7 +391,8 @@
     "nearest_admin2": "Kiritimati",
     "distance_deg": 0.3297,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 146125,
@@ -372,7 +403,8 @@
     "nearest_admin1": "Administrative Unit Not Available",
     "nearest_admin2": "Administrative Unit Not Available",
     "distance_deg": 3.0421,
-    "search_radius": 5.0
+    "search_radius": 5.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 153966,
@@ -384,7 +416,8 @@
     "nearest_admin2": "Isabela",
     "distance_deg": 0.3174,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 157829,
@@ -396,7 +429,8 @@
     "nearest_admin2": "Tomatl\u00e1n",
     "distance_deg": 0.3503,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 159987,
@@ -408,7 +442,8 @@
     "nearest_admin2": "San Blas",
     "distance_deg": 0.3351,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 160708,
@@ -420,7 +455,8 @@
     "nearest_admin2": "San Blas",
     "distance_deg": 0.2949,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 173423,
@@ -432,7 +468,8 @@
     "nearest_admin2": "Minatane-Cho",
     "distance_deg": 0.3081,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 179900,
@@ -444,7 +481,8 @@
     "nearest_admin2": "Tsushima City",
     "distance_deg": 0.2659,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 182470,
@@ -455,7 +493,8 @@
     "nearest_admin1": "Ilha Terceira",
     "nearest_admin2": "Angra Do Hero\u00edsmo",
     "distance_deg": 2.6312,
-    "search_radius": 2.0
+    "search_radius": 2.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 183190,
@@ -466,7 +505,8 @@
     "nearest_admin1": "Ilha Terceira",
     "nearest_admin2": "Angra Do Hero\u00edsmo",
     "distance_deg": 2.2978,
-    "search_radius": 2.0
+    "search_radius": 2.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 183909,
@@ -477,7 +517,8 @@
     "nearest_admin1": "Ilha Terceira",
     "nearest_admin2": "Angra Do Hero\u00edsmo",
     "distance_deg": 1.5994,
-    "search_radius": 2.0
+    "search_radius": 2.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 183910,
@@ -488,7 +529,8 @@
     "nearest_admin1": "Ilha Terceira",
     "nearest_admin2": "Praia Da Vit\u00f3ria",
     "distance_deg": 2.0256,
-    "search_radius": 2.0
+    "search_radius": 2.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 186058,
@@ -499,7 +541,8 @@
     "nearest_admin1": "Ilha do Faial",
     "nearest_admin2": "Horta",
     "distance_deg": 2.5005,
-    "search_radius": 5.0
+    "search_radius": 5.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 186778,
@@ -510,7 +553,8 @@
     "nearest_admin1": "Ilha do Faial",
     "nearest_admin2": "Horta",
     "distance_deg": 2.6739,
-    "search_radius": 5.0
+    "search_radius": 5.0,
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 190724,
@@ -522,7 +566,8 @@
     "nearest_admin2": "Mukawa",
     "distance_deg": 0.3527,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 201850,
@@ -534,7 +579,8 @@
     "nearest_admin2": "Division No.  8",
     "distance_deg": 0.3578,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 202249,
@@ -546,7 +592,8 @@
     "nearest_admin2": "Sakhalin",
     "distance_deg": 0.3462,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 203404,
@@ -558,7 +605,8 @@
     "nearest_admin2": "Pas-De-Calais",
     "distance_deg": 0.2881,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 206592,
@@ -570,7 +618,8 @@
     "nearest_admin2": "Kamchatka",
     "distance_deg": 0.3131,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 208007,
@@ -582,7 +631,8 @@
     "nearest_admin2": "Sakhalin",
     "distance_deg": 0.2996,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 210596,
@@ -594,7 +644,8 @@
     "nearest_admin2": "Fife",
     "distance_deg": 0.3025,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 212353,
@@ -606,7 +657,8 @@
     "nearest_admin2": "Kamchatka",
     "distance_deg": 0.293,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 212774,
@@ -618,7 +670,8 @@
     "nearest_admin2": "Farsund",
     "distance_deg": 0.3089,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 221061,
@@ -630,7 +683,8 @@
     "nearest_admin2": "Nome",
     "distance_deg": 0.3142,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 223941,
@@ -642,7 +696,8 @@
     "nearest_admin2": "Chukot",
     "distance_deg": 0.2514,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 225390,
@@ -654,7 +709,8 @@
     "nearest_admin2": "Nome",
     "distance_deg": 0.2939,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 227961,
@@ -666,7 +722,8 @@
     "nearest_admin2": "Murmansk",
     "distance_deg": 0.3208,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 229161,
@@ -678,7 +735,8 @@
     "nearest_admin2": "Baffin",
     "distance_deg": 0.3268,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 229429,
@@ -690,7 +748,8 @@
     "nearest_admin2": "Nenets",
     "distance_deg": 0.2636,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 229430,
@@ -702,7 +761,8 @@
     "nearest_admin2": "Nenets",
     "distance_deg": 0.2771,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 229866,
@@ -714,7 +774,8 @@
     "nearest_admin2": "Baffin",
     "distance_deg": 0.2808,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 233436,
@@ -726,7 +787,8 @@
     "nearest_admin2": "Kitikmeot",
     "distance_deg": 0.2877,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 233743,
@@ -738,7 +800,8 @@
     "nearest_admin2": "Arkhangel'Sk",
     "distance_deg": 0.3681,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 234640,
@@ -750,7 +813,8 @@
     "nearest_admin2": "Sakha",
     "distance_deg": 0.2549,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 235586,
@@ -762,7 +826,8 @@
     "nearest_admin2": "Kitikmeot",
     "distance_deg": 0.3321,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 235942,
@@ -774,7 +839,8 @@
     "nearest_admin2": "Yamal-Nenets",
     "distance_deg": 0.2617,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 235943,
@@ -786,7 +852,8 @@
     "nearest_admin2": "Yamal-Nenets",
     "distance_deg": 0.3091,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 235951,
@@ -798,7 +865,8 @@
     "nearest_admin2": "Yamal-Nenets",
     "distance_deg": 0.34,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 235954,
@@ -810,7 +878,8 @@
     "nearest_admin2": "Yamal-Nenets",
     "distance_deg": 0.3207,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 236054,
@@ -822,7 +891,8 @@
     "nearest_admin2": "Sakha",
     "distance_deg": 0.2869,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 237351,
@@ -834,7 +904,8 @@
     "nearest_admin2": "Arkhangel'Sk",
     "distance_deg": 0.3382,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 238123,
@@ -846,7 +917,8 @@
     "nearest_admin2": "Krasnoyarsk",
     "distance_deg": 0.3474,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 238231,
@@ -858,7 +930,8 @@
     "nearest_admin2": "Sakha",
     "distance_deg": 0.3141,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 238954,
@@ -870,7 +943,8 @@
     "nearest_admin2": "Sakha",
     "distance_deg": 0.3048,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 239705,
@@ -882,7 +956,8 @@
     "nearest_admin2": "Sakha",
     "distance_deg": 0.3393,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 240318,
@@ -894,7 +969,8 @@
     "nearest_admin2": "Krasnoyarsk",
     "distance_deg": 0.312,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 240319,
@@ -906,7 +982,8 @@
     "nearest_admin2": "Krasnoyarsk",
     "distance_deg": 0.2835,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 240975,
@@ -918,7 +995,8 @@
     "nearest_admin2": "Arkhangel'Sk",
     "distance_deg": 0.3044,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 240977,
@@ -930,7 +1008,8 @@
     "nearest_admin2": "Arkhangel'Sk",
     "distance_deg": 0.2818,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 241153,
@@ -942,7 +1021,8 @@
     "nearest_admin2": "Sakha",
     "distance_deg": 0.3824,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 247862,
@@ -954,7 +1034,8 @@
     "nearest_admin2": "Baffin",
     "distance_deg": 0.2889,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   },
   {
     "gid": 248595,
@@ -966,6 +1047,7 @@
     "nearest_admin2": "Baffin",
     "distance_deg": 0.3363,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile."
+    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "resolution": "accepted_uncovered"
   }
 ]

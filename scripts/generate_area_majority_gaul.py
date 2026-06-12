@@ -348,8 +348,35 @@ def main(
         sup_polys, sup_recs = _load_supplement_polygons(
             supplement_path, all_field_names,
         )
-        polygons.extend(sup_polys)
-        records.extend(sup_recs)
+        gaul_tree = STRtree([make_valid(p) for p in polygons])
+        kept_polys = []
+        kept_recs = []
+        for poly, rec in zip(sup_polys, sup_recs, strict=True):
+            hits = gaul_tree.query(poly, predicate="intersects")
+            covered = any(
+                make_valid(polygons[int(i)]).intersection(poly).area
+                / poly.area > 0.5
+                for i in hits
+            )
+            if covered:
+                logger.warning(
+                    "Supplement %s skipped — GAUL already covers it "
+                    "(source defect likely fixed)",
+                    rec.get("gaul1_name", "unknown"),
+                )
+            else:
+                kept_polys.append(poly)
+                kept_recs.append(rec)
+        if kept_polys:
+            polygons.extend(kept_polys)
+            records.extend(kept_recs)
+            logger.info("Appended %d supplement polygons", len(kept_polys))
+        elif sup_polys:
+            logger.warning(
+                "All %d supplement polygons skipped — GAUL now covers "
+                "them. Consider retiring the supplement (ADR-043).",
+                len(sup_polys),
+            )
 
     t0 = time.monotonic()
     cell_poly_map = _compute_cell_polygon_map(centroids, polygons)
