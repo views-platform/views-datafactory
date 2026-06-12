@@ -7,7 +7,7 @@ Verdict: FALSIFIED (3 hard, 1 soft).
 F-1 (hard): No CICs for VdemConfig or VdemViewpointConfig — integration
     guide Phase 5 requires them in the same commit as Phase 2-4.
 F-2 (hard): ADR-033 source catalog table missing V-Dem row.
-F-3 (hard): docs/sources/README.md missing V-Dem row, feature count 53 not 75.
+F-3 (hard): docs/sources/README.md missing V-Dem row, feature count 53 not 79.
     docs/ADRs/README.md missing ADR-035 entry.
 F-4 (soft): Compilation tests have 5 functions vs 16-18 for peers — already
     tracked in C-203.
@@ -67,11 +67,12 @@ class TestF3DocumentationIndices:
             "index table was not updated."
         )
 
-    def test_sources_readme_feature_count_75(self) -> None:
+    def test_sources_readme_feature_count_79(self) -> None:
         readme = (DOCS / "sources" / "README.md").read_text()
-        assert "75" in readme.split("Total features")[1], (
+        assert "79" in readme.split("Total features")[1], (
             "docs/sources/README.md total feature count is not "
-            "75 — SHDI is harvester-only, no grid features yet."
+            "79 — 6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S"
+            " + 22 V-Dem + 4 SHDI + 34 static + 3 admin."
         )
 
     def test_adrs_readme_lists_035(self) -> None:

@@ -174,8 +174,8 @@ print(f\"Features: {len(f)}\")
 for i, name in enumerate(f):
     print(f\"  {i}: {name}\")
 "'
-# Expected: 75 features (6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S
-#   + 22 V-Dem + 34 static + 3 admin)
+# Expected: 79 features (6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S
+#   + 22 V-Dem + 4 SHDI + 34 static + 3 admin)
 ```
 
 If you only need to re-run assembly (all sources already compiled),

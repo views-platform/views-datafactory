@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-06-11
-**Related ADRs:** ADR-009, ADR-012, ADR-036, ADR-040
+**Last reviewed:** 2026-06-12
+**Related ADRs:** ADR-009, ADR-012, ADR-036, ADR-040, ADR-042
 
 ---
 
@@ -22,7 +22,7 @@ SHDI is an intensive quantity (ADR-040). Sums across cells are meaningless. The 
 - This class does **not** manage the GDL crosswalk or spatial join (produced by the SHDI harvester)
 - This class does **not** know about compilation, assembly, or consumers
 - This class does **not** enforce the [0, 1] value range (that is the build function's responsibility)
-- This class does **not** handle NaN propagation policy (that is the compilation layer's concern)
+- This class does **not** handle NaN propagation policy — NaN is preserved as-is through compilation and assembly (ADR-042). Imputation is a consumer concern, not a factory concern
 
 ---
 
@@ -37,7 +37,7 @@ SHDI is an intensive quantity (ADR-040). Sums across cells are meaningless. The 
 Build function guarantees (enforced by `build_shdi_v1`, not the config):
 - All output values for `shdi`, `healthindex`, `edindex`, `incindex` are in [0, 1] or NaN
 - Output has exactly 12 monthly rows per (GDL region, year) per mapped pgid (step function — constant within year)
-- Unmapped cells (no GDL region) are absent from the output (filled with NaN at compilation)
+- Unmapped cells (no GDL region) are absent from the output (filled with NaN at compilation). NaN is never filled, interpolated, or imputed — see ADR-042 for rationale (MNAR missingness mechanism)
 - Unmapped GDL codes produce a warning, not a crash
 
 ---
