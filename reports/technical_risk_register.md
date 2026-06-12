@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-06-10)
-**Last update:** review-rr strategic curation — resolved C-265, D-34; demoted C-121, C-272, C-277, C-278; rewrite C-258 trigger; cluster updates (2026-06-10)
+**Last update:** review-rr strategic — demoted C-274, C-275, C-279; work package updates (8 entries clustered); C-164 trigger acknowledged (2026-06-12)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10
-**Status:** 281 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 211 resolved, 66 open concerns (0 Tier 1, 7 Tier 2, 14 Tier 3, 39 Tier 4, 6 deferred by design; 0 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 34 struck-through in active register + 29 resolved disagreements in archive. 37 disagreement IDs total: 29 resolved, 8 open.
+**Status:** 281 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 214 resolved, 63 open concerns (0 Tier 1, 7 Tier 2, 14 Tier 3, 36 Tier 4, 6 deferred by design; 1 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 37 struck-through in active register + 29 resolved disagreements in archive. 37 disagreement IDs total: 29 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -104,12 +104,12 @@
 | C-271 | 4 | compute_file_digest() has zero direct tests | Changing digest algorithm or chunk size | Provenance |
 | ~~C-272~~ | ~~4~~ | ~~TemporalConfig CIC Section 6 failure modes untested~~ | Demoted to tech-debt backlog 2026-06-10 (standard __post_init__ pattern, loud failure) | — |
 | C-273 | 4 | snapshot_storage.py has no dedicated tests | Refactoring snapshot storage logic | Test coverage |
-| C-274 | 4 | tagging.py has only 1 test — no edge cases | Adding tag-based filtering or tag-driven logic | Test coverage |
-| C-275 | 4 | raster_io.py has only 1 test — no error path coverage | Adding a new raster source | Test coverage |
+| ~~C-274~~ | ~~4~~ | ~~tagging.py has only 1 test — no edge cases~~ | Demoted to tech-debt backlog 2026-06-12 (no correctness impact on data pipeline; thin metadata annotation layer) | — |
+| ~~C-275~~ | ~~4~~ | ~~raster_io.py has only 1 test — no error path coverage~~ | Demoted to tech-debt backlog 2026-06-12 (exercised end-to-end by GHS-POP/GHS-BUILT-S tests; loud failures) | — |
 | C-276 | 4 | UCDP candidate/dot9 per-version fetch failure modes untested | UCDP changes version numbering scheme | UCDP resilience |
 | ~~C-277~~ | ~~4~~ | ~~check_disk_space() RuntimeError path untested~~ | Demoted to tech-debt backlog 2026-06-10 (simple utility, loud failure, zero data risk) | — |
 | ~~C-278~~ | ~~4~~ | ~~ConsolidationResult / ViewpointResult no frozen-mutation tests~~ | Demoted to tech-debt backlog 2026-06-10 (testing Python machinery, zero correctness risk) | — |
-| C-279 | 4 | land_mask.py has zero red tests | Natural Earth API changes | Test coverage |
+| ~~C-279~~ | ~~4~~ | ~~land_mask.py has zero red tests~~ | Demoted to tech-debt backlog 2026-06-12 (downloaded once, cached permanently; loud HTTP failures; minimal surface) | — |
 | C-280 | 4 | skip.py corrupted provenance.json / .zattrs untested | Disk corruption or manual editing of metadata | Artifact consistency |
 | ~~C-281~~ | ~~4~~ | ~~No SHDI CIC — only source without governance document~~ | Resolved 2026-06-11 (ShdiViewpointConfig.md written) | Documentation |
 | ~~C-263~~ | ~~3~~ | ~~Assembly finally block `mkdir` outside `contextlib.suppress` — can mask original exception~~ | Resolved 2026-06-10 (removed redundant mkdir — append_ledger_entry handles directory creation internally) | Ledger reliability |
@@ -126,8 +126,8 @@ Items that should be resolved together:
 
 | Package | Items | Trigger |
 |---------|-------|---------|
-| **Server hardening** | C-88, C-173, C-224 (C-84, C-85, C-86, C-87 resolved; C-173 recalibrated 3→4; C-121 demoted 2026-06-10) | Before production deployment |
-| **UCDP API resilience** | C-70, C-72 | Multi-operator deployment |
+| **Server hardening** | C-88, C-97, C-148, C-173, C-224 (C-84, C-85, C-86, C-87 resolved; C-173 recalibrated 3→4; C-121 demoted 2026-06-10; C-97, C-148 added 2026-06-12) | Before production deployment or server migration |
+| **UCDP API resilience** | C-70, C-72, C-181 (C-181 added 2026-06-12) | Multi-operator deployment or UCDP rate-limiting observed |
 | **UCDP schema defense** | C-36, C-37, C-45, ~~C-175~~ | UCDP API change (C-175 resolved 2026-05-27) |
 | **Test infrastructure** | C-29, C-79, C-146, C-267, C-270 (C-60, C-169 resolved; C-78 demoted; C-146 recalibrated 3→4) | Test suite growth |
 | **Operational monitoring** | C-131, C-136, C-147, C-237 (C-132, C-191 resolved; C-238, C-239 resolved 2026-06-06; C-265 resolved 2026-06-10) | Before relying on Hetzner pipeline without manual checks |
@@ -136,12 +136,14 @@ Items that should be resolved together:
 | **Harvest correctness** | C-185 (C-182, C-184, C-186, C-188 resolved) | Before relying on harvest caching for correctness |
 | **Count conservation** | C-241, C-249 (C-242, C-243, C-244 resolved PR #135) | C-241 deferred: intensive feature conservation |
 | **GAUL data integrity** | C-247, C-250, C-268 (C-246, C-248 resolved #136) | Before deploying refactored area-majority script to production |
-| **WET-before-DRY refactor** | C-07, C-155, C-164, C-195, C-230 (C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8) | Before WDI or next refactor sprint |
+| **WET-before-DRY refactor** | C-07, C-154, C-155, C-164, C-195, C-230 (C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8; C-154 added 2026-06-12) | Before WDI or next refactor sprint |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
 | **Artifact consistency** | ~~C-253~~, C-254, ~~C-255~~, ~~C-259~~, ~~C-260~~, ~~C-261~~, ~~C-262~~, C-231, C-280, ~~D-34~~, ~~D-36~~, D-37 | Before expanding consumer bridge beyond UCDP-only features |
 | **Data soundness** | C-256, C-257, C-258, C-269, D-35 | Before next data source integration (WDI) or next consolidation/viewpoint change |
-| **Infrastructure test coverage** | C-271, C-273, C-274, C-275, C-276, C-279, C-280, C-281 (C-272, C-277, C-278 demoted 2026-06-10) | Next red-test sprint or CIC Section 10 sweep |
+| **Infrastructure test coverage** | C-189, C-271, C-273, C-276, C-280 (C-272, C-277, C-278 demoted 2026-06-10; C-274, C-275, C-279 demoted 2026-06-12; C-281 resolved 2026-06-11; C-189 added 2026-06-12) | Next red-test sprint or CIC Section 10 sweep |
 | **Provenance resilience** | C-46, C-136, C-270, C-271 | Before production ledger exceeds 10MB or next provenance refactor |
+| **Query layer resilience** | C-116, C-117 (added 2026-06-12) | Consumer reports transient failures or slow remote queries |
+| **Cross-repo alignment** | C-264 (added 2026-06-12) | Before next partition boundary update or model training run |
 | **Migration scope** | C-126 (C-125 resolved) | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -551,7 +553,7 @@ See also C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 | ID | C-164 |
 | Tier | 3 |
 | Source | WET-before-DRY audit (2026-05-19), GHS-POP Phase 4 completion, expert code review (2026-05-30) |
-| Trigger | **Fired 2026-05-22 (GHS-BUILT-S), 2026-05-26 (V-Dem), 2026-05-29 (SHDI):** 6th pipeline source copied cross-layer patterns without extraction. Before WDI integration or next data source. |
+| Trigger | **Fired 2026-05-22 (GHS-BUILT-S), 2026-05-26 (V-Dem), 2026-05-29 (SHDI):** 6th pipeline source copied cross-layer patterns without extraction. Acknowledged 2026-06-12 (review-rr strategic): accepted at Tier 3 — WET-before-DRY strategy is intentional, patterns are clear, extraction is safe when WDI arrives. **Rewritten trigger:** Before WDI integration (10th source). |
 | Location | All `src/datafactory_*` packages — see inventory below |
 
 With 4 sources implemented (UCDP, ACLED, GHS-POP, GHS-BUILT-S), the codebase has accumulated intentional WET patterns across all four layers. The WET-before-DRY strategy (ADR: write 3 times before abstracting) has succeeded — concrete patterns are now clear. The 4th source (GHS-BUILT-S, v1.2.20) copied all patterns again, confirming the abstraction boundaries.
@@ -1252,29 +1254,27 @@ Cross-ref: C-267 (event_store crash-safety — same provenance layer).
 | Source | test-review (2026-06-10) |
 | Location | `src/datafactory_consolidation/snapshot_storage.py` |
 
-### C-274: tagging.py has only 1 test — no edge cases or adversarial — [DEFER]
+### ~~C-274: tagging.py has only 1 test — no edge cases or adversarial~~ — DEMOTED
 
-`tagging.py` in `datafactory_harvester` has a single test. No tests for: empty tag lists, duplicate tags, tag string encoding issues, or interaction with provenance ledger entries. Tier 4 because: tagging is a thin metadata annotation layer with no correctness impact on the data pipeline.
+Demoted to tech-debt backlog 2026-06-12 (review-rr strategic). No correctness impact on data pipeline; thin metadata annotation layer. Same class as already-demoted C-272/C-277/C-278. Re-register if tag-based filtering or tag-driven pipeline logic is added.
 
 | Field | Value |
 |-------|-------|
-| Trigger | Adding tag-based filtering or tag-driven pipeline logic |
 | ID | C-274 |
-| Tier | 4 |
+| Tier | ~~4~~ |
 | Source | test-review (2026-06-10) |
-| Location | `src/datafactory_harvester/tagging.py`, 1 test in existing test files |
+| Location | `src/datafactory_harvester/tagging.py` |
 
-### C-275: raster_io.py has only 1 test — no error path coverage — [DEFER]
+### ~~C-275: raster_io.py has only 1 test — no error path coverage~~ — DEMOTED
 
-`raster_io.py` in `datafactory_compilation` handles GeoTIFF reading with optional CRS/bounds validation. It has 1 test. No tests for: missing file, corrupt TIFF, wrong dtype, CRS mismatch, or bounds outside PRIO-GRID extent. Tier 4 because: (a) raster_io is exercised end-to-end by GHS-POP/GHS-BUILT-S compilation tests, (b) error paths would produce loud failures (file not found, rasterio exceptions).
+Demoted to tech-debt backlog 2026-06-12 (review-rr strategic). Exercised end-to-end by GHS-POP/GHS-BUILT-S compilation tests; error paths produce loud failures (FileNotFoundError, rasterio exceptions). Re-register if a new raster source uses raster_io with different format characteristics.
 
 | Field | Value |
 |-------|-------|
-| Trigger | Adding a new raster source (e.g., WDI spatial data) that uses raster_io with different format characteristics |
 | ID | C-275 |
-| Tier | 4 |
+| Tier | ~~4~~ |
 | Source | test-review (2026-06-10) |
-| Location | `src/datafactory_compilation/raster_io.py`, 1 test in existing test files |
+| Location | `src/datafactory_compilation/raster_io.py` |
 
 ### C-276: UCDP candidate/dot9 per-version fetch failure modes untested — [DEFER]
 
@@ -1314,15 +1314,14 @@ Cross-ref: C-181 (discovery probes even when cached), C-70 (no circuit breaker).
 | Source | test-review (2026-06-10) |
 | Location | `src/datafactory_consolidation/` (ConsolidationResult), `src/datafactory_viewpoint/` (ViewpointResult) |
 
-### C-279: land_mask.py has zero red (adversarial) tests — [DEFER]
+### ~~C-279: land_mask.py has zero red (adversarial) tests~~ — DEMOTED
 
-`land_mask.py` downloads and caches a Natural Earth land mask for spatial filtering. It has green tests but zero red tests. No tests for: API error during download, network timeout, corrupted cache file, wrong resolution, or cache directory permissions. Tier 4 because: (a) land mask is downloaded once and cached permanently, (b) download failures produce loud HTTP errors, (c) the cache is a simple pickle file.
+Demoted to tech-debt backlog 2026-06-12 (review-rr strategic). Downloaded once and cached permanently; download failures produce loud HTTP errors; minimal surface area. Re-register if Natural Earth API changes endpoint URL or response format.
 
 | Field | Value |
 |-------|-------|
-| Trigger | Natural Earth API changes endpoint URL or response format |
 | ID | C-279 |
-| Tier | 4 |
+| Tier | ~~4~~ |
 | Source | test-review (2026-06-10) |
 | Location | `src/datafactory_priogrid/land_mask.py` |
 
