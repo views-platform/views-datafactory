@@ -8,8 +8,8 @@ Writes:
   - src/datafactory_query/land_gaul_pgids.json  (sorted int array)
   - Provenance ledger entry
 
-The 82 excluded cells are sub-Antarctic islands outside FAO GAUL 2024
-coverage. They are printed with coordinates for the FAO release note.
+The 76 excluded cells are small islands outside FAO GAUL 2024
+polygon coverage. They are printed with coordinates for review.
 
 Related: issue #159, ADR-039 (spatial truth ownership).
 """

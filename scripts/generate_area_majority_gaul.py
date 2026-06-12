@@ -280,6 +280,29 @@ def _write_area_majority_parquet(
     }
 
 
+def _load_supplement_polygons(
+    geojson_path: Path,
+    field_names: list[str],
+) -> tuple[list, list[dict]]:
+    """Load supplement polygons from a GeoJSON file."""
+    import json as _json
+
+    data = _json.loads(geojson_path.read_text())
+    polygons = []
+    records = []
+    for feature in data["features"]:
+        geom = shape(feature["geometry"])
+        polygons.append(geom)
+        props = feature["properties"]
+        records.append({fn: props[fn] for fn in field_names})
+
+    logger.info(
+        "Loaded %d supplement polygons from %s",
+        len(polygons), geojson_path.name,
+    )
+    return polygons, records
+
+
 GAUL_CODE_VARIABLES = [
     ("gaul0_code", ["gaul0_code"]),
     ("gaul1_code", ["gaul1_code"]),
@@ -297,8 +320,13 @@ GAUL_NAME_VARIABLES = [
 def main(
     data_dir: Path = Path("data/raw/gaul_admin"),
     cache_dir: Path = Path("data/raw/gaul_admin/shapefiles"),
-    centroid_path: Path = Path("data/raw/priogrid/shapefile/priogrid_centroid.shp"),
-    ledger_path: Path = Path("provenance/gaul_admin/ingestion_ledger.jsonl"),
+    centroid_path: Path = Path(
+        "data/raw/priogrid/shapefile/priogrid_centroid.shp"
+    ),
+    ledger_path: Path = Path(
+        "provenance/gaul_admin/ingestion_ledger.jsonl"
+    ),
+    supplement_path: Path | None = None,
     *,
     dry_run: bool = False,
 ) -> list[dict]:
@@ -314,6 +342,13 @@ def main(
     all_field_names = [f for _, fields in GAUL_CODE_VARIABLES + GAUL_NAME_VARIABLES
                        for f in fields]
     polygons, records = _load_gaul_polygons(l2_shp_path, all_field_names)
+
+    if supplement_path and supplement_path.exists():
+        sup_polys, sup_recs = _load_supplement_polygons(
+            supplement_path, all_field_names,
+        )
+        polygons.extend(sup_polys)
+        records.extend(sup_recs)
 
     t0 = time.monotonic()
     cell_poly_map = _compute_cell_polygon_map(centroids, polygons)
@@ -393,6 +428,10 @@ if __name__ == "__main__":
         default=Path("provenance/gaul_admin/ingestion_ledger.jsonl"),
     )
     parser.add_argument(
+        "--supplement", type=Path, default=None,
+        help="GeoJSON supplement for missing GAUL polygons",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="Compute but don't write files",
     )
@@ -403,6 +442,7 @@ if __name__ == "__main__":
         cache_dir=args.cache_dir,
         centroid_path=args.centroid_path,
         ledger_path=args.ledger_path,
+        supplement_path=args.supplement,
         dry_run=args.dry_run,
     )
 

@@ -256,7 +256,7 @@ class TestLandGaulRegion:
 
     def test_land_gaul_returns_correct_count(self) -> None:
         pgids = load_region_pgids("land_gaul")
-        assert len(pgids) == 64_736
+        assert len(pgids) == 64_742
 
     def test_land_gaul_is_subset_of_land(self) -> None:
         land_gaul = load_region_pgids("land_gaul")
@@ -267,7 +267,7 @@ class TestLandGaulRegion:
         land = load_region_pgids("land")
         land_gaul = load_region_pgids("land_gaul")
         excluded = land - land_gaul
-        assert len(excluded) == 82
+        assert len(excluded) == 76
 
     def test_land_gaul_pgids_json_exists(self) -> None:
         pkg = Path(__file__).parent.parent / "src"
@@ -284,7 +284,7 @@ class TestLandGaulRegion:
     def test_land_gaul_no_gaul_dir_needed(self) -> None:
         """land_gaul resolves from bundled JSON, no GAUL parquets."""
         pgids = load_region_pgids("land_gaul")
-        assert len(pgids) == 64_736
+        assert len(pgids) == 64_742
 
     def test_land_gaul_in_list_regions(self) -> None:
         from datafactory_query.regions import list_regions

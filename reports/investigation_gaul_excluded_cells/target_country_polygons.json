@@ -1,0 +1,4454 @@
+{
+  "Portugal": [
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "\u00c1gueda",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.5581522202487,
+        40.49586173822871,
+        -8.247408328831284,
+        40.69424392132004
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Albergaria-A-Velha",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.63243227413011,
+        40.60931902315451,
+        -8.407891746306916,
+        40.77941178392672
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Anadia",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.579821133138694,
+        40.39556060943465,
+        -8.31149585964613,
+        40.51212368685873
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Arouca",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.433320430593312,
+        40.84480829506691,
+        -8.089170350331301,
+        41.0160133049701
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Aveiro",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.763645197967492,
+        40.528497373554956,
+        -8.522042616273609,
+        40.727508032569745
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Castelo De Paiva",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.400920085793302,
+        40.962211567709744,
+        -8.230261906861472,
+        41.080107184998724
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Espinho",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.653116646116246,
+        40.9647324654311,
+        -8.593620003260412,
+        41.025720382090014
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Estarreja",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.667178771183274,
+        40.68879224996249,
+        -8.511388813842586,
+        40.83365647056985
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "\u00cdlhavo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.766088590316144,
+        40.56539355426918,
+        -8.620255015656426,
+        40.65980981726943
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Mealhada",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.529752681341051,
+        40.2789203611859,
+        -8.354148801326062,
+        40.4160935113066
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Murtosa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.734850737971158,
+        40.70204185015143,
+        -8.596044713092908,
+        40.81619387214954
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Oliveira De Azem\u00e9is",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.550857707617013,
+        40.75875680628167,
+        -8.385384831644615,
+        40.935657888201035
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Oliveira Do Bairro",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.628622518414375,
+        40.46545891179949,
+        -8.459868893134853,
+        40.563901251641596
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Ovar",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.695979228758347,
+        40.7956859291624,
+        -8.52323513799115,
+        40.97613345789284
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Santa Maria Da Feira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.612790336904482,
+        40.87210600888534,
+        -8.389216838386346,
+        41.053414443322026
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "S\u00e3o Jo\u00e3o Da Madeira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.512042799935159,
+        40.87878697973531,
+        -8.47496561357218,
+        40.91655896342547
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Sever Do Vouga",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.416454142944303,
+        40.63671524960921,
+        -8.272982119629035,
+        40.799644962445086
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Vagos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.784028976056334,
+        40.424007479661554,
+        -8.607685902782123,
+        40.582883513663376
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Aveiro",
+      "gaul2_name": "Vale De Cambra",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.433877957201844,
+        40.763126319823925,
+        -8.236762526769155,
+        40.903582724763055
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Aljustrel",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.334076809197313,
+        37.781668833749734,
+        -8.048148543220634,
+        38.00023427758981
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Almod\u00f4var",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.27578752417486,
+        37.31889456033588,
+        -7.886561972357072,
+        37.63083093479986
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Alvito",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.16438401291174,
+        38.15072361190528,
+        -7.9295240308093184,
+        38.32930310305585
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Barrancos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.210811567699636,
+        38.08864281931085,
+        -6.933164000118381,
+        38.21837599955279
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Beja",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.083169097875441,
+        37.77641695038204,
+        -7.632648843669131,
+        38.162541978829324
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Castro Verde",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.246178728065729,
+        37.56272950486294,
+        -7.8490416369619425,
+        37.82730478888493
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Cuba",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.003321913175682,
+        38.10973409495256,
+        -7.83702061860663,
+        38.30488859593214
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Ferreira Do Alentejo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.409242201566258,
+        37.96682556794576,
+        -7.97707822008374,
+        38.223943321926924
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "M\u00e9rtola",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.9329646130263995,
+        37.431960819136634,
+        -7.426383000275223,
+        37.849363494929435
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Moura",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.532795555670305,
+        37.96056007488767,
+        -6.987459732280797,
+        38.330772654634416
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Odemira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.819551937871609,
+        37.3736780838766,
+        -8.312978955014671,
+        37.86998264178567
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Ourique",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.466808973954926,
+        37.409217407957044,
+        -8.13751925880672,
+        37.862611645411164
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Serpa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.6823466335901,
+        37.741149784535025,
+        -7.248572499621105,
+        38.17635543415611
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Beja",
+      "gaul2_name": "Vidigueira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.8803779407892875,
+        38.06452168183023,
+        -7.4869470592593075,
+        38.258015348129845
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Amares",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.433852366093788,
+        41.60478978442109,
+        -8.241945989715589,
+        41.700126176182266
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Barcelos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.745736578080539,
+        41.414826673012556,
+        -8.49453593418599,
+        41.65433319941775
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Braga",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.526079344685968,
+        41.46368322360195,
+        -8.295464102386347,
+        41.61692683780336
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Cabeceiras De Basto",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.068849949265655,
+        41.44659545002003,
+        -7.811627274978719,
+        41.616776198662706
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Celorico De Basto",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.14660827235383,
+        41.31874960141306,
+        -7.936937792644926,
+        41.48788771114914
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Esposende",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.811566968940383,
+        41.466091616135316,
+        -8.700874384345298,
+        41.62488976525054
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Fafe",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.247955765046413,
+        41.37278172969326,
+        -8.055180621988029,
+        41.565898167266596
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Guimar\u00e3es",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.43532333140655,
+        41.36233977516059,
+        -8.18836427698966,
+        41.569200067729014
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "P\u00f3voa De Lanhoso",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.344303380596443,
+        41.518522880126966,
+        -8.146917863068836,
+        41.65513679942387
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Terras De Bouro",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.36288247384698,
+        41.650459074726655,
+        -8.044723393369793,
+        41.82065086704392
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Vieira Do Minho",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.259567894043016,
+        41.54674355916802,
+        -7.98205137567038,
+        41.699635251565724
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Vila Nova De Famalic\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.623315760214041,
+        41.33892692843506,
+        -8.376795021872681,
+        41.47872461684767
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Vila Verde",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.546662570820956,
+        41.568840072711225,
+        -8.307810440599326,
+        41.77001558784929
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Braga",
+      "gaul2_name": "Vizela",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.328085917830776,
+        41.342135276022304,
+        -8.24613339593941,
+        41.40542704801993
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Alf\u00e2ndega Da F\u00e9",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.069546302619699,
+        41.23934604958072,
+        -6.8204811609766125,
+        41.46893347739825
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Bragan\u00e7a",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -6.954478230286043,
+        41.534522321148245,
+        -6.515761499693383,
+        41.99253099980592
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Carrazeda De Ansi\u00e3es",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.4318898747179105,
+        41.136317749164846,
+        -7.186869887235446,
+        41.338468902817795
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Freixo De Espada \u00c0 Cinta",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -6.995189020356975,
+        41.024489598716116,
+        -6.688379649401213,
+        41.24854608983037
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Macedo De Cavaleiros",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.12955159842744,
+        41.403635846717066,
+        -6.659408591333374,
+        41.70963134561015
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Miranda Do Douro",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -6.532479049368533,
+        41.34352745892511,
+        -6.189849499654656,
+        41.67752049977133
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Mirandela",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.366406604181407,
+        41.33444309307447,
+        -7.029436414358997,
+        41.73517253508447
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Mogadouro",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -6.920931641082291,
+        41.19352326298838,
+        -6.418576000182213,
+        41.46726779807045
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Torre De Moncorvo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.223712731857063,
+        41.03302234470556,
+        -6.7981750307529865,
+        41.30906663062058
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Vila Flor",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.298172305707283,
+        41.22786360012509,
+        -7.032629772945597,
+        41.41265304220423
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Vimioso",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -6.678095106803653,
+        41.44598174905849,
+        -6.36783213684356,
+        41.6935304520689
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Bragan\u00e7a",
+      "gaul2_name": "Vinhais",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.210104636719564,
+        41.67107923421946,
+        -6.861161330930656,
+        41.990852499743255
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Belmonte",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.393074982324549,
+        40.244576609323246,
+        -7.270396757804065,
+        40.41433729093336
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Castelo Branco",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.850761435691595,
+        39.64123899978017,
+        -7.179393097313493,
+        40.083486601825314
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Covilh\u00e3",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.8090491533956765,
+        40.1299912678827,
+        -7.343780538341093,
+        40.40178515995734
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Fund\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.812511838250657,
+        39.977615842996784,
+        -7.25213149557203,
+        40.27199569024896
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Idanha-A-Nova",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.361620646075835,
+        39.65299250040357,
+        -6.864202999968427,
+        40.09925460681484
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Oleiros",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.088234803593252,
+        39.812269220148494,
+        -7.691565027204149,
+        40.057444543930615
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Penamacor",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.319248783904186,
+        40.04944637385114,
+        -6.932864992625241,
+        40.324591201922544
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Proen\u00e7a-A-Nova",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.035760394626436,
+        39.56573589219772,
+        -7.740298294230854,
+        39.87053337631437
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Sert\u00e3",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.293129200652004,
+        39.726933363284274,
+        -7.916512408320955,
+        39.948647119569046
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Vila De Rei",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.237378786301917,
+        39.61159952329933,
+        -8.051019438196363,
+        39.75907317538679
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Castelo Branco",
+      "gaul2_name": "Vila Velha De R\u00f3d\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.828857400448555,
+        39.53731770494824,
+        -7.488921363430052,
+        39.79434887669936
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Arganil",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.207360010855723,
+        40.13770054604345,
+        -7.782396100599442,
+        40.30408316180859
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Cantanhede",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.846327745428994,
+        40.24529294811117,
+        -8.481263351822179,
+        40.485537377248136
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Coimbra",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.588436841586883,
+        40.098877007568035,
+        -8.312906741253073,
+        40.35001711090098
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Condeixa-A-Nova",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.590799303944607,
+        40.02972736472623,
+        -8.3993562681772,
+        40.17850759774757
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Figueira Da Foz",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.90924575828501,
+        40.01251452872259,
+        -8.701931246929405,
+        40.3268365590601
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "G\u00f3is",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.180079072091416,
+        39.96018600597955,
+        -7.948670798618309,
+        40.212815300286024
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Lous\u00e3",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.311406690965953,
+        40.05203426476959,
+        -8.151845128949503,
+        40.20550131913075
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Mira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.825677569264315,
+        40.37128864755323,
+        -8.681975466994118,
+        40.520319958699304
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Miranda Do Corvo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.40562471730675,
+        40.02601153780239,
+        -8.242763962686638,
+        40.19433103784729
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Montemor-O-Velho",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.774039912911576,
+        40.11318298200899,
+        -8.547511923836169,
+        40.31099973524971
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Oliveira Do Hospital",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.98173855189259,
+        40.259378324250406,
+        -7.758245018392813,
+        40.49849684984986
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Pampilhosa Da Serra",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.132735164995836,
+        39.93276463897706,
+        -7.732186824862026,
+        40.21079599314072
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Penacova",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.389608994959076,
+        40.21856870138447,
+        -8.10825087857512,
+        40.37075508338046
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Penela",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.474572051359019,
+        39.92393390712425,
+        -8.270696545708972,
+        40.08439407802439
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Soure",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.763261464444952,
+        39.94879871378964,
+        -8.427378938087429,
+        40.1758836431157
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "T\u00e1bua",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.134002872734357,
+        40.24066928436008,
+        -7.8989776779774274,
+        40.423706510746854
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Coimbra",
+      "gaul2_name": "Vila Nova De Poiares",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.340316274076656,
+        40.17599725177189,
+        -8.163632366740217,
+        40.254191799112334
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Alandroal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.56368479661603,
+        38.430058534273996,
+        -7.203246450862935,
+        38.77283023083061
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Arraiolos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.152638427221461,
+        38.627812970792036,
+        -7.674043379298496,
+        38.92837052917662
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Borba",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.564238606326569,
+        38.71296685883357,
+        -7.391687337400583,
+        38.9262879250478
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Estremoz",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.799886483574312,
+        38.68481758056697,
+        -7.455312354981061,
+        39.00839075243147
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "\u00c9vora",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.165709854626016,
+        38.340636330702125,
+        -7.55495091455299,
+        38.76815016699675
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Montemor-O-Novo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.582722188677963,
+        38.436801444131504,
+        -8.035011029135603,
+        38.86906488073981
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Mora",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.272199867729682,
+        38.80492336272306,
+        -7.88991834385638,
+        39.02688633643538
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Mour\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.430597923055643,
+        38.15460280607476,
+        -7.104686910472424,
+        38.43987649960093
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Portel",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.9365079535791665,
+        38.18840790989731,
+        -7.45721258918951,
+        38.43711456108821
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Redondo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.725684552000303,
+        38.47551802803463,
+        -7.491018248793068,
+        38.754952661836
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Reguengos De Monsaraz",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.612904836988605,
+        38.227318795925726,
+        -7.340655071374385,
+        38.52630704813174
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Vendas Novas",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.658041594444,
+        38.54207365377613,
+        -8.380052131600564,
+        38.7545611159029
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Viana Do Alentejo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.32258542317868,
+        38.29948064601507,
+        -7.909530354342337,
+        38.48141811125697
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "\u00c9vora",
+      "gaul2_name": "Vila Vi\u00e7osa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.500008037440921,
+        38.671187425958976,
+        -7.211160150320609,
+        38.84795180373294
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Albufeira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.329577264479099,
+        37.071528855872145,
+        -8.126954295903943,
+        37.21719054400859
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Alcoutim",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.89639082127934,
+        37.27572712820444,
+        -7.437338419132686,
+        37.52908624123711
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Aljezur",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.91872918930062,
+        37.14974635211257,
+        -8.676135820911327,
+        37.44290809013637
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Castro Marim",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.636996803159889,
+        37.16713294163196,
+        -7.412645999912854,
+        37.392922036023265
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Faro",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.006512252738162,
+        36.96166843644937,
+        -7.809378381706836,
+        37.14530838667281
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Lagoa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.532435955254982,
+        37.085287350031365,
+        -8.369383281713056,
+        37.17984284157393
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Lagos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.850748561696719,
+        37.071182924452444,
+        -8.619171151827175,
+        37.23429080107974
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Loul\u00e9",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.232029434410777,
+        37.01022804079156,
+        -7.878731454792785,
+        37.418215231148054
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Monchique",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.75506796521438,
+        37.210155778066735,
+        -8.421277088366821,
+        37.411943993220746
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Olh\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.889295449125655,
+        36.99803845261255,
+        -7.723384850630168,
+        37.130621088892156
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Portim\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.68390387876093,
+        37.108378791647965,
+        -8.485224484122625,
+        37.279876649587834
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "S\u00e3o Br\u00e1s De Alportel",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.965651275885591,
+        37.12365825972097,
+        -7.786111101945721,
+        37.26654244927471
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Silves",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.535478277200639,
+        37.08858303348035,
+        -8.17786127467798,
+        37.439348794711236
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Tavira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.914292458829891,
+        37.05404216911097,
+        -7.568998344697718,
+        37.385510320145215
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Vila Do Bispo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.997565589979956,
+        36.99346064709124,
+        -8.772282151999661,
+        37.16537206277059
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Faro",
+      "gaul2_name": "Vila Real De Santo Ant\u00f3nio",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.574067795192548,
+        37.142323479245306,
+        -7.4045977591791825,
+        37.25836019876431
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Aguiar Da Beira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.627697787123054,
+        40.690252237251116,
+        -7.421995342910691,
+        40.87315454914318
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Almeida",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.05176588738567,
+        40.47676167041493,
+        -6.793930499592818,
+        40.783332371192046
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Celorico Da Beira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.511263283973278,
+        40.515134003731475,
+        -7.25592670115617,
+        40.70888651919756
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Figueira De Castelo Rodrigo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.12217164120824,
+        40.7484571703622,
+        -6.800951999635004,
+        41.0363598286433
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Fornos De Algodres",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.589174346119023,
+        40.55754322104286,
+        -7.420312539591976,
+        40.75804115187782
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Gouveia",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.742102601353849,
+        40.38752125130469,
+        -7.434340188248996,
+        40.60787078460908
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Guarda",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.462146933634017,
+        40.380557530006115,
+        -7.032746862877389,
+        40.70091238529841
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Manteigas",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.6129209537389215,
+        40.3159412463915,
+        -7.418937057099413,
+        40.461511460885276
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "M\u00eada",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.379564597628018,
+        40.82308076076862,
+        -7.134152577679231,
+        41.037231939902256
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Pinhel",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.262446175350647,
+        40.58759747744182,
+        -6.954580113581358,
+        40.97116155506188
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Sabugal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.332079809035918,
+        40.2547414998204,
+        -6.781047499942133,
+        40.552914174849434
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Seia",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.849229266117618,
+        40.22987034933726,
+        -7.583435797324114,
+        40.53546780469554
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Trancoso",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.467241350208042,
+        40.68967877015916,
+        -7.1860868790061545,
+        40.92177012099438
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Guarda",
+      "gaul2_name": "Vila Nova De Foz C\u00f4a",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.344074639133169,
+        40.92306196024134,
+        -6.976669722129941,
+        41.17929937416693
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Graciosa",
+      "gaul2_name": "Santa Cruz Da Graciosa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -28.07240680982636,
+        39.00858604201227,
+        -27.947956132169736,
+        39.09722134598849
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "Calheta",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -17.26595391064444,
+        32.702989241660305,
+        -17.07565774520873,
+        32.84017517114739
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "C\u00e2mara De Lobos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -17.028354741078317,
+        32.644248863894006,
+        -16.928696513333307,
+        32.76189844195966
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "Funchal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -16.969462424651056,
+        30.028775453224625,
+        -15.853696862619984,
+        32.73564358918031
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "Machico",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -16.905576525436175,
+        32.70095793935758,
+        -16.65526439283741,
+        32.78754045442855
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "Ponta Do Sol",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -17.140701647462947,
+        32.67785005723442,
+        -17.04680598940479,
+        32.77063776222303
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "Porto Moniz",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -17.230578979935842,
+        32.76714642316887,
+        -17.065509744878796,
+        32.87062078012491
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "Ribeira Brava",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -17.086582882993582,
+        32.65362798794138,
+        -16.983953592883893,
+        32.755731832957906
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "Santa Cruz",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -16.896309795060972,
+        32.40367841073021,
+        -16.462826787825975,
+        32.734822744674034
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "Santana",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -16.971328530487142,
+        32.71788476756814,
+        -16.839965454941762,
+        32.837602284517914
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha da Madeira (Madeira)",
+      "gaul2_name": "S\u00e3o Vicente",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -17.080183533942886,
+        32.746279290057316,
+        -16.950244944048904,
+        32.83043418508976
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha de Porto Santo (Madeira)",
+      "gaul2_name": "Porto Santo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -16.41075753962872,
+        32.996108179149246,
+        -16.277399465612802,
+        33.12814968975641
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha de S\u00e3o Jorge",
+      "gaul2_name": "Calheta De S\u00e3o Jorge",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -28.06413029597627,
+        38.5333803113524,
+        -27.752458332985555,
+        38.66638555075275
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha de S\u00e3o Jorge",
+      "gaul2_name": "Velas",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -28.317644801965912,
+        38.62572385017563,
+        -28.015820490023486,
+        38.75667725575079
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha do Faial",
+      "gaul2_name": "Horta",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -28.83479704334883,
+        38.515164163795305,
+        -28.598109816015096,
+        38.644095423964814
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha do Pico",
+      "gaul2_name": "Lajes Do Pico",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -28.400308113828316,
+        38.38207054442017,
+        -28.028191962489018,
+        38.47768869197972
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha do Pico",
+      "gaul2_name": "Madalena",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -28.5418999182466,
+        38.41233911555787,
+        -28.363770981145763,
+        38.56071474359061
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha do Pico",
+      "gaul2_name": "S\u00e3o Roque Do Pico",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -28.444183169417613,
+        38.432900748970496,
+        -28.121742479631678,
+        38.561432175054904
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha Terceira",
+      "gaul2_name": "Angra Do Hero\u00edsmo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -27.379452017396602,
+        38.638985643372735,
+        -27.066773061927165,
+        38.802209451604995
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Ilha Terceira",
+      "gaul2_name": "Praia Da Vit\u00f3ria",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -27.277521846755747,
+        38.67521582305187,
+        -27.04120543508259,
+        38.803431456696444
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Alcoba\u00e7a",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.148849476222267,
+        39.3847802582024,
+        -8.865674578219114,
+        39.74138018145038
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Alvai\u00e1zere",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.483938471583144,
+        39.73207134211884,
+        -8.301054315204453,
+        39.90115853134125
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Ansi\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.538816458112933,
+        39.855720034052354,
+        -8.335464195116458,
+        40.02668157859216
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Batalha",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.873785283164239,
+        39.55083252510104,
+        -8.671426510225217,
+        39.695207060357575
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Bombarral",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.23885169574902,
+        39.21153574597804,
+        -9.084959121766019,
+        39.33820124159416
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Caldas Da Rainha",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.235350421884391,
+        39.29157819867504,
+        -8.982717064440862,
+        39.50972829422551
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Castanheira De P\u00eara",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.241461238045588,
+        39.945900694361626,
+        -8.143567598865559,
+        40.08968941033817
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Figueir\u00f3 Dos Vinhos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.363572698121459,
+        39.79571469687579,
+        -8.209753362227843,
+        40.06729134691818
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Leiria",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.968169783908365,
+        39.63683127224556,
+        -8.623662326555007,
+        39.965382858931946
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Marinha Grande",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.040265141722728,
+        39.688430316206166,
+        -8.868311825730075,
+        39.89061277975617
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Nazar\u00e9",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.115454524406744,
+        39.51103574390453,
+        -8.970962132096645,
+        39.650076490038145
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "\u00d3bidos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.291886869783127,
+        39.30537104783576,
+        -9.058662958628588,
+        39.431577514190906
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Pedr\u00f3g\u00e3o Grande",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.258958934307316,
+        39.850209311410595,
+        -8.1080554226196,
+        40.03506019067538
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Peniche",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.517034844682314,
+        39.28451973559737,
+        -9.256438272008552,
+        39.4210238665583
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Pombal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.932235991098082,
+        39.77722951443059,
+        -8.47045285781303,
+        40.04545902811168
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Leiria",
+      "gaul2_name": "Porto De M\u00f3s",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.933203709283646,
+        39.46520800564497,
+        -8.687386930562297,
+        39.651299347686916
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Alenquer",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.162291263331042,
+        39.00067401079701,
+        -8.921018995430188,
+        39.18705436886421
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Amadora",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.264418999737018,
+        38.721952500707516,
+        -9.198134005180066,
+        38.79683344830505
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Arruda Dos Vinhos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.177429188905819,
+        38.92196137032107,
+        -9.022182910412937,
+        39.028752932402085
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Azambuja",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.004754542887781,
+        39.0060939198986,
+        -8.781870441267813,
+        39.25542504682858
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Cadaval",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.178448112690205,
+        39.16758280730073,
+        -8.975884842911114,
+        39.311309854066565
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Cascais",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.486564319088018,
+        38.67584565245488,
+        -9.30845503577126,
+        38.76818083477775
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Lisboa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.237953635451845,
+        38.679992100854804,
+        -9.086343122636947,
+        38.79671846638422
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Loures",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.244876628253735,
+        38.77476420400495,
+        -9.069248300168852,
+        38.9408724411104
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Lourinh\u00e3",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.351614743625476,
+        39.17457410630999,
+        -9.178000895125138,
+        39.31750509658309
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Mafra",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.427791161932532,
+        38.86307379422033,
+        -9.159441847762935,
+        39.06408837657733
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Odivelas",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.23971921327103,
+        38.76049745799139,
+        -9.149897945433793,
+        38.829095935129374
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Oeiras",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.329089343398437,
+        38.673106706009776,
+        -9.211221725602059,
+        38.749973274846866
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Sintra",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.500536152221628,
+        38.73854166136863,
+        -9.22210462672706,
+        38.93239191695352
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Sobral De Monte Agra\u00e7o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.240575258141575,
+        38.94797314174707,
+        -9.098619594318734,
+        39.03586966705166
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Torres Vedras",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.422109604974196,
+        39.00418916659686,
+        -9.126107812425516,
+        39.21579640917696
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Lisboa",
+      "gaul2_name": "Vila Franca De Xira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.118317145619699,
+        38.79320921823097,
+        -8.843403175316269,
+        39.031532444566835
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Alter Do Ch\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.877840259919935,
+        39.11831431055708,
+        -7.5217110040595685,
+        39.3310398034443
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Arronches",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.390079866692474,
+        39.00653967606536,
+        -7.110356222261828,
+        39.20853448797624
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Avis",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.152013991052797,
+        38.94119822681688,
+        -7.69799121292408,
+        39.21856995074262
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Campo Maior",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.148799215311499,
+        38.9057966500954,
+        -6.951391498918497,
+        39.118453999552514
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Castelo De Vide",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.594905122073669,
+        39.36760906710492,
+        -7.37791650004641,
+        39.58376451851791
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Crato",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.901291719037431,
+        39.17730747336128,
+        -7.4681927438999764,
+        39.43839596530165
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Elvas",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.423286249560704,
+        38.750879834636805,
+        -7.033168000103103,
+        39.056888303552455
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Fronteira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.769128567928988,
+        38.99071748962058,
+        -7.512063784915711,
+        39.16684019302062
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Gavi\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.008892510880571,
+        39.33401499009972,
+        -7.745597409093136,
+        39.562578179139734
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Marv\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.4328932968880395,
+        39.31304217405716,
+        -7.294675999697574,
+        39.494912970757184
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Monforte",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.566335069907495,
+        38.86640167789528,
+        -7.298114355193263,
+        39.19058068614987
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Nisa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.882333541759522,
+        39.37718845308467,
+        -7.4819202833941745,
+        39.66263376603547
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Ponte De Sor",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.343812123230805,
+        38.97994854968596,
+        -7.824562646648758,
+        39.38458761442695
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Portalegre",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.558536948621111,
+        39.146187595880974,
+        -7.231466998603082,
+        39.398554509383075
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Portalegre",
+      "gaul2_name": "Sousel",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.9145184431715165,
+        38.89574695016165,
+        -7.540090565627054,
+        39.02131125291203
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Amarante",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.216218333908955,
+        41.189392902560485,
+        -7.894456143935827,
+        41.37514680458139
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Bai\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.11543957427682,
+        41.0899762390124,
+        -7.875576061985555,
+        41.24887860066701
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Felgueiras",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.280110828751674,
+        41.293895822234504,
+        -8.110029742078893,
+        41.41182535295786
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Gondomar",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.584106435063745,
+        41.001333217054366,
+        -8.37256781525241,
+        41.20316726525715
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Lousada",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.339747921429307,
+        41.23076335704343,
+        -8.191492300729067,
+        41.351212105554396
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Maia",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.69348956269306,
+        41.181315040856475,
+        -8.515524178997623,
+        41.29532257597617
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Marco De Canaveses",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.292980020211644,
+        41.06413608970888,
+        -8.041275927741822,
+        41.25832061970101
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Matosinhos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.729153066960407,
+        41.17167937530303,
+        -8.595785107596612,
+        41.271969894794836
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Pa\u00e7os De Ferreira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.452340820272582,
+        41.24241489882854,
+        -8.320020653829943,
+        41.337175864774395
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Paredes",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.473968473166451,
+        41.06824572076357,
+        -8.296191745652436,
+        41.25972411967251
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Penafiel",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.39256560162113,
+        41.04005620862728,
+        -8.169062160290366,
+        41.24598078718361
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Porto",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.691289908202577,
+        41.1392375177972,
+        -8.553246913114378,
+        41.185889071023894
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "P\u00f3voa De Varzim",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.789056631458266,
+        41.364599549329796,
+        -8.590762956045523,
+        41.47192559738846
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Santo Tirso",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.519723917624617,
+        41.2380236963366,
+        -8.316444897214183,
+        41.38424135615384
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Trofa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.634483131291347,
+        41.25865297315636,
+        -8.506170334893,
+        41.34705809385605
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Valongo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.566660183620513,
+        41.140717720046894,
+        -8.440106533989251,
+        41.2689531864404
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Vila Do Conde",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.76795499562644,
+        41.25629660280612,
+        -8.610618345560113,
+        41.42561177286507
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Porto",
+      "gaul2_name": "Vila Nova De Gaia",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.675571068250179,
+        41.00930164475511,
+        -8.448737716172616,
+        41.14742232597973
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Abrantes",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.355574405734103,
+        39.233268276909484,
+        -7.939466852613123,
+        39.64644793602355
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Alcanena",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.763803038879075,
+        39.3987603021464,
+        -8.618091449160943,
+        39.5621371902792
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Almeirim",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.711798424057918,
+        39.09196714326919,
+        -8.439725384218946,
+        39.24393831210358
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Alpiar\u00e7a",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.634018151216651,
+        39.17390105459003,
+        -8.499490770582554,
+        39.30538559167178
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Benavente",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.96847650578593,
+        38.73144856270113,
+        -8.653271753088859,
+        39.03191020659085
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Cartaxo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.913077916112854,
+        39.05824360166105,
+        -8.682857837718984,
+        39.21102541219318
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Chamusca",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.580540833592522,
+        39.0710883954132,
+        -8.172609146694697,
+        39.46374458744293
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Const\u00e2ncia",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.344529935108312,
+        39.33727521507916,
+        -8.240825892201144,
+        39.505913570654855
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Coruche",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.729057162358117,
+        38.76270607242742,
+        -8.124322814845925,
+        39.10939995344518
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Entroncamento",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.498936495023145,
+        39.4394637267697,
+        -8.456159290418896,
+        39.49163018718349
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Ferreira Do Z\u00eazere",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.432135414617505,
+        39.64421718567468,
+        -8.227729517603109,
+        39.80330721065934
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Goleg\u00e3",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.590546715858181,
+        39.31645972823401,
+        -8.437501547858119,
+        39.458104786007254
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Ma\u00e7\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.108304648140972,
+        39.469358339116184,
+        -7.808996517874903,
+        39.746878364844804
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Our\u00e9m",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.702190806560452,
+        39.535775166191115,
+        -8.423088304981206,
+        39.83868406411824
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Rio Maior",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.001109425159768,
+        39.237175571295666,
+        -8.783705147274702,
+        39.46596450725639
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Salvaterra De Magos",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.81522423201261,
+        38.96289380010893,
+        -8.57789731870622,
+        39.132582560237154
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Santar\u00e9m",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.899347384574014,
+        39.16977769268635,
+        -8.556904728370398,
+        39.48260848969011
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Sardoal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.194278672023017,
+        39.49768580005974,
+        -8.081246393206357,
+        39.62650643372507
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Tomar",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.511912585297523,
+        39.47692592099452,
+        -8.236412956692561,
+        39.706599182806144
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Torres Novas",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.67322472624005,
+        39.39823723486052,
+        -8.450794882078071,
+        39.63206215304609
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Santar\u00e9m",
+      "gaul2_name": "Vila Nova Da Barquinha",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.46775501398264,
+        39.447022580727605,
+        -8.327102703426988,
+        39.5201552291806
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Alc\u00e1cer Do Sal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.82277691122539,
+        38.179102641773625,
+        -8.129877269720112,
+        38.553062620043875
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Alcochete",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.031070699752888,
+        38.67132934077648,
+        -8.810307120377217,
+        38.826100221448144
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Almada",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.26298607304875,
+        38.550280754353366,
+        -9.128507105618269,
+        38.688373106933454
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Barreiro",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.09486702918997,
+        38.57823749586379,
+        -8.997153427988223,
+        38.69007594444946
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Gr\u00e2ndola",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.912879934861053,
+        38.024868777771985,
+        -8.238191661016288,
+        38.50530192574331
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Moita",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.049771054890186,
+        38.601173449195414,
+        -8.946201216912584,
+        38.696825728724434
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Montijo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.049851885955661,
+        38.64464689903525,
+        -8.490984022194823,
+        38.843100396566115
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Palmela",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.02588877824445,
+        38.51215398721689,
+        -8.612403030375503,
+        38.74163442269054
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Santiago Do Cac\u00e9m",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.825630229851129,
+        37.749552609065745,
+        -8.293220380216326,
+        38.12428670127042
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Seixal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.176617087608406,
+        38.540634538853055,
+        -9.048528581228993,
+        38.65584245666412
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Sesimbra",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.222934259408476,
+        38.40903421495722,
+        -9.017665118450338,
+        38.58327793333012
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Set\u00fabal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -9.055519015989717,
+        38.45391942504159,
+        -8.731404212134578,
+        38.579564287262144
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Set\u00fabal",
+      "gaul2_name": "Sines",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.89056657948396,
+        37.80490634595128,
+        -8.681452002207948,
+        38.049253997574
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Arcos De Valdevez",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.530999856657957,
+        41.7911817671249,
+        -8.191770568956542,
+        42.0186343527933
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Caminha",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.876933904975658,
+        41.78070011561795,
+        -8.670093010783773,
+        41.917788678205056
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Melga\u00e7o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.341139838132904,
+        41.9219187184741,
+        -8.082901000081051,
+        42.15441900003691
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Mon\u00e7\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.546969014808099,
+        41.965791933151365,
+        -8.28950956161691,
+        42.090515001066535
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Paredes De Coura",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.674893206955858,
+        41.84428890490915,
+        -8.4885396154109,
+        41.98252417415142
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Ponte Da Barca",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.479853462167455,
+        41.73221467386827,
+        -8.161661999801424,
+        41.8790704998039
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Ponte De Lima",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.69678063801598,
+        41.624583766427804,
+        -8.461471961661573,
+        41.87024077878908
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Valen\u00e7a",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.681893877800064,
+        41.92712036391384,
+        -8.52921154487683,
+        42.05516800060286
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Viana Do Castelo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.881049728761923,
+        41.606334814300226,
+        -8.642051652961356,
+        41.829661643170425
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viana do Castelo",
+      "gaul2_name": "Vila Nova De Cerveira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.786691779601881,
+        41.846629573096436,
+        -8.637580157198443,
+        41.99021150076027
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Alij\u00f3",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.602814088399441,
+        41.17962175144277,
+        -7.3625297869200494,
+        41.40355471168078
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Boticas",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.917863428354508,
+        41.57844916419759,
+        -7.5627185883921015,
+        41.79204754086135
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Chaves",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.620550177848372,
+        41.58122253579148,
+        -7.1935355831006405,
+        41.87974585558692
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Mes\u00e3o Frio",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.912582371878898,
+        41.11867796001991,
+        -7.820463695942749,
+        41.202390869742885
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Mondim De Basto",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.981144028973688,
+        41.302617917782754,
+        -7.788683064072018,
+        41.49174285205112
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Montalegre",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.119458160665545,
+        41.58684851464727,
+        -7.579521267892119,
+        41.92737949996405
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Mur\u00e7a",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.588772517337759,
+        41.32396248568023,
+        -7.314701418635536,
+        41.52781393896214
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Peso Da R\u00e9gua",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.894086718627079,
+        41.1414386579678,
+        -7.648175261079359,
+        41.24199878881308
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Ribeira De Pena",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.909861375901755,
+        41.40468799775306,
+        -7.704462471765623,
+        41.652335127064475
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Sabrosa",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.65776851190725,
+        41.156067099617076,
+        -7.536236585749748,
+        41.412497599784444
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Santa Marta De Penagui\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.895727273594673,
+        41.17463954058252,
+        -7.7436676051757445,
+        41.272691945177314
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Valpa\u00e7os",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.530801237087303,
+        41.440371286206016,
+        -7.170634392163436,
+        41.783454426980256
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Vila Pouca De Aguiar",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.784009228942637,
+        41.39103947629087,
+        -7.471388134055019,
+        41.639651373112486
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Vila Real",
+      "gaul2_name": "Vila Real",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.920210042859139,
+        41.17963505061715,
+        -7.600296099085597,
+        41.421475163947775
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Armamar",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.756811893853694,
+        41.01897835087027,
+        -7.616005672423796,
+        41.16299013019045
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Carregal Do Sal",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.068500985332093,
+        40.38053341378611,
+        -7.90315912709201,
+        40.538022147304446
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Castro Daire",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.132552538768607,
+        40.786673609799436,
+        -7.752506676441897,
+        41.02421811497413
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Cinf\u00e3es",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.26398939559408,
+        40.96468847869045,
+        -7.949943812356992,
+        41.10077134472181
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Lamego",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.915679465235087,
+        40.981930940160794,
+        -7.729963820373882,
+        41.16181746280574
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Mangualde",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.896903120982131,
+        40.5263243821646,
+        -7.561752891882406,
+        40.65148552513705
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Moimenta Da Beira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.7573334322920005,
+        40.853535302712146,
+        -7.530985688038982,
+        41.05905695801232
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Mort\u00e1gua",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.35944939017719,
+        40.32282155377186,
+        -8.157833840359388,
+        40.51691701400904
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Nelas",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.943491113723894,
+        40.45596785992882,
+        -7.748761122427823,
+        40.58868173877124
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Oliveira De Frades",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.33343662769812,
+        40.56361479868406,
+        -8.129546151933312,
+        40.803621355341306
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Penalva Do Castelo",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.783203779930432,
+        40.62429909702581,
+        -7.535143089282087,
+        40.726428720209356
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Penedono",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.461455397248642,
+        40.90452450919889,
+        -7.325271960932184,
+        41.06989420235567
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Resende",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.027394559211416,
+        40.99924923426482,
+        -7.850343806721241,
+        41.150459198033616
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Santa Comba D\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.18682053673831,
+        40.333536385995444,
+        -8.045050468704062,
+        40.465374909724346
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "S\u00e3o Jo\u00e3o Da Pesqueira",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.555742435764614,
+        40.99932310637644,
+        -7.304571607093919,
+        41.21460684672877
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "S\u00e3o Pedro Do Sul",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.255086574086079,
+        40.7308579766144,
+        -7.927512358908132,
+        40.93648815220649
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "S\u00e1t\u00e3o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.775510175154409,
+        40.6810249817176,
+        -7.570705531335022,
+        40.87473658972192
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Sernancelhe",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.654774154403583,
+        40.812557324960665,
+        -7.374209433418457,
+        41.021929004020365
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Tabua\u00e7o",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.640281919574875,
+        41.00565096112314,
+        -7.47462894177221,
+        41.17387875909759
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Tarouca",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.850652227418323,
+        40.954203630093616,
+        -7.6597835265884555,
+        41.08074312619442
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Tondela",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.308420385991894,
+        40.448438958790916,
+        -7.959155221835999,
+        40.6406229046234
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Vila Nova De Paiva",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -7.865224856242094,
+        40.765721434996294,
+        -7.6870592870564,
+        40.94778343295917
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Viseu",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.091589553614938,
+        40.53745026571738,
+        -7.758985408649664,
+        40.842550732330494
+      ]
+    },
+    {
+      "gaul0_name": "Portugal",
+      "gaul1_name": "Viseu",
+      "gaul2_name": "Vouzela",
+      "gaul0_code": 325,
+      "iso3_code": "PRT",
+      "bbox": [
+        -8.274278700101888,
+        40.601215186331956,
+        -8.008275280080056,
+        40.750033892350416
+      ]
+    }
+  ],
+  "Maldives": [
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Alifu Alifu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.71998720004927,
+        3.9428222997094053,
+        73.01214129988114,
+        4.444196100369766
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Alifu Dhaalu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.70581990016831,
+        3.471250799584766,
+        72.97325060003521,
+        3.922645700238945
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Baa",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.83625000013751,
+        4.8612711000812965,
+        73.19294270014564,
+        5.369938899860472
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Dhaalu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.83576629977506,
+        2.6660131001245873,
+        73.02842400036741,
+        3.0052919000012253
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Faafu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.8345373995814,
+        3.052109999576885,
+        73.04002710017068,
+        3.3168742986101734
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Gaafu Alifu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.17719349998009,
+        0.34656390030380635,
+        73.57354390013091,
+        0.9091561003738207
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Gaafu Dhaalu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.98687390001061,
+        0.18774960026388499,
+        73.52068529988685,
+        0.5882609998453745
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Haa Alifu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.80900559992858,
+        6.807416400446698,
+        73.2362470999239,
+        7.106481700270422
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Haa Dhaalu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.63896480018548,
+        6.315668899800016,
+        73.18514740003246,
+        6.7877398995767635
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Kaafu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.3507595998758,
+        3.8100336997955537,
+        73.71887109982157,
+        4.966830500127514
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Laamu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.23755190020023,
+        1.778951099613721,
+        73.58599400032296,
+        2.133044400079143
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Lhaviyani",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.33115480015402,
+        5.24286019993832,
+        73.65807089955246,
+        5.557599700066135
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Male'",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.5006439998208,
+        4.168984899633529,
+        73.51904629984699,
+        4.181064400002185
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Meemu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.36744880022212,
+        2.7635725997957366,
+        73.64858669961666,
+        3.221722200419265
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Noonu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.1415959996558,
+        5.644551799626015,
+        73.48255820000105,
+        5.987034300292805
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Raa",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.80221809988552,
+        5.358137600270084,
+        73.04831860032328,
+        5.9807237997635525
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Seenu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.07583239964566,
+        -0.703674300128796,
+        73.23969890028411,
+        -0.5764325000597523
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Shaviyani",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.96899869983031,
+        5.951148700352292,
+        73.30628830006515,
+        6.365820799690255
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Thaa",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        72.90709740022487,
+        2.163474400423354,
+        73.36571309967991,
+        2.5603239998528693
+      ]
+    },
+    {
+      "gaul0_name": "Maldives",
+      "gaul1_name": "Vaavu",
+      "gaul2_name": "Administrative Unit Not Available",
+      "gaul0_code": 255,
+      "iso3_code": "MDV",
+      "bbox": [
+        73.2835118999543,
+        3.3134175996425483,
+        73.76560550039358,
+        3.681389299976388
+      ]
+    }
+  ],
+  "Kiribati": [
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Central",
+      "gaul2_name": "Abemama",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        173.76864221036988,
+        0.30728650456865125,
+        173.94111349988827,
+        0.4948147231209532
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Central",
+      "gaul2_name": "Aranuka",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        173.54975611595205,
+        0.1209777289391809,
+        173.64440426194722,
+        0.18636037163400943
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Central",
+      "gaul2_name": "Banaba",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        169.521219847618,
+        -0.8725462258274774,
+        169.5463881997557,
+        -0.8501674007049473
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Central",
+      "gaul2_name": "Kuria",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        173.3794010094491,
+        0.19804497159822176,
+        173.45277013283544,
+        0.2712483832063981
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Central",
+      "gaul2_name": "Maiana",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        172.99364906565188,
+        0.8666588781047722,
+        173.06502789941806,
+        1.0265564763005273
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Line Is. & Phoenix",
+      "gaul2_name": "Kanton",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        -171.71889685640474,
+        -2.810842388165611,
+        -171.71407309529704,
+        -2.799661613592548
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Line Is. & Phoenix",
+      "gaul2_name": "Kiritimati",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        -157.56129717542424,
+        1.6930816192215161,
+        -157.16315540130066,
+        2.0488175332027367
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Line Is. & Phoenix",
+      "gaul2_name": "Tabuaeran",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        -159.3920333751401,
+        3.8126520003896758,
+        -159.3097629995627,
+        3.916829694634714
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Line Is. & Phoenix",
+      "gaul2_name": "Teeraina",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        -160.41015200001473,
+        4.669204999611111,
+        -160.3605704573607,
+        4.699261641011958
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Northern",
+      "gaul2_name": "Abaiang",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        172.7906174514343,
+        1.7137734151110067,
+        173.0482229446335,
+        1.9677613539034837
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Northern",
+      "gaul2_name": "Butaritari",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        172.68632625555233,
+        3.042771254190143,
+        172.96503929043104,
+        3.2632775420250937
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Northern",
+      "gaul2_name": "Makin",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        172.9719933089441,
+        3.318210070638429,
+        172.99686530568943,
+        3.3839939368708087
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Northern",
+      "gaul2_name": "Marakei",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        173.25109898602955,
+        1.9775025980666214,
+        173.30285571621835,
+        2.0608157348584086
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Northern",
+      "gaul2_name": "North Tarawa",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        172.95236860812486,
+        1.3880168817737513,
+        173.13510656801395,
+        1.6235795293719661
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "South Tarawa",
+      "gaul2_name": "Betio",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        172.91838583244032,
+        1.3448020706591137,
+        172.9546200977395,
+        1.3647529996513867
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "South Tarawa",
+      "gaul2_name": "South Tarawa",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        172.9660110888408,
+        1.3267810004429634,
+        173.16473099973587,
+        1.3933150001872718
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Southern",
+      "gaul2_name": "Arorae",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        176.79056083741295,
+        -2.6647840306584385,
+        176.84050586535375,
+        -2.613058280315272
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Southern",
+      "gaul2_name": "Beru",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        175.94532302363882,
+        -1.3745765288836083,
+        176.02142550688166,
+        -1.2820956141211468
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Southern",
+      "gaul2_name": "Nikunau",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        176.41234153233597,
+        -1.400106538885609,
+        176.48608299933107,
+        -1.319759575743717
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Southern",
+      "gaul2_name": "Nonouti",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        174.2430739467053,
+        -0.8091159546374911,
+        174.47590080807606,
+        -0.5441477945849442
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Southern",
+      "gaul2_name": "North Tabiteuea",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        174.6601561643755,
+        -1.3931769873280473,
+        174.9083408256687,
+        -1.114360008807239
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Southern",
+      "gaul2_name": "Onotoa",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        175.52799758791843,
+        -1.9479932613798496,
+        175.6185662724156,
+        -1.7992478896783268
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Southern",
+      "gaul2_name": "South Tabiteuea",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        175.00661123671944,
+        -1.53265859461834,
+        175.07667119761788,
+        -1.4408654930480225
+      ]
+    },
+    {
+      "gaul0_name": "Kiribati",
+      "gaul1_name": "Southern",
+      "gaul2_name": "Tamana",
+      "gaul0_code": 351,
+      "iso3_code": "KIR",
+      "bbox": [
+        175.9651464827241,
+        -2.515247214187468,
+        175.9978795038362,
+        -2.4838038595603393
+      ]
+    }
+  ]
+}
