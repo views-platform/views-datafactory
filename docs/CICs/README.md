@@ -76,6 +76,7 @@ Contracts must be clear enough that:
 - `GhsBuiltSViewpointConfig.md` -- immutable GHS-BUILT-S viewpoint configuration (spatial aggregation, temporal interpolation)
 - `VdemConfig.md` -- immutable V-Dem harvest configuration (download URL, variables, version)
 - `VdemViewpointConfig.md` -- immutable V-Dem viewpoint configuration (crosswalk, temporal range, variables)
+- `ShdiViewpointConfig.md` -- immutable SHDI viewpoint configuration (GDL crosswalk, temporal range, intensive indices)
 - `AssemblyConfig.md` -- immutable assembly configuration (compiled grid paths, output directory)
 - `PrecomputedData.md` -- precomputed state container for V-Dem grid verification (24 fields, per-feature temporal handling)
 - `PregriddedCompilationConfig.md` -- immutable pre-gridded compilation configuration (GHS-POP, GHS-BUILT-S)

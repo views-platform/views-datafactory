@@ -84,7 +84,7 @@ from datafactory_provenance.source_registry import (
 )
 
 # Registry-driven feature list
-features = get_all_features()  # 75 features in canonical order
+features = get_all_features()  # 79 features in canonical order
 
 # Pre-flight credential check
 results = validate_preflight()

@@ -20,6 +20,7 @@
 | Features produced | `shdi_shdi`, `shdi_healthindex`, `shdi_edindex`, `shdi_incindex` |
 | Grid layers | Harvest → Viewpoint → Compilation → Assembly |
 | Selection ADR | [ADR-036](../ADRs/036_shdi_as_subnational_hdi_source.md) |
+| NaN policy ADR | [ADR-042](../ADRs/042_shdi_nan_preservation.md) |
 | Provenance ledger | `provenance/shdi/ingestion_ledger.jsonl` |
 
 ## Description
@@ -55,9 +56,24 @@ VIEWS is a publicly funded academic project at PRIO and Uppsala University. Our 
 
 **API token:** Free account registered at globaldatalab.org → "My GDL" → "API Access". Token stored as `GDL_API_TOKEN` environment variable per ADR-026. The token is shown once at creation and cannot be retrieved later — keep a record. GDL limits each token to 1000 requests (our harvester uses 5 requests per run — one per indicator plus shapefile — so this is not a constraint). Note: GDL built the API for their R package (`gdldata`) and describes it as intended "for both classroom settings and research alike." We discovered it works as a plain REST endpoint by reading the R package source code.
 
+## Coverage and missing data
+
+SHDI coverage is incomplete. The data factory preserves NaN — no interpolation or imputation is applied (ADR-042).
+
+| Category | Cells | % of land | Missingness mechanism |
+|----------|-------|-----------|----------------------|
+| Never covered | 6,546 | 10.1% | MNAR — GDL has no subnational region |
+| Intermittent gaps | 7,486 | 11.5% | MAR — GDL expanded over time |
+| 2009 reporting gap | 205 | 0.3% | MCAR — single-year artifact |
+
+Coverage grew from 78.7% of land cells (1990) to 89.9% (2023). Of the 6,546 never-covered cells, 946 fall in the Africa+ME forecast region.
+
+The primary missingness (never-covered cells) is MNAR: cells are missing because GDL lacks statistical infrastructure, which correlates with low development — the quantity being measured. Consumers who need complete SHDI data must implement their own imputation and should model the missingness mechanism. See ADR-042 for the full rationale and per-category imputation guidance.
+
 ## Known limitations
 
 - **Admin-1 granularity.** All grid cells within a GDL region share the same SHDI value. No variation below admin-1.
 - **Annual step function.** Values are constant across all 12 months within a year.
 - **Temporal coverage starts 1990.** Grid cells for months before January 1990 will be NaN.
+- **10.1% of land cells never covered.** See coverage table above.
 - **Version coupling.** Tied to current SHDI data version and GDL shapefiles. Updates may require updating column names.

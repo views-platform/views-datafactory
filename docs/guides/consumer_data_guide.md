@@ -419,7 +419,7 @@ V-Dem (Varieties of Democracy) v16 indicators. Country-year data mapped to PRIO-
 | `shdi_edindex` | Education sub-index (schooling years) | Bounded [0, 1] |
 | `shdi_incindex` | Income sub-index (GNI per capita, log) | Bounded [0, 1] |
 
-GDL SHDI v10.2 indicators. Admin-1 data (1,801 GDL regions) mapped to PRIO-GRID cells via spatial join crosswalk and expanded to monthly. NaN for cells outside GDL coverage and years before 1990.
+GDL SHDI v10.2 indicators. Admin-1 data (1,801 GDL regions) mapped to PRIO-GRID cells via spatial join crosswalk and expanded to monthly. NaN for cells outside GDL coverage and years before 1990. Coverage: 89.9% of land cells in 2023; 6,546 cells (10.1%) are never covered — this missingness is MNAR (correlates with low development). NaN is preserved; imputation is a consumer concern (ADR-042). See [SHDI data card](../sources/shdi.md) for per-category imputation guidance.
 
 ### PRIO-GRID static variables (34 features)
 

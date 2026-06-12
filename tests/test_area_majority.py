@@ -819,11 +819,6 @@ class TestS3RegionSubsetting:
                 f"Region {region!r} returned empty pgid set"
             )
 
-    @pytest.mark.xfail(
-        reason="#132: name files not yet regenerated — "
-        "run generate_area_majority_gaul.py to close the gap",
-        strict=False,
-    )
     def test_name_file_row_count_matches_code_file(self) -> None:
         name_table = pq.read_table(
             _CENTROID_DIR / "gaul0_name.parquet",
