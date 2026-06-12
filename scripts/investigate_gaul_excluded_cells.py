@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Investigate the 82 land cells excluded from land_gaul.
+"""Investigate land cells excluded from land_gaul.
 
 Probes the raw GAUL L2 shapefile to determine whether missing
 coverage is an FAO source defect or a datafactory extraction issue.
@@ -42,7 +42,7 @@ TARGET_COUNTRIES = ["Portugal", "Maldives", "Kiribati"]
 
 
 def _load_excluded_cells() -> list[int]:
-    """Return the 82 land cells without GAUL coverage."""
+    """Return land cells without GAUL coverage."""
     land = set(json.loads(LAND_JSON.read_text()))
     land_gaul = set(json.loads(LAND_GAUL_JSON.read_text()))
     return sorted(land - land_gaul)

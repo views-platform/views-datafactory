@@ -285,9 +285,7 @@ def _load_supplement_polygons(
     field_names: list[str],
 ) -> tuple[list, list[dict]]:
     """Load supplement polygons from a GeoJSON file."""
-    import json as _json
-
-    data = _json.loads(geojson_path.read_text())
+    data = json.loads(geojson_path.read_text())
     polygons = []
     records = []
     for feature in data["features"]:
@@ -343,7 +341,10 @@ def main(
                        for f in fields]
     polygons, records = _load_gaul_polygons(l2_shp_path, all_field_names)
 
-    if supplement_path and supplement_path.exists():
+    if supplement_path is not None:
+        if not supplement_path.exists():
+            msg = f"Supplement file not found: {supplement_path}"
+            raise FileNotFoundError(msg)
         sup_polys, sup_recs = _load_supplement_polygons(
             supplement_path, all_field_names,
         )

@@ -122,7 +122,7 @@ def main() -> None:
                 "gaul0_name": "Portugal",
                 "gaul1_code": meta["gaul1_code"],
                 "gaul1_name": meta["name"],
-                "gaul2_code": -1,
+                "gaul2_code": meta["gaul1_code"],
                 "gaul2_name": meta["name"],
                 "iso3_code": "PRT",
                 "source": "natural_earth_10m_supplement",

@@ -38,7 +38,7 @@ Supplement the GAUL shapefile with Natural Earth 10m admin-1 polygons for the 4 
 - `gaul0_name`: "Portugal"
 - `gaul1_code`: Negative synthetic codes (-3727 to -3730) — clearly distinguishable from FAO-assigned codes
 - `gaul1_name`: GAUL naming convention ("Ilha de Sao Miguel", etc.)
-- `gaul2_code`: -1 (no municipality-level data available)
+- `gaul2_code`: Same negative code as `gaul1_code` (each island is a single admin unit; using -1 would collide with the "unassigned" sentinel and break hierarchy nesting checks)
 - `gaul2_name`: Same as L1 name
 - `iso3_code`: "PRT"
 - `source`: "natural_earth_10m_supplement"
