@@ -17,7 +17,7 @@ outside their coverage range. Static and admin features are broadcast
 across all time steps.
 
 Output: grid.npy [T, H, W, F]
-        F = UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin.
+        F = UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + SHDI + static + admin.
 
 Admin channels (gaul0_code, gaul1_code, gaul2_code) are categorical
 integers stored as float32. Downstream models should treat them as
@@ -57,6 +57,7 @@ class AssemblyConfig:
     ghspop_grid_dir: Path | None = None
     ghsbuilts_grid_dir: Path | None = None
     vdem_grid_dir: Path | None = None
+    shdi_grid_dir: Path | None = None
     static_dir: Path = Path("data/raw/priogrid_static")
     admin_dir: Path = Path("data/raw/gaul_admin")
     output_dir: Path = Path("data/assembled")
@@ -223,6 +224,15 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--shdi-grid",
+        type=Path,
+        default=None,
+        help=(
+            "Compiled SHDI grid directory "
+            "(omit to skip SHDI)"
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=defaults.output_dir,
@@ -249,6 +259,7 @@ def main() -> int:
         ghspop_grid_dir=args.ghspop_grid,
         ghsbuilts_grid_dir=args.ghsbuilts_grid,
         vdem_grid_dir=args.vdem_grid,
+        shdi_grid_dir=args.shdi_grid,
         static_dir=args.static_dir,
         admin_dir=args.admin_dir,
         output_dir=args.output_dir,
@@ -308,6 +319,14 @@ def main() -> int:
         )
         return 1
 
+    has_shdi = config.shdi_grid_dir is not None
+    if has_shdi and not config.shdi_grid_dir.exists():
+        print(
+            f"FAIL: --shdi-grid "
+            f"{config.shdi_grid_dir} not found"
+        )
+        return 1
+
     print("=" * 60)
     print("GRID ASSEMBLY — All Data Sources")
     print(f"UCDP grid:   {config.ucdp_grid_dir}")
@@ -319,6 +338,8 @@ def main() -> int:
           f"{config.ghsbuilts_grid_dir if has_ghsbuilts else '(skipped)'}")
     print(f"V-Dem grid:  "
           f"{config.vdem_grid_dir if has_vdem else '(skipped)'}")
+    print(f"SHDI grid:   "
+          f"{config.shdi_grid_dir if has_shdi else '(skipped)'}")
     print(f"Static dir:  {config.static_dir}")
     print(f"Admin dir:   {config.admin_dir}"
           f"{'' if has_admin else ' (skipped)'}")
@@ -360,6 +381,10 @@ def main() -> int:
         if has_vdem:
             current_digests["vdem_digest"] = compute_file_digest(
                 config.vdem_grid_dir / "grid.npy"
+            )
+        if has_shdi:
+            current_digests["shdi_digest"] = compute_file_digest(
+                config.shdi_grid_dir / "grid.npy"
             )
 
         static_digest = _composite_parquet_digest(config.static_dir)
@@ -471,6 +496,18 @@ def main() -> int:
             vdem_grid, vdem_features, vdem_offset = None, [], 0
         n_vdem = len(vdem_features)
 
+        if has_shdi:
+            shdi_result = _load_source_grid(
+                "SHDI", config.shdi_grid_dir,
+                time_steps, n_t,
+            )
+            if shdi_result is None:
+                return 1
+            shdi_grid, shdi_features, shdi_offset = shdi_result
+        else:
+            shdi_grid, shdi_features, shdi_offset = None, [], 0
+        n_shdi = len(shdi_features)
+
         # Build gid → (row, col) lookup from pgids array
         gid_to_rowcol: dict[int, tuple[int, int]] = {}
         for r in range(n_h):
@@ -551,11 +588,11 @@ def main() -> int:
         n_admin = len(admin_names)
         n_total = (
             n_ucdp + n_acled + n_ghspop + n_ghsbuilts
-            + n_vdem + n_static + n_admin
+            + n_vdem + n_shdi + n_static + n_admin
         )
         all_features = (
             ucdp_features + acled_features + ghspop_features
-            + ghsbuilts_features + vdem_features
+            + ghsbuilts_features + vdem_features + shdi_features
             + static_names + admin_names
         )
 
@@ -650,9 +687,24 @@ def main() -> int:
                 ] = vdem_grid
                 del vdem_grid
 
+            # Copy SHDI channels (temporal slice, rest stays zero)
+            if shdi_grid is not None:
+                shdi_end = shdi_offset + shdi_grid.shape[0]
+                ch_shdi = (
+                    n_ucdp + n_acled + n_ghspop + n_ghsbuilts
+                    + n_vdem
+                )
+                assembled[
+                    shdi_offset:shdi_end,
+                    :, :,
+                    ch_shdi:ch_shdi + n_shdi,
+                ] = shdi_grid
+                del shdi_grid
+
             # Fill static channels (broadcast in-place)
             ch_static = (
-                n_ucdp + n_acled + n_ghspop + n_ghsbuilts + n_vdem
+                n_ucdp + n_acled + n_ghspop + n_ghsbuilts
+                + n_vdem + n_shdi
             )
             for i, spatial in enumerate(static_spatial):
                 assembled[:, :, :, ch_static + i] = spatial
@@ -709,6 +761,10 @@ def main() -> int:
         vdem_digest = (
             compute_file_digest(config.vdem_grid_dir / "grid.npy")
             if has_vdem else None
+        )
+        shdi_digest = (
+            compute_file_digest(config.shdi_grid_dir / "grid.npy")
+            if has_shdi else None
         )
 
         static_digest = _composite_parquet_digest(config.static_dir)
@@ -831,6 +887,33 @@ def main() -> int:
                 )
             del vdem_grid_ro
 
+        # SHDI data boundary
+        last_valid_shdi_month_id: int | None = None
+        if has_shdi:
+            shdi_grid_ro = np.load(
+                config.shdi_grid_dir / "grid.npy",
+                mmap_mode="r",
+            )
+            shdi_ts = np.load(
+                config.shdi_grid_dir / "time_steps.npy",
+            )
+            shdi_has_data = np.nansum(
+                shdi_grid_ro, axis=(1, 2, 3),
+            ) > 0
+            shdi_valid = np.where(shdi_has_data)[0]
+            if len(shdi_valid) > 0:
+                shdi_last = int(shdi_valid[-1])
+                shdi_last_dt = shdi_ts[shdi_last]
+                last_valid_shdi_month_id = int(
+                    to_views_month_id(shdi_last_dt)
+                )
+                print(
+                    f"Last valid SHDI month: "
+                    f"{last_valid_shdi_month_id} "
+                    f"({shdi_last_dt})"
+                )
+            del shdi_grid_ro
+
         provenance = {
             "sources": {
                 "ucdp_grid": str(grid_path),
@@ -871,6 +954,15 @@ def main() -> int:
                 "vdem_temporal_offset": (
                     vdem_offset if has_vdem else None
                 ),
+                "shdi_grid": (
+                    str(config.shdi_grid_dir / "grid.npy")
+                    if has_shdi else None
+                ),
+                "shdi_digest": shdi_digest,
+                "shdi_features": shdi_features or None,
+                "shdi_temporal_offset": (
+                    shdi_offset if has_shdi else None
+                ),
                 "static_dir": str(config.static_dir),
                 "static_digest": static_digest,
                 "static_variables": static_names,
@@ -900,6 +992,10 @@ def main() -> int:
         if last_valid_vdem_month_id is not None:
             provenance["last_valid_vdem_month_id"] = (
                 last_valid_vdem_month_id
+            )
+        if last_valid_shdi_month_id is not None:
+            provenance["last_valid_shdi_month_id"] = (
+                last_valid_shdi_month_id
             )
         (config.output_dir / "provenance.json").write_text(
             json.dumps(provenance, indent=2)

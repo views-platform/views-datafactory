@@ -53,3 +53,45 @@ Removing stale lock file provenance/viewpoint/vdem_v1_ledger.jsonl.lock (age: 12
 **Why it's expected:** The lock age (122,772s = ~34 hours) indicates the previous run was interrupted. The cleanup mechanism is working as designed — it prevents stale locks from permanently blocking the pipeline.
 
 **When to worry:** If you see this message on every run with a short age (under 5 minutes), it could indicate a concurrency issue (two pipeline instances running simultaneously) or a crash loop. Check `crontab -l` for duplicate entries and `ps aux | grep refresh_pipeline` for concurrent processes.
+
+---
+
+## A-3: GDL crosswalk maps 2,874 pgids to ocean cells (landarea=0)
+
+**First observed:** 2026-06-12 (SHDI visual audit investigation)
+**Compiled grid signature:** 138 cells with non-NaN SHDI values at grid locations where `landarea=0` in GHS-POP.
+
+**Why it happens:** The GDL shapefiles define subnational boundaries using vector polygons. The SHDI harvester's spatial join (`gdl_to_pgid.parquet`) assigns a pgid to any 0.5° grid cell whose centroid falls inside a GDL polygon. GDL polygons extend over coastal water, fjords, and ice sheet — the polygon boundary is the political border, not the coastline. Meanwhile, `landarea` in GHS-POP classifies cells at 0.5° resolution using a different raster source, so cells that are politically part of a territory can have `landarea=0`.
+
+**Breakdown of the 2,874 ocean-mapped pgids:**
+
+| GDL region | Count | What it is |
+|------------|-------|------------|
+| GRLt (Greenland) | 2,630 | Fjords, ice sheet, Arctic coast |
+| SJMt (Svalbard) | 102 | Arctic archipelago |
+| RUSr102/107/108 (Russia) | 113 | Arctic coast (Siberia, Kamchatka) |
+| FRAr127 (French Guiana) | 17 | Coastal overshoot into Atlantic |
+| FRAr128 (Réunion) | 1 | Island cell below GHS-POP resolution |
+| IDNr112/129/130 (Indonesia) | 3 | Small island cells |
+| TKMr103 (Turkmenistan) | 3 | Caspian Sea coast |
+| Other (PYF, ERIr103, TCA, BHS, JEY) | 5 | Small islands, Eritrea Red Sea coast |
+
+Of the 2,874, only **138** receive non-NaN SHDI values (the rest are outside the GDL-to-PRIO spatial join despite being inside the GDL polygon — a second filtering layer).
+
+**Forecast impact:** Only **2 cells** fall in the Africa+ME forecast bounding box:
+
+| pgid | Location | SHDI | GAUL code | Conflict events |
+|------|----------|------|-----------|-----------------|
+| 99112 | Réunion (lat -21.2, lon 55.8) | 0.857 | 153 (France) | 60 ACLED events |
+| 152362 | Eritrea coast (lat 15.8, lon 40.8) | 0.408 | 122 (Eritrea) | 0 |
+
+Both have valid GAUL codes (>0) and are included in country-month aggregation. Neither is open ocean — they are coastal territory that falls below GHS-POP's land detection threshold at 0.5° resolution.
+
+**Why it's expected:** This is the same raster-vector misalignment phenomenon documented in the C-149 postmortem (GAUL centroids falling in water). The GDL crosswalk uses centroid-in-polygon, which is geometrically correct — the cells really are inside the GDL region boundary. The mismatch is between political boundaries (vector) and land classification (raster). SHDI is an intensive quantity (ADR-040), so broadcasting an index value to a coastal cell does not corrupt sums or counts.
+
+**When to worry:**
+- If adding an ocean-focused data source (maritime events, sea surface temperature): these 138 cells would have both SHDI values and ocean data, potentially confusing models that assume ocean cells have no socioeconomic features. Filter on `landarea > 0` to exclude them.
+- If a new data source uses `landarea=0` as a mask to skip cells: SHDI data in those 138 cells would be silently ignored. Ensure the mask logic is documented.
+- If the count changes significantly between SHDI versions: re-investigate — it could indicate a GDL shapefile boundary change.
+
+**Cross-refs:** C-149 (resolved — GAUL coastal cells), ADR-039 (area-majority), ADR-040 (intensive quantities), ADR-036 (SHDI source selection).

@@ -103,23 +103,25 @@ class TestSourceStages:
                 f"got {active}"
             )
 
-    def test_shdi_harvest_only_integrated(self) -> None:
+    def test_shdi_fully_integrated(self) -> None:
         stages = SOURCE_STAGES["SHDI"]
         integrated = {
             k for k, v in stages.items()
             if isinstance(v, StageArtifact)
         }
-        assert integrated == {"harvest"}, (
-            f"SHDI should have only harvest integrated, "
+        assert integrated == {
+            "harvest", "viewpoint", "compilation",
+            "assembly", "zarr",
+        }, (
+            f"SHDI should have all stages integrated, "
             f"got {integrated}"
         )
 
-    def test_shdi_downstream_not_yet_integrated(self) -> None:
+    def test_shdi_skips_consolidation(self) -> None:
         stages = SOURCE_STAGES["SHDI"]
-        for stage in ("viewpoint", "compilation", "assembly", "zarr"):
-            assert stages[stage] == "not_yet_integrated", (
-                f"SHDI {stage} should be 'not_yet_integrated'"
-            )
+        assert stages["consolidation"] is None, (
+            "SHDI should skip consolidation (ADR-036)"
+        )
 
     def test_every_active_stage_has_check_field(self) -> None:
         for name, stages in SOURCE_STAGES.items():
@@ -506,7 +508,7 @@ class TestGenerateHtml:
             self._make_results(),
             datetime.now(tz=UTC),
         )
-        assert "75" in html
+        assert "79" in html
 
 
 class TestSourceCards:

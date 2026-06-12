@@ -230,10 +230,20 @@ SOURCE_STAGES: dict[str, dict[str, StageArtifact | str | None]] = {
             ledger="shdi/ingestion_ledger.jsonl",
         ),
         "consolidation": None,
-        "viewpoint": "not_yet_integrated",
-        "compilation": "not_yet_integrated",
-        "assembly": "not_yet_integrated",
-        "zarr": "not_yet_integrated",
+        "viewpoint": StageArtifact(
+            artifact="viewpoint/shdi_v1.parquet",
+            ledger="viewpoint/shdi_v1_ledger.jsonl",
+        ),
+        "compilation": StageArtifact(
+            artifact="compiled/shdi/grid.npy",
+            ledger="compilation/shdi_ledger.jsonl",
+        ),
+        "assembly": StageArtifact(
+            features=_source_features("SHDI"),
+        ),
+        "zarr": StageArtifact(
+            features=_source_features("SHDI"),
+        ),
     },
 }
 

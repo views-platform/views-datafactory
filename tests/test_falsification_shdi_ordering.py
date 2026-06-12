@@ -52,25 +52,16 @@ class TestF2ShdiCrosswalkNotCountryLevel:
             )
         assert gaul1.stat().st_size > 0
 
-    def test_no_admin1_viewpoint_builder_exists(self) -> None:
-        """No viewpoint builder handles admin-1 resolution yet.
-        V-Dem builder uses ISO3 (country). SHDI needs admin-1."""
-        from pathlib import Path
-
-        builders_dir = Path(
-            "src/datafactory_viewpoint/builders"
+    def test_shdi_builder_uses_gdl_crosswalk(self) -> None:
+        """SHDI builder uses GDL-level crosswalk, not ISO3."""
+        from datafactory_viewpoint.builders.shdi_v1 import (
+            ShdiViewpointConfig,
         )
-        builder_files = [
-            f.stem
-            for f in builders_dir.glob("*.py")
-            if not f.name.startswith("_")
-        ]
-        admin1_builders = [
-            b for b in builder_files if "admin1" in b or "shdi" in b
-        ]
-        assert not admin1_builders, (
-            f"Admin-1 builder found: {admin1_builders} — "
-            f"falsification F-2 is resolved"
+
+        config = ShdiViewpointConfig()
+        assert "gdl_to_pgid" in str(config.crosswalk_path), (
+            "SHDI crosswalk should use gdl_to_pgid, "
+            "not country-level ISO3"
         )
 
 

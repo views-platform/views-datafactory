@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-06-06
-**Related ADRs:** ADR-003, ADR-009, ADR-011, ADR-012, ADR-029, ADR-040
+**Last reviewed:** 2026-06-11
+**Related ADRs:** ADR-003, ADR-009, ADR-011, ADR-012, ADR-029, ADR-036, ADR-040
 
 ---
 
@@ -11,7 +11,7 @@
 
 > Immutable configuration for grid assembly: declares all input directories, output destination, admin boundary fields, dtype, and disk-space safety margin.
 
-Assembly is the final stage of the data graph — it combines compiled UCDP, compiled ACLED (optional), compiled GHS-POP population (optional), static PRIO-GRID features, and GAUL admin boundaries into the canonical `grid.npy`. The config ensures all paths and parameters are declared upfront and validated before any I/O.
+Assembly is the final stage of the data graph — it combines compiled UCDP, compiled ACLED (optional), compiled GHS-POP population (optional), compiled GHS-BUILT-S (optional), compiled V-Dem (optional), compiled SHDI (optional), static PRIO-GRID features, and GAUL admin boundaries into the canonical `grid.npy`. The config ensures all paths and parameters are declared upfront and validated before any I/O.
 
 ---
 
@@ -36,6 +36,7 @@ Assembly is the final stage of the data graph — it combines compiled UCDP, com
 - `ghspop_grid_dir` defaults to None — assembly works without GHS-POP for local development
 - `ghsbuilts_grid_dir` defaults to None — assembly works without GHS-BUILT-S for local development
 - `vdem_grid_dir` defaults to None — assembly works without V-Dem for local development
+- `shdi_grid_dir` defaults to None — assembly works without SHDI for local development
 - Assembly must contribute all cells from each compiled source grid to the assembled grid without cell loss (ADR-040, Invariant 1)
 
 ---
@@ -47,6 +48,7 @@ Assembly is the final stage of the data graph — it combines compiled UCDP, com
 - `ghspop_grid_dir`: Path to compiled GHS-POP grid directory, or None to skip GHS-POP
 - `ghsbuilts_grid_dir`: Path to compiled GHS-BUILT-S grid directory, or None to skip GHS-BUILT-S
 - `vdem_grid_dir`: Path to compiled V-Dem grid directory, or None to skip V-Dem
+- `shdi_grid_dir`: Path to compiled SHDI grid directory, or None to skip SHDI
 - `static_dir`: Path to PRIO-GRID static features (default: `data/raw/priogrid_static`)
 - `admin_dir`: Path to GAUL admin boundaries (default: `data/raw/gaul_admin`)
 - `output_dir`: Path for assembled output (default: `data/assembled`)
@@ -83,7 +85,7 @@ All failures are immediate and loud. No silent fallbacks.
 - Defined in `scripts/assemble_grid.py` (script-level, not a library)
 - Used only by the `main()` function in the same file
 - Argparse populates fields from CLI arguments; the dataclass validates
-- `refresh_pipeline.sh` passes `--acled-grid data/compiled/acled --ghspop-grid data/compiled/ghspop --ghsbuilts-grid data/compiled/ghsbuilts --vdem-grid data/compiled/vdem` to assembly — if any directory doesn't exist, assembly fails loud
+- `refresh_pipeline.sh` passes `--acled-grid data/compiled/acled --ghspop-grid data/compiled/ghspop --ghsbuilts-grid data/compiled/ghsbuilts --vdem-grid data/compiled/vdem --shdi-grid data/compiled/shdi` to assembly — if any directory doesn't exist, assembly fails loud
 - Must not depend on any `datafactory_*` package (scripts are consumers, not library code)
 
 ---
@@ -98,6 +100,8 @@ cfg = AssemblyConfig(
     acled_grid_dir=Path("data/compiled/acled"),
     ghspop_grid_dir=Path("data/compiled/ghspop"),
     ghsbuilts_grid_dir=Path("data/compiled/ghsbuilts"),
+    vdem_grid_dir=Path("data/compiled/vdem"),
+    shdi_grid_dir=Path("data/compiled/shdi"),
 )
 
 # Local development without ACLED or GHS-POP

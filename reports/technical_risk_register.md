@@ -3,7 +3,7 @@
 **Date:** 2026-03-17 (updated 2026-06-10)
 **Last update:** review-rr strategic curation — resolved C-265, D-34; demoted C-121, C-272, C-277, C-278; rewrite C-258 trigger; cluster updates (2026-06-10)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10
-**Status:** 281 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 210 resolved, 67 open concerns (0 Tier 1, 7 Tier 2, 14 Tier 3, 40 Tier 4, 6 deferred by design; 1 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 34 struck-through in active register + 29 resolved disagreements in archive. 37 disagreement IDs total: 29 resolved, 8 open.
+**Status:** 281 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 211 resolved, 66 open concerns (0 Tier 1, 7 Tier 2, 14 Tier 3, 39 Tier 4, 6 deferred by design; 0 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 34 struck-through in active register + 29 resolved disagreements in archive. 37 disagreement IDs total: 29 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -111,7 +111,7 @@
 | ~~C-278~~ | ~~4~~ | ~~ConsolidationResult / ViewpointResult no frozen-mutation tests~~ | Demoted to tech-debt backlog 2026-06-10 (testing Python machinery, zero correctness risk) | — |
 | C-279 | 4 | land_mask.py has zero red tests | Natural Earth API changes | Test coverage |
 | C-280 | 4 | skip.py corrupted provenance.json / .zattrs untested | Disk corruption or manual editing of metadata | Artifact consistency |
-| C-281 | 4 | No SHDI CIC — only source without governance document | SHDI pipeline path extended beyond harvest | Documentation |
+| ~~C-281~~ | ~~4~~ | ~~No SHDI CIC — only source without governance document~~ | Resolved 2026-06-11 (ShdiViewpointConfig.md written) | Documentation |
 | ~~C-263~~ | ~~3~~ | ~~Assembly finally block `mkdir` outside `contextlib.suppress` — can mask original exception~~ | Resolved 2026-06-10 (removed redundant mkdir — append_ledger_entry handles directory creation internally) | Ledger reliability |
 | ~~C-159~~ | ~~4~~ | ~~ACLED snapshot archiving and revision comparison paths untested~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
@@ -682,7 +682,7 @@ Cross-ref: C-245 (resolved — name file gap), C-246 (untested production code p
 
 ### ~~C-245: Name file gap — 9,481 recovered cells have codes but no country names~~ RESOLVED
 
-Resolved 2026-06-06 (PR #135). `generate_area_majority_gaul.py` extended to produce 4 name Parquet files (`gaul0_name`, `gaul1_name`, `gaul2_name`, `iso3_code`) using OCP `dtype=pa.utf8()` parameter. `GAUL_VARIABLES` split into `GAUL_CODE_VARIABLES` + `GAUL_NAME_VARIABLES` (CRP). Name files need regeneration on server to close the gap (`test_name_file_row_count_matches_code_file` is xfail until then).
+Resolved 2026-06-06 (PR #135). `generate_area_majority_gaul.py` extended to produce 4 name Parquet files (`gaul0_name`, `gaul1_name`, `gaul2_name`, `iso3_code`) using OCP `dtype=pa.utf8()` parameter. `GAUL_VARIABLES` split into `GAUL_CODE_VARIABLES` + `GAUL_NAME_VARIABLES` (CRP). Name files regenerated on both server (via `refresh_pipeline.sh`) and dev machine (2026-06-11). The xfail on `test_name_file_row_count_matches_code_file` has been removed — test now passes.
 
 Cross-ref: C-149 (resolved — the root cause this gap is a residual of), ADR-039.
 
@@ -1340,9 +1340,9 @@ Cross-ref: C-181 (discovery probes even when cached), C-70 (no circuit breaker).
 
 Cross-ref: C-262 (resolved — skip output integrity), ADR-041.
 
-### C-281: No SHDI CIC — only source without governance document — [DEFER]
+### ~~C-281: No SHDI CIC — only source without governance document~~ RESOLVED
 
-SHDI is the only integrated data source without a Class Invariant Contract (CIC). All other sources (UCDP annual, candidate, dot9, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, PRIO-GRID, GAUL) have CICs in `docs/CICs/`. Without a CIC, SHDI has no documented guarantees, failure modes, or test alignment expectations. Tier 4 because: (a) SHDI is a single-file harvest with minimal complexity, (b) the source was recently integrated and CIC writing is a documentation task, (c) the missing CIC does not affect data correctness.
+Resolved 2026-06-11. `docs/CICs/ShdiViewpointConfig.md` written with all 10 CIC sections: purpose, non-goals, responsibilities (value range [0,1], step function, NaN for unmapped), inputs/outputs, failure modes (FileNotFoundError, unmapped GDL codes warn+skip), boundaries (ADR-036 skip consolidation, ADR-040 intensive quantity), correct/incorrect usage, and test alignment (green/beige/red).
 
 | Field | Value |
 |-------|-------|
@@ -1350,7 +1350,7 @@ SHDI is the only integrated data source without a Class Invariant Contract (CIC)
 | ID | C-281 |
 | Tier | 4 |
 | Source | test-review (2026-06-10) |
-| Location | `docs/CICs/` (missing `shdi.md`), `src/datafactory_harvester/sources/shdi.py` |
+| Location | `docs/CICs/ShdiViewpointConfig.md` |
 
 Cross-ref: C-265 (SHDI harvest not wired), C-164 (WET debt — SHDI is pattern instance).
 
