@@ -120,10 +120,13 @@ def list_regions() -> list[str]:
     """List available predefined region names.
 
     Returns region names that can be passed to load_region_pgids().
-    Special values "global" and "land" are always available.
-    Individual country names (matching GAUL) also work.
+    Special values "global", "land", and "land_gaul" are always
+    available. Individual country names (matching GAUL) also work.
     """
-    return sorted(["global", "land", "africa_me_legacy", *REGIONS.keys()])
+    return sorted([
+        "global", "land", "land_gaul", "africa_me_legacy",
+        *REGIONS.keys(),
+    ])
 
 
 @lru_cache(maxsize=1)
@@ -133,6 +136,19 @@ def _load_land_pgids() -> set[int]:
     Bundled with the package as land_pgids.json.
     """
     path = Path(__file__).parent / "land_pgids.json"
+    pgids = json.loads(path.read_text())
+    return set(pgids)
+
+
+@lru_cache(maxsize=1)
+def _load_land_gaul_pgids() -> set[int]:
+    """Load the 64,736 land cells with GAUL coverage.
+
+    Intersection of land (64,818) and cells with gaul0_code != -1.
+    The 82 excluded cells are sub-Antarctic islands outside FAO GAUL
+    2024 coverage. Bundled as land_gaul_pgids.json.
+    """
+    path = Path(__file__).parent / "land_gaul_pgids.json"
     pgids = json.loads(path.read_text())
     return set(pgids)
 
@@ -196,7 +212,8 @@ def load_region_pgids(
         region: One of:
             - Predefined region: "africa", "middle_east", "africa_me",
               "americas", "europe", "asia_oceania"
-            - Special: "global" (all 259,200 cells), "land" (64,818)
+            - Special: "global" (all 259,200), "land" (64,818),
+              "land_gaul" (64,736 = land ∩ GAUL coverage)
             - Country name matching GAUL (e.g., "Ethiopia")
         gaul_dir: Path to GAUL admin Parquet files.
 
@@ -212,6 +229,9 @@ def load_region_pgids(
 
     if region == "land":
         return _load_land_pgids()
+
+    if region == "land_gaul":
+        return _load_land_gaul_pgids()
 
     if region == "africa_me_legacy":
         return _load_legacy_pgids()
