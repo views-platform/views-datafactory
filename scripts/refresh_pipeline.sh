@@ -166,7 +166,8 @@ uv run python scripts/harvest_shapefile.py
 uv run python scripts/harvest_gaul.py
 uv run python scripts/generate_area_majority_gaul.py \
     --data-dir data/raw/gaul_admin \
-    --ledger-path provenance/gaul_admin/ingestion_ledger.jsonl
+    --ledger-path provenance/gaul_admin/ingestion_ledger.jsonl \
+    --supplement data/raw/gaul_admin/supplement_azores.geojson
 uv run python scripts/harvest_acled.py
 uv run python scripts/harvest_ghspop.py
 uv run python scripts/harvest_ghsbuilts.py

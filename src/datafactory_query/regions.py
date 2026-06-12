@@ -142,11 +142,11 @@ def _load_land_pgids() -> set[int]:
 
 @lru_cache(maxsize=1)
 def _load_land_gaul_pgids() -> set[int]:
-    """Load the 64,736 land cells with GAUL coverage.
+    """Load the 64,742 land cells with GAUL coverage.
 
     Intersection of land (64,818) and cells with gaul0_code != -1.
-    The 82 excluded cells are sub-Antarctic islands outside FAO GAUL
-    2024 coverage. Bundled as land_gaul_pgids.json.
+    The 76 excluded cells are small islands outside FAO GAUL 2024
+    polygon coverage. Bundled as land_gaul_pgids.json.
     """
     path = Path(__file__).parent / "land_gaul_pgids.json"
     pgids = json.loads(path.read_text())
@@ -213,7 +213,7 @@ def load_region_pgids(
             - Predefined region: "africa", "middle_east", "africa_me",
               "americas", "europe", "asia_oceania"
             - Special: "global" (all 259,200), "land" (64,818),
-              "land_gaul" (64,736 = land ∩ GAUL coverage)
+              "land_gaul" (64,742 = land ∩ GAUL coverage)
             - Country name matching GAUL (e.g., "Ethiopia")
         gaul_dir: Path to GAUL admin Parquet files.
 

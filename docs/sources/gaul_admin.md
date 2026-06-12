@@ -19,14 +19,15 @@
 | Update cadence | One-time (annual GAUL releases, but we pin to the 2024 version) |
 | Access method | Direct download, no authentication |
 | Authentication | None |
-| Features produced | `gaul0_code`, `gaul1_code`, `gaul2_code` |
+| Features produced | `gaul0_code`, `gaul1_code`, `gaul2_code`, `gaul0_name`, `gaul1_name`, `gaul2_name`, `iso3_code` |
 | Grid layers | Harvest → Assembly (skips consolidation, viewpoint, compilation) |
+| Assignment method | Area-majority spatial join ([ADR-039](../ADRs/039_area_majority_gaul_assignment.md)) |
 | Selection ADR | [ADR-031](../ADRs/031_gaul_admin_boundaries.md) |
 | Provenance ledger | `provenance/gaul_admin/ingestion_ledger.jsonl` |
 
 ## Description
 
-GAUL provides global administrative boundary polygons at three levels: country (admin-0), first-level subdivision (admin-1), and second-level subdivision (admin-2). The harvester downloads GAUL shapefiles and performs a spatial join against PRIO-GRID cell centroids to produce a lookup table mapping each grid cell to its containing administrative units.
+GAUL provides global administrative boundary polygons at three levels: country (admin-0), first-level subdivision (admin-1), and second-level subdivision (admin-2). The harvester downloads GAUL shapefiles, and a precomputed area-majority spatial join (ADR-039) assigns each 0.5° PRIO-GRID cell to the GAUL polygon with the largest intersection area.
 
 This enables country-month and sub-national aggregation of grid-level forecasts — essential for translating 0.5° grid outputs into policy-relevant geographic units.
 
@@ -34,11 +35,13 @@ This enables country-month and sub-national aggregation of grid-level forecasts 
 
 **Harvest → Assembly.** Consolidation, viewpoint, and compilation are skipped — the spatial join produces per-variable Parquet files at PRIO-GRID resolution.
 
-- **Harvest:** Downloads GAUL 2024 shapefiles from FAO. Performs spatial join (STRtree point-in-polygon) against PRIO-GRID cell centroids. Outputs per-variable Parquet files with columns `(gid, value)`.
+- **Harvest:** Downloads GAUL 2024 shapefiles from FAO. Outputs raw shapefiles to cache.
+- **Generation:** `generate_area_majority_gaul.py` computes area-majority assignments for all 259,200 cells. Optionally loads a supplement GeoJSON for missing polygons (ADR-043). Outputs per-variable Parquet files with columns `(gid, value)`.
 - **Assembly:** Per-variable Parquet files are placed directly into the assembled grid.
 
 ## Known limitations
 
 - **Boundary disputes.** Administrative boundaries are politically sensitive. GAUL reflects FAO's boundary decisions, which may differ from other sources.
-- **Centroid assignment.** Cells are assigned to the admin unit containing their centroid. Border cells may be assigned to the "wrong" country if the centroid falls on one side of a boundary that bisects the cell.
+- **Missing Azorean islands (FAO defect).** GAUL 2024 is missing 4 of 9 Azorean islands (São Miguel, Santa Maria, Flores, Corvo) from both L1 and L2 shapefiles. Supplemented locally with Natural Earth 10m polygons ([ADR-043](../ADRs/043_gaul_azores_supplement.md)). gaul0_code = 325 (Portugal) is correct; gaul1/gaul2 use synthetic negative codes to distinguish from FAO-assigned values.
+- **76 uncovered land cells.** Small islands whose GAUL polygon coverage does not intersect any 0.5° grid cell. These cells have gaul0_code = -1 and are excluded from the `land_gaul` region.
 - **Static snapshot.** We pin to the GAUL 2024 release. Administrative boundary changes after 2024 are not reflected.
