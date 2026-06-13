@@ -33,6 +33,7 @@ SHDI is an intensive quantity (ADR-040). Sums across cells are meaningless. The 
 - Guarantees `variables` is non-empty
 - Guarantees `start_year >= VIEWS_EPOCH_YEAR` (1980)
 - Guarantees `end_year >= start_year`
+- Guarantees `temporal_interpolation` is a valid strategy (`"step"` or `"linear"`)
 
 Build function guarantees (enforced by `build_shdi_v1`, not the config):
 - All output values for `shdi`, `healthindex`, `edindex`, `incindex` are in [0, 1] or NaN
@@ -51,6 +52,7 @@ Build function guarantees (enforced by `build_shdi_v1`, not the config):
 - `variables`: tuple[str, ...], SHDI indicator names (default: `("shdi", "healthindex", "edindex", "incindex")`)
 - `start_year`: int, >= `VIEWS_EPOCH_YEAR` (1980), start of temporal range (default: `1990`)
 - `end_year`: int, >= `start_year`, end of temporal range (default: `2023`)
+- `temporal_interpolation`: str, temporal expansion strategy from `VALID_TEMPORAL_INTERPOLATIONS` (default: `"step"`)
 - `version`: str, viewpoint version identifier (default: `"shdi_v1"`)
 
 Assumptions not met cause immediate `ValueError`.
@@ -73,6 +75,7 @@ Crosswalk Parquet columns: `gid` (int32, pgid), `gdl_code` (string).
 - `ValueError` on empty `variables`
 - `ValueError` on `start_year < VIEWS_EPOCH_YEAR`
 - `ValueError` on `end_year < start_year`
+- `ValueError` on `temporal_interpolation` not in `VALID_TEMPORAL_INTERPOLATIONS`
 - `AttributeError` on any attempt to mutate fields (frozen)
 
 Runtime failures from `build_shdi_v1` (the primary consumer):

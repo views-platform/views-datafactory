@@ -30,6 +30,7 @@
 - Guarantees `variables` is non-empty
 - Guarantees `start_year >= VIEWS_EPOCH_YEAR` (1980)
 - Guarantees `end_year >= start_year`
+- Guarantees `temporal_interpolation` is a valid strategy (`"step"` or `"linear"`)
 
 ---
 
@@ -42,6 +43,7 @@
 - `variables`: tuple[str, ...], V-Dem variable codes (default: 22 variables from `VDEM_VARIABLES`)
 - `start_year`: int, >= `VIEWS_EPOCH_YEAR` (1980), start of temporal range (default: `1980`)
 - `end_year`: int, >= `start_year`, end of temporal range (default: `2025`)
+- `temporal_interpolation`: str, temporal expansion strategy from `VALID_TEMPORAL_INTERPOLATIONS` (default: `"step"`)
 - `version`: str, viewpoint version identifier (default: `"vdem_v1"`)
 
 Assumptions not met cause immediate `ValueError`.
@@ -61,6 +63,7 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on empty `variables`
 - `ValueError` on `start_year < VIEWS_EPOCH_YEAR`
 - `ValueError` on `end_year < start_year`
+- `ValueError` on `temporal_interpolation` not in `VALID_TEMPORAL_INTERPOLATIONS`
 - `AttributeError` on any attempt to mutate fields (frozen)
 
 Runtime failures from `build_vdem_viewpoint` (the primary consumer):

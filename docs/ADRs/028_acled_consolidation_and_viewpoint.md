@@ -53,7 +53,7 @@ The ACLED consolidator tags raw harvester snapshots with source metadata and wri
 
 **What it does:**
 - Assigns `date_month` by slicing `event_date[:7]` (YYYY-MM)
-- Optionally filters by event type (configurable)
+- Optionally filters by event type via `event_type_filter` (configurable list of ACLED event types to retain; empty = no filter)
 - Strips consolidation metadata columns (`_source_type`, `_source_version`, `_ingested_at`, `_harvest_digest`, `_harvest_timestamp`)
 
 **What it does NOT do:**
