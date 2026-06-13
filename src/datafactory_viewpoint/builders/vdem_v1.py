@@ -28,6 +28,10 @@ from datafactory_provenance import (
     compute_file_digest,
 )
 from datafactory_viewpoint.builders import register_builder
+from datafactory_viewpoint.temporal import (
+    VALID_TEMPORAL_INTERPOLATIONS,
+    interpolate_temporal,
+)
 from datafactory_viewpoint.viewpoint_result import ViewpointResult
 
 logger = logging.getLogger(__name__)
@@ -93,6 +97,8 @@ class VdemViewpointConfig:
     start_year: int = 1980
     end_year: int = 2025
 
+    temporal_interpolation: str = "step"
+
     version: str = "vdem_v1"
 
     def __post_init__(self) -> None:
@@ -102,6 +108,17 @@ class VdemViewpointConfig:
             raise ValueError(msg)
         if not self.variables:
             msg = "variables must be non-empty"
+            logger.error(msg)
+            raise ValueError(msg)
+        if (
+            self.temporal_interpolation
+            not in VALID_TEMPORAL_INTERPOLATIONS
+        ):
+            msg = (
+                f"temporal_interpolation "
+                f"'{self.temporal_interpolation}' not in "
+                f"{VALID_TEMPORAL_INTERPOLATIONS}"
+            )
             logger.error(msg)
             raise ValueError(msg)
         if self.start_year < VIEWS_EPOCH_YEAR:
@@ -225,17 +242,13 @@ def build_vdem_v1(
         logger.error(msg)
         raise ValueError(msg)
 
-    # Expand country-year → (pgid, month_id, variables)
+    # Phase 1: group source rows by country, building epoch dicts
     unmapped_countries: set[str] = set()
     n_filtered = 0
 
-    pgid_chunks: list[np.ndarray] = []
-    month_chunks: list[np.ndarray] = []
-    var_chunks: dict[str, list[np.ndarray]] = {
-        var: [] for var in config.variables
-    }
-
-    months_12 = np.arange(1, 13, dtype=np.int32)
+    country_epochs: dict[
+        str, dict[str, dict[int, float]]
+    ] = {}
 
     for i in range(n_input):
         iso3 = str(iso3_col[i])
@@ -245,24 +258,67 @@ def build_vdem_v1(
             n_filtered += 1
             continue
 
-        pgids = iso3_to_pgids.get(iso3)
-        if pgids is None:
+        if iso3_to_pgids.get(iso3) is None:
             unmapped_countries.add(iso3)
             continue
 
-        pgid_arr = np.array(pgids, dtype=np.int32)
-        n_pgids = len(pgid_arr)
-        base_mid = (year - VIEWS_EPOCH_YEAR) * 12
-
-        month_ids = np.repeat(months_12 + base_mid, n_pgids)
-        pgid_tiled = np.tile(pgid_arr, 12)
-
-        pgid_chunks.append(pgid_tiled)
-        month_chunks.append(month_ids)
+        if iso3 not in country_epochs:
+            country_epochs[iso3] = {
+                var: {} for var in config.variables
+            }
         for var in config.variables:
-            val = float(var_arrays[var][i])
+            country_epochs[iso3][var][year] = float(
+                var_arrays[var][i]
+            )
+
+    # Phase 2: interpolate via shared temporal module, expand
+    pgid_chunks: list[np.ndarray] = []
+    month_chunks: list[np.ndarray] = []
+    var_chunks: dict[str, list[np.ndarray]] = {
+        var: [] for var in config.variables
+    }
+
+    for iso3, var_epoch_map in country_epochs.items():
+        pgid_arr = np.array(
+            iso3_to_pgids[iso3], dtype=np.int32
+        )
+        n_pgids = len(pgid_arr)
+
+        first_var = next(iter(var_epoch_map))
+        years_present = sorted(var_epoch_map[first_var].keys())
+        min_year = years_present[0]
+        max_year = years_present[-1]
+
+        monthly_vals: dict[str, list[float]] = {}
+        for var, epochs in var_epoch_map.items():
+            monthly_vals[var] = interpolate_temporal(
+                epochs,
+                strategy=config.temporal_interpolation,
+                start_year=min_year,
+                start_month=1,
+                end_year=max_year,
+                end_month=12,
+            )
+
+        n_months = len(monthly_vals[first_var])
+        month_id_arr = np.array(
+            [
+                (min_year - VIEWS_EPOCH_YEAR) * 12 + m + 1
+                for m in range(n_months)
+            ],
+            dtype=np.int32,
+        )
+
+        pgid_chunks.append(np.tile(pgid_arr, n_months))
+        month_chunks.append(
+            np.repeat(month_id_arr, n_pgids)
+        )
+        for var in config.variables:
+            vals = np.array(
+                monthly_vals[var], dtype=np.float64
+            )
             var_chunks[var].append(
-                np.full(12 * n_pgids, val, dtype=np.float64),
+                np.repeat(vals, n_pgids)
             )
 
     empty_i32 = np.array([], dtype=np.int32)

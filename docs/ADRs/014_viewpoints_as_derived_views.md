@@ -75,7 +75,25 @@ Viewpoint configurations are versioned. Multiple viewpoints can coexist:
 
 Each version is a different materialization of the same consolidated store.
 
-### 5. What the Viewpoint Builder Owns
+### 5. Temporal Interpolation Policy
+
+Some sources observe at intervals coarser than the grid's monthly resolution (e.g., GHS-POP/GHS-BUILT-S: five-year epochs). The viewpoint builder may interpolate between known observations of the same source to produce monthly values, subject to two conditions:
+
+1. **The source observes a continuous quantity that changes gradually between samples.** Interpolation approximates a smooth underlying process. It is inappropriate when observations are discrete real measurements (V-Dem annual indicators — use step function) or when values are structurally absent (SHDI never-covered cells — preserve NaN).
+
+2. **Interpolated values must be distinguishable from source-observed values in provenance.** The viewpoint configuration records which temporal interpolation strategy was applied (`linear`, `step`, or `none`).
+
+The shared implementation lives in `datafactory_viewpoint.temporal` and provides two strategies: `linear` (interpolate between adjacent epochs) and `step` (hold last known value). Source-specific ADRs (ADR-029, ADR-034, ADR-035, ADR-042) document which strategy is appropriate for each source and why.
+
+### 6. No Cross-Feature-Source Dependencies
+
+A viewpoint builder must not read from other **feature** sources' data (raw, consolidated, viewpoint, or compiled). It may read from **reference** sources (PRIO-GRID, GAUL admin) for spatial and temporal mapping, provided the dependency is declared in the source's ADR and configurable in its config class.
+
+This refines the original "no cross-source dependencies" rule. The intent — preventing hidden couplings between features — is preserved. The blanket prohibition is narrowed to match the architectural reality that some sources define the coordinate system while others provide values on it. See ADR-044 for the full taxonomy and dependency rules.
+
+Cross-feature derived values (e.g., conflict-adjusted population) are a consumer concern — they belong in the model layer, not the data factory.
+
+### 7. What the Viewpoint Builder Owns
 
 | Responsibility | Description |
 |---------------|-------------|
@@ -85,7 +103,7 @@ Each version is a different materialization of the same consolidated store.
 | Field selection | Which fields from the consolidated store propagate to the viewpoint |
 | Month assignment | Whether `date_start` or `date_end` determines the event's month |
 
-### 6. Provenance
+### 8. Provenance
 
 The viewpoint output must record:
 

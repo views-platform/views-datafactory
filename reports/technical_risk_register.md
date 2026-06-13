@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-06-10)
-**Last update:** review-rr strategic — demoted C-274, C-275, C-279; work package updates (8 entries clustered); C-164 trigger acknowledged (2026-06-12)
+**Last update:** register-risk — C-282, C-283, C-284 added from falsification audit (impl vs doc consistency) (2026-06-13)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10
-**Status:** 281 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 214 resolved, 63 open concerns (0 Tier 1, 7 Tier 2, 14 Tier 3, 36 Tier 4, 6 deferred by design; 1 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 37 struck-through in active register + 29 resolved disagreements in archive. 37 disagreement IDs total: 29 resolved, 8 open.
+**Status:** 284 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 214 resolved, 66 open concerns (0 Tier 1, 7 Tier 2, 16 Tier 3, 37 Tier 4, 6 deferred by design; 1 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 37 struck-through in active register + 29 resolved disagreements in archive. 37 disagreement IDs total: 29 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -112,6 +112,9 @@
 | ~~C-279~~ | ~~4~~ | ~~land_mask.py has zero red tests~~ | Demoted to tech-debt backlog 2026-06-12 (downloaded once, cached permanently; loud HTTP failures; minimal surface) | — |
 | C-280 | 4 | skip.py corrupted provenance.json / .zattrs untested | Disk corruption or manual editing of metadata | Artifact consistency |
 | ~~C-281~~ | ~~4~~ | ~~No SHDI CIC — only source without governance document~~ | Resolved 2026-06-11 (ShdiViewpointConfig.md written) | Documentation |
+| C-282 | 3 | V-Dem and SHDI bypass shared temporal module — ADR-014 P5 claim false for 2 of 4 builders | New builder author reads ADR-014 P5, modifies only temporal.py, misses inline implementations | Doc/code consistency |
+| C-283 | 3 | V-Dem viewpoint reads GAUL admin crosswalk — cross-source dependency violates ADR-014 P6 | GAUL admin data regenerated (e.g., area-majority update) without rebuilding V-Dem viewpoint | Doc/code consistency |
+| C-284 | 4 | ACLED event_type_filter implemented but absent from ADR-028 | Developer reads ADR-028 to understand ACLED viewpoint behavior and misses the filter capability | Doc/code consistency |
 | ~~C-263~~ | ~~3~~ | ~~Assembly finally block `mkdir` outside `contextlib.suppress` — can mask original exception~~ | Resolved 2026-06-10 (removed redundant mkdir — append_ledger_entry handles directory creation internally) | Ledger reliability |
 | ~~C-159~~ | ~~4~~ | ~~ACLED snapshot archiving and revision comparison paths untested~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
@@ -144,6 +147,7 @@ Items that should be resolved together:
 | **Provenance resilience** | C-46, C-136, C-270, C-271 | Before production ledger exceeds 10MB or next provenance refactor |
 | **Query layer resilience** | C-116, C-117 (added 2026-06-12) | Consumer reports transient failures or slow remote queries |
 | **Cross-repo alignment** | C-264 (added 2026-06-12) | Before next partition boundary update or model training run |
+| **Doc/code consistency** | C-282, C-283, C-284 | Before next viewpoint builder or ADR-014 amendment |
 | **Migration scope** | C-126 (C-125 resolved) | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -687,6 +691,42 @@ Cross-ref: C-245 (resolved — name file gap), C-246 (untested production code p
 Resolved 2026-06-06 (PR #135). `generate_area_majority_gaul.py` extended to produce 4 name Parquet files (`gaul0_name`, `gaul1_name`, `gaul2_name`, `iso3_code`) using OCP `dtype=pa.utf8()` parameter. `GAUL_VARIABLES` split into `GAUL_CODE_VARIABLES` + `GAUL_NAME_VARIABLES` (CRP). Name files regenerated on both server (via `refresh_pipeline.sh`) and dev machine (2026-06-11). The xfail on `test_name_file_row_count_matches_code_file` has been removed — test now passes.
 
 Cross-ref: C-149 (resolved — the root cause this gap is a residual of), ADR-039.
+
+---
+
+### C-282: V-Dem and SHDI bypass shared temporal module — ADR-014 Principle 5 claim false for 2 of 4 builders
+
+ADR-014 Principle 5 states "The shared implementation lives in `datafactory_viewpoint.temporal`" and describes two strategies (`linear`, `step`). GHS-POP and GHS-BUILT-S route through this module. However, V-Dem (`vdem_v1.py:257-258`) and SHDI (`shdi_v1.py:225-226`) implement step-function temporal expansion inline via `np.repeat()`/`np.tile()` without importing from `temporal.py`. The shared module is used by only 2 of 4 builders that perform temporal expansion — ADR-014's characterization of it as THE shared implementation is misleading.
+
+The inline implementations produce correct results. The risk is that a future contributor reads ADR-014, assumes all temporal logic flows through `temporal.py`, modifies that module (e.g., adding provenance metadata to interpolated values), and misses the two inline implementations. The fix is either: (a) refactor V-Dem/SHDI to use `temporal.py`'s `step` strategy, or (b) narrow ADR-014's claim to accurately describe which builders use the shared module.
+
+| Field | Value |
+|-------|-------|
+| ID | C-282 |
+| Tier | 3 — maintainability; ADR makes a false architectural claim affecting 2 of 6 viewpoint builders |
+| Source | falsify (2026-06-13), probe P-1 |
+| Trigger | New builder author reads ADR-014 P5, modifies only temporal.py, misses inline implementations in vdem_v1.py and shdi_v1.py |
+| Location | `src/datafactory_viewpoint/builders/vdem_v1.py:257-258`, `src/datafactory_viewpoint/builders/shdi_v1.py:225-226`, `docs/ADRs/014_viewpoints_as_derived_views.md` (Principle 5, line 86) |
+
+Cross-ref: C-164 (WET debt — temporal.py extraction completed v1.2.21 but V-Dem/SHDI predate it), C-283 (V-Dem cross-source dep — same builder, different issue).
+
+---
+
+### C-283: V-Dem viewpoint reads GAUL admin crosswalk — cross-source dependency violates ADR-014 Principle 6
+
+ADR-014 Principle 6 states "A viewpoint builder must be a pure function of its own source data plus configuration. It must not read from other sources' consolidated stores, viewpoints, or compiled outputs." The V-Dem builder's `VdemViewpointConfig` has a default `crosswalk_path = "data/raw/gaul_admin/iso3_code.parquet"` (line 82) — a file produced by the GAUL admin harvester, stored in GAUL admin's data directory. This is a cross-source dependency: V-Dem's viewpoint reads another source's raw data.
+
+The dependency is architecturally necessary — V-Dem publishes country-year data, so mapping to PRIO-GRID cells requires an ISO3→pgid crosswalk. By contrast, SHDI's builder uses `data/raw/shdi/gdl_to_pgid.parquet`, a crosswalk produced by its own harvester. The V-Dem builder could be fixed by: (a) having the V-Dem harvester produce its own ISO3→pgid crosswalk, or (b) moving the crosswalk to `datafactory_priogrid` as a shared spatial utility (not owned by any source), or (c) acknowledging the dependency in ADR-014 as an accepted exception. Option (c) is the simplest but weakens the principle.
+
+| Field | Value |
+|-------|-------|
+| ID | C-283 |
+| Tier | 3 — structural coupling; violates a newly-formalized constitutional principle |
+| Source | falsify (2026-06-13), probe P-6 |
+| Trigger | GAUL admin data regenerated (e.g., area-majority update changes iso3_code.parquet) without triggering V-Dem viewpoint rebuild |
+| Location | `src/datafactory_viewpoint/builders/vdem_v1.py:82` (crosswalk_path default), `docs/ADRs/014_viewpoints_as_derived_views.md` (Principle 6, lines 88-94) |
+
+Cross-ref: C-282 (V-Dem temporal bypass — same builder, different issue), C-247 (dual GAUL source of truth — same data directory).
 
 ---
 
@@ -1324,6 +1364,22 @@ Demoted to tech-debt backlog 2026-06-12 (review-rr strategic). Downloaded once a
 | Tier | ~~4~~ |
 | Source | test-review (2026-06-10) |
 | Location | `src/datafactory_priogrid/land_mask.py` |
+
+### C-284: ACLED event_type_filter implemented but absent from ADR-028 — [DEFER]
+
+`acled_v1.py` implements an `event_type_filter` capability (lines 138-151) using PyArrow `pc.is_in()` to conditionally filter events by type. The `AcledViewpointConfig` CIC lists the field (`event_type_filter: Optional[tuple[str, ...]]`), but ADR-028 does not mention filtering at all. ADR-028 characterizes the ACLED viewpoint as "no survivorship, no temporal distribution, no spatial transformation, no aggregation" — accurate, but the filtering capability is an undocumented behavior. A developer reading ADR-028 to understand what the ACLED viewpoint does would miss this capability entirely.
+
+| Field | Value |
+|-------|-------|
+| ID | C-284 |
+| Tier | 4 — documentation gap; no correctness risk, single-developer scope |
+| Source | falsify (2026-06-13), probe P-8 |
+| Trigger | Developer reads ADR-028 to understand ACLED viewpoint behavior and misses the event_type_filter capability, or adds a similar filter to another viewpoint without knowing the ACLED precedent |
+| Location | `src/datafactory_viewpoint/builders/acled_v1.py:138-151`, `docs/ADRs/028_acled_consolidation_and_viewpoint.md` |
+
+Cross-ref: C-154 (ACLED feature config duplication — same builder, different concern).
+
+---
 
 ### C-280: skip.py does not test corrupted provenance.json or .zattrs — [DEFER]
 
