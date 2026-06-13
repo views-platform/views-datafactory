@@ -301,6 +301,40 @@ def _load_supplement_polygons(
     return polygons, records
 
 
+def _filter_covered_supplements(
+    gaul_polys: list,
+    sup_polys: list,
+    sup_recs: list[dict],
+    *,
+    coverage_threshold: float = 0.5,
+) -> tuple[list, list[dict]]:
+    """Filter supplement polygons already covered by GAUL.
+
+    Returns (kept_polys, kept_recs) — only supplements where no GAUL
+    polygon covers more than ``coverage_threshold`` of their area.
+    """
+    gaul_tree = STRtree([make_valid(p) for p in gaul_polys])
+    kept_polys = []
+    kept_recs = []
+    for poly, rec in zip(sup_polys, sup_recs, strict=True):
+        hits = gaul_tree.query(poly, predicate="intersects")
+        covered = any(
+            make_valid(gaul_polys[int(i)]).intersection(poly).area
+            / poly.area > coverage_threshold
+            for i in hits
+        )
+        if covered:
+            logger.warning(
+                "Supplement %s skipped — GAUL already covers it "
+                "(source defect likely fixed)",
+                rec.get("gaul1_name", "unknown"),
+            )
+        else:
+            kept_polys.append(poly)
+            kept_recs.append(rec)
+    return kept_polys, kept_recs
+
+
 GAUL_CODE_VARIABLES = [
     ("gaul0_code", ["gaul0_code"]),
     ("gaul1_code", ["gaul1_code"]),
@@ -348,25 +382,9 @@ def main(
         sup_polys, sup_recs = _load_supplement_polygons(
             supplement_path, all_field_names,
         )
-        gaul_tree = STRtree([make_valid(p) for p in polygons])
-        kept_polys = []
-        kept_recs = []
-        for poly, rec in zip(sup_polys, sup_recs, strict=True):
-            hits = gaul_tree.query(poly, predicate="intersects")
-            covered = any(
-                make_valid(polygons[int(i)]).intersection(poly).area
-                / poly.area > 0.5
-                for i in hits
-            )
-            if covered:
-                logger.warning(
-                    "Supplement %s skipped — GAUL already covers it "
-                    "(source defect likely fixed)",
-                    rec.get("gaul1_name", "unknown"),
-                )
-            else:
-                kept_polys.append(poly)
-                kept_recs.append(rec)
+        kept_polys, kept_recs = _filter_covered_supplements(
+            polygons, sup_polys, sup_recs,
+        )
         if kept_polys:
             polygons.extend(kept_polys)
             records.extend(kept_recs)
