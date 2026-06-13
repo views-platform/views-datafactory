@@ -333,13 +333,13 @@
     "gid": 129387,
     "lat": -0.25,
     "lon": 73.25,
-    "classification": "coastal_resolution_gap",
+    "classification": "suspected_data_defect",
     "nearest_country": "Maldives",
     "nearest_admin1": "Seenu",
     "nearest_admin2": "Administrative Unit Not Available",
     "distance_deg": 0.3291,
     "search_radius": 0.5,
-    "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
+    "reclassification_rationale": "Gnaviyani atoll (Fuvahmulah, ~13k inhabitants) is one of the Maldives' 21 administrative atolls. GAUL 2024 contains 20 of 21 atolls at L1 — Gnaviyani is absent under every spelling variant (gnaviyani, fuvah, fuvam, foammul, foah). The nearest polygon (Seenu, 0.33 deg) is a different atoll. This is an FAO source defect identical in kind to the Azores (ADR-043), not a grid-resolution artifact. Accepted uncovered: single cell, non-conflict zone, below ADR-043 supplementation threshold. Candidate for future supplement if GAUL defect persists.",
     "resolution": "accepted_uncovered"
   },
   {

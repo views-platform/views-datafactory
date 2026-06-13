@@ -89,7 +89,14 @@ The GAUL shapefile is untouched. The supplement only adds polygons for areas GAU
 
 ### Sunset condition
 
-Remove the supplement when FAO releases a corrected GAUL version that includes the missing Azorean islands. Verify by checking whether the 4 L1 entries appear in the new shapefile.
+Remove the supplement when FAO releases a corrected GAUL version that includes the missing Azorean islands. Verify by checking whether the 4 L1 entries appear in the new shapefile. The self-deactivation guard (`_filter_covered_supplements`) automatically detects when GAUL covers a supplement polygon (>50% area overlap) and skips it with a retirement warning.
+
+### Upstream reporting obligation
+
+This supplement patches FAO's own product. FAO must be informed so the defect can be fixed at source:
+
+- **Defect reported to FAO:** Logged in project notes (`~/brain/2_projects/fao02/project_log.md`, entry 2026-06-12). Formal communication pending next PRIO-FAO coordination meeting.
+- **Release-note obligation:** Any data delivery that includes supplement-assigned cells must disclose the synthetic negative codes (gaul1_code -3727 to -3730, gaul2_code same) and their Natural Earth provenance. Consumers filtering on `gaul1_code > 0` automatically exclude supplement assignments.
 
 ---
 

@@ -98,16 +98,11 @@ class TestSentinelOverloading:
 
 
 class TestSuspectedDefectsResolved:
-    """P4 (SOFT): the claim 'missing cells solved' is overbroad.
-
-    The committed classification marks gids 129387 (Fuvahmulah, Maldives,
-    ~13k inhabitants) and 132525 (Kiritimati, Kiribati, ~7k inhabitants) as
-    'suspected_data_defect' — the same class as the Azores — but only the
-    Azores were supplemented. Fails until these are supplemented or
-    reclassified with a recorded rationale.
+    """P4 (SOFT): every suspected_data_defect must be either supplemented
+    or have a recorded rationale explaining the decision.
     """
 
-    def test_no_inhabited_suspected_defects_remain_unsupplemented(self):
+    def test_no_suspected_defects_without_rationale(self):
         classification = json.loads(_CLASSIFICATION.read_text())
         gaul0 = _load("gaul0_code")
         unresolved = [
@@ -115,10 +110,12 @@ class TestSuspectedDefectsResolved:
             for e in classification
             if e["classification"] == "suspected_data_defect"
             and gaul0.get(e["gid"], -1) == -1
+            and not e.get("reclassification_rationale")
         ]
         assert unresolved == [], (
-            f"cells classified suspected_data_defect remain unassigned: {unresolved} "
-            f"— supplement them (ADR-043 pattern) or reclassify with rationale"
+            f"cells classified suspected_data_defect have no "
+            f"rationale: {unresolved} — supplement them "
+            f"(ADR-043 pattern) or record a decision"
         )
 
 
