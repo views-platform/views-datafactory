@@ -165,6 +165,13 @@ def build_acled_v1(
 
     n_output = table.num_rows
 
+    if n_input != n_output + n_filtered:
+        raise RuntimeError(
+            f"Count conservation violation: "
+            f"input ({n_input}) != "
+            f"output ({n_output}) + filtered ({n_filtered})"
+        )
+
     config.output_path.parent.mkdir(parents=True, exist_ok=True)
     pq.write_table(table, config.output_path)
 

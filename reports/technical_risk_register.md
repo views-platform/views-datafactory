@@ -1,9 +1,9 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-06-10)
-**Last update:** register-risk — C-282, C-283, C-284 added from falsification audit (impl vs doc consistency) (2026-06-13)
+**Date:** 2026-03-17 (updated 2026-06-15)
+**Last update:** Story 2 — C-258 closed (conservation assertions at 4 boundaries + 14 tests); prior: Story 0 — C-264, C-282, C-283, C-284, C-285 closed; C-288 closed (Story 1); C-79, C-177 demoted; D-30, D-31 resolved; C-46, C-173 triggers rewritten; C-288, C-289, C-290 added from test-review (2026-06-14)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10
-**Status:** 284 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 214 resolved, 66 open concerns (0 Tier 1, 7 Tier 2, 16 Tier 3, 37 Tier 4, 6 deferred by design; 1 with fired trigger), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 37 struck-through in active register + 29 resolved disagreements in archive. 37 disagreement IDs total: 29 resolved, 8 open.
+**Status:** 290 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 224 resolved, 63 open concerns (0 Tier 1, 6 Tier 2, 16 Tier 3, 35 Tier 4, 6 deferred by design; 2 with fired trigger), 6 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 41 struck-through in active register + 31 resolved disagreements in archive. 37 disagreement IDs total: 31 resolved, 6 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -22,21 +22,21 @@
 | C-36 | 4 | UCDP API contract has no schema versioning | UCDP announces API v2 | UCDP schema |
 | C-37 | 4 | `date_prec=5` semantics hardcoded | UCDP publishes codebook | UCDP schema |
 | C-45 | 4 | No Parquet schema evolution strategy | UCDP removes/renames a field | UCDP schema |
-| C-46 | 4 | No ledger write idempotency | External systems consume ledger | — |
+| C-46 | 4 | No ledger write idempotency | First non-pipeline consumer (e.g., monitoring dashboard, audit report) reads JSONL ledger entries | — |
 | C-32 | — | Source registry returns `Any` | Accepted by design | — |
 | C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Full-scale e2e with all 9+ sources, or 2nd deployment target | Test infra |
 | C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment | UCDP resilience |
 | C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
 | ~~C-74~~ | ~~4~~ | ~~CompilationConfig leaks strategy vocabulary~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-78~~ | ~~4~~ | ~~`_place_events` hard to test in isolation~~ | Demoted to tech-debt backlog 2026-06-06 | — |
-| C-79 | 4 | Compilation/consolidation require real Parquet I/O | Test suite exceeds 30s | Test infra |
+| ~~C-79~~ | ~~4~~ | ~~Compilation/consolidation require real Parquet I/O~~ | Demoted to tech-debt backlog 2026-06-14 (trigger permanently fired — suite at 6m38s, functioning normally) | — |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
 | C-131 | 2 | No external monitoring for cron job failure on Hetzner | Before 2nd month without `HEARTBEAT_URL` configured, or server reboots without cron re-enable | Operational monitoring |
 | C-136 | 4 | `read_last_entries()` crashes on non-UTF8 ledger files | Disk corruption or binary append to JSONL ledger | Operational monitoring |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
-| C-177 | 4 | `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) | Function is re-activated for a new data source | ADR-031 compliance |
+| ~~C-177~~ | ~~4~~ | ~~`_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3)~~ | Demoted to tech-debt backlog 2026-06-14 (function not actively used; dead code concern) | — |
 | C-179 | 4 | Consolidation dedup uses `.to_pylist()` + Python set (ADR-031 P1) | Consolidated store exceeds ~5M rows on 8 GB machine | ADR-031 compliance |
 | C-180 | 4 | No falsification tests for non-GHS-POP compilation/viewpoint paths | Memory regression introduced in UCDP or ACLED path | Test coverage |
 | C-181 | 4 | UCDP candidate/dot9 discovery probes API even when all versions cached | UCDP rate-limits or blocks IP after repeated full-range probes | Harvest efficiency |
@@ -50,8 +50,8 @@
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
 | D-26 | — | Discovery probing cost vs cache staleness (UCDP candidate/dot9) | Open | Harvest caching |
 | D-29 | — | Shapefile harvester retrofit depth — full outcome compliance vs organic | Open | Harvest correctness |
-| D-30 | — | Config validator extraction depth — utility functions vs declarative specs | Open | WET-before-DRY |
-| D-31 | — | Harvest script consolidation — single unified script vs thin delegates | Open | WET-before-DRY |
+| ~~D-30~~ | ~~—~~ | ~~Config validator extraction depth — utility functions vs declarative specs~~ | Resolved 2026-06-14 (utility functions first; declarative deferred to 12+ sources) | WET-before-DRY |
+| ~~D-31~~ | ~~—~~ | ~~Harvest script consolidation — single unified script vs thin delegates~~ | Resolved 2026-06-14 (middle path: shared HarvestRunner + thin delegates. Deferred to WDI sprint.) | WET-before-DRY |
 | C-230 | 4 | Script layer (harvest + pipeline) has zero unit tests | Pattern #7/#8 extraction changes behavior with no test to catch regression | Test coverage |
 | C-231 | 4 | No compilation idempotence guard — silent recompilation with stale inputs | Operator re-runs compilation after viewpoint re-built with different parameters | Compilation correctness |
 | ~~C-235~~ | ~~3~~ | ~~Source registry declares nonexistent SHDI downstream entries~~ | Resolved: #105 removed SHDI features and phantom entries | Source registry |
@@ -72,7 +72,7 @@
 | ~~C-255~~ | ~~2~~ | ~~Health check reports "SLO MET" for content-stale artifacts (time-fresh, content-wrong)~~ | Resolved 2026-06-09 (commit 975b401: check_export_freshness compares source_digest) | Artifact consistency |
 | ~~C-260~~ | ~~2~~ | ~~Assembly skip logic ignores source removal — `all()` checks only current keys~~ | Resolved 2026-06-09 (ADR-041: check_assembly_skip uses key-set equality, not subset) | Artifact consistency |
 | C-257 | 2 | No input data validation at system boundary — DGP assumptions untested | ACLED or UCDP changes data model (e.g., multi-day events, new date_prec values) | Data soundness |
-| C-258 | 2 | Count conservation not enforced at consolidation or viewpoint boundaries | Before next consolidation or viewpoint logic change (dedup strategy, survivorship rules, temporal distribution) or next source onboarding | Data soundness |
+| ~~C-258~~ | ~~2~~ | ~~Count conservation not enforced at consolidation or viewpoint boundaries~~ | Resolved 2026-06-15 (conservation assertions at 4 boundaries + 14 tests in test_boundary_conservation.py) | Data soundness |
 | ~~C-242~~ | ~~2~~ | ~~ADR-040 count conservation invariants accepted but zero test enforcement~~ | Resolved 2026-06-06 (PR #135: 10 tests + runtime assertions) | Count conservation |
 | ~~C-243~~ | ~~3~~ | ~~ADR-040 hierarchical reconciliation untested (gaul0/1/2 sum equality)~~ | Resolved 2026-06-06 (PR #135: 6 tests + check_nesting + assert_hierarchical_reconciliation) | Count conservation |
 | ~~C-244~~ | ~~4~~ | ~~4 CICs + ADR-025 not updated after ADR-040 acceptance~~ | Resolved 2026-06-06 (PR #135: 4 CICs + ADR-025 updated) | Count conservation |
@@ -91,11 +91,11 @@
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
 | C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Before 6th pipeline source (WDI) requires a verify script | Visual audit |
 | C-195 | 4 | 37 falsification test files accumulated without curation (3,129 lines) | Next audit round adds files, or total exceeds 45 | Test hygiene |
-| C-173 | 4 | Hetzner server memory headroom (CPX42 + swap) | Software optimization needed before next large source | Server hardening |
+| C-173 | 4 | Hetzner server memory headroom (CPX42 + swap) | CPX42 RSS usage during full pipeline run exceeds 80% of available RAM (observed during WDI pilot) | Server hardening |
 | C-164 | 3 | Cross-layer WET debt: 6 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI integration or next data source | WET-before-DRY |
 | C-156 | 3 | ACLED temporal range mismatch — zero-fill before 2020 in assembled grid | Model uses ACLED features for pre-2020 months without awareness of zero-fill | ACLED assembly |
 | ~~C-265~~ | ~~2~~ | ~~SHDI harvest missing from `refresh_pipeline.sh` — status page RED, data never collected~~ | Resolved 2026-06-10 (commit cd23624: harvest_shdi.py added to refresh_pipeline.sh line 173) | Pipeline completeness |
-| C-264 | 3 | Factory/models partition boundary drift — 4 alignment tests failing | Factory partitions updated without coordinating with views-models, or model training uses mismatched partitions | Cross-repo alignment |
+| ~~C-264~~ | ~~3~~ | ~~Factory/models partition boundary drift — 4 alignment tests failing~~ | Resolved 2026-06-14 (commit cd23624: partition boundaries updated in defaults.py lines 92-94) | Cross-repo alignment |
 | ~~C-266~~ | 4 | ~~Flaky `test_latest_harvest_wins` — filesystem timestamp resolution~~ | ~~Full suite run where both test Parquet files created in same second~~ | ~~Test reliability~~ |
 | C-267 | 2 | event_store.py crash-safety and concurrency untested — system of record at risk | Refactoring event_store.py write path without characterization tests | Data soundness |
 | C-268 | 3 | gaul_admin.py has zero test coverage — 7-feature spatial join untested | Modification to GAUL admin hierarchy parsing or new GAUL release | GAUL data integrity |
@@ -112,9 +112,15 @@
 | ~~C-279~~ | ~~4~~ | ~~land_mask.py has zero red tests~~ | Demoted to tech-debt backlog 2026-06-12 (downloaded once, cached permanently; loud HTTP failures; minimal surface) | — |
 | C-280 | 4 | skip.py corrupted provenance.json / .zattrs untested | Disk corruption or manual editing of metadata | Artifact consistency |
 | ~~C-281~~ | ~~4~~ | ~~No SHDI CIC — only source without governance document~~ | Resolved 2026-06-11 (ShdiViewpointConfig.md written) | Documentation |
-| C-282 | 3 | V-Dem and SHDI bypass shared temporal module — ADR-014 P5 claim false for 2 of 4 builders | New builder author reads ADR-014 P5, modifies only temporal.py, misses inline implementations | Doc/code consistency |
-| C-283 | 3 | V-Dem viewpoint reads GAUL admin crosswalk — cross-source dependency violates ADR-014 P6 | GAUL admin data regenerated (e.g., area-majority update) without rebuilding V-Dem viewpoint | Doc/code consistency |
-| C-284 | 4 | ACLED event_type_filter implemented but absent from ADR-028 | Developer reads ADR-028 to understand ACLED viewpoint behavior and misses the filter capability | Doc/code consistency |
+| ~~C-282~~ | ~~3~~ | ~~V-Dem and SHDI bypass shared temporal module — ADR-014 P5 claim false for 2 of 4 builders~~ | Resolved 2026-06-14 (PR #169 commit 85601ec: V-Dem and SHDI migrated to shared temporal.py) | Doc/code consistency |
+| ~~C-283~~ | ~~3~~ | ~~V-Dem viewpoint reads GAUL admin crosswalk — cross-source dependency violates ADR-014 P6~~ | Resolved 2026-06-14 (PR #169 commit 85601ec: ADR-014 P6 rewritten to allow reference source deps) | Doc/code consistency |
+| ~~C-284~~ | ~~4~~ | ~~ACLED event_type_filter implemented but absent from ADR-028~~ | Resolved 2026-06-14 (PR #169: ADR-028 line 56 clarified event_type_filter) | Doc/code consistency |
+| ~~C-285~~ | ~~3~~ | ~~No process lock prevents concurrent pipeline runs — data file overwrites possible~~ | Resolved 2026-06-14 (commit 428e479: flock in refresh_pipeline.sh lines 136-142) | Pipeline safety |
+| C-286 | 3 | UCDP as implicit temporal anchor — source data silently dropped if UCDP contracts | UCDP temporal range shortened (e.g., early years removed), assembly silently drops other sources' data beyond UCDP range | Assembly temporal alignment |
+| C-287 | 4 | Assembly channel order is positional — hardcoded offsets fragile if feature counts change | Source adds/removes a feature, assembly channel offsets shift silently | Assembly maintainability |
+| ~~C-288~~ | ~~2~~ | ~~No cross-layer schema contract tests — viewpoint column rename silently breaks compilation~~ | Resolved 2026-06-15 (tests/test_cross_layer_contracts.py: 24 tests covering all 6 sources) | Cross-layer verification |
+| C-289 | 3 | cell_generator.py has zero characterization tests — spatial backbone unpinned | Developer modifies pgid calculation, cell boundary logic, or rounding mode | Test coverage |
+| C-290 | 3 | datafactory_query has 25% module coverage — consumer API mostly untested | Developer changes `load_dataset()`, region subsetting, or zarr backend | Test coverage |
 | ~~C-263~~ | ~~3~~ | ~~Assembly finally block `mkdir` outside `contextlib.suppress` — can mask original exception~~ | Resolved 2026-06-10 (removed redundant mkdir — append_ledger_entry handles directory creation internally) | Ledger reliability |
 | ~~C-159~~ | ~~4~~ | ~~ACLED snapshot archiving and revision comparison paths untested~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
@@ -139,15 +145,18 @@ Items that should be resolved together:
 | **Harvest correctness** | C-185 (C-182, C-184, C-186, C-188 resolved) | Before relying on harvest caching for correctness |
 | **Count conservation** | C-241, C-249 (C-242, C-243, C-244 resolved PR #135) | C-241 deferred: intensive feature conservation |
 | **GAUL data integrity** | C-247, C-250, C-268 (C-246, C-248 resolved #136) | Before deploying refactored area-majority script to production |
-| **WET-before-DRY refactor** | C-07, C-154, C-155, C-164, C-195, C-230 (C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8; C-154 added 2026-06-12) | Before WDI or next refactor sprint |
+| **WET-before-DRY refactor** | C-07, C-154, C-155, C-164, C-195, C-230, C-287 (C-44 merged into C-164; C-230 blocks safe extraction of patterns #7/#8; C-154 added 2026-06-12; C-287 added 2026-06-14) | Before WDI or next refactor sprint |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
 | **Artifact consistency** | ~~C-253~~, C-254, ~~C-255~~, ~~C-259~~, ~~C-260~~, ~~C-261~~, ~~C-262~~, C-231, C-280, ~~D-34~~, ~~D-36~~, D-37 | Before expanding consumer bridge beyond UCDP-only features |
 | **Data soundness** | C-256, C-257, C-258, C-269, D-35 | Before next data source integration (WDI) or next consolidation/viewpoint change |
-| **Infrastructure test coverage** | C-189, C-271, C-273, C-276, C-280 (C-272, C-277, C-278 demoted 2026-06-10; C-274, C-275, C-279 demoted 2026-06-12; C-281 resolved 2026-06-11; C-189 added 2026-06-12) | Next red-test sprint or CIC Section 10 sweep |
+| **Infrastructure test coverage** | C-189, C-271, C-273, C-276, C-280, C-289 (C-272, C-277, C-278 demoted 2026-06-10; C-274, C-275, C-279 demoted 2026-06-12; C-281 resolved 2026-06-11; C-189 added 2026-06-12; C-289 added 2026-06-14) | Next red-test sprint or CIC Section 10 sweep |
 | **Provenance resilience** | C-46, C-136, C-270, C-271 | Before production ledger exceeds 10MB or next provenance refactor |
-| **Query layer resilience** | C-116, C-117 (added 2026-06-12) | Consumer reports transient failures or slow remote queries |
+| **Query layer resilience** | C-116, C-117, C-290 (C-290 added 2026-06-14) | Consumer reports transient failures or slow remote queries |
+| **Cross-layer verification** | C-288 | Before next viewpoint column rename or compilation config field change |
 | **Cross-repo alignment** | C-264 (added 2026-06-12) | Before next partition boundary update or model training run |
 | **Doc/code consistency** | C-282, C-283, C-284 | Before next viewpoint builder or ADR-014 amendment |
+| **Pipeline safety** | C-285 | Before multi-operator deployment or cron schedule with overlap risk |
+| **Assembly temporal alignment** | C-156, C-286 | Before UCDP temporal range change or new source with non-overlapping timeline |
 | **Migration scope** | C-126 (C-125 resolved) | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -328,19 +337,11 @@ The harvest layer trusts that external sources send data matching the pipeline's
 See also C-36 (UCDP API contract has no schema versioning — related but narrower), C-45 (no Parquet schema evolution strategy), C-153 (ACLED API has no TotalCount). Part of causal cluster: **Data soundness**.
 
 
-### C-258: Count conservation not enforced at consolidation or viewpoint boundaries
+### ~~C-258: Count conservation not enforced at consolidation or viewpoint boundaries~~ RESOLVED
 
-| Field | Value |
-|-------|-------|
-| ID | C-258 |
-| Tier | 2 — structural fragility; the ACLED dedup incident (C-251) was exactly this failure class |
-| Source | expert-method-review (2026-06-08), Betancourt perspective |
-| Trigger | Before next consolidation or viewpoint logic change (dedup strategy, survivorship rules, temporal distribution formula) or next data source onboarding that adds a new consolidator |
-| Location | `src/datafactory_consolidation/consolidators/acled.py:252-270` (dedup), `src/datafactory_consolidation/consolidators/ucdp.py` (dedup), `src/datafactory_viewpoint/builders/ucdp_v1.py` (survivorship + temporal distribution) |
+Resolved 2026-06-15. Conservation assertions now enforced at 4 boundaries: (1) ACLED consolidation — `_dedup_by_event_id` returns `(table, n_removed)`, fail-loud assertion `n_concat == n_new_raw + n_dedup_removed`, store merge assertion `n_total == n_before + n_new`, ledger records `n_records_concat`/`n_dedup_removed`/`n_records_dedup_filtered`. (2) UCDP consolidation — ledger records `n_records_raw`/`n_records_dedup_filtered` (already had assertions). (3) ACLED viewpoint — fail-loud assertion `n_input == n_output + n_filtered`. (4) UCDP viewpoint — fail-loud assertion `n_read == n_input + n_stale`, ledger records `n_events_read`/`n_stale_filtered`/`n_groups`/`n_survivorship_discarded`. 14 tests in `tests/test_boundary_conservation.py`.
 
-ADR-040 count conservation (`placed + excluded = input`) is enforced at compilation (`assert_placement_conservation` in `grid_compilation.py`) and country-month aggregation (`assert_cm_conservation` in `grid_to_country_month.py`). But consolidation and viewpoint have no conservation accounting. Consolidation removes duplicates — but nothing verifies `input_records = output_records + duplicates_removed`. Viewpoint applies survivorship (removes records) and temporal distribution (expands summary events) — but neither transformation records the expected count delta. The ACLED dedup incident (C-251, now resolved) was a conservation violation at the consolidation boundary: input had 411,089 unique events but output had 822,178 because duplicates were retained instead of removed. If `input - duplicates_removed = output` had been enforced, the doubled count would have been caught immediately. The consolidation ledger entry records `n_records_total` but not `n_duplicates_removed`, making post-hoc verification impossible without re-reading the source files.
-
-See also C-242 (resolved — conservation at compilation/CM boundaries, different layers), C-251 (resolved — the incident that demonstrates this gap). Part of causal cluster: **Data soundness**.
+**Source:** expert-method-review (2026-06-08), Betancourt perspective. Cross-ref: C-242 (resolved — conservation at compilation/CM boundaries), C-251 (resolved — the incident that demonstrates this gap).
 
 
 ### ~~C-239: Issue #104 paths produce silent wrong status page~~ RESOLVED
@@ -694,7 +695,7 @@ Cross-ref: C-149 (resolved — the root cause this gap is a residual of), ADR-03
 
 ---
 
-### C-282: V-Dem and SHDI bypass shared temporal module — ADR-014 Principle 5 claim false for 2 of 4 builders
+### ~~C-282: V-Dem and SHDI bypass shared temporal module — ADR-014 Principle 5 claim false for 2 of 4 builders~~
 
 ADR-014 Principle 5 states "The shared implementation lives in `datafactory_viewpoint.temporal`" and describes two strategies (`linear`, `step`). GHS-POP and GHS-BUILT-S route through this module. However, V-Dem (`vdem_v1.py:257-258`) and SHDI (`shdi_v1.py:225-226`) implement step-function temporal expansion inline via `np.repeat()`/`np.tile()` without importing from `temporal.py`. The shared module is used by only 2 of 4 builders that perform temporal expansion — ADR-014's characterization of it as THE shared implementation is misleading.
 
@@ -712,7 +713,7 @@ Cross-ref: C-164 (WET debt — temporal.py extraction completed v1.2.21 but V-De
 
 ---
 
-### C-283: V-Dem viewpoint reads GAUL admin crosswalk — cross-source dependency violates ADR-014 Principle 6
+### ~~C-283: V-Dem viewpoint reads GAUL admin crosswalk — cross-source dependency violates ADR-014 Principle 6~~
 
 ADR-014 Principle 6 states "A viewpoint builder must be a pure function of its own source data plus configuration. It must not read from other sources' consolidated stores, viewpoints, or compiled outputs." The V-Dem builder's `VdemViewpointConfig` has a default `crosswalk_path = "data/raw/gaul_admin/iso3_code.parquet"` (line 82) — a file produced by the GAUL admin harvester, stored in GAUL admin's data directory. This is a cross-source dependency: V-Dem's viewpoint reads another source's raw data.
 
@@ -730,7 +731,7 @@ Cross-ref: C-282 (V-Dem temporal bypass — same builder, different issue), C-24
 
 ---
 
-### C-264: Factory/models partition boundary drift — 4 alignment tests failing
+### ~~C-264: Factory/models partition boundary drift — 4 alignment tests failing~~
 
 `datafactory_query.defaults.PARTITIONS` defined calibration/validation boundaries that no longer match the partition configs in `views-models`. Factory had `calibration: train=(121,444), test=(445,492), validation: train=(121,492), test=(493,540)`. Models updated to `calibration: train=(121,456), test=(457,504), validation: train=(121,504), test=(505,552)`. All 5 integrated models (`bright_starship`, `heavy_freighter`, `heavy_strider`, `light_strider`, `shining_codex`) agreed on the new boundaries, but the factory wasn't updated. Four `TestPartitionAlignment` tests failed as a result.
 
@@ -862,7 +863,7 @@ Demoted to tech-debt backlog 2026-06-06 (review-rr strategic curation). Naming/A
 Demoted to tech-debt backlog 2026-06-06 (review-rr strategic curation). Test ergonomics concern; compilation tests run well under 5s. No correctness impact. Re-register if compilation tests exceed 5s.
 **Source:** Feathers (expert review #4), ADR-031 compliance review (2026-05-21). Cross-ref: C-144.
 
-### C-79: Compilation/consolidation require real Parquet I/O in tests — [DEFER]
+### ~~C-79: Compilation/consolidation require real Parquet I/O in tests — [DEFER]~~
 `compile_grid()` and `consolidate_ucdp()` always read from disk. No seam to inject mock reader. Tests create actual Parquet files. **Trigger: add `read_table_fn` parameter when test suite exceeds 30 seconds.**
 **Source:** Feathers (expert review #4)
 
@@ -873,6 +874,7 @@ Demoted to tech-debt backlog 2026-05-28 (review-rr strategic curation). Threshol
 ### C-116: No retry on remote zarr network failures — [DEFER]
 `_load_grid_from_zarr` in `dataset.py` opens a remote zarr store via xarray/fsspec/aiohttp. Transient network errors (DNS timeout, TCP reset, server restart) fail immediately — no retry, no backoff. `datafactory_http.retry.request_with_retry()` exists but is designed for `requests`-based harvester calls, not the xarray/fsspec path. For consumers, a transient failure at 2am during automated training means a full pipeline retry. **Trigger: consumer reports intermittent failures loading remote data.** Cross-ref: C-70 (circuit breaker, harvester path).
 **Source:** Expert review #5 (M12 investigation), Nygard perspective, 2026-04-08.
+**Update (2026-06-14, repo-assimilation):** The entire remote zarr code path has zero test coverage — `test_query.py` (18 tests) exercises only the npy backend. Not just edge cases; the happy path through `_load_grid_from_zarr` is also untested.
 
 ### C-117: Remote zarr downloads all spatial cells before region filter — [DEFER]
 `_load_grid_from_zarr` applies temporal and feature subsetting lazily (xarray isel/variable selection), but spatial subsetting (region → pgid set) happens AFTER full grid materialization in `load_dataset`. For remote stores, this means downloading all 259,200 cells even when only ~13,000 are needed (e.g., Africa). The spatial dimension is 360x720 per time step per feature — less impactful than temporal (which IS subsetted), but still ~20x more data than needed for typical region queries. xarray does not support efficient irregular spatial selection on chunked stores without rechunking. **Trigger: consumer queries a single country over a slow connection and complains about latency.**
@@ -1027,7 +1029,7 @@ GHS-BUILT-S test suite has 41 test functions vs 215 for ACLED + GHS-POP + PRIO-G
 
 Cross-ref: C-164 (WET-before-DRY raster code duplication), C-180 (no falsification tests for non-GHS-POP compilation/viewpoint paths).
 
-### C-177: `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) — [DEFER]
+### ~~C-177: `_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3) — [DEFER]~~
 
 | Field | Value |
 |-------|-------|
@@ -1365,7 +1367,7 @@ Demoted to tech-debt backlog 2026-06-12 (review-rr strategic). Downloaded once a
 | Source | test-review (2026-06-10) |
 | Location | `src/datafactory_priogrid/land_mask.py` |
 
-### C-284: ACLED event_type_filter implemented but absent from ADR-028 — [DEFER]
+### ~~C-284: ACLED event_type_filter implemented but absent from ADR-028 — [DEFER]~~
 
 `acled_v1.py` implements an `event_type_filter` capability (lines 138-151) using PyArrow `pc.is_in()` to conditionally filter events by type. The `AcledViewpointConfig` CIC lists the field (`event_type_filter: Optional[tuple[str, ...]]`), but ADR-028 does not mention filtering at all. ADR-028 characterizes the ACLED viewpoint as "no survivorship, no temporal distribution, no spatial transformation, no aggregation" — accurate, but the filtering capability is an undocumented behavior. A developer reading ADR-028 to understand what the ACLED viewpoint does would miss this capability entirely.
 
@@ -1378,6 +1380,104 @@ Demoted to tech-debt backlog 2026-06-12 (review-rr strategic). Downloaded once a
 | Location | `src/datafactory_viewpoint/builders/acled_v1.py:138-151`, `docs/ADRs/028_acled_consolidation_and_viewpoint.md` |
 
 Cross-ref: C-154 (ACLED feature config duplication — same builder, different concern).
+
+---
+
+### ~~C-285: No process lock prevents concurrent pipeline runs — data file overwrites possible~~
+
+`refresh_pipeline.sh` and individual `run_*_pipeline.py` scripts write grid.npy, assembled grid, and zarr stores using an atomic `.tmp` + rename pattern. Ledger writes are protected by `fcntl.flock`, but data file writes have no process-level lock. If two pipeline runs overlap (e.g., cron schedule fires while a previous run is still assembling), the atomic rename prevents file corruption but the slower run's output silently replaces the faster one's — potentially reverting a more recent assembly to an older state. The risk increases if cron intervals are shorter than pipeline duration (~7 min for full refresh).
+
+| Field | Value |
+|-------|-------|
+| ID | C-285 |
+| Tier | 3 — operational risk; not silent corruption (atomic writes are correct), but potential data staleness from race condition |
+| Source | repo-assimilation (2026-06-14), Phase 5 |
+| Trigger | Operator starts second pipeline run (cron overlap or manual re-trigger) while first is still writing grid.npy or assembled output |
+| Location | `scripts/refresh_pipeline.sh`, `scripts/assemble_grid.py` (atomic rename pattern), `scripts/export_zarr.py` |
+
+Cross-ref: C-267 (event_store.py crash-safety — same concern class, different data files), C-147 (no pipeline orchestrator).
+
+---
+
+### C-286: UCDP as implicit temporal anchor — source data silently dropped if UCDP contracts
+
+Assembly (`assemble_grid.py`) aligns all sources to UCDP's `time_steps.npy`. Each source's temporal offset is computed as the position where its start date matches in the UCDP timeline. If UCDP's temporal range contracts (e.g., early years removed in a future UCDP release), data from other sources that extends beyond UCDP's range is silently dropped — the offset computation produces an out-of-bounds index and the assertion `source_end <= assembled_length` fails. Conversely, if UCDP extends, other sources are zero-filled. The dependency on UCDP as the temporal anchor is implicit in the assembly script's control flow, not declared in any ADR or config.
+
+| Field | Value |
+|-------|-------|
+| ID | C-286 |
+| Tier | 3 — architectural coupling; UCDP temporal range contraction would break assembly for all sources with no recovery path except reverting UCDP |
+| Source | repo-assimilation (2026-06-14), Phase 3 |
+| Trigger | UCDP temporal range shortened (early years removed) or a new source with a start date before UCDP's start (1989) |
+| Location | `scripts/assemble_grid.py` (temporal alignment logic — `np.where(ucdp_time_steps == source_start)`) |
+
+Cross-ref: C-156 (ACLED zero-fill before 2020 — specific instance of the zero-fill direction of this problem).
+
+---
+
+### C-287: Assembly channel order is positional — hardcoded offsets fragile if feature counts change — [DEFER]
+
+`assemble_grid.py` concatenates features from all sources using cumulative positional offsets: UCDP occupies channels `[0:n_ucdp]`, ACLED occupies `[n_ucdp:n_ucdp+n_acled]`, and so on. If a source adds or removes a feature (e.g., ACLED adds a 9th event type), all subsequent channel offsets shift. The `feature_names.json` sidecar correctly records the actual feature order, so consumers using named feature access are safe. The risk is to the assembly script maintainer: a mismatch between the hardcoded assignment order and the feature names list would produce silent misalignment. The repetitive load-validate-align blocks (C-164 pattern #7) compound this — each source block independently computes its offset range.
+
+| Field | Value |
+|-------|-------|
+| ID | C-287 |
+| Tier | 4 — maintainability; consumers are protected by feature_names.json; risk is assembly-time misalignment |
+| Source | repo-assimilation (2026-06-14), Phase 3 |
+| Trigger | Source adds/removes a feature without updating channel offset logic in assemble_grid.py |
+| Location | `scripts/assemble_grid.py` (channel assignment block — positional offsets: `n_ucdp`, `n_ucdp + n_acled`, etc.) |
+
+**Test gap note (test-review 2026-06-14):** No test verifies that planted data values appear at the correct channel index. The synthetic pipeline test (`test_synthetic_pipeline.py`) checks that planted values exist somewhere in the grid but does not verify they are in the right feature channel. If two source arrays were swapped during assembly (e.g., GHS-POP data placed in V-Dem channels), all current tests would pass. A channel-data-name consistency test is needed.
+
+Cross-ref: C-146 (assembly logic in script — same file, testability concern), C-164 (WET debt — repetitive load-validate-align blocks), C-288 (cross-layer schema verification gap).
+
+---
+
+### ~~C-288: No cross-layer schema contract tests — viewpoint column rename silently breaks compilation~~
+
+No test verifies that a viewpoint builder's output Parquet schema matches the compilation layer's input expectations. The viewpoint produces columns like `date_month`, `latitude`, `longitude`, `best`, etc., and compilation reads those exact column names via `CompilationConfig.lat_field`, `lon_field`, `date_field`, and feature names. If a viewpoint builder renames an output column (e.g., `date_month` → `month_id`), compilation would raise `KeyError` at runtime — but no test catches this at the contract boundary. The SHDI and V-Dem paths use `PregriddedCompilationConfig` with `pgid_field`/`month_id_field`, adding a second contract surface. The gap is structural: each layer tests its own inputs and outputs, but no test validates that one layer's outputs are the other layer's valid inputs.
+
+| Field | Value |
+|-------|-------|
+| ID | C-288 |
+| Tier | 2 — silent pipeline breakage; no error until runtime compilation; affects every source path |
+| Source | test-review (2026-06-14), Kleppmann perspective |
+| Trigger | Developer renames a viewpoint output column without updating compilation input expectations, or vice versa |
+| Location | viewpoint builders (`src/datafactory_viewpoint/builders/*.py` output schemas) → compilation configs (`src/datafactory_compilation/compilation_config.py`, `pregridded_compilation.py` input field names) |
+
+Cross-ref: C-287 (assembly channel order — same class of positional/naming fragility at a different boundary), C-258 (conservation not enforced at boundaries — same inter-layer gap theme).
+
+---
+
+### C-289: cell_generator.py has zero characterization tests — spatial backbone unpinned
+
+`cell_generator.py` in `datafactory_priogrid` implements `pgid_to_latlon()`, `latlon_to_pgid()`, and `generate_grid()` — the spatial backbone for the entire PRIO-GRID system. These functions determine which geographic coordinates map to which grid cell ID. Despite being foundational, no test pins exact (lat, lon) → pgid mappings. The functions are tested only indirectly through `test_grid.py`'s higher-level tests (cell count, resolution, boundary checks). A change in rounding mode, boundary convention (cell-center vs cell-edge), or floating-point comparison would silently shift every grid placement, corrupting all downstream data. This is a characterization test gap, not a code bug — the functions work correctly today, but their exact behavior is not pinned.
+
+| Field | Value |
+|-------|-------|
+| ID | C-289 |
+| Tier | 3 — no current bug; risk is undetected regression from future modification |
+| Source | test-review (2026-06-14), Feathers perspective |
+| Trigger | Developer modifies pgid calculation, cell boundary logic, or rounding mode in `cell_generator.py` |
+| Location | `src/datafactory_priogrid/cell_generator.py` (`pgid_to_latlon`, `latlon_to_pgid`, `generate_grid`) |
+
+Cross-ref: C-268 (gaul_admin.py zero coverage — same "foundational module with zero characterization tests" pattern).
+
+---
+
+### C-290: datafactory_query has 25% module coverage — consumer API mostly untested — [DEFER]
+
+The `datafactory_query` package is the primary consumer-facing interface (`load_dataset()`), yet only 1 of 4 modules (`temporal.py`) has a dedicated test file. The untested modules: `dataset.py` (the `load_dataset()` entry point and `_load_grid_from_zarr` backend), `defaults.py` (`DEFAULT_REMOTE`, `get_last_valid_month_id`), `regions.py` (`list_regions`, `load_region_pgids`). While `test_query.py` (18 tests) exercises some `dataset.py` paths via integration, it only covers the npy backend — the remote zarr code path has zero happy-path tests (see C-116 note). Consumer-facing edge cases are untested: zero-grid response, stale grid without warning, empty feature list, unknown region name. This is the layer that downstream forecasting models directly depend on.
+
+| Field | Value |
+|-------|-------|
+| ID | C-290 |
+| Tier | 3 — consumer-facing API; failures affect model training; currently works but unguarded against regression |
+| Source | test-review (2026-06-14), Leveson perspective |
+| Trigger | Developer changes `load_dataset()`, region subsetting, or zarr backend without regression tests |
+| Location | `src/datafactory_query/dataset.py`, `src/datafactory_query/defaults.py`, `src/datafactory_query/regions.py` |
+
+Cross-ref: C-116 (remote zarr no retry + zero test coverage note), C-117 (remote zarr downloads all cells).
 
 ---
 
@@ -1409,17 +1509,21 @@ Resolved 2026-06-11. `docs/CICs/ShdiViewpointConfig.md` written with all 10 CIC 
 
 Cross-ref: C-265 (SHDI harvest not wired), C-164 (WET debt — SHDI is pattern instance).
 
-### D-30: Config validator extraction depth — utility functions vs declarative specs
+### ~~D-30~~: Config validator extraction depth — utility functions vs declarative specs — Resolved
 
 Martin/Beck advocate extracting simple utility functions (`validate_positive_int(value, name)`) that configs call in their `__post_init__`. Each config retains its `__post_init__` method but delegates to shared validators. This preserves the existing seam, is easy to TDD, and follows the proven extraction precedent (`raster_io.py`, `temporal.py`). Hickey advocates a declarative validation spec where configs declare constraints as data and a single generic validator applies them, eliminating `__post_init__` entirely for standard constraints. The declarative approach is more elegant but harder to reverse: once configs drop their `__post_init__`, re-adding them requires touching every config class. **Recommendation: start with utility functions (lower risk, reversible), promote to declarative specs only if utility approach still feels repetitive at 12+ sources.**
 
 **Source:** Expert code review of C-164 (2026-05-30). Cross-ref: C-07 (frozen dataclass pattern), C-164 (pattern #1).
 
-### D-31: Harvest script consolidation — single unified script vs thin delegates
+**Resolution (2026-06-14):** Recommendation accepted: utility functions first. Declarative validation specs deferred until 12+ sources make utility approach feel repetitive. Implementation deferred to WDI sprint.
+
+### ~~D-31~~: Harvest script consolidation — single unified script vs thin delegates — Resolved
 
 Ousterhout argues the 9 harvest scripts should be merged into one deep `harvest.py` with `--source acled|vdem|shdi|...` dispatch via the existing Registry. The scripts are shallow modules (pure boilerplate) and 9 copies of a shallow module is worse than 1. Nygard counters that a single script creates a single failure domain — a bug in shared argparse handling blocks all 9 sources. Feathers proposes a middle path: extract a shared `HarvestRunner` function, but keep source-specific scripts as 5-10 line thin delegates that call it. This satisfies both deep-module design (Ousterhout) and blast-radius isolation (Nygard). **No resolution yet — the middle path (shared runner + thin delegates) appears to be the pragmatic choice, but extraction hasn't started.**
 
 **Source:** Expert code review of C-164 (2026-05-30). Cross-ref: C-164 (pattern #8), C-230 (script layer zero tests).
+
+**Resolution (2026-06-14):** Middle path accepted: shared HarvestRunner function with source-specific scripts as thin delegates. Satisfies both deep-module design (Ousterhout) and blast-radius isolation (Nygard). Implementation deferred to WDI sprint.
 
 ### ~~D-32~~: `assembled` flag vs removing features from partially-integrated sources — Resolved #105
 

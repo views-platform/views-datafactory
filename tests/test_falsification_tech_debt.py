@@ -73,7 +73,8 @@ class TestTechDebtResolved:
         # Collect unique resolved C-IDs from all sources:
         # 1. Archive full entries (### C-xx)
         # 2. Archive early reference rows (| C-xx)
-        # 3. Active struck-through entries (### ~~C-xx~~)
+        # 3. Active struck-through detail sections (### ~~C-xx~~)
+        # 4. Active struck-through summary table rows (| ~~C-xx~~)
         resolved_ids: set[str] = set()
         resolved_ids.update(
             re.findall(r"^### (C-\d+)", archive_text, re.MULTILINE)
@@ -83,6 +84,11 @@ class TestTechDebtResolved:
         )
         resolved_ids.update(
             re.findall(r"^### ~~(C-\d+)", active_text, re.MULTILINE)
+        )
+        resolved_ids.update(
+            re.findall(
+                r"^\| ~~(C-\d+)~~", active_text, re.MULTILINE,
+            )
         )
         n_resolved_concerns = len(resolved_ids)
 
