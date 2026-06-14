@@ -492,6 +492,8 @@ def consolidate_ucdp(
         "dataset": DATASET_ID,
         "n_sources": len(source_manifest),
         "n_records_before": n_before,
+        "n_records_raw": n_new_raw,
+        "n_records_dedup_filtered": n_new_raw - n_new,
         "n_records_new": n_new,
         "n_records_total": n_total,
         "source_manifest": source_manifest,

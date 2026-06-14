@@ -150,16 +150,21 @@ def _check_year_overlap(
     return warnings
 
 
-def _dedup_by_event_id(table: pa.Table) -> pa.Table:
+def _dedup_by_event_id(
+    table: pa.Table,
+) -> tuple[pa.Table, int]:
     """Deduplicate table on event_id_cnty, keeping latest harvest.
 
     When the same event appears in multiple source files, keep the
     row with the latest _harvest_timestamp. ACLED has no vintage
     semantics — only the most recent version of each event matters.
+
+    Returns:
+        (deduped_table, n_removed)
     """
     eids = table.column("event_id_cnty").to_pylist()
     if len(eids) == len(set(eids)):
-        return table
+        return table, 0
 
     timestamps = table.column(
         "_harvest_timestamp"
@@ -179,7 +184,7 @@ def _dedup_by_event_id(table: pa.Table) -> pa.Table:
         n_removed,
         len(keep_indices),
     )
-    return table.take(keep_indices)
+    return table.take(keep_indices), n_removed
 
 
 @dataclass(frozen=True)
@@ -303,8 +308,16 @@ def consolidate_acled(
     new_table = pa.concat_tables(
         tagged_tables, promote_options="default"
     )
-    new_table = _dedup_by_event_id(new_table)
+    n_concat = new_table.num_rows
+    new_table, n_dedup_removed = _dedup_by_event_id(new_table)
     n_new_raw = new_table.num_rows
+
+    if n_concat != n_new_raw + n_dedup_removed:
+        raise RuntimeError(
+            f"Count conservation violation at cross-file dedup: "
+            f"concat ({n_concat}) != "
+            f"deduped ({n_new_raw}) + removed ({n_dedup_removed})"
+        )
 
     existing = read_store(config.output_path)
     if existing is not None:
@@ -341,6 +354,14 @@ def consolidate_acled(
         n_new = n_new_raw
         n_before = 0
 
+    expected_total = n_before + n_new
+    if combined.num_rows != expected_total:
+        raise RuntimeError(
+            f"Count conservation violation at store merge: "
+            f"expected {n_before} + {n_new} = {expected_total}, "
+            f"got {combined.num_rows}"
+        )
+
     output_digest = write_store(combined, config.output_path)
 
     n_total = combined.num_rows
@@ -353,7 +374,10 @@ def consolidate_acled(
     append_ledger_entry(config.ledger_path, {
         "dataset": DATASET_ID,
         "n_sources": len(source_manifest),
+        "n_records_concat": n_concat,
+        "n_dedup_removed": n_dedup_removed,
         "n_records_before": n_before,
+        "n_records_dedup_filtered": n_new_raw - n_new,
         "n_records_new": n_new,
         "n_records_total": n_total,
         "source_manifest": source_manifest,

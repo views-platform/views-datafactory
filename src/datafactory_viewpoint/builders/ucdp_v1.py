@@ -110,16 +110,17 @@ def build_ucdp_v1(
 
     # Read consolidated store
     table = pq.read_table(config.consolidated_path)
-    n_input = table.num_rows
-    if n_input == 0:
+    n_read = table.num_rows
+    if n_read == 0:
         err_msg = "Consolidated store is empty"
         logger.error(err_msg)
         raise ValueError(err_msg)
 
     logger.info(
         "Read consolidated store: %d events from %s",
-        n_input, config.consolidated_path,
+        n_read, config.consolidated_path,
     )
+    n_stale = 0
 
     # Filter stale non-annual versions (ADR-023).
     # Controlled by config.filter_stale_versions.
@@ -210,6 +211,13 @@ def build_ucdp_v1(
 
     # Update count after optional stale filtering
     n_input = table.num_rows
+
+    if n_read != n_input + n_stale:
+        raise RuntimeError(
+            f"Count conservation violation at stale filtering: "
+            f"read ({n_read}) != "
+            f"input ({n_input}) + stale ({n_stale})"
+        )
 
     # Look up strategies
     survivorship_fn = get_survivorship(config.survivorship_strategy)
@@ -308,6 +316,7 @@ def build_ucdp_v1(
     output_digest = compute_file_digest(config.output_path)
 
     n_output = len(output_columns["date_month"])
+    n_survivorship_discarded = n_input - n_groups
 
     # Record provenance
     append_ledger_entry(config.ledger_path, {
@@ -317,7 +326,11 @@ def build_ucdp_v1(
         "distribution_strategy": config.distribution_strategy,
         "filter_stale_versions": config.filter_stale_versions,
         "source_distribution_map": config.source_distribution_map,
+        "n_events_read": n_read,
+        "n_stale_filtered": n_stale,
         "n_events_input": n_input,
+        "n_groups": n_groups,
+        "n_survivorship_discarded": n_survivorship_discarded,
         "n_events_output": n_output,
         "n_summary_expanded": n_summary,
         "n_filtered": n_filtered,
