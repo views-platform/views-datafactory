@@ -63,6 +63,16 @@ Despite the same pipeline shape, the raster data has different properties:
 
 The unsigned integer dtype and absence of a nodata sentinel simplify the viewpoint: no nodata masking is needed. Zero genuinely means zero built-up surface.
 
+### Temporal interpolation is appropriate
+
+Built-up surface area, like population, is a continuous physical quantity sampled at five-year epochs. Between observations, the true value changes smoothly — buildings are constructed and demolished gradually, not in discrete jumps. Linear interpolation between epoch observations is therefore a defensible approximation, not an opinion about the data-generating process.
+
+This contrasts with sources where interpolation is inappropriate:
+- **V-Dem** (ADR-035): annual observations are real measurements, not sparse samples — step function preserves the data faithfully.
+- **SHDI** (ADR-042): 10.1% of cells are structurally missing (MNAR) — interpolation would fabricate values where no measurement infrastructure exists.
+
+GHS-BUILT-S has no structurally missing cells (every land pixel has a value), and the five-year gap is a sampling limitation, not a measurement gap. Interpolation fills the sampling gap without inventing observations.
+
 ### Consolidation: skipped
 
 Same rationale as GHS-POP (ADR-029): single release (R2023A) with nothing to merge or deduplicate. When JRC publishes R2024A, a consolidator can be added.

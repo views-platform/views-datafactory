@@ -192,6 +192,10 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
     SourceEntry(
         name="SHDI",
         required_env_vars=("GDL_API_TOKEN",),
+        features=(
+            "shdi_shdi", "shdi_healthindex",
+            "shdi_edindex", "shdi_incindex",
+        ),
         slo_hours=None,
         ledger_path=Path(
             "shdi/ingestion_ledger.jsonl"
@@ -265,6 +269,13 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         ),
     ),
     SourceEntry(
+        name="SHDI Viewpoint",
+        slo_hours=None,
+        ledger_path=Path(
+            "viewpoint/shdi_v1_ledger.jsonl"
+        ),
+    ),
+    SourceEntry(
         name="Compilation",
         slo_hours=744,
         ledger_path=Path(
@@ -297,6 +308,13 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         slo_hours=None,
         ledger_path=Path(
             "compilation/vdem_ledger.jsonl"
+        ),
+    ),
+    SourceEntry(
+        name="SHDI Compilation",
+        slo_hours=None,
+        ledger_path=Path(
+            "compilation/shdi_ledger.jsonl"
         ),
     ),
 )

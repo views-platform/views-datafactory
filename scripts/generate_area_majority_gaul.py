@@ -280,6 +280,61 @@ def _write_area_majority_parquet(
     }
 
 
+def _load_supplement_polygons(
+    geojson_path: Path,
+    field_names: list[str],
+) -> tuple[list, list[dict]]:
+    """Load supplement polygons from a GeoJSON file."""
+    data = json.loads(geojson_path.read_text())
+    polygons = []
+    records = []
+    for feature in data["features"]:
+        geom = shape(feature["geometry"])
+        polygons.append(geom)
+        props = feature["properties"]
+        records.append({fn: props[fn] for fn in field_names})
+
+    logger.info(
+        "Loaded %d supplement polygons from %s",
+        len(polygons), geojson_path.name,
+    )
+    return polygons, records
+
+
+def _filter_covered_supplements(
+    gaul_polys: list,
+    sup_polys: list,
+    sup_recs: list[dict],
+    *,
+    coverage_threshold: float = 0.5,
+) -> tuple[list, list[dict]]:
+    """Filter supplement polygons already covered by GAUL.
+
+    Returns (kept_polys, kept_recs) — only supplements where no GAUL
+    polygon covers more than ``coverage_threshold`` of their area.
+    """
+    gaul_tree = STRtree([make_valid(p) for p in gaul_polys])
+    kept_polys = []
+    kept_recs = []
+    for poly, rec in zip(sup_polys, sup_recs, strict=True):
+        hits = gaul_tree.query(poly, predicate="intersects")
+        covered = any(
+            make_valid(gaul_polys[int(i)]).intersection(poly).area
+            / poly.area > coverage_threshold
+            for i in hits
+        )
+        if covered:
+            logger.warning(
+                "Supplement %s skipped — GAUL already covers it "
+                "(source defect likely fixed)",
+                rec.get("gaul1_name", "unknown"),
+            )
+        else:
+            kept_polys.append(poly)
+            kept_recs.append(rec)
+    return kept_polys, kept_recs
+
+
 GAUL_CODE_VARIABLES = [
     ("gaul0_code", ["gaul0_code"]),
     ("gaul1_code", ["gaul1_code"]),
@@ -297,8 +352,13 @@ GAUL_NAME_VARIABLES = [
 def main(
     data_dir: Path = Path("data/raw/gaul_admin"),
     cache_dir: Path = Path("data/raw/gaul_admin/shapefiles"),
-    centroid_path: Path = Path("data/raw/priogrid/shapefile/priogrid_centroid.shp"),
-    ledger_path: Path = Path("provenance/gaul_admin/ingestion_ledger.jsonl"),
+    centroid_path: Path = Path(
+        "data/raw/priogrid/shapefile/priogrid_centroid.shp"
+    ),
+    ledger_path: Path = Path(
+        "provenance/gaul_admin/ingestion_ledger.jsonl"
+    ),
+    supplement_path: Path | None = None,
     *,
     dry_run: bool = False,
 ) -> list[dict]:
@@ -314,6 +374,27 @@ def main(
     all_field_names = [f for _, fields in GAUL_CODE_VARIABLES + GAUL_NAME_VARIABLES
                        for f in fields]
     polygons, records = _load_gaul_polygons(l2_shp_path, all_field_names)
+
+    if supplement_path is not None:
+        if not supplement_path.exists():
+            msg = f"Supplement file not found: {supplement_path}"
+            raise FileNotFoundError(msg)
+        sup_polys, sup_recs = _load_supplement_polygons(
+            supplement_path, all_field_names,
+        )
+        kept_polys, kept_recs = _filter_covered_supplements(
+            polygons, sup_polys, sup_recs,
+        )
+        if kept_polys:
+            polygons.extend(kept_polys)
+            records.extend(kept_recs)
+            logger.info("Appended %d supplement polygons", len(kept_polys))
+        elif sup_polys:
+            logger.warning(
+                "All %d supplement polygons skipped — GAUL now covers "
+                "them. Consider retiring the supplement (ADR-043).",
+                len(sup_polys),
+            )
 
     t0 = time.monotonic()
     cell_poly_map = _compute_cell_polygon_map(centroids, polygons)
@@ -393,6 +474,10 @@ if __name__ == "__main__":
         default=Path("provenance/gaul_admin/ingestion_ledger.jsonl"),
     )
     parser.add_argument(
+        "--supplement", type=Path, default=None,
+        help="GeoJSON supplement for missing GAUL polygons",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="Compute but don't write files",
     )
@@ -403,6 +488,7 @@ if __name__ == "__main__":
         cache_dir=args.cache_dir,
         centroid_path=args.centroid_path,
         ledger_path=args.ledger_path,
+        supplement_path=args.supplement,
         dry_run=args.dry_run,
     )
 

@@ -14,10 +14,11 @@
 #   6.  Compile GHS-POP grid (viewpoint + compile, no consolidation)
 #   7.  Compile GHS-BUILT-S grid (viewpoint + compile, no consolidation)
 #   8.  Compile V-Dem grid (viewpoint + compile, no consolidation)
-#   9.  Assemble all features (UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin)
-#  10.  Export to consumer formats (zarr, parquet)
-#  11.  Run health check
-#  12.  Verify remote data correctness (C-138)
+#   9.  Compile SHDI grid (viewpoint + compile, no consolidation — ADR-036)
+#  10.  Assemble all features (UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + SHDI + static + admin)
+#  11.  Export to consumer formats (zarr, parquet)
+#  12.  Run health check
+#  13.  Verify remote data correctness (C-138)
 #
 # Status page (EXIT trap):
 #   generate_status.py runs on exit — success or failure — via
@@ -151,13 +152,13 @@ echo "========================================"
 echo
 
 # Step 0: Pre-flight checks (credentials, disk space)
-CURRENT_STEP="0/13: Pre-flight checks"
+CURRENT_STEP="0/14: Pre-flight checks"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/preflight.py
 echo
 
 # Step 1: Harvest
-CURRENT_STEP="1/13: Harvest raw data"
+CURRENT_STEP="1/14: Harvest raw data"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/harvest_ucdp.py
 uv run python scripts/harvest_priogrid.py
@@ -165,7 +166,8 @@ uv run python scripts/harvest_shapefile.py
 uv run python scripts/harvest_gaul.py
 uv run python scripts/generate_area_majority_gaul.py \
     --data-dir data/raw/gaul_admin \
-    --ledger-path provenance/gaul_admin/ingestion_ledger.jsonl
+    --ledger-path provenance/gaul_admin/ingestion_ledger.jsonl \
+    --supplement data/raw/gaul_admin/supplement_azores.geojson
 uv run python scripts/harvest_acled.py
 uv run python scripts/harvest_ghspop.py
 uv run python scripts/harvest_ghsbuilts.py
@@ -174,73 +176,80 @@ uv run python scripts/harvest_shdi.py
 echo
 
 # Step 2: Consolidate
-CURRENT_STEP="2/13: Consolidate UCDP sources"
+CURRENT_STEP="2/14: Consolidate UCDP sources"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/consolidate_ucdp.py
 echo
 
 # Step 3: Build viewpoint
-CURRENT_STEP="3/13: Build viewpoint"
+CURRENT_STEP="3/14: Build viewpoint"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/build_viewpoint.py
 echo
 
 # Step 4: Compile UCDP grid
-CURRENT_STEP="4/13: Compile UCDP to PRIO-GRID"
+CURRENT_STEP="4/14: Compile UCDP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/compile_grid.py
 echo
 
 # Step 5: Compile ACLED grid
-CURRENT_STEP="5/13: Compile ACLED to PRIO-GRID"
+CURRENT_STEP="5/14: Compile ACLED to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_acled_pipeline.py --skip-to consolidate
 echo
 
 # Step 6: Compile GHS-POP grid (no consolidation — ADR-029)
-CURRENT_STEP="6/13: Compile GHS-POP to PRIO-GRID"
+CURRENT_STEP="6/14: Compile GHS-POP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_ghspop_pipeline.py --skip-to viewpoint
 echo
 
 # Step 7: Compile GHS-BUILT-S grid (no consolidation — ADR-034)
-CURRENT_STEP="7/13: Compile GHS-BUILT-S to PRIO-GRID"
+CURRENT_STEP="7/14: Compile GHS-BUILT-S to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_ghsbuilts_pipeline.py --skip-to viewpoint
 echo
 
 # Step 8: Compile V-Dem grid (no consolidation — ADR-035)
-CURRENT_STEP="8/13: Compile V-Dem to PRIO-GRID"
+CURRENT_STEP="8/14: Compile V-Dem to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/run_vdem_pipeline.py --skip-to viewpoint
 echo
 
-# Step 9: Assemble
-CURRENT_STEP="9/13: Assemble all features"
+# Step 9: Compile SHDI grid (no consolidation — ADR-036)
+CURRENT_STEP="9/14: Compile SHDI to PRIO-GRID"
+echo "── $CURRENT_STEP ──"
+uv run python scripts/run_shdi_pipeline.py --skip-to viewpoint
+echo
+
+# Step 10: Assemble
+CURRENT_STEP="10/14: Assemble all features"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/assemble_grid.py \
     --acled-grid data/compiled/acled \
     --ghspop-grid data/compiled/ghspop \
     --ghsbuilts-grid data/compiled/ghsbuilts \
     --vdem-grid data/compiled/vdem \
+    --shdi-grid data/compiled/shdi \
     --skip-if-unchanged
 echo
 
-# Step 10: Export
-CURRENT_STEP="10/13: Export consumer formats"
+# Step 11: Export
+CURRENT_STEP="11/14: Export consumer formats"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/export_zarr.py --skip-if-unchanged
 uv run python scripts/export_dataframe.py
 echo
 
-# Step 11: Health check
-CURRENT_STEP="11/13: Health check"
+# Step 12: Health check
+CURRENT_STEP="12/14: Health check"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/check_health.py
 echo
 
-# Step 12: Remote data verification (C-138)
-CURRENT_STEP="12/13: Verify remote data"
+# Step 13: Remote data verification (C-138)
+CURRENT_STEP="13/14: Verify remote data"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/verify_remote_data.py
 echo

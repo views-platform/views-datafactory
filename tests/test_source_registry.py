@@ -82,22 +82,25 @@ class TestPipelineSources:
         dupes = [f for f in set(all_feats) if all_feats.count(f) > 1]
         assert not dupes, f"duplicate features: {dupes}"
 
-    def test_feature_count_is_75(self) -> None:
+    def test_feature_count_is_79(self) -> None:
         """6 UCDP + 8 ACLED + 1 GHS-POP + 1 GHS-BUILT-S
-        + 22 V-Dem + 34 static + 3 admin = 75."""
-        assert len(get_all_features()) == 75
+        + 22 V-Dem + 4 SHDI + 34 static + 3 admin = 79."""
+        assert len(get_all_features()) == 79
 
-    def test_shdi_has_no_features(self) -> None:
-        """SHDI is harvester-only — no grid features."""
+    def test_shdi_has_four_features(self) -> None:
+        """SHDI contributes 4 features to the grid."""
         shdi = [s for s in PIPELINE_SOURCES if s.name == "SHDI"]
         assert len(shdi) == 1
-        assert shdi[0].features == ()
+        assert shdi[0].features == (
+            "shdi_shdi", "shdi_healthindex",
+            "shdi_edindex", "shdi_incindex",
+        )
 
-    def test_no_phantom_downstream_entries(self) -> None:
-        """No downstream entries for code that doesn't exist."""
+    def test_shdi_downstream_entries_exist(self) -> None:
+        """SHDI viewpoint and compilation layers are registered."""
         names = {s.name for s in PIPELINE_SOURCES}
-        assert "SHDI Viewpoint" not in names
-        assert "SHDI Compilation" not in names
+        assert "SHDI Viewpoint" in names
+        assert "SHDI Compilation" in names
 
     def test_ucdp_features_first(self) -> None:
         feats = get_all_features()

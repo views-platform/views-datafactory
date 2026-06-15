@@ -150,6 +150,15 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-041** -- Content-Addressed Skip for Assembly and Export
   SHA-256 digest comparison skips redundant assembly and export when inputs are unchanged. Key-set equality detects source addition/removal; output integrity check prevents serving corrupt artifacts. Extends ADR-032 pattern.
 
+- **ADR-042** -- SHDI Viewpoint Preserves NaN — Imputation Is a Consumer Concern
+  SHDI missing data (10.1% never-covered, 11.5% intermittent) is preserved as NaN. Primary missingness is MNAR (correlates with low development). Imputation is a modeling choice that belongs downstream. Consistent with all other viewpoints.
+
+- **ADR-043** -- GAUL Azores Supplement
+  FAO's GAUL 2024 is missing 4 of 9 Azorean islands from both L1 and L2. Supplemented with Natural Earth 10m polygons using synthetic negative GAUL codes. Self-deactivating guard removes supplement when FAO fixes the defect.
+
+- **ADR-044** -- Source Taxonomy: Reference Infrastructure vs Feature Sources
+  Data sources are classified as reference (define coordinate system: PRIO-GRID, GAUL) or feature (provide measured values: UCDP, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI). Feature sources may depend on reference sources for spatial/temporal mapping; feature sources must not depend on other feature sources. Refines ADR-014 Principle 6.
+
 These must comply with the constitutional ADRs above.
 
 ---

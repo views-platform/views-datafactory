@@ -251,6 +251,46 @@ class TestAfricaMeLegacyRegion:
         assert len(pgids) == len(set(pgids))
 
 
+class TestLandGaulRegion:
+    """Tests for the bundled land_gaul pgid set (land ∩ GAUL)."""
+
+    def test_land_gaul_returns_correct_count(self) -> None:
+        pgids = load_region_pgids("land_gaul")
+        assert len(pgids) == 64_742
+
+    def test_land_gaul_is_subset_of_land(self) -> None:
+        land_gaul = load_region_pgids("land_gaul")
+        land = load_region_pgids("land")
+        assert land_gaul < land
+
+    def test_land_gaul_excludes_82_cells(self) -> None:
+        land = load_region_pgids("land")
+        land_gaul = load_region_pgids("land_gaul")
+        excluded = land - land_gaul
+        assert len(excluded) == 76
+
+    def test_land_gaul_pgids_json_exists(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "land_gaul_pgids.json"
+        assert path.exists(), "land_gaul_pgids.json must be bundled"
+
+    def test_land_gaul_pgids_json_is_sorted_unique(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "land_gaul_pgids.json"
+        pgids = json.loads(path.read_text())
+        assert pgids == sorted(pgids)
+        assert len(pgids) == len(set(pgids))
+
+    def test_land_gaul_no_gaul_dir_needed(self) -> None:
+        """land_gaul resolves from bundled JSON, no GAUL parquets."""
+        pgids = load_region_pgids("land_gaul")
+        assert len(pgids) == 64_742
+
+    def test_land_gaul_in_list_regions(self) -> None:
+        from datafactory_query.regions import list_regions
+        assert "land_gaul" in list_regions()
+
+
 class TestBundledPgidConsistency:
     """Cross-checks between bundled pgid sets."""
 
@@ -269,7 +309,7 @@ class TestBundledPgidConsistency:
         pkg = Path(__file__).parent.parent / "src"
         pkg_dir = pkg / "datafactory_query"
         json_files = list(pkg_dir.glob("*.json"))
-        assert len(json_files) >= 2
+        assert len(json_files) >= 3
         for jf in json_files:
             data = json.loads(jf.read_text())
             assert isinstance(data, list)

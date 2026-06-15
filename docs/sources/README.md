@@ -11,11 +11,11 @@ Upstream data sources consumed by the VIEWS data factory. One card per source �
 | [GHS-POP](ghspop.md) | JRC/Copernicus | 1 | 1975–2030 | 5-year epochs | 30″ → 0.5° | ~2–3 year releases |
 | [GHS-BUILT-S](ghsbuilts.md) | JRC/Copernicus | 1 | 1975–2030 | 5-year epochs | 30″ → 0.5° | ~2–3 year releases |
 | [V-Dem](vdem.md) | V-Dem Institute | 22 | 1789– | Annual | Country → 0.5° | Annual |
-| [SHDI](shdi.md) | Global Data Lab | 0 (harvester only) | 1990–2023 | Annual | Admin-1 → 0.5° | Periodic |
+| [SHDI](shdi.md) | Global Data Lab | 4 | 1990–2023 | Annual | Admin-1 → 0.5° | Periodic |
 | [PRIO-GRID Static](priogrid_static.md) | PRIO | 34 | Static | — | 0.5° | One-time |
 | [GAUL Admin](gaul_admin.md) | FAO | 3 | Static | — | Polygons → 0.5° | One-time |
 
-**Total features in assembled grid:** 75
+**Total features in assembled grid:** 79
 
 ## Current status
 
