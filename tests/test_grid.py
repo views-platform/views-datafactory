@@ -914,3 +914,76 @@ class TestShapefileHarvesterConfigBeige:
 
         with pytest.raises(ValueError, match="max_retries"):
             ShapefileHarvesterConfig(max_retries=0)
+
+
+# ---------------------------------------------------------------------------
+# Characterization: spatial pinning (C-289, #198)
+# ---------------------------------------------------------------------------
+
+
+class TestGridCharacterization:
+    """Pin exact PRIO-GRID outputs to catch coordinate regressions."""
+
+    def test_total_cell_count(self) -> None:
+        pgids, lats, lons = generate_grid()
+        assert len(pgids) == 259_200
+        assert len(lats) == 259_200
+        assert len(lons) == 259_200
+
+    @pytest.mark.parametrize(
+        "pgid, expected_lat, expected_lon",
+        [
+            (215662, 59.75, 10.75),      # Oslo
+            (127874, -1.25, 36.75),      # Nairobi
+            (96027, -23.25, -46.75),     # Sao Paulo
+            (177569, 33.25, 44.25),      # Baghdad
+            (142412, 8.75, 105.75),      # SE Asia
+        ],
+    )
+    def test_known_pgid_to_latlon(
+        self, pgid: int, expected_lat: float, expected_lon: float,
+    ) -> None:
+        lat, lon = pgid_to_latlon(pgid)
+        assert float(lat) == expected_lat
+        assert float(lon) == expected_lon
+
+    @pytest.mark.parametrize(
+        "lat, lon, expected_pgid",
+        [
+            (59.9, 10.7, 215662),    # Oslo
+            (-1.3, 36.8, 127874),    # Nairobi
+            (-23.5, -46.6, 96027),   # Sao Paulo
+            (33.3, 44.4, 177569),    # Baghdad
+            (8.8, 105.9, 142412),    # SE Asia
+        ],
+    )
+    def test_known_latlon_to_pgid(
+        self, lat: float, lon: float, expected_pgid: int,
+    ) -> None:
+        result = latlon_to_pgid(lat, lon)
+        assert int(result) == expected_pgid
+
+    def test_roundtrip_identity(self) -> None:
+        diverse_pgids = [
+            1, 720, 259200, 258481,   # four corners
+            360, 129960, 129601,      # edges + center
+            142412, 215662, 127874,   # known locations
+        ]
+        for pgid in diverse_pgids:
+            lat, lon = pgid_to_latlon(pgid)
+            back = latlon_to_pgid(float(lat), float(lon))
+            assert int(back) == pgid, f"roundtrip failed for pgid={pgid}"
+
+    def test_bounding_box_dimensions(self) -> None:
+        pgids, west, south, east, north = generate_bounding_boxes()
+        widths = east - west
+        heights = north - south
+        assert np.allclose(widths, 0.5), "not all boxes are 0.5 deg wide"
+        assert np.allclose(heights, 0.5), "not all boxes are 0.5 deg tall"
+
+    def test_grid_covers_full_globe(self) -> None:
+        pgids, west, south, east, north = generate_bounding_boxes()
+        assert float(west.min()) == pytest.approx(-180.0)
+        assert float(east.max()) == pytest.approx(180.0)
+        assert float(south.min()) == pytest.approx(-90.0)
+        assert float(north.max()) == pytest.approx(90.0)

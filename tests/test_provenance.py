@@ -7,6 +7,7 @@ categories per ADR-005.
 from __future__ import annotations
 
 import json
+import unittest.mock
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from datafactory_provenance import (
     last_digest,
     last_digest_for_version,
 )
+from datafactory_provenance.digests_and_ledgers import _rotate_ledger
 
 # ============================================================
 # Green team — correctness
@@ -331,3 +333,82 @@ class TestComputeContentDigestRed:
     def test_unknown_algorithm_raises(self) -> None:
         with pytest.raises(ValueError):
             compute_content_digest(b"test", algorithm="not_a_real_algo")
+
+
+# ---------------------------------------------------------------------------
+# Characterization: ledger rotation (C-270, #197)
+# ---------------------------------------------------------------------------
+
+
+class TestRotateLedgerCharacterization:
+    """Pin _rotate_ledger behavior to catch audit-trail regressions."""
+
+    _PATCH_THRESHOLD = unittest.mock.patch(
+        "datafactory_provenance.digests_and_ledgers._MAX_LEDGER_BYTES", 1024,
+    )
+    _LINE = '{"op": "test"}\n'
+
+    def _fill_ledger(self, path: Path, nbytes: int) -> str:
+        repeats = (nbytes // len(self._LINE)) + 1
+        content = self._LINE * repeats
+        path.write_text(content)
+        return content
+
+    @_PATCH_THRESHOLD
+    def test_rotation_creates_dot1_file(self, tmp_path: Path) -> None:
+        ledger = tmp_path / "provenance.jsonl"
+        original = self._fill_ledger(ledger, 2048)
+
+        _rotate_ledger(ledger)
+
+        dot1 = tmp_path / "provenance.1.jsonl"
+        assert dot1.exists()
+        assert dot1.read_text() == original
+
+    @_PATCH_THRESHOLD
+    def test_rotation_shifts_existing_backups(self, tmp_path: Path) -> None:
+        ledger = tmp_path / "provenance.jsonl"
+        self._fill_ledger(ledger, 2048)
+
+        content1 = "backup-1\n"
+        content2 = "backup-2\n"
+        (tmp_path / "provenance.1.jsonl").write_text(content1)
+        (tmp_path / "provenance.2.jsonl").write_text(content2)
+
+        _rotate_ledger(ledger)
+
+        assert (tmp_path / "provenance.2.jsonl").read_text() == content1
+        assert (tmp_path / "provenance.3.jsonl").read_text() == content2
+
+    @_PATCH_THRESHOLD
+    def test_rotation_caps_at_dot10(self, tmp_path: Path) -> None:
+        ledger = tmp_path / "provenance.jsonl"
+        self._fill_ledger(ledger, 2048)
+
+        content9 = "backup-9\n"
+        (tmp_path / "provenance.9.jsonl").write_text(content9)
+
+        _rotate_ledger(ledger)
+
+        assert (tmp_path / "provenance.10.jsonl").read_text() == content9
+        assert not (tmp_path / "provenance.11.jsonl").exists()
+
+    @_PATCH_THRESHOLD
+    def test_no_rotation_below_threshold(self, tmp_path: Path) -> None:
+        ledger = tmp_path / "provenance.jsonl"
+        ledger.write_text(self._LINE)
+
+        append_ledger_entry(ledger, {"op": "small"})
+
+        assert not (tmp_path / "provenance.1.jsonl").exists()
+
+    @_PATCH_THRESHOLD
+    def test_original_ledger_absent_after_rotation(self, tmp_path: Path) -> None:
+        ledger = tmp_path / "provenance.jsonl"
+        self._fill_ledger(ledger, 2048)
+
+        _rotate_ledger(ledger)
+
+        assert not ledger.exists(), (
+            "original ledger should be renamed to .1, not left in place"
+        )
