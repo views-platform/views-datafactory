@@ -1,8 +1,8 @@
-"""Characterization tests for pipeline runner scripts (C-164, Pattern #8 prep).
+"""Characterization tests for pipeline runner scripts (C-230, Pattern #8 prep).
 
 These tests verify the CLI interface of each pipeline runner script
-without executing actual pipeline steps.  They exist so that PR-5
-(PipelineRunner extraction) can verify that refactoring preserves
+without executing actual pipeline steps.  They exist so that
+PipelineRunner extraction can verify that refactoring preserves
 behavior.
 """
 
@@ -148,6 +148,13 @@ class TestSkipToFlag:
                 f"V-Dem pipeline missing --skip-to choice: {choice}"
             )
 
+    def test_shdi_skip_to_choices(self) -> None:
+        result = _run_help("run_shdi_pipeline")
+        for choice in ("viewpoint", "compile"):
+            assert choice in result.stdout, (
+                f"SHDI pipeline missing --skip-to choice: {choice}"
+            )
+
 
 # ── Invalid arguments rejected ───────────────────────────────────────
 
@@ -249,6 +256,10 @@ class TestStepsTupleContent:
 
     def test_vdem_steps(self) -> None:
         mod = _load_script("run_vdem_pipeline")
+        assert mod.STEPS == ("harvest", "viewpoint", "compile")
+
+    def test_shdi_steps(self) -> None:
+        mod = _load_script("run_shdi_pipeline")
         assert mod.STEPS == ("harvest", "viewpoint", "compile")
 
 

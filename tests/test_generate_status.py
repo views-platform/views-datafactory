@@ -553,54 +553,6 @@ class TestScriptStructure:
 # ── Characterization: registry alignment (C-236, #203) ─────────────────
 
 
-# ── Characterization: delivery contract (C-237, #204) ──────────────────
-
-
-class TestDeliveryContract:
-    """Generated HTML must contain all sources and metadata."""
-
-    @staticmethod
-    def _dummy_results() -> dict[str, dict[str, dict]]:
-        return {
-            source: {
-                stage: {"status": "ok", "timestamp": "2026-01-01T00:00:00"}
-                for stage in ALL_STAGES
-            }
-            for source in SOURCE_STAGES
-        }
-
-    def test_output_flag_writes_html(self, tmp_path: Path) -> None:
-        html = generate_html(
-            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
-        )
-        out = tmp_path / "status.html"
-        out.write_text(html)
-        assert out.exists()
-        content = out.read_text()
-        assert "<html" in content
-        assert "</html>" in content
-
-    def test_html_contains_all_sources(self) -> None:
-        html = generate_html(
-            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
-        )
-        for source in SOURCE_STAGES:
-            assert source in html, (
-                f"Generated HTML missing source {source!r}"
-            )
-
-    def test_html_contains_generation_timestamp(self) -> None:
-        now = datetime(2026, 6, 15, 12, 0, 0, tzinfo=UTC)
-        html = generate_html(self._dummy_results(), now)
-        assert "2026-06-15" in html
-
-    def test_html_contains_feature_count(self) -> None:
-        html = generate_html(
-            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
-        )
-        assert "79 features" in html
-
-
 class TestSourceRegistryAlignment:
     """SOURCE_STAGES must stay aligned with PIPELINE_SOURCES."""
 
@@ -652,3 +604,51 @@ class TestSourceRegistryAlignment:
                 f"PIPELINE_SOURCES entry for "
                 f"{len(assembly.features)} features"
             )
+
+
+# ── Characterization: delivery contract (C-237, #204) ──────────────────
+
+
+class TestDeliveryContract:
+    """Generated HTML must contain all sources and metadata."""
+
+    @staticmethod
+    def _dummy_results() -> dict[str, dict[str, dict]]:
+        return {
+            source: {
+                stage: {"status": "ok", "timestamp": "2026-01-01T00:00:00"}
+                for stage in ALL_STAGES
+            }
+            for source in SOURCE_STAGES
+        }
+
+    def test_output_flag_writes_html(self, tmp_path: Path) -> None:
+        html = generate_html(
+            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
+        )
+        out = tmp_path / "status.html"
+        out.write_text(html)
+        assert out.exists()
+        content = out.read_text()
+        assert "<html" in content
+        assert "</html>" in content
+
+    def test_html_contains_all_sources(self) -> None:
+        html = generate_html(
+            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
+        )
+        for source in SOURCE_STAGES:
+            assert source in html, (
+                f"Generated HTML missing source {source!r}"
+            )
+
+    def test_html_contains_generation_timestamp(self) -> None:
+        now = datetime(2026, 6, 15, 12, 0, 0, tzinfo=UTC)
+        html = generate_html(self._dummy_results(), now)
+        assert "2026-06-15" in html
+
+    def test_html_contains_feature_count(self) -> None:
+        html = generate_html(
+            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
+        )
+        assert "79 features" in html

@@ -146,7 +146,7 @@ class TestConsumerProvenance:
             assert pq_path.exists(), f"{path_str} not found"
             assert compute_file_digest(pq_path) == digest
 
-    def test_skip_on_digest_mismatch_aborts(
+    def test_digest_mismatch_returns_nonzero(
         self, tmp_path: Path,
     ) -> None:
         data_dir = tmp_path / "assembled"
