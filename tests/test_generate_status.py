@@ -548,3 +548,107 @@ class TestScriptStructure:
     def test_has_sys_exit_main(self) -> None:
         source = SCRIPT.read_text()
         assert "sys.exit(main())" in source
+
+
+# ── Characterization: registry alignment (C-236, #203) ─────────────────
+
+
+# ── Characterization: delivery contract (C-237, #204) ──────────────────
+
+
+class TestDeliveryContract:
+    """Generated HTML must contain all sources and metadata."""
+
+    @staticmethod
+    def _dummy_results() -> dict[str, dict[str, dict]]:
+        return {
+            source: {
+                stage: {"status": "ok", "timestamp": "2026-01-01T00:00:00"}
+                for stage in ALL_STAGES
+            }
+            for source in SOURCE_STAGES
+        }
+
+    def test_output_flag_writes_html(self, tmp_path: Path) -> None:
+        html = generate_html(
+            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
+        )
+        out = tmp_path / "status.html"
+        out.write_text(html)
+        assert out.exists()
+        content = out.read_text()
+        assert "<html" in content
+        assert "</html>" in content
+
+    def test_html_contains_all_sources(self) -> None:
+        html = generate_html(
+            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
+        )
+        for source in SOURCE_STAGES:
+            assert source in html, (
+                f"Generated HTML missing source {source!r}"
+            )
+
+    def test_html_contains_generation_timestamp(self) -> None:
+        now = datetime(2026, 6, 15, 12, 0, 0, tzinfo=UTC)
+        html = generate_html(self._dummy_results(), now)
+        assert "2026-06-15" in html
+
+    def test_html_contains_feature_count(self) -> None:
+        html = generate_html(
+            self._dummy_results(), datetime(2026, 1, 1, tzinfo=UTC),
+        )
+        assert "79 features" in html
+
+
+class TestSourceRegistryAlignment:
+    """SOURCE_STAGES must stay aligned with PIPELINE_SOURCES."""
+
+    def test_all_pipeline_sources_in_status(self) -> None:
+        registry_with_features = {
+            s.name
+            for s in PIPELINE_SOURCES
+            if s.features
+        }
+        status_features: set[str] = set()
+        for stages in SOURCE_STAGES.values():
+            assembly = stages.get("assembly")
+            if assembly and assembly.features:
+                status_features.update(assembly.features)
+
+        for name in registry_with_features:
+            src = [s for s in PIPELINE_SOURCES if s.name == name][0]
+            for feat in src.features:
+                assert feat in status_features, (
+                    f"PIPELINE_SOURCES[{name!r}] feature "
+                    f"{feat!r} not in any SOURCE_STAGES assembly"
+                )
+
+    def test_no_orphan_status_sources(self) -> None:
+        for source_key in SOURCE_STAGES:
+            stages = SOURCE_STAGES[source_key]
+            assembly = stages.get("assembly")
+            if assembly and assembly.features:
+                found = any(
+                    s.features == assembly.features
+                    for s in PIPELINE_SOURCES
+                )
+                assert found, (
+                    f"SOURCE_STAGES[{source_key!r}] assembly "
+                    f"features not found in PIPELINE_SOURCES"
+                )
+
+    def test_feature_counts_match(self) -> None:
+        for source_key, stages in SOURCE_STAGES.items():
+            assembly = stages.get("assembly")
+            if not assembly or not assembly.features:
+                continue
+            matched = [
+                s for s in PIPELINE_SOURCES
+                if s.features == assembly.features
+            ]
+            assert matched, (
+                f"SOURCE_STAGES[{source_key!r}]: no matching "
+                f"PIPELINE_SOURCES entry for "
+                f"{len(assembly.features)} features"
+            )

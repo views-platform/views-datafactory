@@ -208,3 +208,62 @@ class TestSourceSpecificArgs:
             timeout=10,
         )
         assert "--variables" in result.stdout
+
+
+# ── Characterization: CLI contracts (C-230, #201) ──────────────────────
+
+_SOURCE_KEYWORDS: dict[str, str] = {
+    "harvest_ucdp": "ucdp",
+    "harvest_acled": "acled",
+    "harvest_ghspop": "ghspop",
+    "harvest_ghsbuilts": "ghsbuilts",
+    "harvest_priogrid": "priogrid",
+    "harvest_gaul": "gaul",
+    "harvest_vdem": "vdem",
+    "harvest_shdi": "shdi",
+    "harvest_shapefile": "shapefile",
+}
+
+
+class TestHarvestBanner:
+    """--help output must mention the source and work without network."""
+
+    @pytest.mark.parametrize("script", HARVEST_SCRIPTS)
+    def test_help_output_contains_source_name(
+        self, script: str,
+    ) -> None:
+        result = subprocess.run(
+            [sys.executable, str(SCRIPTS_DIR / f"{script}.py"), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        keyword = _SOURCE_KEYWORDS[script]
+        assert keyword in result.stdout.lower(), (
+            f"{script} --help does not mention '{keyword}'"
+        )
+
+    @pytest.mark.parametrize("script", HARVEST_SCRIPTS)
+    def test_help_no_network_required(self, script: str) -> None:
+        result = subprocess.run(
+            [sys.executable, str(SCRIPTS_DIR / f"{script}.py"), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, (
+            f"{script} --help failed (rc={result.returncode})"
+        )
+
+
+class TestHarvestCompleteness:
+    """Test list must match the actual scripts/ glob."""
+
+    def test_all_harvest_scripts_covered(self) -> None:
+        on_disk = sorted(
+            p.stem for p in SCRIPTS_DIR.glob("harvest_*.py")
+        )
+        assert on_disk == sorted(HARVEST_SCRIPTS), (
+            f"Test list mismatch — on disk: {on_disk}, "
+            f"in tests: {sorted(HARVEST_SCRIPTS)}"
+        )

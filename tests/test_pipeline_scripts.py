@@ -24,6 +24,7 @@ PIPELINE_SCRIPTS: list[str] = [
     "run_ghspop_pipeline",
     "run_ghsbuilts_pipeline",
     "run_vdem_pipeline",
+    "run_shdi_pipeline",
 ]
 
 
@@ -299,4 +300,31 @@ class TestPipelineConventions:
         mod = _load_script(script)
         assert mod.STEPS[-1] == "compile", (
             f"{script} STEPS should end with 'compile'"
+        )
+
+
+# ── Characterization: pipeline CLI contracts (C-230, #202) ─────────────
+
+
+class TestPipelineStepsContent:
+    """STEPS tuple must have meaningful content."""
+
+    @pytest.mark.parametrize("script", PIPELINE_SCRIPTS)
+    def test_steps_are_nonempty(self, script: str) -> None:
+        mod = _load_script(script)
+        assert len(mod.STEPS) >= 2, (
+            f"{script}.STEPS has {len(mod.STEPS)} entries, need >= 2"
+        )
+
+
+class TestPipelineCompleteness:
+    """Test list must match the actual scripts/ glob."""
+
+    def test_all_pipeline_scripts_covered(self) -> None:
+        on_disk = sorted(
+            p.stem for p in SCRIPTS_DIR.glob("run_*_pipeline.py")
+        )
+        assert on_disk == sorted(PIPELINE_SCRIPTS), (
+            f"Test list mismatch — on disk: {on_disk}, "
+            f"in tests: {sorted(PIPELINE_SCRIPTS)}"
         )

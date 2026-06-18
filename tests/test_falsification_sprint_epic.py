@@ -65,16 +65,11 @@ class TestF3EventValidationInputTypes:
 class TestF6AdrNumberAssigned:
     """Issue #200 must specify a concrete ADR number, not 0XX."""
 
-    def test_next_adr_number_is_045(self) -> None:
+    def test_adr_045_exists(self) -> None:
         from pathlib import Path
 
-        existing = sorted(Path("docs/ADRs").glob("[0-9]*.md"))
-        last_num = int(existing[-1].name.split("_")[0])
-        next_num = last_num + 1
-        assert next_num == 45, (
-            f"Next ADR number should be {next_num:03d} — "
-            f"update issue #200 from '0XX' to '{next_num:03d}'"
-        )
+        adr = Path("docs/ADRs/045_data_soundness_invariants.md")
+        assert adr.exists(), "ADR-045 not found — issue #200 requires it"
 
 
 class TestF8RegisterHeaderAccuracy:
