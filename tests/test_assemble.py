@@ -535,3 +535,113 @@ class TestAssemblyRoundTrip:
         # Admin channel
         assert result[0, 0, 0, 6] == -1.0  # missing
         assert result[0, 1, 1, 6] == 42.0  # placed
+
+
+# ---- Registry ↔ Assembly sync (C-293, #208) ----
+
+
+class TestRegistryAssemblySync:
+    """Guard tests: source_registry.py and assemble_grid.py stay in sync.
+
+    The registry declares which sources contribute features and how many.
+    The assembly script concatenates per-source grids into the final
+    [T, H, W, C] array. These tests catch silent divergence.
+    """
+
+    def test_source_ordering_matches_registry(self) -> None:
+        """Assembly concatenation order matches registry source order.
+
+        Assembly concatenates: ucdp, acled, ghspop, ghsbuilts, vdem,
+        shdi, static, admin. The set of source names contributing
+        features must match those in PIPELINE_SOURCES.
+        """
+        from datafactory_provenance.source_registry import (
+            PIPELINE_SOURCES,
+        )
+
+        registry_sources_with_features = [
+            s.name for s in PIPELINE_SOURCES if s.features
+        ]
+        assembly_source_names = [
+            "UCDP Annual", "ACLED", "GHS-POP", "GHS-BUILT-S",
+            "V-Dem", "SHDI", "PRIO-GRID Static", "GAUL Admin",
+        ]
+
+        assert set(registry_sources_with_features) == set(
+            assembly_source_names
+        ), (
+            f"Registry sources with features: "
+            f"{registry_sources_with_features}, "
+            f"assembly expects: {assembly_source_names}"
+        )
+
+    def test_per_source_feature_count_consistent(self) -> None:
+        """Per-source feature counts from registry match expectations."""
+        from datafactory_provenance.source_registry import (
+            PIPELINE_SOURCES,
+        )
+
+        expected_counts = {
+            "UCDP Annual": 6,
+            "ACLED": 8,
+            "GHS-POP": 1,
+            "GHS-BUILT-S": 1,
+            "PRIO-GRID Static": 34,
+            "V-Dem": 22,
+            "SHDI": 4,
+            "GAUL Admin": 3,
+        }
+
+        for source in PIPELINE_SOURCES:
+            if source.name in expected_counts:
+                assert len(source.features) == expected_counts[
+                    source.name
+                ], (
+                    f"{source.name}: expected "
+                    f"{expected_counts[source.name]} features, "
+                    f"got {len(source.features)}"
+                )
+
+    def test_total_feature_count_79(self) -> None:
+        """Total features across all sources is 79."""
+        from datafactory_provenance.source_registry import (
+            get_all_features,
+        )
+
+        all_features = get_all_features()
+        assert len(all_features) == 79, (
+            f"Expected 79 total features, got {len(all_features)}"
+        )
+
+    def test_feature_names_match_registry(self) -> None:
+        """All feature names are unique and present in registry."""
+        from datafactory_provenance.source_registry import (
+            get_all_features,
+        )
+
+        all_features = get_all_features()
+        assert len(all_features) == len(set(all_features)), (
+            "Duplicate feature names in registry"
+        )
+
+        admin_fields = _assembly_mod.AssemblyConfig().admin_numeric_fields
+        for field in admin_fields:
+            assert field in all_features, (
+                f"Admin field '{field}' not in registry features"
+            )
+
+    def test_admin_numeric_fields_match_registry(self) -> None:
+        """AssemblyConfig.admin_numeric_fields matches GAUL Admin features."""
+        from datafactory_provenance.source_registry import (
+            PIPELINE_SOURCES,
+        )
+
+        gaul_entry = next(
+            s for s in PIPELINE_SOURCES if s.name == "GAUL Admin"
+        )
+        config_fields = _assembly_mod.AssemblyConfig().admin_numeric_fields
+
+        assert set(config_fields) == set(gaul_entry.features), (
+            f"Config admin_numeric_fields {config_fields} != "
+            f"registry GAUL Admin features {gaul_entry.features}"
+        )
