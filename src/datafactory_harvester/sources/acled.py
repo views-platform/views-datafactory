@@ -566,9 +566,6 @@ def _fetch_single_year(
         FIELD_TYPES,
         digest_fields=DIGEST_FIELDS,
     )
-    validate_dgp_assumptions(
-        events, ACLED_DGP_CHECKS, source_name="ACLED",
-    )
 
     min_date, max_date = date_range(
         events, field_name="event_date"
@@ -603,6 +600,10 @@ def _fetch_single_year(
             "warnings": validation.warnings,
         })
         raise ValueError(err_msg)
+
+    validate_dgp_assumptions(
+        events, ACLED_DGP_CHECKS, source_name="ACLED",
+    )
 
     comparison: ComparisonResult | None = None
     if snap_path.exists():

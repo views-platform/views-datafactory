@@ -419,9 +419,6 @@ def fetch_ucdp_annual(
 
     # Validate
     validation = validate_events(events, REQUIRED_FIELDS, FIELD_TYPES)
-    validate_dgp_assumptions(
-        events, UCDP_DGP_CHECKS, source_name="UCDP-annual",
-    )
 
     # Compute actual date coverage
     min_date, max_date = date_range(events)
@@ -452,6 +449,10 @@ def fetch_ucdp_annual(
             "warnings": validation.warnings,
         })
         raise ValueError(err_msg)
+
+    validate_dgp_assumptions(
+        events, UCDP_DGP_CHECKS, source_name="UCDP-annual",
+    )
 
     # Compare with previous snapshot
     comparison: ComparisonResult | None = None
