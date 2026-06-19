@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.falsification
+
 # --- G1: Three-way path disagreement (hard falsification) ---
 
 class TestG1PathDisagreement:

@@ -210,7 +210,9 @@
     "distance_deg": 0.2593,
     "search_radius": 0.5,
     "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
-    "resolution": "accepted_uncovered"
+    "resolution": "accepted_uncovered",
+    "unit_verified": true,
+    "verification_note": "GAUL 2024 L1 contains 'Western' polygon for Solomon Islands (1 of 10 admin-1 units). Polygon does not reach cell centroid at 0.5-deg resolution. Genuine resolution gap, not source defect."
   },
   {
     "gid": 121625,
@@ -353,7 +355,9 @@
     "distance_deg": 0.309,
     "search_radius": 0.5,
     "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
-    "resolution": "accepted_uncovered"
+    "resolution": "accepted_uncovered",
+    "unit_verified": true,
+    "verification_note": "GAUL 2024 L1 contains Nauru polygon (admin1 = 'Administrative Unit Not Available' — single-unit nation). Polygon does not reach cell centroid at 0.5-deg resolution. Genuine resolution gap, not source defect."
   },
   {
     "gid": 130919,
@@ -392,7 +396,9 @@
     "distance_deg": 0.3297,
     "search_radius": 0.5,
     "reclassification_rationale": "Cell is within 0.5 deg of a GAUL polygon but the polygon does not cover the cell at 0.5-degree resolution. This is a grid-resolution artifact, not an FAO source defect. True source defects (ADR-043 Azores) have entire named landmasses absent from the shapefile.",
-    "resolution": "accepted_uncovered"
+    "resolution": "accepted_uncovered",
+    "unit_verified": true,
+    "verification_note": "GAUL 2024 L2 contains 'Kiritimati' polygon under 'Line Is. & Phoenix' admin-1. Polygon does not reach cell centroid at 0.5-deg resolution. Genuine resolution gap, not source defect."
   },
   {
     "gid": 146125,

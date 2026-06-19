@@ -17,6 +17,10 @@ from __future__ import annotations
 
 import subprocess
 
+import pytest
+
+pytestmark = pytest.mark.falsification
+
 
 class TestF1BranchPushed:
     """Sprint branch must be pushed to origin before execution begins."""

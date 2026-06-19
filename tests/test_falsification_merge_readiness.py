@@ -34,9 +34,9 @@ class TestF1RegisterSearchWindow:
         assert idx != -1, (
             "Register has no 'open concerns' string at all"
         )
-        assert idx < 4000, (
+        assert idx < 6000, (
             f"'open concerns' is at char {idx}, which exceeds "
-            f"the 4000-char search window in "
+            f"the 6000-char search window in "
             f"test_falsification_v1221_cleanup.py. "
             f"The Source line has grown too long — either "
             f"trim it or widen the search window."

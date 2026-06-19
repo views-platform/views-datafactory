@@ -15,6 +15,8 @@ import subprocess
 
 import pytest
 
+pytestmark = pytest.mark.falsification
+
 # --- H2: Round 1 hard falsification (F3) still unresolved ---
 
 class TestH2PriorFalsificationResolved:
