@@ -320,22 +320,50 @@ def consolidate_acled(
         )
 
     existing = read_store(config.output_path)
+    n_replaced = 0
     if existing is not None:
         n_before = existing.num_rows
 
-        existing_keys = set(
-            existing.column("event_id_cnty").to_pylist()
-        )
+        existing_eids = existing.column(
+            "event_id_cnty"
+        ).to_pylist()
+        existing_ts = existing.column(
+            "_harvest_timestamp"
+        ).to_pylist()
+        existing_lookup: dict[str, tuple[int, str]] = {}
+        for i, (eid, ts) in enumerate(
+            zip(existing_eids, existing_ts, strict=True)
+        ):
+            existing_lookup[eid] = (i, ts)
 
         new_ids = new_table.column("event_id_cnty").to_pylist()
+        new_ts = new_table.column(
+            "_harvest_timestamp"
+        ).to_pylist()
 
-        keep_mask = [
-            eid not in existing_keys for eid in new_ids
-        ]
-        new_filtered = new_table.filter(keep_mask)
-        n_new = new_filtered.num_rows
+        new_keep_indices: list[int] = []
+        replace_eids: set[str] = set()
+        for j, (eid, ts) in enumerate(
+            zip(new_ids, new_ts, strict=True)
+        ):
+            if eid not in existing_lookup:
+                new_keep_indices.append(j)
+            elif ts > existing_lookup[eid][1]:
+                new_keep_indices.append(j)
+                replace_eids.add(eid)
 
-        if n_new > 0:
+        n_replaced = len(replace_eids)
+
+        if replace_eids:
+            keep_existing_mask = [
+                eid not in replace_eids for eid in existing_eids
+            ]
+            existing = existing.filter(keep_existing_mask)
+
+        n_new = len(new_keep_indices) - n_replaced
+
+        if new_keep_indices:
+            new_filtered = new_table.take(new_keep_indices)
             combined = pa.concat_tables(
                 [existing, new_filtered],
                 promote_options="default",
@@ -344,21 +372,32 @@ def consolidate_acled(
             combined = existing
 
         logger.info(
-            "Dedup: %d raw, %d already in store, %d new added",
+            "Dedup: %d raw, %d already in store, "
+            "%d replaced, %d new added",
             n_new_raw,
-            n_new_raw - n_new,
+            n_new_raw - len(new_keep_indices),
+            n_replaced,
             n_new,
         )
+        if n_replaced > 0:
+            logger.warning(
+                "Cross-run replacement: %d events updated "
+                "to newer version",
+                n_replaced,
+            )
+        n_kept_from_new = len(new_keep_indices)
     else:
         combined = new_table
         n_new = n_new_raw
         n_before = 0
+        n_kept_from_new = n_new_raw
 
-    expected_total = n_before + n_new
+    expected_total = (n_before - n_replaced) + n_kept_from_new
     if combined.num_rows != expected_total:
         raise RuntimeError(
             f"Count conservation violation at store merge: "
-            f"expected {n_before} + {n_new} = {expected_total}, "
+            f"expected ({n_before} - {n_replaced}) + "
+            f"{n_kept_from_new} = {expected_total}, "
             f"got {combined.num_rows}"
         )
 
@@ -377,7 +416,8 @@ def consolidate_acled(
         "n_records_concat": n_concat,
         "n_dedup_removed": n_dedup_removed,
         "n_records_before": n_before,
-        "n_records_dedup_filtered": n_new_raw - n_new,
+        "n_records_dedup_filtered": n_new_raw - n_new - n_replaced,
+        "n_records_replaced": n_replaced,
         "n_records_new": n_new,
         "n_records_total": n_total,
         "source_manifest": source_manifest,
