@@ -21,6 +21,10 @@ Each stored as Parquet with columns (gid, value), matching the
 priogrid_static pattern for assembly into the grid.
 
 Local-first: skips if all variables already cached with digests.
+
+Ordering: this script MUST run before generate_area_majority_gaul.py,
+which reads the shapefiles downloaded here. See refresh_pipeline.sh
+for the canonical ordering (C-247).
 """
 
 from __future__ import annotations

@@ -548,3 +548,229 @@ class TestConsolidateAcledCrossFileDedup:
         assert r1.n_records_total == 5
         assert r2.n_records_new == 0
         assert r2.n_records_total == 5
+
+
+# ---- Cross-run dedup: latest-wins (C-252, #210) ----
+
+
+def _base_event(
+    event_id: str = "SOM0001",
+    fatalities: int = 0,
+) -> dict:
+    """Single ACLED event with controllable id and fatalities."""
+    return {
+        "event_id_cnty": event_id,
+        "event_date": "2025-01-15",
+        "event_type": "Battles",
+        "sub_event_type": "Armed clash",
+        "actor1": "Group A",
+        "actor2": "Group B",
+        "country": "Somalia",
+        "admin1": "Banadir",
+        "latitude": 2.0,
+        "longitude": 45.0,
+        "fatalities": fatalities,
+        "notes": f"fatalities={fatalities}",
+        "source": "Test",
+        "source_scale": "National",
+    }
+
+
+class TestCrossRunDedupLatestWins:
+    """Cross-run dedup must keep the latest version of revised events.
+
+    ADR-028: ACLED has no vintage semantics — only the most recent
+    version of each event matters. This applies to both within-run
+    AND cross-run deduplication. C-252 documents the bug where
+    cross-run used first-seen-wins instead of latest-wins.
+    """
+
+    def test_revised_event_replaces_stale(
+        self, tmp_path: Path,
+    ) -> None:
+        """Re-consolidation with newer timestamp replaces stale event."""
+        source_dir = tmp_path / "raw"
+
+        # Run 1: event with fatalities=0
+        path1 = _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            [_base_event("SOM0001", fatalities=0)],
+        )
+        os.utime(path1, (1_000_000, 1_000_000))
+
+        config = _make_config(tmp_path, source_dir)
+        consolidate_acled(config)
+
+        store = read_store(config.output_path)
+        assert store.column("fatalities").to_pylist() == [0]
+
+        # Run 2: add file with revised event (fatalities=99, later mtime)
+        path2 = _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            [_base_event("SOM0001", fatalities=99)],
+        )
+        os.utime(path2, (2_000_000, 2_000_000))
+
+        consolidate_acled(config)
+
+        store = read_store(config.output_path)
+        fatalities = store.column("fatalities").to_pylist()
+        assert fatalities == [99], (
+            f"Expected revised fatalities=99, got {fatalities}"
+        )
+
+    def test_older_duplicate_does_not_replace(
+        self, tmp_path: Path,
+    ) -> None:
+        """Re-consolidation with OLDER timestamp does not replace."""
+        source_dir = tmp_path / "raw"
+
+        # Run 1: event with fatalities=99, newer mtime
+        path1 = _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            [_base_event("SOM0001", fatalities=99)],
+        )
+        os.utime(path1, (2_000_000, 2_000_000))
+
+        config = _make_config(tmp_path, source_dir)
+        consolidate_acled(config)
+
+        # Run 2: add file with OLD version (fatalities=0, earlier mtime)
+        path2 = _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            [_base_event("SOM0001", fatalities=0)],
+        )
+        os.utime(path2, (1_000_000, 1_000_000))
+
+        consolidate_acled(config)
+
+        store = read_store(config.output_path)
+        fatalities = store.column("fatalities").to_pylist()
+        assert fatalities == [99], (
+            f"Store should keep newer fatalities=99, got {fatalities}"
+        )
+
+    def test_replacement_count_logged(
+        self,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Cross-run replacement emits a log warning."""
+        source_dir = tmp_path / "raw"
+
+        path1 = _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            [_base_event("SOM0001", fatalities=0)],
+        )
+        os.utime(path1, (1_000_000, 1_000_000))
+
+        config = _make_config(tmp_path, source_dir)
+        consolidate_acled(config)
+
+        path2 = _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            [_base_event("SOM0001", fatalities=99)],
+        )
+        os.utime(path2, (2_000_000, 2_000_000))
+
+        with caplog.at_level(logging.WARNING):
+            consolidate_acled(config)
+
+        replacement_warnings = [
+            r for r in caplog.records
+            if "replac" in r.message.lower()
+        ]
+        assert len(replacement_warnings) >= 1, (
+            "Expected a log warning about replaced events"
+        )
+
+    def test_count_conservation_with_replacements(
+        self, tmp_path: Path,
+    ) -> None:
+        """Store count is correct after replacements + additions."""
+        source_dir = tmp_path / "raw"
+
+        # Run 1: 3 events (SOM0001, SOM0002, SOM0003)
+        run1_events = [
+            _base_event(f"SOM000{i}", fatalities=i)
+            for i in range(1, 4)
+        ]
+        path1 = _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            run1_events,
+        )
+        os.utime(path1, (1_000_000, 1_000_000))
+
+        config = _make_config(tmp_path, source_dir)
+        consolidate_acled(config)
+
+        store = read_store(config.output_path)
+        assert store.num_rows == 3
+
+        # Run 2: revise SOM0001 + add new SOM0004
+        run2_events = [
+            _base_event("SOM0001", fatalities=99),
+            _base_event("SOM0004", fatalities=10),
+        ]
+        path2 = _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            run2_events,
+        )
+        os.utime(path2, (2_000_000, 2_000_000))
+
+        consolidate_acled(config)
+
+        store = read_store(config.output_path)
+        assert store.num_rows == 4, (
+            f"Expected 4 events (3 original - 1 replaced + "
+            f"1 replaced + 1 new), got {store.num_rows}"
+        )
+
+        eids = set(store.column("event_id_cnty").to_pylist())
+        assert eids == {"SOM0001", "SOM0002", "SOM0003", "SOM0004"}
+
+    def test_mixed_new_and_revised_events(
+        self, tmp_path: Path,
+    ) -> None:
+        """Run 2 correctly handles a mix of new, revised, and unchanged."""
+        source_dir = tmp_path / "raw"
+
+        # Run 1: A=0, B=0, C=0
+        run1_events = [
+            _base_event("SOM0001", fatalities=0),
+            _base_event("SOM0002", fatalities=0),
+            _base_event("SOM0003", fatalities=0),
+        ]
+        path1 = _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            run1_events,
+        )
+        os.utime(path1, (1_000_000, 1_000_000))
+
+        config = _make_config(tmp_path, source_dir)
+        consolidate_acled(config)
+
+        # Run 2: revise A=99, skip B (unchanged in run1 file),
+        # add D=50
+        run2_events = [
+            _base_event("SOM0001", fatalities=99),
+            _base_event("SOM0004", fatalities=50),
+        ]
+        path2 = _write_parquet(
+            source_dir / "acled_2025_2025.parquet",
+            run2_events,
+        )
+        os.utime(path2, (2_000_000, 2_000_000))
+
+        consolidate_acled(config)
+
+        store = read_store(config.output_path)
+        eids = store.column("event_id_cnty").to_pylist()
+        fats = store.column("fatalities").to_pylist()
+        eid_to_fat = dict(zip(eids, fats, strict=True))
+
+        assert len(eids) == 4, f"Expected 4 events, got {len(eids)}"
+        assert eid_to_fat["SOM0001"] == 99, "Revised event"
+        assert eid_to_fat["SOM0002"] == 0, "Unchanged event"
+        assert eid_to_fat["SOM0003"] == 0, "Unchanged event"
+        assert eid_to_fat["SOM0004"] == 50, "New event"

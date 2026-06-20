@@ -14,6 +14,7 @@ import logging
 import os
 import random
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from datafactory_harvester.event_validation import (
     ComparisonResult,
     compare_snapshots,
     date_range,
+    validate_dgp_assumptions,
     validate_events,
 )
 from datafactory_harvester.snapshot_storage import archive_snapshot, save_event_snapshot
@@ -88,6 +90,87 @@ FIELD_TYPES: dict[str, tuple[type, ...]] = {
     "number_of_sources": (int,),
 }
 
+# ---- DGP assumption checks (C-257) ----
+
+_VALID_DATE_PREC = {1, 2, 3, 4, 5}
+_VALID_VIOLENCE_TYPE = {1, 2, 3}
+
+
+def _check_date_prec_range(event: dict) -> str | None:
+    """date_prec must be in {1,2,3,4,5}."""
+    val = event.get("date_prec")
+    if val is not None and val not in _VALID_DATE_PREC:
+        return f"date_prec={val} outside {_VALID_DATE_PREC}"
+    return None
+
+
+def _check_violence_type(event: dict) -> str | None:
+    """type_of_violence must be in {1,2,3}."""
+    val = event.get("type_of_violence")
+    if val is not None and val not in _VALID_VIOLENCE_TYPE:
+        return f"type_of_violence={val} outside {_VALID_VIOLENCE_TYPE}"
+    return None
+
+
+def _check_coordinate_bounds(event: dict) -> str | None:
+    """Latitude in [-90,90], longitude in [-180,180]."""
+    for field, lo, hi in (
+        ("latitude", -90, 90),
+        ("longitude", -180, 180),
+    ):
+        val = event.get(field)
+        if val is not None:
+            try:
+                fval = float(val)
+                if not (lo <= fval <= hi):
+                    return f"{field}={fval} outside [{lo},{hi}]"
+            except (TypeError, ValueError):
+                pass
+    return None
+
+
+def _check_best_high_low_ordering(event: dict) -> str | None:
+    """low <= best <= high."""
+    low = event.get("low")
+    best = event.get("best")
+    high = event.get("high")
+    if (
+        low is not None
+        and best is not None
+        and isinstance(low, (int, float))
+        and isinstance(best, (int, float))
+        and low > best
+    ):
+        return f"low ({low}) > best ({best})"
+    if (
+        best is not None
+        and high is not None
+        and isinstance(best, (int, float))
+        and isinstance(high, (int, float))
+        and best > high
+    ):
+        return f"best ({best}) > high ({high})"
+    return None
+
+
+def _check_coords_non_null(event: dict) -> str | None:
+    """Latitude and longitude must not be None."""
+    if event.get("latitude") is None:
+        return "latitude is None"
+    if event.get("longitude") is None:
+        return "longitude is None"
+    return None
+
+
+UCDP_DGP_CHECKS: tuple[
+    Callable[[dict], str | None], ...
+] = (
+    _check_date_prec_range,
+    _check_violence_type,
+    _check_coordinate_bounds,
+    _check_best_high_low_ordering,
+    _check_coords_non_null,
+)
 
 
 # ---- Config ----
@@ -366,6 +449,10 @@ def fetch_ucdp_annual(
             "warnings": validation.warnings,
         })
         raise ValueError(err_msg)
+
+    validate_dgp_assumptions(
+        events, UCDP_DGP_CHECKS, source_name="UCDP-annual",
+    )
 
     # Compare with previous snapshot
     comparison: ComparisonResult | None = None

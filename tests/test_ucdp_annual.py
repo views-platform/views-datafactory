@@ -92,6 +92,8 @@ def _make_events(n: int = 3) -> list[dict]:
             "where_prec": 1,
             "date_prec": 1,
             "number_of_sources": 2,
+            "latitude": 12.0 + i,
+            "longitude": 31.0 + i,
         }
         for i in range(1, n + 1)
     ]

@@ -14,6 +14,10 @@ from __future__ import annotations
 
 import subprocess
 
+import pytest
+
+pytestmark = pytest.mark.falsification
+
 
 class TestF1PrerequisitePRMerged:
     """PR #207 must be merged before the sprint branch is created."""

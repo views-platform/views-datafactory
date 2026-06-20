@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +30,7 @@ from datafactory_harvester.event_validation import (
     ComparisonResult,
     compare_snapshots,
     date_range,
+    validate_dgp_assumptions,
     validate_events,
 )
 from datafactory_harvester.snapshot_storage import (
@@ -100,6 +102,54 @@ FIELD_TYPES: dict[str, tuple[type, ...]] = {
     "source": (str,),
     "source_scale": (str,),
 }
+
+# ---- DGP assumption checks (C-257) ----
+
+
+def _check_fatality_non_negative(event: dict) -> str | None:
+    """Fatalities must be >= 0."""
+    val = event.get("fatalities")
+    if val is not None:
+        try:
+            if float(val) < 0:
+                return f"Negative fatalities: {val}"
+        except (TypeError, ValueError):
+            pass
+    return None
+
+
+def _check_known_event_type(event: dict) -> str | None:
+    """Event type must be in ALL_EVENT_TYPES."""
+    et = event.get("event_type")
+    if et is not None and et not in ALL_EVENT_TYPES:
+        return f"Unknown event_type: {et!r}"
+    return None
+
+
+def _check_coordinate_bounds(event: dict) -> str | None:
+    """Latitude in [-90,90], longitude in [-180,180]."""
+    for field, lo, hi in (
+        ("latitude", -90, 90),
+        ("longitude", -180, 180),
+    ):
+        val = event.get(field)
+        if val is not None:
+            try:
+                fval = float(val)
+                if not (lo <= fval <= hi):
+                    return f"{field}={fval} outside [{lo},{hi}]"
+            except (TypeError, ValueError):
+                pass
+    return None
+
+
+ACLED_DGP_CHECKS: tuple[
+    Callable[[dict], str | None], ...
+] = (
+    _check_fatality_non_negative,
+    _check_known_event_type,
+    _check_coordinate_bounds,
+)
 
 
 # ---- Config ----
@@ -550,6 +600,10 @@ def _fetch_single_year(
             "warnings": validation.warnings,
         })
         raise ValueError(err_msg)
+
+    validate_dgp_assumptions(
+        events, ACLED_DGP_CHECKS, source_name="ACLED",
+    )
 
     comparison: ComparisonResult | None = None
     if snap_path.exists():
