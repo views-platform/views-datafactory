@@ -291,6 +291,45 @@ class TestLandGaulRegion:
         assert "land_gaul" in list_regions()
 
 
+class TestAfricaMeGaulRegion:
+    """Tests for the bundled africa_me_gaul pgid set (#215)."""
+
+    def test_africa_me_gaul_returns_correct_count(self) -> None:
+        pgids = load_region_pgids("africa_me_gaul")
+        assert len(pgids) == 13_105
+
+    def test_africa_me_gaul_is_subset_of_legacy(self) -> None:
+        gaul = load_region_pgids("africa_me_gaul")
+        legacy = load_region_pgids("africa_me_legacy")
+        assert gaul < legacy
+
+    def test_africa_me_gaul_is_subset_of_land_gaul(self) -> None:
+        gaul = load_region_pgids("africa_me_gaul")
+        land_gaul = load_region_pgids("land_gaul")
+        assert gaul <= land_gaul
+
+    def test_africa_me_gaul_excluded_set(self) -> None:
+        gaul = load_region_pgids("africa_me_gaul")
+        legacy = load_region_pgids("africa_me_legacy")
+        excluded = legacy - gaul
+        assert excluded == {62356, 94776, 99027, 107733, 107742}
+
+    def test_africa_me_gaul_pgids_json_exists(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "africa_me_gaul_pgids.json"
+        assert path.exists()
+
+    def test_africa_me_gaul_pgids_json_is_sorted_unique(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "africa_me_gaul_pgids.json"
+        pgids = json.loads(path.read_text())
+        assert pgids == sorted(pgids)
+        assert len(pgids) == len(set(pgids))
+
+    def test_africa_me_gaul_in_list_regions(self) -> None:
+        assert "africa_me_gaul" in list_regions()
+
+
 class TestBundledPgidConsistency:
     """Cross-checks between bundled pgid sets."""
 

@@ -140,7 +140,7 @@ class TestUpstreamDefectIsReported:
                 "defect report",
             )
         )
-        has_release_note = "release" in text and "note" in text
+        has_release_note = "release note" in text or "release-note" in text
         assert has_report and has_release_note, (
             "ADR-043 lacks a communication trail: "
             f"upstream report={has_report}, "
