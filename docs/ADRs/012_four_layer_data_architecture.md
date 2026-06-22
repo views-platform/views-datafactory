@@ -66,6 +66,8 @@ Not all data traverses all layers — this is the graph nature of the architectu
 
 `datafactory_adapters` sits alongside the graph, not inside it. It converts compiled grid output into consumer formats (DataFrame, FeatureFrame) and imports nothing from `datafactory_*`. It is designed for eventual extraction to `views-pipeline-core`.
 
+\* No `datafactory_*` imports; external dependencies (numpy, pandas, views-frames) are permitted for extractability.
+
 ### Import Rules
 
 | Package | May import from | Reads filesystem output of |
@@ -77,7 +79,7 @@ Not all data traverses all layers — this is the graph nature of the architectu
 | `datafactory_consolidation` | provenance | harvester |
 | `datafactory_viewpoint` | provenance | consolidation |
 | `datafactory_compilation` | provenance, priogrid | viewpoint |
-| `datafactory_adapters` | nothing | compilation (reads grid npy) |
+| `datafactory_adapters` | nothing* | compilation (reads grid npy) |
 | `datafactory_query` | priogrid, adapters | assembly (reads assembled files) |
 
 ### Data Flow (Filesystem-Mediated)

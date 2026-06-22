@@ -24,6 +24,7 @@ views-datafactory has nine packages across four layers (ADR-012), with data flow
 4. **Consolidator to viewpoint builder** -- the viewpoint builder reads the consolidated store and must verify its integrity and completeness before applying survivorship rules.
 5. **Viewpoint to compiler** -- the compiler reads the viewpoint output and must verify schema conformance before grid placement.
 6. **Compiler to consumer** -- compiled npy output with sidecar coordinate arrays must conform to the declared shape contract.
+7. **Assembly to adapters** -- adapters consume assembled grid files (`grid.npy`, `pgids.npy`, `time_steps.npy`, `feature_names.json`) and produce FeatureFrame (views-frames `>=1.0,<2`) or DataFrame. FeatureFrame output has shape `(N, D, 1)` with `SpatioTemporalIndex` validated for time/unit/level. External dependency boundary: views-frames.
 
 Ambiguous configuration, hidden defaults, and implicit contracts introduce silent semantic drift and runtime fragility. To preserve architectural integrity and fail-loud guarantees (ADR-003), all external and internal boundaries must be explicit and validated.
 

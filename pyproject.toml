@@ -18,6 +18,7 @@ dependencies = [
     "aiohttp>=3.9,<4",
     "tifffile>=2024.1",
     "imagecodecs>=2024.1",
+    "views-frames>=1.0,<2",
 ]
 
 [dependency-groups]
