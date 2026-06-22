@@ -37,6 +37,11 @@ def feature_frame_to_grid(
     from datafactory_adapters._validation import validate_pgids
 
     validate_pgids(pgids)
+    if ff.sample_count > 1:
+        raise ValueError(
+            f"feature_frame_to_grid requires S=1, "
+            f"got S={ff.sample_count}"
+        )
     n_h, n_w = pgids.shape
     n_f = ff.n_features
 

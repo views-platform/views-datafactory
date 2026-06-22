@@ -609,6 +609,26 @@ class TestGridShapeValidationBeige:
                 grid_3d, pgids, time_steps, ["a", "b"],
             )
 
+    def test_feature_frame_to_grid_rejects_samples(
+        self,
+    ) -> None:
+        """feature_frame_to_grid rejects S > 1."""
+        index = SpatioTemporalIndex(
+            time=np.arange(5, dtype=np.int64),
+            unit=np.arange(5, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        ff = FeatureFrame(
+            y_features=np.zeros(
+                (5, 2, 3), dtype=np.float32
+            ),
+            index=index,
+            feature_names=["a", "b"],
+        )
+        pgids = np.arange(1, 13).reshape(3, 4)
+        with pytest.raises(ValueError, match="S=1"):
+            feature_frame_to_grid(ff, pgids)
+
     def test_feature_frame_to_grid_1d_pgids(
         self,
     ) -> None:
