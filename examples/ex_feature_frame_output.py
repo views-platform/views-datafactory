@@ -2,8 +2,8 @@
 """Verify: load_dataset(output_format='feature_frame') returns correct contract.
 
 Expected output:
-    - FeatureFrame instance
-    - y_features shape (N, D) with dtype float32
+    - FeatureFrame instance (views-frames v1.0.0)
+    - values shape (N, D, 1) with dtype float32
     - identifiers dict with "time" and "unit" arrays of length N
     - feature_names list of length D
 """
@@ -37,16 +37,16 @@ def main() -> int:
 
     assert isinstance(ff, FeatureFrame), f"Expected FeatureFrame, got {type(ff)}"
 
-    assert ff.y_features.ndim == 2, f"Expected 2D array, got {ff.y_features.ndim}D"
+    assert ff.values.ndim == 3, f"Expected 3D array, got {ff.values.ndim}D"
 
-    n_rows, n_features = ff.y_features.shape
+    n_rows, n_features, _ = ff.values.shape
     assert n_rows > 0, "FeatureFrame is empty"
     assert n_features == len(FEATURES), (
         f"Expected {len(FEATURES)} features, got {n_features}"
     )
 
-    assert ff.y_features.dtype == np.float32, (
-        f"Expected float32, got {ff.y_features.dtype}"
+    assert ff.values.dtype == np.float32, (
+        f"Expected float32, got {ff.values.dtype}"
     )
 
     assert ff.feature_names == FEATURES, (
@@ -62,10 +62,10 @@ def main() -> int:
         f"unit array length {len(ff.identifiers['unit'])} != {n_rows} rows"
     )
 
-    nan_count = int(np.isnan(ff.y_features).sum())
-    assert nan_count == 0, f"Found {nan_count} NaN values in y_features"
+    nan_count = int(np.isnan(ff.values).sum())
+    assert nan_count == 0, f"Found {nan_count} NaN values in values"
 
-    print(f"PASS  ex_feature_frame_output — shape {ff.y_features.shape}, "
+    print(f"PASS  ex_feature_frame_output — shape {ff.values.shape}, "
           f"features {ff.feature_names}")
     return 0
 

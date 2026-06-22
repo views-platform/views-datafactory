@@ -9,7 +9,12 @@ adapter pattern matures. Dependencies are minimal (numpy,
 pandas only — no other datafactory_* imports).
 """
 
-from datafactory_adapters.feature_frame import FeatureFrame
+from datafactory_adapters.feature_frame import (
+    FeatureFrame,
+    FrameMetadata,
+    SpatialLevel,
+    SpatioTemporalIndex,
+)
 from datafactory_adapters.grid_from_feature_frame import (
     feature_frame_to_grid,
 )
@@ -23,6 +28,9 @@ from datafactory_adapters.grid_to_dataframe import (
 
 __all__ = [
     "FeatureFrame",
+    "FrameMetadata",
+    "SpatialLevel",
+    "SpatioTemporalIndex",
     "feature_frame_to_grid",
     "grid_to_country_month",
     "grid_to_dataframe",

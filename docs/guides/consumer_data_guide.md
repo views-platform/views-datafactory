@@ -46,7 +46,7 @@ ff = load_dataset(
 )
 ```
 
-Returns a FeatureFrame with `ff.y_features` (numpy array), `ff.identifiers` (time/unit), `ff.feature_names`.
+Returns a FeatureFrame (views-frames v1.0.0) with `ff.values` (numpy array `[N, D, S]`), `ff.identifiers` (time/unit), `ff.feature_names`.
 
 ### From the remote server
 
@@ -215,7 +215,7 @@ Accepts multiple formats:
 ### `output_format` parameter
 
 **`"feature_frame"`** (default) — for metric-lab and array-based pipelines:
-- `result.y_features`: numpy array `[N, D]` (N observations, D features), float32
+- `result.values`: numpy array `[N, D, S]` (N observations, D features, S samples), float32
 - `result.identifiers`: dict with `"time"` and `"unit"` arrays (month_id and priogrid_gid)
 - `result.feature_names`: list of D feature name strings
 

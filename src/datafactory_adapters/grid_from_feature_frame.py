@@ -42,7 +42,7 @@ def feature_frame_to_grid(
 
     month_ids = ff.identifiers["time"]
     unit_ids = ff.identifiers["unit"]
-    data = ff.y_features  # (N, F)
+    data = ff.values[:, :, 0]  # (N, F) — squeeze trailing S=1
 
     # Determine T from unique month_ids, preserving order
     unique_months = np.unique(month_ids)

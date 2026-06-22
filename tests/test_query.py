@@ -610,7 +610,7 @@ class TestLoadDatasetZarr:
         assert ff_npy.n_features == ff_zarr.n_features
         assert ff_npy.feature_names == ff_zarr.feature_names
         np.testing.assert_array_equal(
-            ff_npy.y_features, ff_zarr.y_features,
+            ff_npy.values, ff_zarr.values,
         )
 
     def test_zarr_feature_order_from_attrs(
@@ -659,8 +659,8 @@ class TestLoadDatasetZarr:
         # Order matches attrs, not alphabetical
         assert ff.feature_names == ["zz_last", "aa_first"]
         # Values match: zz_last=0.0, aa_first=1.0
-        assert ff.y_features[0, 0] == 0.0
-        assert ff.y_features[0, 1] == 1.0
+        assert ff.values[0, 0, 0] == 0.0
+        assert ff.values[0, 1, 0] == 1.0
 
     def test_zarr_unknown_feature_raises(
         self, tmp_path: Path,
@@ -967,7 +967,7 @@ class TestLoadDatasetBeige:
         )
         assert ff_default.feature_names == ff_explicit.feature_names
         np.testing.assert_array_equal(
-            ff_default.y_features, ff_explicit.y_features,
+            ff_default.values, ff_explicit.values,
         )
 
 
@@ -1047,7 +1047,7 @@ class TestLoadDatasetRed:
             data_dir=data_dir,
             gaul_dir=gaul_dir,
         )
-        assert np.all(np.isnan(ff.y_features))
+        assert np.all(np.isnan(ff.values))
 
     def test_zero_time_steps(self, tmp_path: Path) -> None:
         from datafactory_query.dataset import load_dataset
@@ -1246,7 +1246,7 @@ class TestRemoteZarrSmoke:
             features=["ged_sb_best", "ged_ns_best"],
             output_format="feature_frame",
         )
-        assert ff.y_features.shape[1] == 2
+        assert ff.values.shape[1] == 2
         assert set(ff.feature_names) == {
             "ged_sb_best", "ged_ns_best",
         }

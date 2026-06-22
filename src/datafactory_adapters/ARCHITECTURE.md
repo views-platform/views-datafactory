@@ -39,7 +39,7 @@ datafactory_adapters/
 
 | Concept | Description |
 |---------|-------------|
-| FeatureFrame | Input-side transport object: y_features (N, D) or (N, D, S), identifiers {time, unit}, feature_names. Analogous to PredictionFrame. |
+| FeatureFrame | Input-side transport object (re-exported from views-frames v1.0): values (N, D, S), SpatioTemporalIndex {time, unit, level}, feature_names. Analogous to PredictionFrame. |
 | grid_to_dataframe | Converts [T, H, W, C] → pandas DataFrame with (month_id, priogrid_gid) MultiIndex. |
 | grid_to_feature_frame | Converts [T, H, W, C] → FeatureFrame with dense land-cell time series. |
 | month_id_epoch | Configurable base year for month_id encoding. 0 = raw, 1980 = VIEWS convention. |

@@ -231,7 +231,7 @@ class TestFeatureFrameConsumer:
         )
 
         df = pd.DataFrame(
-            ff.y_features,
+            ff.values[:, :, 0],
             columns=ff.feature_names,
             index=pd.MultiIndex.from_arrays(
                 [ff.identifiers["time"], ff.identifiers["unit"]],
