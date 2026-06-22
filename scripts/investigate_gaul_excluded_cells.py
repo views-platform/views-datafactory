@@ -171,18 +171,50 @@ def _find_nearest_polygon(
 
 
 def _classify_cell(
+    lat: float,
+    lon: float,
     nearest: dict,
-    country_polygons: dict[str, list[dict]],
+    tree: STRtree,
+    polygons: list,
+    records: list[dict],
 ) -> str:
-    """Classify a cell as legitimately_uncovered or suspected_data_defect."""
-    dist = nearest["distance_deg"]
-    country = nearest["nearest_country"]
+    """Classify an excluded cell using polygon intersection.
 
-    if dist < 1.0 and country in TARGET_COUNTRIES:
+    A cell is coastal_resolution_gap if any GAUL polygon intersects
+    its 0.5-deg bounding box (the polygon exists but is too small
+    to win area-majority assignment), OR the nearest admin unit
+    exists in GAUL but doesn't reach the cell.
+
+    A cell is legitimately_uncovered if no nearby GAUL polygon
+    exists and the expected admin unit is absent from GAUL.
+
+    A cell is suspected_data_defect if the expected country has
+    polygons in GAUL but the specific admin1 unit is entirely
+    missing (the Fuvahmulah pattern from ADR-043).
+    """
+    cell_box = shapely_box(lon - 0.25, lat - 0.25, lon + 0.25, lat + 0.25)
+    indices = tree.query(cell_box, predicate="intersects")
+
+    if len(indices) > 0:
+        return "coastal_resolution_gap"
+
+    country = nearest["nearest_country"]
+    admin1 = nearest["nearest_admin1"]
+
+    if country == "NONE_FOUND":
+        return "legitimately_uncovered"
+
+    country_present = any(
+        r["gaul0_name"] == country for r in records
+    )
+    admin1_present = any(
+        r["gaul0_name"] == country and r["gaul1_name"] == admin1
+        for r in records
+    )
+
+    if country_present and not admin1_present:
         return "suspected_data_defect"
-    if dist < 0.5:
-        return "suspected_data_defect"
-    if dist > 5.0:
+    if not country_present:
         return "legitimately_uncovered"
 
     return "near_coverage_boundary"
@@ -262,7 +294,9 @@ def main() -> None:
         nearest = _find_nearest_polygon(
             lat, lon, tree, polygons, records,
         )
-        classification = _classify_cell(nearest, country_polys)
+        classification = _classify_cell(
+            lat, lon, nearest, tree, polygons, records,
+        )
 
         entry = {
             "gid": gid,

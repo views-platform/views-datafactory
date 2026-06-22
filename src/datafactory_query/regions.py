@@ -124,7 +124,8 @@ def list_regions() -> list[str]:
     available. Individual country names (matching GAUL) also work.
     """
     return sorted([
-        "global", "land", "land_gaul", "africa_me_legacy",
+        "global", "land", "land_gaul",
+        "africa_me_legacy", "africa_me_gaul",
         *REGIONS.keys(),
     ])
 
@@ -164,6 +165,20 @@ def _load_legacy_pgids() -> set[int]:
     region due to VIEWSER's independent land mask.
     """
     path = Path(__file__).parent / "africa_me_legacy_pgids.json"
+    pgids = json.loads(path.read_text())
+    return set(pgids)
+
+
+@lru_cache(maxsize=1)
+def _load_africa_me_gaul_pgids() -> set[int]:
+    """Load the africa_me_legacy ∩ land_gaul pgid set (13,105 cells).
+
+    Bundled with the package as africa_me_gaul_pgids.json.
+    This is africa_me_legacy minus the 5 cells absent from
+    land_gaul (gids 62356, 94776, 99027, 107733, 107742).
+    Solves the region/coverage mismatch (#215).
+    """
+    path = Path(__file__).parent / "africa_me_gaul_pgids.json"
     pgids = json.loads(path.read_text())
     return set(pgids)
 
@@ -235,6 +250,9 @@ def load_region_pgids(
 
     if region == "africa_me_legacy":
         return _load_legacy_pgids()
+
+    if region == "africa_me_gaul":
+        return _load_africa_me_gaul_pgids()
 
     # Predefined macro-region
     if region in REGIONS:
