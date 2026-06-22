@@ -46,7 +46,24 @@ ff = load_dataset(
 )
 ```
 
-Returns a FeatureFrame (views-frames v1.0.0) with `ff.values` (numpy array `[N, D, S]`), `ff.identifiers` (time/unit), `ff.feature_names`.
+Returns a FeatureFrame (views-frames v1.0.0) with `ff.values` (numpy array `[N, D, 1]`), `ff.identifiers` (time/unit), `ff.feature_names`. The third dimension is always 1 for datafactory output; views-frames reserves it for multi-sample scenarios (e.g., ensemble predictions).
+
+### 3 lines: get a country-month DataFrame
+
+```python
+from datafactory_query import load_dataset
+
+df = load_dataset(
+    region="africa",
+    start=480,
+    end=491,
+    features=["ged_sb_best"],
+    output_format="country_month",
+    gaul_dir="data/raw/gaul_admin",
+)
+```
+
+Returns a pandas DataFrame with MultiIndex `(month_id, country_id)` where `country_id` is the GAUL admin-0 code. Feature values are summed per country per month.
 
 ### From the remote server
 
@@ -215,7 +232,7 @@ Accepts multiple formats:
 ### `output_format` parameter
 
 **`"feature_frame"`** (default) — for metric-lab and array-based pipelines:
-- `result.values`: numpy array `[N, D, S]` (N observations, D features, S samples), float32
+- `result.values`: numpy array `[N, D, 1]` (N observations, D features, 1 sample), float32
 - `result.identifiers`: dict with `"time"` and `"unit"` arrays (month_id and priogrid_gid)
 - `result.feature_names`: list of D feature name strings
 

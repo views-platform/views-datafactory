@@ -4,14 +4,14 @@
 
 Consumer-facing adapters that convert the datafactory's canonical output ([T, H, W, C] numpy arrays) into transport formats for downstream consumers. This module sits alongside the data graph (ADR-012), not inside it.
 
-**Extractability note:** This module is designed to be moved to `views-pipeline-core` or a dedicated micro-service when the adapter pattern matures across the VIEWS platform. Dependencies are intentionally minimal (numpy, pandas only).
+**Extractability note:** This module is designed to be moved to `views-pipeline-core` or a dedicated micro-service when the adapter pattern matures across the VIEWS platform. Dependencies are intentionally minimal (numpy, pandas, views-frames).
 
 ## Responsibility Boundary
 
 **Owns:**
 - Grid array → DataFrame conversion (dense or sparse, configurable month_id encoding)
 - Grid array → FeatureFrame conversion
-- FeatureFrame class (analogous to PredictionFrame and EvaluationFrame)
+- FeatureFrame re-export from views-frames v1.0 (analogous to PredictionFrame and EvaluationFrame)
 - month_id encoding logic (configurable epoch)
 
 **Does NOT own:**
@@ -22,7 +22,7 @@ Consumer-facing adapters that convert the datafactory's canonical output ([T, H,
 
 ## Dependency Rules
 
-**May import:** numpy, pandas
+**May import:** numpy, pandas, views-frames
 **Must never import:** Any `datafactory_*` package. This ensures clean extractability.
 
 ## Package Structure
@@ -31,8 +31,11 @@ Consumer-facing adapters that convert the datafactory's canonical output ([T, H,
 datafactory_adapters/
     __init__.py              # Public API: FeatureFrame, grid_to_dataframe, grid_to_feature_frame
     ARCHITECTURE.md          # This file
-    feature_frame.py         # FeatureFrame class
-    grid_to_dataframe.py     # Conversion functions
+    _validation.py           # Shared shape validation helpers
+    feature_frame.py         # FeatureFrame re-export shim (views-frames v1.0)
+    grid_from_feature_frame.py  # FeatureFrame → [T, H, W, F] grid reconstruction
+    grid_to_country_month.py # [T, H, W, C] → country-month DataFrame
+    grid_to_dataframe.py     # [T, H, W, C] → DataFrame and FeatureFrame conversion
 ```
 
 ## Key Concepts
