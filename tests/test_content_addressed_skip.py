@@ -275,6 +275,18 @@ class TestSkipCorrectness:
             "Assembly should NOT skip when admin input changed"
         )
 
+    def test_admin_digest_in_provenance(self, baseline: dict) -> None:
+        """Provenance must record admin_digest when admin dir is provided."""
+        import json
+
+        prov_path = baseline["root"] / "assembled" / "provenance.json"
+        prov = json.loads(prov_path.read_text())
+        admin_digest = prov["sources"].get("admin_digest")
+        assert admin_digest is not None, (
+            "provenance.json must contain a non-None admin_digest "
+            "when admin parquets are provided"
+        )
+
     def test_force_flag_bypasses_skip(self, baseline: dict) -> None:
         """C-261: --force must prevent skip even when inputs unchanged."""
         root = baseline["root"]
