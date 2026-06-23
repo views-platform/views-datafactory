@@ -65,11 +65,12 @@ All fields are required. No defaults.
 
 ## 7. Boundaries and Interactions
 
-- Created by consolidator functions (e.g., `consolidate_ucdp`)
+- Created by consolidator functions (e.g., `consolidate_ucdp`, `consolidate_acled`)
 - Consumed by orchestration scripts and provenance logging
 - The `output_digest` is computed post-write by `compute_file_digest` (chunked, memory-safe)
 - Parquet writes are protected by `file_lock` for concurrency safety
 - Must not depend on any `datafactory_*` class
+- Note: `n_records_replaced` (cross-run event replacements) is recorded in the consolidation ledger but is **not** a field on this dataclass — it is a ledger-only accounting detail
 
 ---
 

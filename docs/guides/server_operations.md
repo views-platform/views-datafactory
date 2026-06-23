@@ -141,7 +141,7 @@ one stage after a failure.
 
 **Important:** `assemble_grid.py` silently skips any source whose
 `--*-grid` flag is omitted. If you run it without flags you get a
-UCDP + static + admin grid only (~42 features instead of ~75).
+UCDP + static + admin grid only (~42 features instead of ~79).
 There is no error or warning — the output looks correct but is
 incomplete.
 

@@ -86,6 +86,7 @@ All failures are immediate and loud. No silent fallbacks.
 - Used only by the `main()` function in the same file
 - Argparse populates fields from CLI arguments; the dataclass validates
 - `refresh_pipeline.sh` passes `--acled-grid data/compiled/acled --ghspop-grid data/compiled/ghspop --ghsbuilts-grid data/compiled/ghsbuilts --vdem-grid data/compiled/vdem --shdi-grid data/compiled/shdi` to assembly — if any directory doesn't exist, assembly fails loud
+- CLI also accepts `--skip-if-unchanged` (content-addressed skip via provenance digests, ADR-041) and `--force` (override skip, always reassemble)
 - Must not depend on any `datafactory_*` package (scripts are consumers, not library code)
 
 ---

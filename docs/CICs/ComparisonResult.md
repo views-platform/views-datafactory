@@ -74,7 +74,7 @@ No `__post_init__` validation — fields are populated by `compare_snapshots()`.
 ## 8. Examples of Correct Usage
 
 ```python
-comparison = compare_snapshots(prev_path, new_events, id_field="id", key_fields=("best",))
+comparison = compare_snapshots(old_path, new_events, id_field="id", key_fields=("best",))
 if comparison.n_revised > 0:
     logger.info("Revised %d events", comparison.n_revised)
 ```

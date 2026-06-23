@@ -673,7 +673,7 @@ Check with `df -h`.
 **"OOM killed" (exit code 137)** — A pipeline step exceeded
 physical RAM. The CPX32 has 8 GB and no swap by default. See the
 Swap Configuration section in `server_operations.md` for setup
-instructions (4 GB recommended for 75-feature assembly).
+instructions (4 GB recommended for 79-feature assembly).
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-22
+**Last reviewed:** 2026-06-23
 **Related ADRs:** ADR-003, ADR-008, ADR-009
 
 ---
@@ -69,6 +69,7 @@ No `__post_init__` validation — fields are populated by `validate_events()`.
 - Consumed by source orchestrators (e.g., `fetch_ucdp_annual`) to decide halt/continue
 - `content_digest` computed via `datafactory_provenance.compute_content_digest`
 - Must not depend on any `datafactory_*` class other than provenance
+- `event_validation.py` also exports `validate_dgp_assumptions()` (runs source-specific DGP checks, raises `ValueError` on violations) and `date_range()` (extracts min/max date strings from events). These are public API siblings, not consumers of `ValidationResult`
 
 ---
 

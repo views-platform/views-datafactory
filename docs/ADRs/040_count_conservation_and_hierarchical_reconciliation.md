@@ -252,10 +252,14 @@ The `gaul1_to_gaul0` mapping is derivable from the assembled grid: for each cell
 Trace a single count feature from viewpoint through compiled grid, assembled grid, and country-month output. The total should be accounted for at every stage:
 
 ```
+consolidation_output = consolidation_input - n_dedup_removed - n_records_replaced + n_records_replaced
+                     = consolidation_input - n_dedup_removed
 viewpoint_total = viewpoint_placed + viewpoint_filtered
 viewpoint_placed = grid_total
 grid_total = cm_total + excluded_total
 ```
+
+At the consolidation boundary, ACLED's cross-run replacement (`n_records_replaced` in the ledger) is a swap, not a loss: the same number of records are removed from the existing store as are added from the new harvest. The net count change is `n_records_new` (genuinely new event IDs). The `n_dedup_removed` term accounts for cross-file deduplication within a single run.
 
 ---
 
