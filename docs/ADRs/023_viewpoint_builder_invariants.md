@@ -18,6 +18,8 @@ A forensic parity investigation (April 2026) compared the data factory's viewpoi
 
 This ADR documents the second category. These are the decisions that a researcher must know about but cannot change through configuration.
 
+**Scope:** Despite the general title, this ADR covers UCDP viewpoint invariants specifically. Other viewpoint builders (ACLED, V-Dem, SHDI) have their own invariant sets documented in their respective ADRs or CICs.
+
 ---
 
 ## Decision

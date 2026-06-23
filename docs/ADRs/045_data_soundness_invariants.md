@@ -50,7 +50,7 @@ Extensive features must conserve: `input = placed + excluded`. Intensive feature
 | Atomic write (temp + rename) | Harvest output | Yes | `tests/test_consolidation.py::TestStoreCharacterization` | None |
 | Lossless append | Harvest -> Consolidation | Partial | `tests/test_consolidation.py::TestStoreIoGreen` | No explicit lossless check |
 | Summary event detection | Consolidation -> Viewpoint | Yes | `tests/test_viewpoint.py` | None |
-| Month assignment from `date_end` | Consolidation -> Viewpoint | Yes | `tests/test_consumer_parity.py` | None |
+| Month assignment from `date_end` | Consolidation -> Viewpoint | Partial | `tests/test_consumer_parity.py` | Parity test validates output, not the assignment rule directly |
 | Count conservation | Viewpoint -> Compilation | Yes | `_conservation.py::assert_cm_conservation()` | Runtime assertion only; no dedicated test |
 | Column schema match | Viewpoint -> Compilation | Yes | `tests/test_cross_layer_contracts.py` | None |
 | Dimension order [T,H,W,C] | Compilation -> Assembly | Yes | `tests/test_compiler.py` | None |

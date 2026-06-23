@@ -66,7 +66,7 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on `temporal_interpolation` not in `VALID_TEMPORAL_INTERPOLATIONS`
 - `AttributeError` on any attempt to mutate fields (frozen)
 
-Runtime failures from `build_vdem_viewpoint` (the primary consumer):
+Runtime failures from `build_vdem_v1` (the primary consumer):
 - `FileNotFoundError` if `source_path` or `crosswalk_path` does not exist
 - `KeyError` if harvest Parquet lacks expected columns
 - All failures are logged and recorded in the provenance ledger
