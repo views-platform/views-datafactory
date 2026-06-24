@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-06-06
+**Last reviewed:** 2026-06-24
 **Related ADRs:** ADR-012, ADR-025, ADR-039, ADR-040
 
 ---
@@ -19,7 +19,7 @@ This is the bridge between grid-native data (one row per cell per month) and cou
 
 - This module does **not** perform feature engineering or transformations beyond summation
 - This module does **not** apply temporal alignment or padding
-- This module does **not** validate that the grid contains meaningful data (non-zero, non-NaN)
+- This module does **not** validate that the grid contains meaningful data (non-zero) — however, `assert_cm_conservation` (called internally) rejects NaN in extensive feature columns as a pipeline bug indicator (C-291)
 - This module does **not** know about specific country codes or their semantics
 - This module does **not** handle weighted aggregation (area-weighted, population-weighted)
 
@@ -57,12 +57,14 @@ Assumptions not met cause immediate `ValueError`.
 - One column per feature except the country feature
 - All values are sums over grid cells belonging to each (month, country) group
 - Emits `UserWarning` when excluded cells (country_id <= 0) have nonzero event feature values (features starting with `ged_` or `acled_`). The warning includes the count of excluded cell-months and how many carry events. Since ADR-039, the number of excluded cells with events is substantially reduced.
+- Emits `UserWarning` when intensive features (SHDI, V-Dem, GHS-BUILT-S — prefixes `shdi`, `healthindex`, `edindex`, `incindex`, `vdem_`, `ghs_built_`) are included in the aggregation. Summation is not meaningful for these indices; the warning recommends `output_format='dataframe'` with weighted mean aggregation. Aggregation still proceeds — consumers can suppress the warning.
 
 ---
 
 ## 6. Failure Modes and Loudness
 
 - `ValueError` if `country_feature` is not in `feature_names`
+- `RuntimeError` if any extensive feature column (prefixes `ged_`, `acled_`) contains NaN — this indicates a pipeline bug, not missing data (C-291). Raised by `assert_cm_conservation` before summation.
 - Delegates to `_flatten_grid()` for shape mismatches
 
 All failures are immediate and loud. No silent fallbacks.
@@ -110,9 +112,9 @@ df.loc[(500, 12345)]  # 12345 is a pgid, not a country_id
 
 ## 10. Test Alignment
 
-- **Green:** Correct aggregation with default country feature, correct MultiIndex shape
+- **Green:** Correct aggregation with default country feature, correct MultiIndex shape; intensive feature warning emitted when SHDI/V-Dem/GHS-BUILT-S features present; no warning for extensive-only feature sets
 - **Beige:** Missing country feature raises ValueError, all-ocean grid produces empty DataFrame
-- **Red:** Aggregation correctness: manual sum of known cells matches grouped output; count conservation equation verified per ADR-040 (`grid_total = cm_total + excluded_total` for all extensive features)
+- **Red:** Aggregation correctness: manual sum of known cells matches grouped output; count conservation equation verified per ADR-040 (`grid_total = cm_total + excluded_total` for all extensive features); NaN in extensive features raises RuntimeError before summation; NaN in intensive features does not raise; float64 regression guard proves partition-sum precision at 500K cells
 
 Tests in `tests/test_grid_to_country_month.py` (if present).
 
