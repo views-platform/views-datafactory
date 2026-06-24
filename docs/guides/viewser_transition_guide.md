@@ -13,7 +13,7 @@ Your model is fine. The data factory replaces *how data reaches your model*, not
 - **Partitions** — Same calibration (121-492), validation (121-540), forecasting (dynamic). Same month_id encoding: `(year - 1980) * 12 + month`.
 - **Spatial grid** — Same 0.5-degree PRIO-GRID, same pgid numbering (1-259,200).
 - **Parquet interface** — Your model still reads `{run_type}_viewser_df.parquet` from `data/raw/`. The file format, MultiIndex `(month_id, priogrid_gid)`, and column layout are identical.
-- **Feature names in the model** — The model still sees `lr_sb_best`, `lr_ns_best`, `lr_os_best`, `c_id`, `row`, `col`. The rename from factory names to VIEWSER names happens before the parquet is written.
+- **Feature names in the parquet** — The parquet now uses factory source names: `ged_sb_best`, `ged_ns_best`, `ged_os_best`, `gaul0_code`, `row`, `col`. If your model expects `lr_*` names, rename in `config_queryset.py`.
 
 ---
 
@@ -36,7 +36,7 @@ Six things are different. None affect your model code — they affect the data t
 
 | Operation | viewser | datafactory |
 |-----------|---------|-------------|
-| **Define data needs** | `Queryset("name", "priogrid_month")` with `.with_column(...)` | `config_queryset.py` with `FACTORY_FEATURES` and `FEATURE_RENAME` |
+| **Define data needs** | `Queryset("name", "priogrid_month")` with `.with_column(...)` | `config_queryset.py` with `FACTORY_FEATURES` list |
 | **Fetch data** | `queryset.publish().fetch()` (PostgreSQL) | `load_dataset(data_dir="http://...")` (zarr over HTTP) |
 | **Data location** | PRIO PostgreSQL server | Hetzner server (204.168.219.108) |
 | **Authentication** | SSH tunnel + PRIO VPN | `~/.netrc` (HTTP Basic Auth) |
@@ -77,18 +77,16 @@ The parquet file that lands in `data/raw/` has the same schema either way. Your 
 
 ## 2. Column naming
 
-viewser and the data factory use different names for the same variables.
+The data factory emits source column names. The `lr_*` / `c_id` vocabulary from VIEWSER is not applied — consumer-side renaming is the model's responsibility via `config_queryset.py`.
 
-| Data factory | viewser / model | What it is |
-|--------------|-----------------|------------|
-| `ged_sb_best` | `lr_sb_best` | State-based fatalities (best estimate) |
-| `ged_ns_best` | `lr_ns_best` | Non-state fatalities (best estimate) |
-| `ged_os_best` | `lr_os_best` | One-sided violence fatalities (best estimate) |
-| `gaul0_code` | `c_id` | Country identifier |
+| Parquet column | What it is |
+|----------------|------------|
+| `ged_sb_best` | State-based fatalities (best estimate) |
+| `ged_ns_best` | Non-state fatalities (best estimate) |
+| `ged_os_best` | One-sided violence fatalities (best estimate) |
+| `gaul0_code` | Country identifier (GAUL Level 0) |
 
-The `lr_` prefix is a VIEWSER convention (short for "log-ratio" in some historical context). The data factory uses UCDP's original field names. The rename happens in `config_queryset.py` before the parquet is saved — your model never sees the factory names.
-
-**Why not just use the same names?** The factory uses UCDP's canonical names because they're unambiguous and documented. The rename layer exists so existing models don't need to change their feature references. When you write a new model from scratch, you can choose either naming convention.
+If your existing model expects `lr_sb_best`, add the rename in your `config_queryset.py`. The factory uses UCDP's canonical names because they're unambiguous and documented.
 
 ---
 

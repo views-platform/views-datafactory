@@ -262,7 +262,7 @@ class TestFeatureContract:
         assert descriptor["features"]["ged_sb_best"] == "lr_ged_sb"
         assert descriptor["loa"] == "country_month"
 
-    def test_pgm_models_use_lr_sb_best(self) -> None:
+    def test_pgm_models_request_ged_sb_best(self) -> None:
         for model in [
             "bright_starship", "heavy_freighter",
             "heavy_strider", "light_strider",
@@ -277,9 +277,8 @@ class TestFeatureContract:
                 f"{model}_queryset", path,
             )
             descriptor = spec.generate()
-            assert descriptor["features"]["ged_sb_best"] == "lr_sb_best", (
-                f"{model} renames ged_sb_best to "
-                f"{descriptor['features']['ged_sb_best']}"
+            assert "ged_sb_best" in descriptor["features"], (
+                f"{model} does not request ged_sb_best"
             )
             assert descriptor["loa"] == "priogrid_month"
 

@@ -787,15 +787,15 @@ class TestS1CMAggregation:
 class TestS2ConsumerBridge:
     """S2: Consumer bridge maps gaul0_code correctly."""
 
-    def test_consumer_feature_rename_includes_gaul0_code(
+    def test_consumer_bridge_includes_gaul0_code(
         self,
     ) -> None:
         script = (
             _REPO_ROOT / "scripts" / "generate_consumer_data.py"
         )
         text = script.read_text()
-        assert '"gaul0_code": "c_id"' in text, (
-            "FEATURE_RENAME must map gaul0_code → c_id"
+        assert '"gaul0_code"' in text, (
+            "FACTORY_FEATURES must include gaul0_code"
         )
 
 

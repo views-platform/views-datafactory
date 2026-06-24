@@ -9,13 +9,14 @@ These scripts expect parquet files at:
 
 With structure:
     - MultiIndex: (month_id, priogrid_gid)
-    - Columns: lr_sb_best, lr_ns_best, lr_os_best, c_id, col, row
+    - Columns: ged_sb_best, ged_ns_best, ged_os_best, gaul0_code, col, row
     - NaN replaced with 0
     - Sorted by index
 
-This script calls load_dataset() from the data factory, renames
-columns to match the VIEWSER convention, derives row/col from
-priogrid_gid, and saves parquet files for each partition.
+This script calls load_dataset() from the data factory, derives
+row/col from priogrid_gid, and saves parquet files for each partition.
+Column names are the factory's source names — consumer-side renaming
+(if any) is the model's responsibility via config_queryset.py.
 
 Usage:
     uv run python scripts/generate_consumer_data.py
@@ -39,17 +40,10 @@ from datafactory_query.dataset import _is_remote
 from datafactory_query.defaults import PARTITIONS as _BASE_PARTITIONS
 
 # ── Consumer contract ──────────────────────────────────────
-# These match what purple_alien, white_ranger, and other models
-# expect in their config_queryset.py files.
+# Source column names — the bridge emits what the data IS.
+# Consumer-side renaming is the model's responsibility.
 
-FEATURE_RENAME = {
-    "ged_sb_best": "lr_sb_best",
-    "ged_ns_best": "lr_ns_best",
-    "ged_os_best": "lr_os_best",
-    "gaul0_code": "c_id",
-}
-
-FACTORY_FEATURES = list(FEATURE_RENAME.keys())
+FACTORY_FEATURES = ["ged_sb_best", "ged_ns_best", "ged_os_best", "gaul0_code"]
 
 # Calibration/validation from single source of truth; forecasting computed dynamically.
 PARTITIONS: dict[str, dict[str, tuple[int, int]] | None] = {
@@ -127,9 +121,6 @@ def generate_partition(
         gaul_dir=gaul_dir,
         month_id_epoch=1980,
     )
-
-    # Rename to VIEWSER convention
-    df = df.rename(columns=FEATURE_RENAME)
 
     # Derive row/col from priogrid_gid
     df = _derive_row_col(df)
@@ -281,7 +272,7 @@ def main() -> int:
     manifest: dict = {
         "generation_timestamp": datetime.now(tz=UTC).isoformat(),
         "source_grid_digest": grid_digest,
-        "feature_mapping": FEATURE_RENAME,
+        "features": FACTORY_FEATURES,
         "output_files": {},
     }
     for name in partitions:

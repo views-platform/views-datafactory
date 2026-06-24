@@ -44,15 +44,9 @@ DATA_DIR = Path("data/assembled")
 GAUL_DIR = Path("data/raw/gaul_admin")
 ZARR_PATH = Path("data/assembled/grid.zarr")
 
-# ── Feature mapping ──────────────────────────────────────
-# data factory name -> purple alien name
-FEATURE_RENAME = {
-    "ged_sb_best": "lr_sb_best",
-    "ged_ns_best": "lr_ns_best",
-    "ged_os_best": "lr_os_best",
-}
-DF_FEATURES = list(FEATURE_RENAME.keys())
-FEATURE_COLS = list(FEATURE_RENAME.values())
+# ── Feature columns ──────────────────────────────────────
+DF_FEATURES = ["ged_sb_best", "ged_ns_best", "ged_os_best"]
+FEATURE_COLS = DF_FEATURES
 
 # ── Temporal bounds (calibration partition) ───────────────
 MONTH_START = PARTITIONS["calibration"]["train"][0]  # 121 = 1990-01
@@ -60,28 +54,26 @@ MONTH_END = PARTITIONS["calibration"]["test"][1]  # 492 = 2018-12
 MONTH_ID_EPOCH = 1980
 
 # ── Parity columns (c_id excluded: GAUL != VIEWSER codes) ─
-PARITY_COLS = ["col", "row", "lr_sb_best", "lr_ns_best", "lr_os_best"]
+PARITY_COLS = ["col", "row", "ged_sb_best", "ged_ns_best", "ged_os_best"]
 
 # Known discrepancy threshold: VIEWSER uses nokgi filter, we don't.
 MAX_MISMATCH_RATE = 0.001  # 0.1%
 
 
+_VIEWSER_TO_FACTORY = {
+    "lr_sb_best": "ged_sb_best",
+    "lr_ns_best": "ged_ns_best",
+    "lr_os_best": "ged_os_best",
+}
+
 # ── Helpers ──────────────────────────────────────────────
 
 
 def build_parity_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Transform a data-factory DataFrame into purple_alien format.
-
-    Selects the 3 GED features, renames to lr_* convention,
-    derives row/col from pgid index, fills NaN with 0, and
-    coerces to float64.
-    """
-    result = df[list(FEATURE_RENAME.keys())].rename(
-        columns=FEATURE_RENAME,
-    )
+    """Select GED features, derive row/col, fill NaN, coerce to float64."""
+    result = df[DF_FEATURES].copy()
 
     pgids = result.index.get_level_values("priogrid_gid")
-    result = result.copy()
     ncol = DEFAULT_GRID_CONFIG.ncol
     result["row"] = ((pgids - 1) // ncol + 1).astype(np.float64)
     result["col"] = ((pgids - 1) % ncol + 1).astype(np.float64)
@@ -155,10 +147,15 @@ def assert_consumer_parity(
 
 @pytest.fixture(scope="module")
 def reference_df() -> pd.DataFrame:
-    """Load the purple_alien ground truth, keeping only parity columns."""
+    """Load the purple_alien ground truth, keeping only parity columns.
+
+    Reference data may use VIEWSER lr_* names; rename to factory names
+    so both sides of the parity comparison use the same vocabulary.
+    """
     if not PURPLE_ALIEN_PARQUET.exists():
         pytest.skip(f"Reference parquet not found: {PURPLE_ALIEN_PARQUET}")
     df = pd.read_parquet(PURPLE_ALIEN_PARQUET)
+    df = df.rename(columns=_VIEWSER_TO_FACTORY)
     return df[PARITY_COLS].sort_index()
 
 
