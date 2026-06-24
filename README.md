@@ -450,7 +450,7 @@ When adding new packages, follow the existing `datafactory_*` naming convention 
 
 ## License
 
-This project is part of the VIEWS Platform. See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License — see [LICENSE](LICENSE). The license covers the software in this repository only; upstream data sources (UCDP, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI, PRIO-GRID, GAUL, WDI) are subject to their respective providers' terms of use.
 
 ---
 
