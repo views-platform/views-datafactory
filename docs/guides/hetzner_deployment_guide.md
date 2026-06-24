@@ -66,7 +66,7 @@ Everything below is the full setup guide (one-time, ~1,200 lines).
 | **Name** | `views-datafactory-00` |
 | **IP** | `204.168.219.108` |
 | **Location** | Helsinki (eu-central) |
-| **Type** | CPX32 (4 vCPU, 8 GB RAM, 160 GB SSD) |
+| **Type** | CPX42 (8 vCPU, 16 GB RAM, 240 GB SSD) |
 | **OS** | Ubuntu 24.04 |
 | **Project** | views-datafactory (Hetzner console) |
 | **Backups** | Enabled (daily) |
@@ -495,7 +495,7 @@ within the expected window. Check in this order:
    ```
 
 If the server is unreachable, check Hetzner Cloud console for the
-server status (views-datafactory-00, Helsinki, CPX32).
+server status (views-datafactory-00, Helsinki, CPX42).
 
 #### Verify monitoring is working
 
@@ -673,9 +673,9 @@ backoff). If it still fails, try again later.
 Check with `df -h`.
 
 **"OOM killed" (exit code 137)** — A pipeline step exceeded
-physical RAM. The CPX32 has 8 GB and no swap by default. See the
+physical RAM. The CPX42 has 16 GB RAM + 16 GB swap. See the
 Swap Configuration section in `server_operations.md` for setup
-instructions (4 GB recommended for 79-feature assembly).
+instructions.
 
 ---
 
