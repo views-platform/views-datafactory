@@ -23,6 +23,10 @@ Produces seven Parquet files with (gid, value) schema:
 Dependencies: shapely 2.x, pyshp (both already installed).
 No geopandas, no GDAL (ADR-030 compliance).
 
+Ordering: harvest_gaul.py MUST run first — this script reads the
+GAUL shapefiles it downloads. See refresh_pipeline.sh for the
+canonical ordering (C-247).
+
 See: ADR-039, investigation #115, issue #118.
 """
 
@@ -34,6 +38,7 @@ import logging
 import time
 from pathlib import Path
 
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import shapefile as shp
@@ -42,6 +47,7 @@ from shapely.geometry import box as shapely_box
 from shapely.geometry import shape
 from shapely.strtree import STRtree
 
+from datafactory_adapters._reconciliation import check_nesting
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -349,6 +355,32 @@ GAUL_NAME_VARIABLES = [
 ]
 
 
+def _check_nesting_integrity(
+    code_assignments: dict[str, dict[int, int]],
+) -> None:
+    """Check GAUL hierarchy nesting and log violations (ADR-040)."""
+    required = ("gaul0_code", "gaul1_code", "gaul2_code")
+    if not all(v in code_assignments for v in required):
+        return
+
+    gids = sorted(code_assignments["gaul0_code"].keys())
+    gaul0 = np.array([code_assignments["gaul0_code"][g] for g in gids])
+    gaul1 = np.array([code_assignments["gaul1_code"][g] for g in gids])
+    gaul2 = np.array([code_assignments["gaul2_code"][g] for g in gids])
+
+    violations = check_nesting(gaul0, gaul1, gaul2)
+    if violations:
+        for v in violations[:10]:
+            logger.warning("Nesting violation: %s", v)
+        logger.warning(
+            "GAUL hierarchy check: %d nesting violation(s) "
+            "(see ADR-040)",
+            len(violations),
+        )
+    else:
+        logger.info("GAUL hierarchy check: no nesting violations")
+
+
 def main(
     data_dir: Path = Path("data/raw/gaul_admin"),
     cache_dir: Path = Path("data/raw/gaul_admin/shapefiles"),
@@ -406,6 +438,7 @@ def main(
     )
 
     results = []
+    code_assignments: dict[str, dict[int, int]] = {}
 
     all_variables = [
         (var_name, fields[0], _INT32, -1)
@@ -422,6 +455,9 @@ def main(
                 assignments[gid] = default
             else:
                 assignments[gid] = records[poly_idx][field_name]
+
+        if var_name in ("gaul0_code", "gaul1_code", "gaul2_code"):
+            code_assignments[var_name] = assignments  # type: ignore[assignment]
 
         if dry_run:
             if pa.types.is_integer(dtype):
@@ -443,6 +479,9 @@ def main(
                 dtype=dtype,
             )
             results.append(result)
+
+    if not dry_run:
+        _check_nesting_integrity(code_assignments)
 
     return results
 

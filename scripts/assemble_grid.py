@@ -393,8 +393,7 @@ def main() -> int:
 
         if has_admin:
             admin_digest = _composite_parquet_digest(config.admin_dir)
-            if admin_digest is not None:
-                current_digests["admin_digest"] = admin_digest
+            current_digests["admin_digest"] = admin_digest
 
         verdict = check_assembly_skip(
             current_digests, prov_path, output_grid,

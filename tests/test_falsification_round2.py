@@ -32,6 +32,10 @@ def _gaul0(gid: int) -> int:
     ).get(gid, -1)
 
 
+@pytest.mark.skipif(
+    not _L1_SHP.exists(),
+    reason="GAUL L1 shapefile not available — data/ is gitignored",
+)
 class TestReclassificationRationaleIsFactual:
     """R2-P3 (HARD): a registry rationale must not be contradicted by the data.
 
@@ -136,7 +140,7 @@ class TestUpstreamDefectIsReported:
                 "defect report",
             )
         )
-        has_release_note = "release" in text and "note" in text
+        has_release_note = "release note" in text or "release-note" in text
         assert has_report and has_release_note, (
             "ADR-043 lacks a communication trail: "
             f"upstream report={has_report}, "

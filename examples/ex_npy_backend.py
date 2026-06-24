@@ -45,18 +45,18 @@ def main() -> int:
         data_dir=DATA_DIR,
     )
 
-    assert len(df) == ff.y_features.shape[0], (
+    assert len(df) == ff.values.shape[0], (
         f"Row count mismatch: DataFrame={len(df)}, "
-        f"FeatureFrame={ff.y_features.shape[0]}"
+        f"FeatureFrame={ff.values.shape[0]}"
     )
 
-    assert len(df.columns) == ff.y_features.shape[1], (
+    assert len(df.columns) == ff.values.shape[1], (
         f"Feature count mismatch: DataFrame={len(df.columns)}, "
-        f"FeatureFrame={ff.y_features.shape[1]}"
+        f"FeatureFrame={ff.values.shape[1]}"
     )
 
     df_values = df.values.astype(np.float32)
-    ff_values = ff.y_features.astype(np.float32)
+    ff_values = ff.values[:, :, 0].astype(np.float32)
     assert np.allclose(df_values, ff_values, equal_nan=True), (
         "Value mismatch between DataFrame and FeatureFrame outputs"
     )

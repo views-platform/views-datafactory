@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-05-02
+**Last reviewed:** 2026-06-23
 **Related ADRs:** ADR-009, ADR-012, ADR-026
 
 ---
@@ -61,6 +61,14 @@ Assumptions not met cause immediate `ValueError`.
 - No side effects. Pure configuration container.
 - No derived properties or computed fields.
 
+The ACLED source module (`acled.py`) defines several module-level constants alongside this config class:
+- `REQUIRED_FIELDS`: set of field names every ACLED event must carry
+- `FIELD_TYPES`: mapping of field name to acceptable Python types
+- `DIGEST_FIELDS`: tuple of fields used for content digest computation
+- `ACLED_DGP_CHECKS`: tuple of DGP assumption check callables (`_check_fatality_non_negative`, `_check_known_event_type`, `_check_coordinate_bounds`)
+
+These are **not** part of `AcledConfig` — they are module-level schema and validation constants consumed by `fetch_acled` alongside the config.
+
 ---
 
 ## 6. Failure Modes and Loudness
@@ -83,6 +91,7 @@ All failures are immediate and loud. No silent fallbacks.
 - Storage paths consumed by `save_event_snapshot` and `append_ledger_entry`
 - Must not depend on any other `datafactory_*` config class
 - Registered in the source registry via `register_source("acled", ...)`
+- `fetch_acled` calls `validate_dgp_assumptions(events, ACLED_DGP_CHECKS)` after schema validation — DGP violations raise `ValueError`
 
 ---
 

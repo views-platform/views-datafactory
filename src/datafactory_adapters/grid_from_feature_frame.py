@@ -37,12 +37,17 @@ def feature_frame_to_grid(
     from datafactory_adapters._validation import validate_pgids
 
     validate_pgids(pgids)
+    if ff.sample_count > 1:
+        raise ValueError(
+            f"feature_frame_to_grid requires S=1, "
+            f"got S={ff.sample_count}"
+        )
     n_h, n_w = pgids.shape
     n_f = ff.n_features
 
     month_ids = ff.identifiers["time"]
     unit_ids = ff.identifiers["unit"]
-    data = ff.y_features  # (N, F)
+    data = ff.values[:, :, 0]  # (N, F) — squeeze trailing S=1
 
     # Determine T from unique month_ids, preserving order
     unique_months = np.unique(month_ids)

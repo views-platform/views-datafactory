@@ -13,6 +13,8 @@ import subprocess
 
 import pytest
 
+pytestmark = pytest.mark.falsification
+
 # --- F1: Symlink as distinct step (soft falsification) ---
 
 class TestF1SymlinkAsDistinctStep:

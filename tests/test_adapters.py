@@ -9,6 +9,9 @@ import pytest
 
 from datafactory_adapters import (
     FeatureFrame,
+    FrameMetadata,
+    SpatialLevel,
+    SpatioTemporalIndex,
     feature_frame_to_grid,
     grid_to_dataframe,
     grid_to_feature_frame,
@@ -20,12 +23,14 @@ from datafactory_adapters import (
 class TestFeatureFrameGreen:
 
     def test_construction(self) -> None:
-        ff = FeatureFrame(
-            y_features=np.zeros((10, 3)),
-            identifiers={
-                "time": np.arange(10),
-                "unit": np.arange(10),
-            },
+        index = SpatioTemporalIndex(
+            time=np.arange(10, dtype=np.int64),
+            unit=np.arange(10, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        ff = FeatureFrame.from_2d(
+            y_features_2d=np.zeros((10, 3)),
+            index=index,
             feature_names=["a", "b", "c"],
         )
         assert ff.n_rows == 10
@@ -34,12 +39,14 @@ class TestFeatureFrameGreen:
         assert not ff.is_sample
 
     def test_3d_with_samples(self) -> None:
+        index = SpatioTemporalIndex(
+            time=np.arange(10, dtype=np.int64),
+            unit=np.arange(10, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
         ff = FeatureFrame(
-            y_features=np.zeros((10, 3, 5)),
-            identifiers={
-                "time": np.arange(10),
-                "unit": np.arange(10),
-            },
+            y_features=np.zeros((10, 3, 5), dtype=np.float32),
+            index=index,
             feature_names=["a", "b", "c"],
         )
         assert ff.sample_count == 5
@@ -48,36 +55,40 @@ class TestFeatureFrameGreen:
     def test_save_load_roundtrip(
         self, tmp_path: Path
     ) -> None:
-        original = FeatureFrame(
-            y_features=np.random.rand(10, 3).astype(
+        index = SpatioTemporalIndex(
+            time=np.arange(10, dtype=np.int64),
+            unit=np.arange(100, 110, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        original = FeatureFrame.from_2d(
+            y_features_2d=np.random.rand(10, 3).astype(
                 np.float32
             ),
-            identifiers={
-                "time": np.arange(10),
-                "unit": np.arange(100, 110),
-            },
+            index=index,
             feature_names=["x", "y", "z"],
-            metadata={"source": "test"},
+            metadata=FrameMetadata(model="test"),
         )
         original.save(tmp_path / "ff")
         loaded = FeatureFrame.load(tmp_path / "ff")
 
         np.testing.assert_array_equal(
-            original.y_features, loaded.y_features
+            original.values, loaded.values
         )
         assert loaded.feature_names == ["x", "y", "z"]
-        assert loaded.metadata["source"] == "test"
+        assert loaded.metadata.model == "test"
 
     def test_dtype_coerced_to_float32(self) -> None:
-        ff = FeatureFrame(
-            y_features=np.zeros((5, 2), dtype=np.float64),
-            identifiers={
-                "time": np.arange(5),
-                "unit": np.arange(5),
-            },
+        index = SpatioTemporalIndex(
+            time=np.arange(5, dtype=np.int64),
+            unit=np.arange(5, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        ff = FeatureFrame.from_2d(
+            y_features_2d=np.zeros((5, 2), dtype=np.float64),
+            index=index,
             feature_names=["a", "b"],
         )
-        assert ff.y_features.dtype == np.float32
+        assert ff.values.dtype == np.float32
 
 
 # ---- FeatureFrame: Beige ----
@@ -86,51 +97,50 @@ class TestFeatureFrameGreen:
 class TestFeatureFrameBeige:
 
     def test_missing_time_raises(self) -> None:
-        with pytest.raises(ValueError, match="time"):
-            FeatureFrame(
-                y_features=np.zeros((5, 2)),
-                identifiers={"unit": np.arange(5)},
-                feature_names=["a", "b"],
+        with pytest.raises(TypeError):
+            SpatioTemporalIndex(
+                unit=np.arange(5, dtype=np.int64),
+                level=SpatialLevel.PGM,
             )
 
     def test_missing_unit_raises(self) -> None:
-        with pytest.raises(ValueError, match="unit"):
-            FeatureFrame(
-                y_features=np.zeros((5, 2)),
-                identifiers={"time": np.arange(5)},
-                feature_names=["a", "b"],
+        with pytest.raises(TypeError):
+            SpatioTemporalIndex(
+                time=np.arange(5, dtype=np.int64),
+                level=SpatialLevel.PGM,
             )
 
     def test_wrong_feature_names_count(self) -> None:
+        index = SpatioTemporalIndex(
+            time=np.arange(5, dtype=np.int64),
+            unit=np.arange(5, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
         with pytest.raises(ValueError, match="feature_names"):
-            FeatureFrame(
-                y_features=np.zeros((5, 3)),
-                identifiers={
-                    "time": np.arange(5),
-                    "unit": np.arange(5),
-                },
+            FeatureFrame.from_2d(
+                y_features_2d=np.zeros((5, 3)),
+                index=index,
                 feature_names=["a", "b"],  # 2 != 3
             )
 
     def test_identifier_length_mismatch(self) -> None:
         with pytest.raises(ValueError, match="length"):
-            FeatureFrame(
-                y_features=np.zeros((5, 2)),
-                identifiers={
-                    "time": np.arange(3),  # 3 != 5
-                    "unit": np.arange(5),
-                },
-                feature_names=["a", "b"],
+            SpatioTemporalIndex(
+                time=np.arange(3, dtype=np.int64),  # 3 != 5
+                unit=np.arange(5, dtype=np.int64),
+                level=SpatialLevel.PGM,
             )
 
     def test_1d_features_raises(self) -> None:
+        index = SpatioTemporalIndex(
+            time=np.arange(5, dtype=np.int64),
+            unit=np.arange(5, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
         with pytest.raises(ValueError, match="2D"):
-            FeatureFrame(
-                y_features=np.zeros(5),
-                identifiers={
-                    "time": np.arange(5),
-                    "unit": np.arange(5),
-                },
+            FeatureFrame.from_2d(
+                y_features_2d=np.zeros(5),
+                index=index,
                 feature_names=["a"],
             )
 
@@ -256,27 +266,31 @@ class TestGridToFeatureFrameGreen:
 
 class TestFeatureFrameRed:
 
-    def test_zero_rows_raises(self) -> None:
-        with pytest.raises(ValueError, match="at least 1"):
-            FeatureFrame(
-                y_features=np.zeros((0, 2)),
-                identifiers={
-                    "time": np.array([]),
-                    "unit": np.array([]),
-                },
-                feature_names=["a", "b"],
-            )
+    def test_zero_rows_accepted(self) -> None:
+        index = SpatioTemporalIndex(
+            time=np.array([], dtype=np.int64),
+            unit=np.array([], dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        ff = FeatureFrame.from_2d(
+            y_features_2d=np.zeros((0, 2), dtype=np.float32),
+            index=index,
+            feature_names=["a", "b"],
+        )
+        assert ff.n_rows == 0
 
     def test_save_to_nonexistent_parent(
         self, tmp_path: Path
     ) -> None:
         """Save should create directories."""
-        ff = FeatureFrame(
-            y_features=np.ones((3, 2), dtype=np.float32),
-            identifiers={
-                "time": np.arange(3),
-                "unit": np.arange(3),
-            },
+        index = SpatioTemporalIndex(
+            time=np.arange(3, dtype=np.int64),
+            unit=np.arange(3, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        ff = FeatureFrame.from_2d(
+            y_features_2d=np.ones((3, 2), dtype=np.float32),
+            index=index,
             feature_names=["a", "b"],
         )
         deep_path = tmp_path / "a" / "b" / "c"
@@ -363,7 +377,7 @@ class TestAdapterRoundtripGreen:
 
         assert len(df) == ff.n_rows
         np.testing.assert_allclose(
-            df.values.sum(), ff.y_features.sum(), rtol=1e-5
+            df.values.sum(), ff.values.sum(), rtol=1e-5
         )
 
     def test_ff_save_load_preserves_data(
@@ -389,16 +403,16 @@ class TestAdapterRoundtripGreen:
         assert loaded.n_rows == ff.n_rows
         assert loaded.feature_names == ff.feature_names
         np.testing.assert_array_equal(
-            loaded.y_features, ff.y_features
+            loaded.values, ff.values
         )
 
 
-# ---- FeatureFrame.from_grid: Green (C-64) ----
+# ---- grid_to_feature_frame via function: Green (C-64) ----
 
 
 class TestFeatureFrameFromGridGreen:
 
-    def test_from_grid_classmethod(self) -> None:
+    def test_from_grid_function(self) -> None:
         grid = np.ones((2, 3, 4, 2), dtype=np.float32)
         pgids = np.arange(1, 13).reshape(3, 4)
         time_steps = np.array(
@@ -406,7 +420,7 @@ class TestFeatureFrameFromGridGreen:
             dtype="datetime64[M]",
         )
 
-        ff = FeatureFrame.from_grid(
+        ff = grid_to_feature_frame(
             grid, pgids, time_steps, ["a", "b"]
         )
         assert ff.n_rows == 24
@@ -435,12 +449,14 @@ class TestIdentifierAlignmentGreen:
     def test_feature_frame_identifiers_present(
         self,
     ) -> None:
-        ff = FeatureFrame(
-            y_features=np.ones((5, 2)),
-            identifiers={
-                "time": np.arange(5),
-                "unit": np.arange(5),
-            },
+        index = SpatioTemporalIndex(
+            time=np.arange(5, dtype=np.int64),
+            unit=np.arange(5, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        ff = FeatureFrame.from_2d(
+            y_features_2d=np.ones((5, 2)),
+            index=index,
             feature_names=["a", "b"],
         )
         assert "time" in ff.identifiers
@@ -580,8 +596,8 @@ class TestGridShapeValidationBeige:
                 grid, pgids_flat, time_steps, ["a", "b"],
             )
 
-    def test_from_grid_validates(self) -> None:
-        """FeatureFrame.from_grid rejects bad shapes."""
+    def test_grid_to_feature_frame_validates(self) -> None:
+        """grid_to_feature_frame rejects bad shapes."""
         grid_3d = np.zeros((2, 12, 2), dtype=np.float32)
         pgids = np.arange(1, 13).reshape(3, 4)
         time_steps = np.array(
@@ -589,9 +605,29 @@ class TestGridShapeValidationBeige:
             dtype="datetime64[M]",
         )
         with pytest.raises(ValueError, match="4D"):
-            FeatureFrame.from_grid(
+            grid_to_feature_frame(
                 grid_3d, pgids, time_steps, ["a", "b"],
             )
+
+    def test_feature_frame_to_grid_rejects_samples(
+        self,
+    ) -> None:
+        """feature_frame_to_grid rejects S > 1."""
+        index = SpatioTemporalIndex(
+            time=np.arange(5, dtype=np.int64),
+            unit=np.arange(5, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        ff = FeatureFrame(
+            y_features=np.zeros(
+                (5, 2, 3), dtype=np.float32
+            ),
+            index=index,
+            feature_names=["a", "b"],
+        )
+        pgids = np.arange(1, 13).reshape(3, 4)
+        with pytest.raises(ValueError, match="S=1"):
+            feature_frame_to_grid(ff, pgids)
 
     def test_feature_frame_to_grid_1d_pgids(
         self,
@@ -649,3 +685,188 @@ class TestSharedValidation:
         pgids = np.arange(12).reshape(4, 3)  # transposed
         with pytest.raises(ValueError, match="spatial dims"):
             validate_grid_pgids(grid, pgids)
+
+
+# ---- views-frames conformance: Green (#221) ----
+
+
+class TestViewsFramesConformance:
+    """Run views-frames conformance suite against adapter output."""
+
+    def test_grid_to_feature_frame_conforms(self) -> None:
+        from views_frames.conformance import (
+            assert_frame_contract,
+        )
+
+        grid = np.random.rand(2, 3, 4, 2).astype(
+            np.float32
+        )
+        pgids = np.arange(1, 13).reshape(3, 4)
+        time_steps = np.array(
+            ["2024-01", "2024-02"],
+            dtype="datetime64[M]",
+        )
+        ff = grid_to_feature_frame(
+            grid, pgids, time_steps, ["count", "best"]
+        )
+        assert_frame_contract(ff)
+
+    def test_direct_construction_conforms(self) -> None:
+        from views_frames.conformance import (
+            assert_frame_contract,
+        )
+
+        index = SpatioTemporalIndex(
+            time=np.arange(10, dtype=np.int64),
+            unit=np.arange(10, dtype=np.int64),
+            level=SpatialLevel.PGM,
+        )
+        ff = FeatureFrame.from_2d(
+            y_features_2d=np.random.rand(10, 3).astype(
+                np.float32
+            ),
+            index=index,
+            feature_names=["a", "b", "c"],
+        )
+        assert_frame_contract(ff)
+
+
+# ---- feature_frame_to_grid standalone tests (C-296, #236) ----
+
+
+def _make_ff(
+    month_ids: np.ndarray,
+    unit_ids: np.ndarray,
+    values: np.ndarray,
+    feature_names: list[str],
+) -> FeatureFrame:
+    """Build a FeatureFrame from flat arrays (S=1)."""
+    index = SpatioTemporalIndex(
+        time=month_ids.astype(np.int64),
+        unit=unit_ids.astype(np.int64),
+        level=SpatialLevel.PGM,
+    )
+    return FeatureFrame.from_2d(
+        y_features_2d=values.astype(np.float32),
+        index=index,
+        feature_names=feature_names,
+    )
+
+
+class TestFeatureFrameToGridGreen:
+    """Standalone happy-path tests for feature_frame_to_grid (ADR-005)."""
+
+    def test_standalone_reconstruction(self) -> None:
+        """Known values at known pgids appear at correct positions."""
+        pgids = np.arange(1, 13).reshape(3, 4)
+        month_ids = np.array([100, 100, 101])
+        unit_ids = np.array([1, 5, 1])
+        values = np.array([[10.0], [20.0], [30.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["feat"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid.shape == (2, 3, 4, 1)
+        assert grid[0, 0, 0, 0] == 10.0  # month 100, pgid 1 → (0,0)
+        assert grid[0, 1, 0, 0] == 20.0  # month 100, pgid 5 → (1,0)
+        assert grid[1, 0, 0, 0] == 30.0  # month 101, pgid 1 → (0,0)
+
+    def test_output_dtype_float32(self) -> None:
+        """Output is always float32 regardless of input dtype."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        month_ids = np.array([1])
+        unit_ids = np.array([1])
+        values = np.array([[5.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid.dtype == np.float32
+
+    def test_output_shape_thwf(self) -> None:
+        """Output shape matches [T, H, W, F] from input dimensions."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        n_months = 3
+        n_cells_per_month = 6
+        n_rows = n_months * n_cells_per_month
+        month_ids = np.repeat(np.arange(1, n_months + 1), n_cells_per_month)
+        unit_ids = np.tile(np.arange(1, 7), n_months)
+        values = np.random.rand(n_rows, 2).astype(np.float32)
+        ff = _make_ff(month_ids, unit_ids, values, ["a", "b"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid.shape == (3, 2, 3, 2)
+
+
+class TestFeatureFrameToGridBeige:
+    """Boundary condition tests for feature_frame_to_grid (ADR-005)."""
+
+    def test_pgids_not_in_frame_are_zero(self) -> None:
+        """Grid cells for pgids absent from FeatureFrame are 0.0."""
+        pgids = np.arange(1, 13).reshape(3, 4)
+        month_ids = np.array([1])
+        unit_ids = np.array([1])
+        values = np.array([[42.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid[0, 0, 0, 0] == 42.0
+        assert grid[0, 1, 0, 0] == 0.0
+        assert grid[0, 0, 1, 0] == 0.0
+
+    def test_unit_ids_not_in_pgids_skipped(self) -> None:
+        """FeatureFrame rows with pgids not in pgids array are skipped."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        month_ids = np.array([1, 1])
+        unit_ids = np.array([1, 999])
+        values = np.array([[10.0], [99.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid[0, 0, 0, 0] == 10.0
+        assert grid.sum() == 10.0
+
+    def test_single_row_single_feature(self) -> None:
+        """Minimal input: one row, one feature."""
+        pgids = np.array([[1, 2], [3, 4]])
+        month_ids = np.array([0])
+        unit_ids = np.array([3])
+        values = np.array([[7.5]])
+        ff = _make_ff(month_ids, unit_ids, values, ["z"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid.shape == (1, 2, 2, 1)
+        assert grid[0, 1, 0, 0] == 7.5
+
+
+class TestFeatureFrameToGridRed:
+    """Adversarial tests for feature_frame_to_grid (ADR-005)."""
+
+    def test_nan_propagates(self) -> None:
+        """NaN values in FeatureFrame propagate to grid output."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        month_ids = np.array([1, 1])
+        unit_ids = np.array([1, 2])
+        values = np.array([[np.nan], [5.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert np.isnan(grid[0, 0, 0, 0])
+        assert grid[0, 0, 1, 0] == 5.0
+
+    def test_duplicate_pgid_last_write_wins(self) -> None:
+        """Duplicate (month, pgid) pairs: last row wins."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        month_ids = np.array([1, 1])
+        unit_ids = np.array([1, 1])
+        values = np.array([[10.0], [20.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid[0, 0, 0, 0] == 20.0

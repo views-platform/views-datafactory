@@ -291,6 +291,45 @@ class TestLandGaulRegion:
         assert "land_gaul" in list_regions()
 
 
+class TestAfricaMeGaulRegion:
+    """Tests for the bundled africa_me_gaul pgid set (#215)."""
+
+    def test_africa_me_gaul_returns_correct_count(self) -> None:
+        pgids = load_region_pgids("africa_me_gaul")
+        assert len(pgids) == 13_105
+
+    def test_africa_me_gaul_is_subset_of_legacy(self) -> None:
+        gaul = load_region_pgids("africa_me_gaul")
+        legacy = load_region_pgids("africa_me_legacy")
+        assert gaul < legacy
+
+    def test_africa_me_gaul_is_subset_of_land_gaul(self) -> None:
+        gaul = load_region_pgids("africa_me_gaul")
+        land_gaul = load_region_pgids("land_gaul")
+        assert gaul <= land_gaul
+
+    def test_africa_me_gaul_excluded_set(self) -> None:
+        gaul = load_region_pgids("africa_me_gaul")
+        legacy = load_region_pgids("africa_me_legacy")
+        excluded = legacy - gaul
+        assert excluded == {62356, 94776, 99027, 107733, 107742}
+
+    def test_africa_me_gaul_pgids_json_exists(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "africa_me_gaul_pgids.json"
+        assert path.exists()
+
+    def test_africa_me_gaul_pgids_json_is_sorted_unique(self) -> None:
+        pkg = Path(__file__).parent.parent / "src"
+        path = pkg / "datafactory_query" / "africa_me_gaul_pgids.json"
+        pgids = json.loads(path.read_text())
+        assert pgids == sorted(pgids)
+        assert len(pgids) == len(set(pgids))
+
+    def test_africa_me_gaul_in_list_regions(self) -> None:
+        assert "africa_me_gaul" in list_regions()
+
+
 class TestBundledPgidConsistency:
     """Cross-checks between bundled pgid sets."""
 
@@ -571,7 +610,7 @@ class TestLoadDatasetZarr:
         assert ff_npy.n_features == ff_zarr.n_features
         assert ff_npy.feature_names == ff_zarr.feature_names
         np.testing.assert_array_equal(
-            ff_npy.y_features, ff_zarr.y_features,
+            ff_npy.values, ff_zarr.values,
         )
 
     def test_zarr_feature_order_from_attrs(
@@ -620,8 +659,8 @@ class TestLoadDatasetZarr:
         # Order matches attrs, not alphabetical
         assert ff.feature_names == ["zz_last", "aa_first"]
         # Values match: zz_last=0.0, aa_first=1.0
-        assert ff.y_features[0, 0] == 0.0
-        assert ff.y_features[0, 1] == 1.0
+        assert ff.values[0, 0, 0] == 0.0
+        assert ff.values[0, 1, 0] == 1.0
 
     def test_zarr_unknown_feature_raises(
         self, tmp_path: Path,
@@ -928,7 +967,7 @@ class TestLoadDatasetBeige:
         )
         assert ff_default.feature_names == ff_explicit.feature_names
         np.testing.assert_array_equal(
-            ff_default.y_features, ff_explicit.y_features,
+            ff_default.values, ff_explicit.values,
         )
 
 
@@ -1008,7 +1047,7 @@ class TestLoadDatasetRed:
             data_dir=data_dir,
             gaul_dir=gaul_dir,
         )
-        assert np.all(np.isnan(ff.y_features))
+        assert np.all(np.isnan(ff.values))
 
     def test_zero_time_steps(self, tmp_path: Path) -> None:
         from datafactory_query.dataset import load_dataset
@@ -1207,7 +1246,7 @@ class TestRemoteZarrSmoke:
             features=["ged_sb_best", "ged_ns_best"],
             output_format="feature_frame",
         )
-        assert ff.y_features.shape[1] == 2
+        assert ff.values.shape[1] == 2
         assert set(ff.feature_names) == {
             "ged_sb_best", "ged_ns_best",
         }
@@ -1227,3 +1266,182 @@ class TestRemoteZarrSmoke:
                 end=480,
                 features=["ged_sb_best"],
             )
+
+
+# ---- RemoteConfig tests (C-290, #237) ----
+
+
+class TestRemoteConfigGreen:
+    """CIC Section 3 guarantees for RemoteConfig (ADR-005)."""
+
+    def test_frozen_enforcement(self) -> None:
+        """RemoteConfig is frozen — field assignment raises."""
+        from datafactory_query.defaults import RemoteConfig
+
+        cfg = RemoteConfig()
+        with pytest.raises(AttributeError):
+            cfg.server = "1.2.3.4"  # type: ignore[misc]
+
+    def test_zarr_url_construction(self) -> None:
+        """DEFAULT_REMOTE.zarr_url matches expected format."""
+        assert DEFAULT_REMOTE.zarr_url == (
+            "http://204.168.219.108/grid.zarr"
+        )
+
+    def test_parquet_url_construction(self) -> None:
+        """DEFAULT_REMOTE.parquet_url matches expected format."""
+        assert DEFAULT_REMOTE.parquet_url == (
+            "http://204.168.219.108/dataframe.parquet"
+        )
+
+    def test_default_remote_is_remote_config(self) -> None:
+        """DEFAULT_REMOTE is a RemoteConfig with expected defaults."""
+        from datafactory_query.defaults import RemoteConfig
+
+        assert isinstance(DEFAULT_REMOTE, RemoteConfig)
+        assert DEFAULT_REMOTE.server == "204.168.219.108"
+        assert DEFAULT_REMOTE.zarr_path == "/grid.zarr"
+        assert DEFAULT_REMOTE.scheme == "http"
+
+
+class TestRemoteConfigBeige:
+    """Custom overrides for RemoteConfig (ADR-005)."""
+
+    def test_custom_scheme_overrides_url(self) -> None:
+        """Custom scheme propagates to zarr_url."""
+        from datafactory_query.defaults import RemoteConfig
+
+        cfg = RemoteConfig(scheme="https")
+        assert cfg.zarr_url.startswith("https://")
+
+    def test_custom_server_overrides_url(self) -> None:
+        """Custom server propagates to zarr_url."""
+        from datafactory_query.defaults import RemoteConfig
+
+        cfg = RemoteConfig(server="example.com")
+        assert "example.com" in cfg.zarr_url
+
+
+# ---- PARTITIONS tests (C-290, #237) ----
+
+
+class TestPartitionsGreen:
+    """Structure and immutability tests for PARTITIONS (ADR-005)."""
+
+    def test_partitions_immutable(self) -> None:
+        """Top-level PARTITIONS is immutable (MappingProxyType)."""
+        from datafactory_query.defaults import PARTITIONS
+
+        with pytest.raises(TypeError):
+            PARTITIONS["new_key"] = {}  # type: ignore[index]
+
+    def test_nested_partitions_immutable(self) -> None:
+        """Nested partition dicts are also immutable."""
+        from datafactory_query.defaults import PARTITIONS
+
+        with pytest.raises(TypeError):
+            PARTITIONS["calibration"]["new_key"] = (0, 0)  # type: ignore[index]
+
+    def test_calibration_boundaries_correct(self) -> None:
+        """Calibration train/test boundaries match expected values."""
+        from datafactory_query.defaults import PARTITIONS
+
+        assert PARTITIONS["calibration"]["train"] == (121, 456)
+        assert PARTITIONS["calibration"]["test"] == (457, 504)
+
+    def test_validation_boundaries_correct(self) -> None:
+        """Validation train/test boundaries match expected values."""
+        from datafactory_query.defaults import PARTITIONS
+
+        assert PARTITIONS["validation"]["train"] == (121, 504)
+        assert PARTITIONS["validation"]["test"] == (505, 552)
+
+
+# ---- country_month output format tests (C-290, #237) ----
+
+
+class TestLoadDatasetCountryMonthGreen:
+    """Tests for country_month output format (ADR-005)."""
+
+    def test_country_month_returns_dataframe(
+        self, tmp_path: Path,
+    ) -> None:
+        """country_month format returns DataFrame with MultiIndex."""
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+
+        n_t, n_h, n_w, n_f = 3, 3, 4, 3
+        feature_names = ["feat_0", "feat_1", "gaul0_code"]
+        grid = np.ones(
+            (n_t, n_h, n_w, n_f), dtype=np.float32,
+        )
+        grid[:, :, :, 2] = 100.0
+        grid[:, :2, :, 2] = 100.0
+        grid[:, 2:, :, 2] = 200.0
+
+        data_dir.mkdir(parents=True, exist_ok=True)
+        np.save(data_dir / "grid.npy", grid)
+        pgids = np.arange(1, n_h * n_w + 1).reshape(n_h, n_w)
+        np.save(data_dir / "pgids.npy", pgids)
+        time_steps = np.array(
+            [f"2020-{m:02d}" for m in range(1, n_t + 1)],
+            dtype="datetime64[M]",
+        )
+        np.save(data_dir / "time_steps.npy", time_steps)
+        (data_dir / "feature_names.json").write_text(
+            json.dumps(feature_names),
+        )
+        _make_gaul_parquets(gaul_dir)
+
+        df = load_dataset(
+            data_dir=str(data_dir),
+            region="global",
+            output_format="country_month",
+            features=["feat_0", "feat_1"],
+        )
+
+        assert isinstance(df, pd.DataFrame)
+        assert df.index.names == ["month_id", "country_id"]
+
+    def test_country_month_auto_includes_gaul0_code(
+        self, tmp_path: Path,
+    ) -> None:
+        """gaul0_code is auto-included even when not in features."""
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = tmp_path / "assembled"
+        gaul_dir = tmp_path / "gaul"
+
+        n_t, n_h, n_w, n_f = 2, 3, 4, 3
+        feature_names = ["feat_0", "feat_1", "gaul0_code"]
+        grid = np.ones(
+            (n_t, n_h, n_w, n_f), dtype=np.float32,
+        )
+        grid[:, :, :, 2] = 100.0
+
+        data_dir.mkdir(parents=True, exist_ok=True)
+        np.save(data_dir / "grid.npy", grid)
+        pgids = np.arange(1, n_h * n_w + 1).reshape(n_h, n_w)
+        np.save(data_dir / "pgids.npy", pgids)
+        time_steps = np.array(
+            ["2020-01", "2020-02"],
+            dtype="datetime64[M]",
+        )
+        np.save(data_dir / "time_steps.npy", time_steps)
+        (data_dir / "feature_names.json").write_text(
+            json.dumps(feature_names),
+        )
+        _make_gaul_parquets(gaul_dir)
+
+        df = load_dataset(
+            data_dir=str(data_dir),
+            region="global",
+            output_format="country_month",
+            features=["feat_0"],
+        )
+
+        assert isinstance(df, pd.DataFrame)
+        assert "gaul0_code" not in df.columns
+        assert "feat_0" in df.columns

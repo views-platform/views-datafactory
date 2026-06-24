@@ -14,7 +14,12 @@ import logging
 import numpy as np
 import pandas as pd
 
-from datafactory_adapters.feature_frame import FeatureFrame
+from datafactory_adapters.feature_frame import (
+    FeatureFrame,
+    FrameMetadata,
+    SpatialLevel,
+    SpatioTemporalIndex,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +143,7 @@ def grid_to_feature_frame(
     *,
     land_pgids: set[int] | None = None,
     month_id_epoch: int = 0,
-    metadata: dict | None = None,
+    metadata: FrameMetadata | None = None,
 ) -> FeatureFrame:
     """Convert a [T, H, W, C] grid to a FeatureFrame.
 
@@ -149,7 +154,7 @@ def grid_to_feature_frame(
         feature_names: List of C feature column names.
         land_pgids: Optional set of land cell IDs for filtering.
         month_id_epoch: Base year for month_id encoding.
-        metadata: Optional dict of provenance info.
+        metadata: Optional FrameMetadata for provenance.
 
     Returns:
         FeatureFrame with dense land-cell time series.
@@ -158,12 +163,14 @@ def grid_to_feature_frame(
         grid, pgids, time_steps, month_id_epoch, land_pgids
     )
 
-    return FeatureFrame(
-        y_features=flat_data,
-        identifiers={
-            "time": all_month_ids,
-            "unit": all_pgids.astype(np.int32),
-        },
+    index = SpatioTemporalIndex(
+        time=all_month_ids,
+        unit=all_pgids.astype(np.int32),
+        level=SpatialLevel.PGM,
+    )
+    return FeatureFrame.from_2d(
+        y_features_2d=flat_data,
+        index=index,
         feature_names=list(feature_names),
         metadata=metadata,
     )

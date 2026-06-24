@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -208,6 +209,44 @@ def validate_events(
         schema_snapshot=schema_snapshot,
         content_digest=content_digest,
     )
+
+
+def validate_dgp_assumptions(
+    events: list[dict],
+    checks: Sequence[Callable[[dict], str | None]],
+    *,
+    source_name: str = "unknown",
+) -> None:
+    """Validate data-generating process assumptions on harvested events.
+
+    Each check callable receives a single event dict and returns None
+    if the assumption holds, or a violation description string if not.
+    Collects all violations across all events and checks, then raises
+    ValueError with the full report if any are found.
+
+    Args:
+        events: List of raw event dicts.
+        checks: Sequence of check callables.
+        source_name: Source identifier for the error message.
+
+    Raises:
+        ValueError: If any DGP assumption is violated.
+    """
+    violations: list[str] = []
+    for i, event in enumerate(events):
+        for check in checks:
+            result = check(event)
+            if result is not None:
+                violations.append(
+                    f"Event {i} (id={event.get('id', '?')}): {result}"
+                )
+
+    if violations:
+        summary = "; ".join(violations[:20])
+        raise ValueError(
+            f"{source_name} DGP validation: {len(violations)} "
+            f"violation(s): {summary}"
+        )
 
 
 def compare_snapshots(

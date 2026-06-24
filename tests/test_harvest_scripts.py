@@ -1,7 +1,7 @@
 """Characterization tests for harvest scripts (C-230, Pattern #8 prep).
 
 These tests verify the CLI interface of each harvest script without
-making network calls.  They exist so that PR-3 (HarvestRunner extraction)
+making network calls.  They exist so that HarvestRunner extraction
 can verify that refactoring preserves behavior.
 """
 
@@ -40,6 +40,16 @@ HARVEST_SCRIPTS: list[str] = [
 ]
 
 
+def _run_help(script: str) -> subprocess.CompletedProcess[str]:
+    """Run a harvest script with --help and return the result."""
+    return subprocess.run(
+        [sys.executable, str(SCRIPTS_DIR / f"{script}.py"), "--help"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+
 # ── Module structure ─────────────────────────────────────────────────
 
 
@@ -71,12 +81,7 @@ class TestHelpFlag:
 
     @pytest.mark.parametrize("script", HARVEST_SCRIPTS)
     def test_help_exits_zero(self, script: str) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / f"{script}.py"), "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help(script)
         assert result.returncode == 0, (
             f"{script} --help failed: {result.stderr}"
         )
@@ -91,12 +96,7 @@ class TestForceFlag:
 
     @pytest.mark.parametrize("script", HARVEST_SCRIPTS)
     def test_force_in_help(self, script: str) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / f"{script}.py"), "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help(script)
         assert "--force" in result.stdout, (
             f"{script} --help does not mention --force"
         )
@@ -130,81 +130,82 @@ class TestSourceSpecificArgs:
     """Verify source-specific CLI flags exist in help output."""
 
     def test_ucdp_has_source_flag(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / "harvest_ucdp.py"), "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help("harvest_ucdp")
         assert "--source" in result.stdout
 
     def test_acled_has_start_year(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / "harvest_acled.py"), "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help("harvest_acled")
         assert "--start-year" in result.stdout
 
     def test_acled_has_end_year(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / "harvest_acled.py"), "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help("harvest_acled")
         assert "--end-year" in result.stdout
 
     def test_acled_has_proof(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / "harvest_acled.py"), "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help("harvest_acled")
         assert "--proof" in result.stdout
 
     def test_ghspop_has_epochs(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / "harvest_ghspop.py"), "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help("harvest_ghspop")
         assert "--epochs" in result.stdout
 
     def test_ghsbuilts_has_epochs(self) -> None:
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPTS_DIR / "harvest_ghsbuilts.py"),
-                "--help",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help("harvest_ghsbuilts")
         assert "--epochs" in result.stdout
 
     def test_priogrid_has_variables(self) -> None:
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPTS_DIR / "harvest_priogrid.py"),
-                "--help",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help("harvest_priogrid")
         assert "--variables" in result.stdout
 
     def test_gaul_has_variables(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / "harvest_gaul.py"), "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        result = _run_help("harvest_gaul")
         assert "--variables" in result.stdout
+
+
+# ── Characterization: CLI contracts (C-230, #201) ──────────────────────
+
+_SOURCE_KEYWORDS: dict[str, str] = {
+    "harvest_ucdp": "ucdp",
+    "harvest_acled": "acled",
+    "harvest_ghspop": "ghspop",
+    "harvest_ghsbuilts": "ghsbuilts",
+    "harvest_priogrid": "priogrid",
+    "harvest_gaul": "gaul",
+    "harvest_vdem": "vdem",
+    "harvest_shdi": "shdi",
+    "harvest_shapefile": "shapefile",
+}
+
+
+class TestHarvestBanner:
+    """--help output must mention the source and work without network."""
+
+    @pytest.mark.parametrize("script", HARVEST_SCRIPTS)
+    def test_help_output_contains_source_name(
+        self, script: str,
+    ) -> None:
+        result = _run_help(script)
+        keyword = _SOURCE_KEYWORDS[script]
+        assert keyword in result.stdout.lower(), (
+            f"{script} --help does not mention '{keyword}'"
+        )
+
+    @pytest.mark.parametrize("script", HARVEST_SCRIPTS)
+    def test_help_no_network_required(self, script: str) -> None:
+        result = _run_help(script)
+        assert result.returncode == 0, (
+            f"{script} --help failed (rc={result.returncode})"
+        )
+
+
+class TestHarvestCompleteness:
+    """Test list must match the actual scripts/ glob."""
+
+    def test_all_harvest_scripts_covered(self) -> None:
+        on_disk = sorted(
+            p.stem for p in SCRIPTS_DIR.glob("harvest_*.py")
+        )
+        assert on_disk == sorted(HARVEST_SCRIPTS), (
+            f"Test list mismatch — on disk: {on_disk}, "
+            f"in tests: {sorted(HARVEST_SCRIPTS)}"
+        )

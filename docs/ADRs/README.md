@@ -159,6 +159,12 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-044** -- Source Taxonomy: Reference Infrastructure vs Feature Sources
   Data sources are classified as reference (define coordinate system: PRIO-GRID, GAUL) or feature (provide measured values: UCDP, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI). Feature sources may depend on reference sources for spatial/temporal mapping; feature sources must not depend on other feature sources. Refines ADR-014 Principle 6.
 
+- **ADR-045** -- Data Soundness Invariants Across Layers
+  A grid is "sound" when every layer boundary preserves its documented invariants. Defines the invariant chain from harvest through query, distinguishes extensive/intensive/static feature types, and maintains a gap table of tested vs untested invariants.
+
+- **ADR-046** -- UCDP Schema Evolution Strategy
+  Documents how the harvester handles UCDP API schema changes across versions: field addition detection, type-change detection, and the schema fingerprint mechanism that flags breaking changes in the provenance ledger.
+
 These must comply with the constitutional ADRs above.
 
 ---

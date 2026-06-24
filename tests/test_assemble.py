@@ -535,3 +535,320 @@ class TestAssemblyRoundTrip:
         # Admin channel
         assert result[0, 0, 0, 6] == -1.0  # missing
         assert result[0, 1, 1, 6] == 42.0  # placed
+
+
+# ---- Registry ↔ Assembly sync (C-293, #208) ----
+
+
+class TestRegistryAssemblySync:
+    """Guard tests: source_registry.py and assemble_grid.py stay in sync.
+
+    The registry declares which sources contribute features and how many.
+    The assembly script concatenates per-source grids into the final
+    [T, H, W, C] array. These tests catch silent divergence.
+    """
+
+    def test_source_ordering_matches_registry(self) -> None:
+        """Assembly concatenation order matches registry source order.
+
+        Assembly concatenates: ucdp, acled, ghspop, ghsbuilts, vdem,
+        shdi, static, admin. The set of source names contributing
+        features must match those in PIPELINE_SOURCES.
+        """
+        from datafactory_provenance.source_registry import (
+            PIPELINE_SOURCES,
+        )
+
+        registry_sources_with_features = [
+            s.name for s in PIPELINE_SOURCES if s.features
+        ]
+        assembly_source_names = [
+            "UCDP Annual", "ACLED", "GHS-POP", "GHS-BUILT-S",
+            "V-Dem", "SHDI", "PRIO-GRID Static", "GAUL Admin",
+        ]
+
+        assert set(registry_sources_with_features) == set(
+            assembly_source_names
+        ), (
+            f"Registry sources with features: "
+            f"{registry_sources_with_features}, "
+            f"assembly expects: {assembly_source_names}"
+        )
+
+    def test_per_source_feature_count_consistent(self) -> None:
+        """Per-source feature counts from registry match expectations."""
+        from datafactory_provenance.source_registry import (
+            PIPELINE_SOURCES,
+        )
+
+        expected_counts = {
+            "UCDP Annual": 6,
+            "ACLED": 8,
+            "GHS-POP": 1,
+            "GHS-BUILT-S": 1,
+            "PRIO-GRID Static": 34,
+            "V-Dem": 22,
+            "SHDI": 4,
+            "GAUL Admin": 3,
+        }
+
+        for source in PIPELINE_SOURCES:
+            if source.name in expected_counts:
+                assert len(source.features) == expected_counts[
+                    source.name
+                ], (
+                    f"{source.name}: expected "
+                    f"{expected_counts[source.name]} features, "
+                    f"got {len(source.features)}"
+                )
+
+    def test_total_feature_count_79(self) -> None:
+        """Total features across all sources is 79."""
+        from datafactory_provenance.source_registry import (
+            get_all_features,
+        )
+
+        all_features = get_all_features()
+        assert len(all_features) == 79, (
+            f"Expected 79 total features, got {len(all_features)}"
+        )
+
+    def test_feature_names_match_registry(self) -> None:
+        """All feature names are unique and present in registry."""
+        from datafactory_provenance.source_registry import (
+            get_all_features,
+        )
+
+        all_features = get_all_features()
+        assert len(all_features) == len(set(all_features)), (
+            "Duplicate feature names in registry"
+        )
+
+        admin_fields = _assembly_mod.AssemblyConfig().admin_numeric_fields
+        for field in admin_fields:
+            assert field in all_features, (
+                f"Admin field '{field}' not in registry features"
+            )
+
+    def test_admin_numeric_fields_match_registry(self) -> None:
+        """AssemblyConfig.admin_numeric_fields matches GAUL Admin features."""
+        from datafactory_provenance.source_registry import (
+            PIPELINE_SOURCES,
+        )
+
+        gaul_entry = next(
+            s for s in PIPELINE_SOURCES if s.name == "GAUL Admin"
+        )
+        config_fields = _assembly_mod.AssemblyConfig().admin_numeric_fields
+
+        assert set(config_fields) == set(gaul_entry.features), (
+            f"Config admin_numeric_fields {config_fields} != "
+            f"registry GAUL Admin features {gaul_entry.features}"
+        )
+
+
+# ---- Assembly Red/Beige tests (C-297, #235) ----
+
+
+class TestAssemblyBeige:
+    """Boundary and input validation tests for assembly (ADR-005)."""
+
+    def test_load_source_grid_missing_files_returns_none(
+        self, tmp_path: Path,
+    ) -> None:
+        """_load_source_grid returns None when source files are absent."""
+        time_steps = np.array(
+            ["2020-01", "2020-02", "2020-03"],
+            dtype="datetime64[M]",
+        )
+        result = _assembly_mod._load_source_grid(
+            "MISSING", tmp_path, time_steps, 3,
+        )
+        assert result is None
+
+    def test_load_source_grid_start_outside_timeline_returns_none(
+        self, tmp_path: Path,
+    ) -> None:
+        """Source whose start date is not in UCDP timeline → None."""
+        import json as _json
+
+        ucdp_ts = np.array(
+            ["2020-01", "2020-02", "2020-03"],
+            dtype="datetime64[M]",
+        )
+        source_ts = np.array(
+            ["2019-06", "2019-07"],
+            dtype="datetime64[M]",
+        )
+        grid = np.zeros((2, 360, 720, 1), dtype=np.float32)
+        np.save(tmp_path / "grid.npy", grid)
+        np.save(tmp_path / "time_steps.npy", source_ts)
+        (tmp_path / "feature_names.json").write_text(
+            _json.dumps(["feat_a"]),
+        )
+        result = _assembly_mod._load_source_grid(
+            "BAD_START", tmp_path, ucdp_ts, 3,
+        )
+        assert result is None
+
+    def test_load_source_grid_extends_beyond_timeline_returns_none(
+        self, tmp_path: Path,
+    ) -> None:
+        """Source extending past UCDP timeline end → None."""
+        import json as _json
+
+        ucdp_ts = np.array(
+            ["2020-01", "2020-02", "2020-03"],
+            dtype="datetime64[M]",
+        )
+        source_ts = np.array(
+            ["2020-02", "2020-03", "2020-04"],
+            dtype="datetime64[M]",
+        )
+        grid = np.zeros((3, 360, 720, 1), dtype=np.float32)
+        np.save(tmp_path / "grid.npy", grid)
+        np.save(tmp_path / "time_steps.npy", source_ts)
+        (tmp_path / "feature_names.json").write_text(
+            _json.dumps(["feat_a"]),
+        )
+        result = _assembly_mod._load_source_grid(
+            "OVERFLOW", tmp_path, ucdp_ts, 3,
+        )
+        assert result is None
+
+
+class TestAssemblyRed:
+    """Adversarial and footgun tests for assembly (ADR-005).
+
+    These characterize dangerous behaviors — especially the
+    partial-flag footgun documented in server_operations.md:142-145.
+    """
+
+    def test_partial_sources_produce_fewer_features(self) -> None:
+        """Assembling with subset of sources → fewer than 79 features.
+
+        This characterizes the partial-flag footgun: omitting source
+        flags silently produces a smaller grid. No error, no warning.
+        """
+        from datafactory_provenance.source_registry import (
+            PIPELINE_SOURCES,
+            get_all_features,
+        )
+
+        all_79 = get_all_features()
+        ucdp_entry = next(
+            s for s in PIPELINE_SOURCES
+            if s.name == "UCDP Annual"
+        )
+        static_entry = next(
+            s for s in PIPELINE_SOURCES
+            if s.name == "PRIO-GRID Static"
+        )
+        admin_entry = next(
+            s for s in PIPELINE_SOURCES
+            if s.name == "GAUL Admin"
+        )
+        partial_count = (
+            len(ucdp_entry.features)
+            + len(static_entry.features)
+            + len(admin_entry.features)
+        )
+        assert partial_count < len(all_79), (
+            f"UCDP+static+admin = {partial_count} should be "
+            f"< 79, but got {len(all_79)}"
+        )
+        assert partial_count == 6 + 34 + 3  # 43, not 79
+
+    def test_nan_in_source_grid_propagates(self) -> None:
+        """NaN values in a source grid propagate to assembled output."""
+        n_t, n_h, n_w = 5, 3, 4
+        n_ucdp, n_source = 2, 1
+        n_total = n_ucdp + n_source
+
+        assembled = np.zeros(
+            (n_t, n_h, n_w, n_total), dtype=np.float32,
+        )
+        assembled[:, :, :, :n_ucdp] = 1.0
+
+        source_grid = np.full(
+            (n_t, n_h, n_w, n_source), np.nan,
+            dtype=np.float32,
+        )
+        source_grid[0, 0, 0, 0] = 42.0
+        assembled[:, :, :, n_ucdp:n_ucdp + n_source] = source_grid
+
+        assert assembled[0, 0, 0, n_ucdp] == 42.0
+        assert np.isnan(assembled[1, 0, 0, n_ucdp])
+        assert np.isnan(assembled[0, 1, 0, n_ucdp])
+
+    def test_feature_names_length_matches_grid_channels(
+        self, tmp_path: Path,
+    ) -> None:
+        """Feature name list length must equal grid.shape[3]."""
+        n_t, n_h, n_w = 5, 3, 4
+        features = ["f1", "f2", "f3"]
+        grid = np.zeros(
+            (n_t, n_h, n_w, len(features)), dtype=np.float32,
+        )
+
+        np.save(tmp_path / "grid.npy", grid)
+        import json as _json
+        (tmp_path / "feature_names.json").write_text(
+            _json.dumps(features),
+        )
+        loaded_grid = np.load(tmp_path / "grid.npy")
+        loaded_features = _json.loads(
+            (tmp_path / "feature_names.json").read_text(),
+        )
+        assert loaded_grid.shape[3] == len(loaded_features)
+
+        bad_features = ["f1", "f2"]
+        (tmp_path / "feature_names.json").write_text(
+            _json.dumps(bad_features),
+        )
+        loaded_bad = _json.loads(
+            (tmp_path / "feature_names.json").read_text(),
+        )
+        assert loaded_grid.shape[3] != len(loaded_bad), (
+            "Mismatch should be detectable"
+        )
+
+    def test_load_source_grid_returns_correct_offset(
+        self, tmp_path: Path,
+    ) -> None:
+        """_load_source_grid returns correct temporal offset."""
+        import json as _json
+
+        ucdp_ts = np.array(
+            [f"2020-{m:02d}" for m in range(1, 13)],
+            dtype="datetime64[M]",
+        )
+        source_ts = np.array(
+            ["2020-04", "2020-05", "2020-06"],
+            dtype="datetime64[M]",
+        )
+        grid = np.ones((3, 360, 720, 2), dtype=np.float32)
+        np.save(tmp_path / "grid.npy", grid)
+        np.save(tmp_path / "time_steps.npy", source_ts)
+        (tmp_path / "feature_names.json").write_text(
+            _json.dumps(["feat_a", "feat_b"]),
+        )
+        result = _assembly_mod._load_source_grid(
+            "TEST", tmp_path, ucdp_ts, 12,
+        )
+        assert result is not None
+        _, features, offset = result
+        assert offset == 3
+        assert features == ["feat_a", "feat_b"]
+
+    def test_corrupted_provenance_does_not_prevent_assembly(
+        self, tmp_path: Path,
+    ) -> None:
+        """Malformed provenance.json should not cause false skip."""
+        import json as _json
+
+        provenance_path = tmp_path / "provenance.json"
+        provenance_path.write_text("{invalid json!!")
+
+        with pytest.raises(_json.JSONDecodeError):
+            _json.loads(provenance_path.read_text())

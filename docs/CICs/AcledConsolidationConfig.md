@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-05-02
+**Last reviewed:** 2026-06-23
 **Related ADRs:** ADR-009, ADR-012, ADR-013
 
 ---
@@ -20,7 +20,7 @@ Carries source directory, harvest ledger path, output path, and consolidation le
 - This class does **not** validate that paths exist (directories are created at consolidation time)
 - This class does **not** know about the harvester, viewpoints, or compilation
 - This class does **not** contain event schema definitions (those are module-level constants)
-- This class does **not** contain deduplication keys or strategies
+- This class does **not** contain deduplication keys or strategies (dedup logic is in the `consolidate_acled` function and `_dedup_by_event_id`)
 
 ---
 
@@ -65,6 +65,7 @@ No validation constraints beyond frozen immutability.
 - Paths consumed by `read_store`, `write_store`, `append_ledger_entry`, and `_build_harvest_index`
 - Must not depend on any other `datafactory_*` config class
 - Registered via `register_consolidator("acled", ...)`
+- `consolidate_acled` performs cross-file dedup via `_dedup_by_event_id` (keeps latest `_harvest_timestamp` per `event_id_cnty`) and cross-run replacement (newer harvests update existing store records). The consolidation ledger records `n_records_replaced` for audit
 
 ---
 

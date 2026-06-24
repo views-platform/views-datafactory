@@ -23,6 +23,8 @@ _QUERY_DIR = Path("src/datafactory_query")
 _CLASSIFICATION = Path(
     "reports/investigation_gaul_excluded_cells/excluded_cell_classification.json"
 )
+_GAUL_AVAILABLE = (_GAUL_DIR / "gaul0_code.parquet").exists()
+_SKIP_REASON = "GAUL parquet files not available — data/ is gitignored"
 
 
 def _load(name: str) -> dict:
@@ -38,6 +40,7 @@ def _land_gaul() -> set[int]:
     return set(json.loads((_QUERY_DIR / "land_gaul_pgids.json").read_text()))
 
 
+@pytest.mark.skipif(not _GAUL_AVAILABLE, reason=_SKIP_REASON)
 class TestLandGaulCompletenessContract:
     """P2 (HARD): every land_gaul cell must carry complete GAUL metadata.
 
@@ -75,6 +78,7 @@ class TestLandGaulCompletenessContract:
         )
 
 
+@pytest.mark.skipif(not _GAUL_AVAILABLE, reason=_SKIP_REASON)
 class TestSentinelOverloading:
     """P7 (SOFT): -1 means 'unassigned' everywhere else; for supplemented
     cells it is reused to mean 'no municipality-level data exists'.
@@ -97,12 +101,17 @@ class TestSentinelOverloading:
         )
 
 
+@pytest.mark.skipif(not _GAUL_AVAILABLE, reason=_SKIP_REASON)
 class TestSuspectedDefectsResolved:
     """P4 (SOFT): every suspected_data_defect must be either supplemented
     or have a recorded rationale explaining the decision.
     """
 
-    def test_no_suspected_defects_without_rationale(self):
+    _VALID_RESOLUTIONS = {
+        "supplemented", "accepted_uncovered", "reclassified",
+    }
+
+    def test_no_suspected_defects_without_resolution(self):
         classification = json.loads(_CLASSIFICATION.read_text())
         gaul0 = _load("gaul0_code")
         unresolved = [
@@ -110,12 +119,13 @@ class TestSuspectedDefectsResolved:
             for e in classification
             if e["classification"] == "suspected_data_defect"
             and gaul0.get(e["gid"], -1) == -1
-            and not e.get("reclassification_rationale")
+            and e.get("resolution") not in self._VALID_RESOLUTIONS
         ]
         assert unresolved == [], (
-            f"cells classified suspected_data_defect have no "
-            f"rationale: {unresolved} — supplement them "
-            f"(ADR-043 pattern) or record a decision"
+            f"cells classified suspected_data_defect lack a "
+            f"structured resolution field: {unresolved} — "
+            f"supplement them (ADR-043 pattern) or record a "
+            f"resolution in {self._VALID_RESOLUTIONS}"
         )
 
 

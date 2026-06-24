@@ -1,8 +1,8 @@
-"""Characterization tests for pipeline runner scripts (C-164, Pattern #8 prep).
+"""Characterization tests for pipeline runner scripts (C-230, Pattern #8 prep).
 
 These tests verify the CLI interface of each pipeline runner script
-without executing actual pipeline steps.  They exist so that PR-5
-(PipelineRunner extraction) can verify that refactoring preserves
+without executing actual pipeline steps.  They exist so that
+PipelineRunner extraction can verify that refactoring preserves
 behavior.
 """
 
@@ -24,6 +24,7 @@ PIPELINE_SCRIPTS: list[str] = [
     "run_ghspop_pipeline",
     "run_ghsbuilts_pipeline",
     "run_vdem_pipeline",
+    "run_shdi_pipeline",
 ]
 
 
@@ -147,6 +148,13 @@ class TestSkipToFlag:
                 f"V-Dem pipeline missing --skip-to choice: {choice}"
             )
 
+    def test_shdi_skip_to_choices(self) -> None:
+        result = _run_help("run_shdi_pipeline")
+        for choice in ("viewpoint", "compile"):
+            assert choice in result.stdout, (
+                f"SHDI pipeline missing --skip-to choice: {choice}"
+            )
+
 
 # ── Invalid arguments rejected ───────────────────────────────────────
 
@@ -250,6 +258,10 @@ class TestStepsTupleContent:
         mod = _load_script("run_vdem_pipeline")
         assert mod.STEPS == ("harvest", "viewpoint", "compile")
 
+    def test_shdi_steps(self) -> None:
+        mod = _load_script("run_shdi_pipeline")
+        assert mod.STEPS == ("harvest", "viewpoint", "compile")
+
 
 # ── Cross-cutting conventions ────────────────────────────────────────
 
@@ -299,4 +311,31 @@ class TestPipelineConventions:
         mod = _load_script(script)
         assert mod.STEPS[-1] == "compile", (
             f"{script} STEPS should end with 'compile'"
+        )
+
+
+# ── Characterization: pipeline CLI contracts (C-230, #202) ─────────────
+
+
+class TestPipelineStepsContent:
+    """STEPS tuple must have meaningful content."""
+
+    @pytest.mark.parametrize("script", PIPELINE_SCRIPTS)
+    def test_steps_are_nonempty(self, script: str) -> None:
+        mod = _load_script(script)
+        assert len(mod.STEPS) >= 2, (
+            f"{script}.STEPS has {len(mod.STEPS)} entries, need >= 2"
+        )
+
+
+class TestPipelineCompleteness:
+    """Test list must match the actual scripts/ glob."""
+
+    def test_all_pipeline_scripts_covered(self) -> None:
+        on_disk = sorted(
+            p.stem for p in SCRIPTS_DIR.glob("run_*_pipeline.py")
+        )
+        assert on_disk == sorted(PIPELINE_SCRIPTS), (
+            f"Test list mismatch — on disk: {on_disk}, "
+            f"in tests: {sorted(PIPELINE_SCRIPTS)}"
         )

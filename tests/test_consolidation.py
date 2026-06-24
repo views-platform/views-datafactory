@@ -7,6 +7,8 @@ conventions. No network access needed.
 from __future__ import annotations
 
 import json
+import threading
+import unittest.mock
 from pathlib import Path
 
 import pyarrow as pa
@@ -22,6 +24,7 @@ from datafactory_consolidation.consolidators.ucdp import (
     consolidate_ucdp,
 )
 from datafactory_consolidation.event_store import read_store, write_store
+from datafactory_provenance import compute_file_digest
 
 # ---- Helpers ----
 
@@ -656,3 +659,191 @@ class TestRowCountInvariants:
         ):
             mp.setattr(pa, "concat_tables", drop_one_row)
             consolidate_ucdp(cfg)
+
+
+# ---------------------------------------------------------------------------
+# Characterization: event_store crash-safety (C-267, #195)
+# ---------------------------------------------------------------------------
+
+
+def _sample_table(n: int = 5) -> pa.Table:
+    return pa.table({"id": list(range(n)), "value": [f"v{i}" for i in range(n)]})
+
+
+class TestStoreCharacterization:
+    """Pin event_store read/write behavior to catch crash-safety regressions."""
+
+    def test_write_produces_complete_file(self, tmp_path: Path) -> None:
+        store = tmp_path / "store.parquet"
+        original = _sample_table()
+        write_store(original, store)
+        roundtrip = read_store(store)
+        assert roundtrip is not None
+        assert roundtrip.equals(original)
+
+    def test_write_uses_temp_file(self, tmp_path: Path) -> None:
+        store = tmp_path / "store.parquet"
+        table = _sample_table()
+        import tempfile as _tempfile
+
+        with unittest.mock.patch(
+            "tempfile.mkstemp", wraps=_tempfile.mkstemp,
+        ) as mock_mkstemp:
+            write_store(table, store)
+        mock_mkstemp.assert_called_once()
+
+    def test_read_returns_none_on_missing_path(self, tmp_path: Path) -> None:
+        result = read_store(tmp_path / "nonexistent.parquet")
+        assert result is None
+
+    def test_write_returns_content_digest(self, tmp_path: Path) -> None:
+        store = tmp_path / "store.parquet"
+        table = _sample_table()
+        digest = write_store(table, store)
+        assert isinstance(digest, str)
+        assert len(digest) == 16
+        assert all(c in "0123456789abcdef" for c in digest)
+        assert digest == compute_file_digest(store)
+
+    def test_concurrent_reads_safe(self, tmp_path: Path) -> None:
+        store = tmp_path / "store.parquet"
+        original = _sample_table(100)
+        write_store(original, store)
+
+        results: list[pa.Table | None] = [None, None]
+        errors: list[Exception | None] = [None, None]
+
+        def reader(idx: int) -> None:
+            try:
+                results[idx] = read_store(store)
+            except Exception as exc:
+                errors[idx] = exc
+
+        t1 = threading.Thread(target=reader, args=(0,))
+        t2 = threading.Thread(target=reader, args=(1,))
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        assert errors[0] is None, f"thread 0 error: {errors[0]}"
+        assert errors[1] is None, f"thread 1 error: {errors[1]}"
+        assert results[0] is not None and results[0].equals(original)
+        assert results[1] is not None and results[1].equals(original)
+
+    def test_write_overwrites_existing(self, tmp_path: Path) -> None:
+        store = tmp_path / "store.parquet"
+        old = _sample_table(3)
+        new = _sample_table(7)
+        write_store(old, store)
+        write_store(new, store)
+        result = read_store(store)
+        assert result is not None
+        assert result.num_rows == 7
+        assert result.equals(new)
+
+
+# ---- Provenance locking hardening (C-294, C-295, #238) ----
+
+
+class TestDigestUnderLockRed:
+    """Digest must be computed inside the file lock (ADR-005)."""
+
+    def test_digest_matches_file_contents(
+        self, tmp_path: Path,
+    ) -> None:
+        """write_store returns digest matching on-disk file."""
+        store = tmp_path / "store.parquet"
+        table = _sample_table(5)
+        digest = write_store(table, store)
+        assert digest == compute_file_digest(store)
+
+    def test_digest_changes_on_rewrite(
+        self, tmp_path: Path,
+    ) -> None:
+        """Rewriting with different data produces different digest."""
+        store = tmp_path / "store.parquet"
+        d1 = write_store(_sample_table(3), store)
+        d2 = write_store(_sample_table(7), store)
+        assert d1 != d2
+
+
+class TestFileLockTimeoutRed:
+    """file_lock timeout behavior (C-295, ADR-005)."""
+
+    def test_lock_timeout_raises(self, tmp_path: Path) -> None:
+        """Held lock + short timeout → TimeoutError."""
+        from datafactory_provenance.digests_and_ledgers import (
+            file_lock,
+        )
+
+        target = tmp_path / "data.parquet"
+        target.touch()
+
+        lock_path = target.with_suffix(".parquet.lock")
+        import fcntl
+
+        lock_file = open(lock_path, "w")  # noqa: SIM115
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        try:
+            with pytest.raises(TimeoutError, match="Timed out"), \
+                 file_lock(target, timeout=0.3):
+                pass  # pragma: no cover
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+            lock_file.close()
+
+    def test_lock_acquires_after_release(
+        self, tmp_path: Path,
+    ) -> None:
+        """Lock acquired once holder releases."""
+        from datafactory_provenance.digests_and_ledgers import (
+            file_lock,
+        )
+
+        target = tmp_path / "data.parquet"
+        target.touch()
+
+        acquired = threading.Event()
+        released = threading.Event()
+
+        def hold_then_release() -> None:
+            with file_lock(target, timeout=5.0):
+                acquired.set()
+                released.wait(timeout=2.0)
+
+        t = threading.Thread(target=hold_then_release)
+        t.start()
+        acquired.wait(timeout=2.0)
+
+        released.set()
+
+        with file_lock(target, timeout=5.0):
+            pass
+
+        t.join(timeout=5.0)
+
+    def test_lock_timeout_error_message_includes_path(
+        self, tmp_path: Path,
+    ) -> None:
+        """TimeoutError message names the lock file path."""
+        import fcntl as _fcntl
+
+        from datafactory_provenance.digests_and_ledgers import (
+            file_lock,
+        )
+
+        target = tmp_path / "data.parquet"
+        target.touch()
+        lock_path = target.with_suffix(".parquet.lock")
+
+        lock_file = open(lock_path, "w")  # noqa: SIM115
+        _fcntl.flock(lock_file, _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+        try:
+            with pytest.raises(
+                TimeoutError, match=str(lock_path),
+            ), file_lock(target, timeout=0.3):
+                pass  # pragma: no cover
+        finally:
+            _fcntl.flock(lock_file, _fcntl.LOCK_UN)
+            lock_file.close()

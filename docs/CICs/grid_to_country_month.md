@@ -72,6 +72,7 @@ All failures are immediate and loud. No silent fallbacks.
 ## 7. Boundaries and Interactions
 
 - Imports `_flatten_grid` from `datafactory_adapters.grid_to_dataframe` (same package)
+- Imports `assert_cm_conservation` from `datafactory_adapters._conservation` (same package) for count conservation checks (ADR-040)
 - No `datafactory_*` imports outside `datafactory_adapters`
 - Sits alongside the graph (adapters layer), not inside it
 - Consumers: model scripts that need country-level aggregation
