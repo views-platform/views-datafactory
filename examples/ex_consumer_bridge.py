@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Verify: full consumer bridge pattern (load -> rename -> derive -> save).
+"""Verify: full consumer bridge pattern (load -> derive -> save).
 
 This exercises the complete workflow a model's config_queryset.fetch_data()
-performs: load from factory, rename columns, derive row/col from priogrid_gid,
+performs: load from factory, derive row/col from priogrid_gid,
 fill NaN, save as parquet, and verify the parquet round-trips correctly.
 """
 

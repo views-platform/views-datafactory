@@ -36,7 +36,7 @@ Six things are different. None affect your model code — they affect the data t
 
 | Operation | viewser | datafactory |
 |-----------|---------|-------------|
-| **Define data needs** | `Queryset("name", "priogrid_month")` with `.with_column(...)` | `config_queryset.py` with `FACTORY_FEATURES` and `FEATURE_RENAME` |
+| **Define data needs** | `Queryset("name", "priogrid_month")` with `.with_column(...)` | `config_queryset.py` with `FACTORY_FEATURES` list |
 | **Fetch data** | `queryset.publish().fetch()` (PostgreSQL) | `load_dataset(data_dir="http://...")` (zarr over HTTP) |
 | **Data location** | PRIO PostgreSQL server | Hetzner server (204.168.219.108) |
 | **Authentication** | SSH tunnel + PRIO VPN | `~/.netrc` (HTTP Basic Auth) |
