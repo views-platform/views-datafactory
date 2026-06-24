@@ -57,7 +57,7 @@ def write_store(table: pa.Table, path: Path) -> str:
         except BaseException:
             Path(tmp).unlink(missing_ok=True)
             raise
-    digest = compute_file_digest(path)
+        digest = compute_file_digest(path)
     logger.info(
         "Wrote consolidated store: %s (%d rows, digest: %s)",
         path,

@@ -57,3 +57,6 @@ credentials.toml
 
 # Session
 resume_session.md
+
+# Claude Code
+.claude/

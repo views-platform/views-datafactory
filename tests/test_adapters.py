@@ -729,3 +729,144 @@ class TestViewsFramesConformance:
             feature_names=["a", "b", "c"],
         )
         assert_frame_contract(ff)
+
+
+# ---- feature_frame_to_grid standalone tests (C-296, #236) ----
+
+
+def _make_ff(
+    month_ids: np.ndarray,
+    unit_ids: np.ndarray,
+    values: np.ndarray,
+    feature_names: list[str],
+) -> FeatureFrame:
+    """Build a FeatureFrame from flat arrays (S=1)."""
+    index = SpatioTemporalIndex(
+        time=month_ids.astype(np.int64),
+        unit=unit_ids.astype(np.int64),
+        level=SpatialLevel.PGM,
+    )
+    return FeatureFrame.from_2d(
+        y_features_2d=values.astype(np.float32),
+        index=index,
+        feature_names=feature_names,
+    )
+
+
+class TestFeatureFrameToGridGreen:
+    """Standalone happy-path tests for feature_frame_to_grid (ADR-005)."""
+
+    def test_standalone_reconstruction(self) -> None:
+        """Known values at known pgids appear at correct positions."""
+        pgids = np.arange(1, 13).reshape(3, 4)
+        month_ids = np.array([100, 100, 101])
+        unit_ids = np.array([1, 5, 1])
+        values = np.array([[10.0], [20.0], [30.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["feat"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid.shape == (2, 3, 4, 1)
+        assert grid[0, 0, 0, 0] == 10.0  # month 100, pgid 1 → (0,0)
+        assert grid[0, 1, 0, 0] == 20.0  # month 100, pgid 5 → (1,0)
+        assert grid[1, 0, 0, 0] == 30.0  # month 101, pgid 1 → (0,0)
+
+    def test_output_dtype_float32(self) -> None:
+        """Output is always float32 regardless of input dtype."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        month_ids = np.array([1])
+        unit_ids = np.array([1])
+        values = np.array([[5.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid.dtype == np.float32
+
+    def test_output_shape_thwf(self) -> None:
+        """Output shape matches [T, H, W, F] from input dimensions."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        n_months = 3
+        n_cells_per_month = 6
+        n_rows = n_months * n_cells_per_month
+        month_ids = np.repeat(np.arange(1, n_months + 1), n_cells_per_month)
+        unit_ids = np.tile(np.arange(1, 7), n_months)
+        values = np.random.rand(n_rows, 2).astype(np.float32)
+        ff = _make_ff(month_ids, unit_ids, values, ["a", "b"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid.shape == (3, 2, 3, 2)
+
+
+class TestFeatureFrameToGridBeige:
+    """Boundary condition tests for feature_frame_to_grid (ADR-005)."""
+
+    def test_pgids_not_in_frame_are_zero(self) -> None:
+        """Grid cells for pgids absent from FeatureFrame are 0.0."""
+        pgids = np.arange(1, 13).reshape(3, 4)
+        month_ids = np.array([1])
+        unit_ids = np.array([1])
+        values = np.array([[42.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid[0, 0, 0, 0] == 42.0
+        assert grid[0, 1, 0, 0] == 0.0
+        assert grid[0, 0, 1, 0] == 0.0
+
+    def test_unit_ids_not_in_pgids_skipped(self) -> None:
+        """FeatureFrame rows with pgids not in pgids array are skipped."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        month_ids = np.array([1, 1])
+        unit_ids = np.array([1, 999])
+        values = np.array([[10.0], [99.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid[0, 0, 0, 0] == 10.0
+        assert grid.sum() == 10.0
+
+    def test_single_row_single_feature(self) -> None:
+        """Minimal input: one row, one feature."""
+        pgids = np.array([[1, 2], [3, 4]])
+        month_ids = np.array([0])
+        unit_ids = np.array([3])
+        values = np.array([[7.5]])
+        ff = _make_ff(month_ids, unit_ids, values, ["z"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid.shape == (1, 2, 2, 1)
+        assert grid[0, 1, 0, 0] == 7.5
+
+
+class TestFeatureFrameToGridRed:
+    """Adversarial tests for feature_frame_to_grid (ADR-005)."""
+
+    def test_nan_propagates(self) -> None:
+        """NaN values in FeatureFrame propagate to grid output."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        month_ids = np.array([1, 1])
+        unit_ids = np.array([1, 2])
+        values = np.array([[np.nan], [5.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert np.isnan(grid[0, 0, 0, 0])
+        assert grid[0, 0, 1, 0] == 5.0
+
+    def test_duplicate_pgid_last_write_wins(self) -> None:
+        """Duplicate (month, pgid) pairs: last row wins."""
+        pgids = np.arange(1, 7).reshape(2, 3)
+        month_ids = np.array([1, 1])
+        unit_ids = np.array([1, 1])
+        values = np.array([[10.0], [20.0]])
+        ff = _make_ff(month_ids, unit_ids, values, ["x"])
+
+        grid = feature_frame_to_grid(ff, pgids)
+
+        assert grid[0, 0, 0, 0] == 20.0
