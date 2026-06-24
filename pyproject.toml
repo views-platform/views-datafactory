@@ -3,6 +3,8 @@ name = "views-datafactory"
 version = "1.4.0"
 description = "Data factory for the VIEWS conflict forecasting platform — provenance, harvesting, consolidation, viewpoint construction, compilation, and assembly."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=1.26,<3",
