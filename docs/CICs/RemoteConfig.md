@@ -101,7 +101,7 @@ RemoteConfig().fetch()  # This class does not perform I/O
 - **Beige:** None (no validation to test)
 - **Red:** Mutation attempt (frozen enforcement)
 
-Tests in `tests/test_defaults.py` (if present).
+Tests in `tests/test_query.py` (TestRemoteConfigGreen, TestRemoteConfigBeige).
 
 ---
 

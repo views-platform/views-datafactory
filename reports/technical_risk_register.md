@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-06-24)
-**Last update:** review-rr strategic curation (2026-06-24) — C-156 demoted 3→4; 5 entries demoted to tech-debt backlog (C-179, C-181, C-185, C-231, C-273); D-29 resolved; 4 trigger rewrites (C-173, C-249, C-273, C-280); C-286 updated with C-156 subsumption note. Header counts: 48→43 open, 246→251 resolved (5 demotions are struck-through), 9→8 open disagreements. Prior: test-review v1.4.0 (2026-06-24) — C-290 updated (RemoteConfig zero tests merged); C-296, C-297 added; lossless-append gap skipped (ADR-045 gap table). Header counts: 295→297 concern IDs, 46→48 open. Prior: WDI readiness gate sprint (#208–#213, 2026-06-19) — 10 concerns resolved: C-293 (#208, registry↔assembly sync test), C-36/C-37/C-45 (#209, ADR-046 UCDP schema evolution), C-252 (#210, ACLED cross-run dedup fix), C-268/C-247/C-292/C-250 (#211, GAUL data integrity), C-257 (#212, DGP validation contracts). Header counts: 236→246 resolved, 56→46 open. Prior: expert-code-review register-risk for sprint issues (2026-06-19) — C-252 update note (timestamp format heterogeneity); C-257 update note (DGP failure mode); D-40 added (DGP check module placement). Prior: review-rr strategic curation (2026-06-19) — header arithmetic corrected (235→236 resolved, dedup noted); C-195 demoted; C-293 promoted 3→2; C-267, C-270, C-237, C-289 struck through in work packages; D-32 added to summary table; 5 trigger rewrites (C-29, C-46, C-155, C-180, C-189); D-38/D-39 added to WET-before-DRY; C-293 added to Source registry; new Provenance locking work package (C-294, C-295); 5 entries relocated to correct tier sections. Prior: expert-code-review register-risk (2026-06-18) — C-293, C-294, C-295 added; D-38, D-39 added. Prior: review-rr strategic curation (2026-06-16) — C-136, C-148 demoted; 4 fully-resolved work packages struck through; C-258, C-79 struck through in work packages; header counts corrected. Prior: repo-assimilation v1.3.0 (2026-06-16) — C-291 added; C-267 updated; C-223 updated. Story 2 — C-258 closed; Story 0 — C-264, C-282, C-283, C-284, C-285 closed; C-288 closed (Story 1); C-79, C-177 demoted; D-30, D-31 resolved; C-46, C-173 triggers rewritten; C-288, C-289, C-290 added from test-review (2026-06-14)
+**Last update:** Pre-WDI Test Hardening sprint (2026-06-24, #234) — 5 concerns resolved: C-290 (#237, query module tests), C-294 (#238, digest inside lock), C-295 (#238, lock timeout), C-296 (#236, grid_from_feature_frame tests), C-297 (#235, assembly Red/Beige tests); D-38 deferred by design; Provenance locking work package fully resolved. Header counts: 43→38 open, 251→256 resolved, Tier 3: 11→8, Tier 4: 24→22. Prior: review-rr strategic curation (2026-06-24) — C-290 updated (RemoteConfig zero tests merged); C-296, C-297 added; lossless-append gap skipped (ADR-045 gap table). Header counts: 295→297 concern IDs, 46→48 open. Prior: WDI readiness gate sprint (#208–#213, 2026-06-19) — 10 concerns resolved: C-293 (#208, registry↔assembly sync test), C-36/C-37/C-45 (#209, ADR-046 UCDP schema evolution), C-252 (#210, ACLED cross-run dedup fix), C-268/C-247/C-292/C-250 (#211, GAUL data integrity), C-257 (#212, DGP validation contracts). Header counts: 236→246 resolved, 56→46 open. Prior: expert-code-review register-risk for sprint issues (2026-06-19) — C-252 update note (timestamp format heterogeneity); C-257 update note (DGP failure mode); D-40 added (DGP check module placement). Prior: review-rr strategic curation (2026-06-19) — header arithmetic corrected (235→236 resolved, dedup noted); C-195 demoted; C-293 promoted 3→2; C-267, C-270, C-237, C-289 struck through in work packages; D-32 added to summary table; 5 trigger rewrites (C-29, C-46, C-155, C-180, C-189); D-38/D-39 added to WET-before-DRY; C-293 added to Source registry; new Provenance locking work package (C-294, C-295); 5 entries relocated to correct tier sections. Prior: expert-code-review register-risk (2026-06-18) — C-293, C-294, C-295 added; D-38, D-39 added. Prior: review-rr strategic curation (2026-06-16) — C-136, C-148 demoted; 4 fully-resolved work packages struck through; C-258, C-79 struck through in work packages; header counts corrected. Prior: repo-assimilation v1.3.0 (2026-06-16) — C-291 added; C-267 updated; C-223 updated. Story 2 — C-258 closed; Story 0 — C-264, C-282, C-283, C-284, C-285 closed; C-288 closed (Story 1); C-79, C-177 demoted; D-30, D-31 resolved; C-46, C-173 triggers rewritten; C-288, C-289, C-290 added from test-review (2026-06-14)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10, repo-assimilation v1.3.0 2026-06-16, expert-code-review register-risk 2026-06-18, test-review v1.4.0 2026-06-24
-**Status:** 297 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 251 resolved, 43 open concerns (0 Tier 1, 2 Tier 2, 11 Tier 3, 24 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 68 struck-through in active register (251 unique after dedup — 3 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
+**Status:** 297 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 256 resolved, 38 open concerns (0 Tier 1, 2 Tier 2, 8 Tier 3, 22 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 73 struck-through in active register (256 unique after dedup — 3 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -48,8 +48,8 @@
 | C-223 | 3 | Compilation pipeline allocates full grid in RAM (bounded-memory R&D) | Next data source (WDI: 20-50 features) pushes single-source compile past 16 GB | Scaling headroom |
 | C-224 | 4 | No server backup or disaster recovery plan | Disk failure or accidental data deletion on Hetzner server | Server hardening |
 | ~~C-293~~ | ~~2~~ | ~~Three-way feature name sync only partially tested~~ | Resolved 2026-06-19 (5 guard tests in test_assemble.py, #208) | Source registry |
-| C-294 | 4 | Digest computation after lock release in event store | Concurrent pipeline runs on same source write overlapping stores | Consolidation correctness |
-| C-295 | 4 | No timeout on LOCK_EX in file_lock() | Pipeline hangs indefinitely waiting for abandoned lock | Provenance locking |
+| ~~C-294~~ | ~~4~~ | ~~Digest computation after lock release in event store~~ | Resolved 2026-06-24 (digest moved inside file_lock in event_store.py, #238) | Consolidation correctness |
+| ~~C-295~~ | ~~4~~ | ~~No timeout on LOCK_EX in file_lock()~~ | Resolved 2026-06-24 (LOCK_NB + retry loop with 60s timeout, #238) | Provenance locking |
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
 | D-26 | — | Discovery probing cost vs cache staleness (UCDP candidate/dot9) | Open | Harvest caching |
 | ~~D-29~~ | ~~—~~ | ~~Shapefile harvester retrofit depth — full outcome compliance vs organic~~ | Resolved 2026-06-24 (organic retrofit achieved — C-186 added outcome vocabulary 2026-05-31) | Harvest correctness |
@@ -86,7 +86,7 @@
 | D-35 | — | Test scope: exhaustive verification vs minimum viable testing | Open | Data soundness |
 | ~~D-36~~ | ~~—~~ | ~~Skip decision location: inline in script vs. provenance package function~~ | Resolved 2026-06-09 (ADR-041: extracted to provenance/skip.py) | Artifact consistency |
 | D-37 | — | Code identity in skip decisions: include git hash or not | Open | Artifact consistency |
-| D-38 | — | Script extraction timing — when does WET in scripts/ cross the extraction threshold | Open | WET-before-DRY |
+| D-38 | — | Script extraction timing — when does WET in scripts/ cross the extraction threshold | Deferred by design — WDI sprint provides 3rd pipeline script instance to validate abstraction | WET-before-DRY |
 | D-39 | — | Viewpoint builder abstraction — Protocol extraction vs explicit repetition | Open | Viewpoint architecture |
 | D-40 | — | DGP check module placement — source-agnostic `event_validation.py` vs per-source definitions | Open | Data soundness |
 | C-144 | 3 | Compilation `to_pydict()` materializes millions of Python objects | Consolidation store exceeds ~5M events | Compilation memory |
@@ -127,9 +127,9 @@
 | C-287 | 4 | Assembly channel order is positional — hardcoded offsets fragile if feature counts change | Source adds/removes a feature, assembly channel offsets shift silently | Assembly maintainability |
 | ~~C-288~~ | ~~2~~ | ~~No cross-layer schema contract tests — viewpoint column rename silently breaks compilation~~ | Resolved 2026-06-15 (tests/test_cross_layer_contracts.py: 24 tests covering all 6 sources) | Cross-layer verification |
 | ~~C-289~~ | ~~3~~ | ~~cell_generator.py has zero characterization tests — spatial backbone unpinned~~ | Resolved 2026-06-18 (6 characterization tests, #198) | Test coverage |
-| C-290 | 3 | datafactory_query has 25% module coverage — consumer API mostly untested | Developer changes `load_dataset()`, region subsetting, or zarr backend | Test coverage |
-| C-296 | 3 | grid_from_feature_frame has zero tests — 89-line consumer-facing adapter untested | Developer modifies inverse adapter or consumer calls `feature_frame_to_grid()` | Test coverage |
-| C-297 | 3 | Assembly has zero Red team tests — partial-flag footgun unguarded | Operator runs `assemble_grid.py` with subset of source flags, producing silently incomplete grid | Test coverage |
+| ~~C-290~~ | ~~3~~ | ~~datafactory_query has 25% module coverage — consumer API mostly untested~~ | Resolved 2026-06-24 (RemoteConfig, PARTITIONS, country_month tests, #237) | Test coverage |
+| ~~C-296~~ | ~~3~~ | ~~grid_from_feature_frame has zero tests — 89-line consumer-facing adapter untested~~ | Resolved 2026-06-24 (8 standalone Green/Beige/Red tests, #236) | Test coverage |
+| ~~C-297~~ | ~~3~~ | ~~Assembly has zero Red team tests — partial-flag footgun unguarded~~ | Resolved 2026-06-24 (8 Red/Beige tests in test_assemble.py, #235) | Test coverage |
 | C-291 | 3 | Conservation assertions use np.nansum() — NaN exclusion weakens partition invariant | NaN-type corruption introduced during grid-to-country-month aggregation | Count conservation |
 | ~~C-292~~ | ~~3~~ | ~~Fuvahmulah-signature cells unverified — distance discriminator proven unreliable~~ | Resolved 2026-06-19 (3 pgids verified in classification JSON, #211) | GAUL data integrity |
 | ~~C-263~~ | ~~3~~ | ~~Assembly finally block `mkdir` outside `contextlib.suppress` — can mask original exception~~ | Resolved 2026-06-10 (removed redundant mkdir — append_ledger_entry handles directory creation internally) | Ledger reliability |
@@ -160,15 +160,15 @@ Items that should be resolved together:
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
 | **Artifact consistency** | ~~C-253~~, ~~C-254~~, ~~C-255~~, ~~C-259~~, ~~C-260~~, ~~C-261~~, ~~C-262~~, ~~C-231~~, C-280, ~~D-34~~, ~~D-36~~, D-37 (C-231 demoted 2026-06-24) | Before expanding consumer bridge beyond UCDP-only features |
 | **Data soundness** | ~~C-256~~, ~~C-257~~, ~~C-258~~, ~~C-269~~, D-35 | Before next data source integration (WDI) or next consolidation/viewpoint change |
-| **Infrastructure test coverage** | C-189, C-271, ~~C-273~~, C-276, C-280, C-296, C-297, ~~C-289~~ (C-272, C-277, C-278 demoted 2026-06-10; C-274, C-275, C-279 demoted 2026-06-12; C-281 resolved 2026-06-11; C-189 added 2026-06-12; C-289 added 2026-06-14; C-289 resolved 2026-06-18; C-296, C-297 added 2026-06-24; C-273 demoted 2026-06-24) | Next red-test sprint or CIC Section 10 sweep |
+| **Infrastructure test coverage** | C-189, C-271, ~~C-273~~, C-276, C-280, ~~C-296~~, ~~C-297~~, ~~C-289~~ (C-272, C-277, C-278 demoted 2026-06-10; C-274, C-275, C-279 demoted 2026-06-12; C-281 resolved 2026-06-11; C-189 added 2026-06-12; C-289 added 2026-06-14; C-289 resolved 2026-06-18; C-296, C-297 added 2026-06-24; C-273 demoted 2026-06-24; C-296, C-297 resolved 2026-06-24 #235, #236) | Next red-test sprint or CIC Section 10 sweep |
 | **Provenance resilience** | C-46, ~~C-136~~, ~~C-270~~, C-271 (C-270 resolved 2026-06-18) | Before production ledger exceeds 10MB or next provenance refactor |
-| **Query layer resilience** | C-116, C-117, C-290 (C-290 added 2026-06-14) | Consumer reports transient failures or slow remote queries |
+| **Query layer resilience** | C-116, C-117, ~~C-290~~ (C-290 added 2026-06-14; C-290 resolved 2026-06-24 #237) | Consumer reports transient failures or slow remote queries |
 | ~~**Cross-layer verification**~~ | ~~C-288~~ | Resolved 2026-06-15 (tests/test_cross_layer_contracts.py: 24 tests covering all 6 sources) |
 | ~~**Cross-repo alignment**~~ | ~~C-264~~ | Resolved 2026-06-14 (partition boundaries updated in defaults.py) |
 | ~~**Doc/code consistency**~~ | ~~C-282~~, ~~C-283~~, ~~C-284~~ | Resolved 2026-06-14 (PR #169: temporal routing, ADR-014 P6, ADR-028 event_type_filter) |
 | ~~**Pipeline safety**~~ | ~~C-285~~ | Resolved 2026-06-14 (commit 428e479: flock in refresh_pipeline.sh) |
 | **Assembly temporal alignment** | C-156, C-286 | Before UCDP temporal range change or new source with non-overlapping timeline |
-| **Provenance locking** | C-294, C-295 | Before concurrent pipeline runs are operationally supported |
+| ~~**Provenance locking**~~ | ~~C-294~~, ~~C-295~~ | Resolved 2026-06-24 (#238): digest inside lock + timeout with non-blocking poll |
 | **Migration scope** | C-126 (C-125 resolved) | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -863,7 +863,7 @@ Cross-ref: C-156 (ACLED zero-fill before 2020 — specific instance of this temp
 
 ---
 
-### C-290: datafactory_query has 25% module coverage — consumer API mostly untested — [DEFER]
+### ~~C-290: datafactory_query has 25% module coverage — consumer API mostly untested~~ — RESOLVED 2026-06-24
 
 The `datafactory_query` package is the primary consumer-facing interface (`load_dataset()`), yet only 1 of 4 modules (`temporal.py`) has a dedicated test file. The untested modules: `dataset.py` (the `load_dataset()` entry point and `_load_grid_from_zarr` backend), `defaults.py` (`DEFAULT_REMOTE`, `get_last_valid_month_id`), `regions.py` (`list_regions`, `load_region_pgids`). While `test_query.py` (18 tests) exercises some `dataset.py` paths via integration, it only covers the npy backend — the remote zarr code path has zero happy-path tests (see C-116 note). Consumer-facing edge cases are untested: zero-grid response, stale grid without warning, empty feature list, unknown region name. This is the layer that downstream forecasting models directly depend on.
 
@@ -874,6 +874,7 @@ The `datafactory_query` package is the primary consumer-facing interface (`load_
 | Source | test-review (2026-06-14), Leveson perspective |
 | Trigger | Developer changes `load_dataset()`, region subsetting, or zarr backend without regression tests |
 | Location | `src/datafactory_query/dataset.py`, `src/datafactory_query/defaults.py`, `src/datafactory_query/regions.py` |
+| Resolution | Resolved 2026-06-24 (#237). 12 tests added: RemoteConfig (4 Green, 2 Beige), PARTITIONS (4 Green), country_month (2 Green). RemoteConfig frozen enforcement, URL construction, and PARTITIONS immutability now covered. |
 
 Cross-ref: C-116 (remote zarr no retry + zero test coverage note), C-117 (remote zarr downloads all cells).
 
@@ -915,7 +916,7 @@ Cross-ref: ~~C-246~~ (resolved — cell polygon map tests), ~~C-248~~ (resolved 
 
 ---
 
-### C-296: grid_from_feature_frame has zero tests — 89-line consumer-facing adapter untested
+### ~~C-296: grid_from_feature_frame has zero tests — 89-line consumer-facing adapter untested~~ — RESOLVED 2026-06-24
 
 `grid_from_feature_frame.py` exports `feature_frame_to_grid()`, the inverse of `grid_to_feature_frame()`. It reconstructs a [T, H, W, F] grid from a FeatureFrame using pgids lookup. The module has 89 lines, a single public function, and zero test coverage — no test file references it. A regression here silently produces wrong grid reconstructions for any consumer using the round-trip path. The forward path (`grid_to_feature_frame`) has 4 Green tests + 6 Beige tests + 2 Red tests in `test_adapters.py`, but the inverse has none.
 
@@ -926,12 +927,13 @@ Cross-ref: ~~C-246~~ (resolved — cell polygon map tests), ~~C-248~~ (resolved 
 | Source | test-review v1.4.0 (2026-06-24), Feathers perspective |
 | Trigger | Developer modifies inverse adapter or consumer calls `feature_frame_to_grid()` without regression coverage |
 | Location | `src/datafactory_adapters/grid_from_feature_frame.py` |
+| Resolution | Resolved 2026-06-24 (#236). 8 standalone tests added: 3 Green (reconstruction, dtype, shape), 3 Beige (unmapped pgids, skipped unit_ids, single row), 2 Red (NaN propagation, duplicate pgid last-write-wins). |
 
 Cross-ref: C-290 (query module coverage gap — same consumer-facing theme).
 
 ---
 
-### C-297: Assembly has zero Red team tests — partial-flag footgun unguarded
+### ~~C-297: Assembly has zero Red team tests — partial-flag footgun unguarded~~ — RESOLVED 2026-06-24
 
 `test_assemble.py` has 33 tests across 9 classes but zero Red team tests (0% ADR-005 compliance). Assembly is the most critical integration point — it combines all sources into the final grid. The most dangerous untested scenario: running `assemble_grid.py` with a subset of source flags (e.g., omitting `--vdem-grid`) silently produces a grid with fewer features (42 instead of 79) that passes all shape checks. This footgun is documented in `docs/guides/server_operations.md:142-145` but no test catches it. Other untested adversarial scenarios: misaligned temporal ranges from different sources, corrupted provenance.json during skip-if-unchanged, and concurrent assembly + export.
 
@@ -942,6 +944,7 @@ Cross-ref: C-290 (query module coverage gap — same consumer-facing theme).
 | Source | test-review v1.4.0 (2026-06-24), Nygard + Leveson perspectives |
 | Trigger | Operator runs `assemble_grid.py` with subset of source flags, producing a grid with fewer features than expected |
 | Location | `scripts/assemble_grid.py`, `tests/test_assemble.py` |
+| Resolution | Resolved 2026-06-24 (#235). 8 Red/Beige tests added: partial-sources fewer features, NaN propagation, feature-names length, correct offset, corrupted provenance (Red); missing files, start outside timeline, extends beyond timeline (Beige). |
 
 Cross-ref: C-146 (assembly in script — testability), C-287 (channel order positional — assembly fragility), C-280 (skip.py corrupted provenance.json untested).
 
@@ -1608,7 +1611,7 @@ Cross-ref: C-268 (gaul_admin.py zero coverage — same "foundational module with
 
 ---
 
-### C-294: Digest computation after lock release in event store
+### ~~C-294: Digest computation after lock release in event store~~ — RESOLVED 2026-06-24
 
 | Field | Value |
 |-------|-------|
@@ -1617,14 +1620,15 @@ Cross-ref: C-268 (gaul_admin.py zero coverage — same "foundational module with
 | Source | expert-code-review (2026-06-18), Nygard |
 | Trigger | Concurrent pipeline runs on the same source write overlapping consolidated stores — digest returned by `write_store()` may not match the file on disk if another writer intervenes |
 | Location | `src/datafactory_consolidation/event_store.py:59-60` (digest computed after `file_lock` context exits) |
+| Resolution | Resolved 2026-06-24 (#238). Moved `compute_file_digest(path)` inside the `file_lock` block in `write_store()`. 2 Red tests verify digest matches file contents and changes on rewrite. |
 
 In `write_store()`, the `file_lock` context manager (line 58) releases the lock when its block exits, then `compute_file_digest()` (line 60) reads the file to compute the digest. If a concurrent process acquires the lock and overwrites the file between these two operations, the returned digest describes the new writer's content, not the caller's. The provenance ledger entry would then record a digest that doesn't match what this process wrote. In practice this is unlikely — the lock release and digest computation are microseconds apart, and concurrent single-source runs are operationally rare — but it violates the provenance contract (the digest should describe exactly what was written).
 
 **To resolve:** Move `compute_file_digest(path)` inside the `file_lock` block, or compute the digest from the bytes before writing (avoiding a second read).
 
-Cross-ref: ~~C-267~~ (resolved — event store crash safety characterization tests), ~~C-285~~ (resolved — concurrent pipeline run safety). Part of work package: **Consolidation correctness**.
+Cross-ref: ~~C-267~~ (resolved — event store crash safety characterization tests), ~~C-285~~ (resolved — concurrent pipeline run safety). Part of work package: **Provenance locking**.
 
-### C-295: No timeout on LOCK_EX in file_lock()
+### ~~C-295: No timeout on LOCK_EX in file_lock()~~ — RESOLVED 2026-06-24
 
 | Field | Value |
 |-------|-------|
@@ -1633,12 +1637,13 @@ Cross-ref: ~~C-267~~ (resolved — event store crash safety characterization tes
 | Source | expert-code-review (2026-06-18), Nygard |
 | Trigger | Pipeline process hangs indefinitely waiting for a lock held by a dead or stuck process whose PID was recycled (stale lock cleanup matched wrong process) |
 | Location | `src/datafactory_provenance/digests_and_ledgers.py:156` (`fcntl.flock(fd, fcntl.LOCK_EX)`) |
+| Resolution | Resolved 2026-06-24 (#238). Replaced blocking `flock(fd, LOCK_EX)` with non-blocking retry loop (`LOCK_EX | LOCK_NB`), 0.1s poll interval, warning after 5s, `TimeoutError` after 60s (configurable). 3 Red tests verify timeout raises, acquisition after release, and error message content. |
 
 `file_lock()` uses `fcntl.flock(fd, LOCK_EX)` which blocks indefinitely until the lock is acquired. The function includes a 5-minute stale-lock cleanup heuristic (checks lock file age, removes if older than threshold), but `flock()` itself has no timeout — if the stale cleanup doesn't trigger (e.g., lock was recently created by a process that then hung), the pipeline blocks forever with no diagnostic output. Adding `LOCK_NB` with a retry loop and a configurable timeout (e.g., 60 seconds) would convert an indefinite hang into a fail-loud error, consistent with ADR-011.
 
 **To resolve:** Replace the blocking `flock(fd, LOCK_EX)` with a retry loop using `flock(fd, LOCK_EX | LOCK_NB)` + sleep + timeout. Log a warning after N seconds of waiting. Raise `TimeoutError` after the limit.
 
-Cross-ref: C-46 (ledger write idempotency). Part of work package: **Provenance locking**.
+Cross-ref: C-46 (ledger write idempotency). Part of work package: ~~**Provenance locking**~~ (fully resolved).
 
 ---
 
@@ -1769,7 +1774,7 @@ Cross-ref: C-259 (skip completeness — same skip logic), D-36 (skip decision lo
 | ID | D-38 |
 | Source | expert-code-review (2026-06-18), Martin vs Feathers vs Beck |
 | Perspectives | Martin (scripts/ has crossed the extraction threshold — 14 scripts averaging 200+ lines, with repeated argparse/logging/EXIT-trap patterns; extract now to prevent accidental behavioral drift between copies), Feathers (scripts are the seams that make the system testable — if extraction breaks the seam, the characterization tests lose their anchor; extract only when the next functional change touches 3+ scripts simultaneously), Beck (wait for the WDI sprint — that's the 3rd instance of the pipeline script pattern, which triggers the WET-before-DRY rule; extracting before the 3rd data source risks encoding an abstraction that doesn't generalize) |
-| Resolution | Unresolved. All three perspectives have merit. D-31 resolved the harvest-script subset (shared HarvestRunner + thin delegates). Pipeline scripts are the next candidate. Defer until the WDI sprint — that's when the 3rd pipeline script instance will exercise the pattern and validate the abstraction. |
+| Resolution | Deferred by design (2026-06-24, #239). All three perspectives have merit. D-31 resolved the harvest-script subset (shared HarvestRunner + thin delegates). Pipeline scripts are the next candidate. WDI sprint provides the 3rd pipeline script instance to validate the abstraction — extraction before that risks encoding an abstraction that doesn't generalize. Revisit when WDI pipeline script is implemented. |
 
 Cross-ref: D-31 (resolved — harvest script consolidation), C-164 (WET debt), C-230 (resolved — script layer tests). Part of work package: **WET-before-DRY**.
 

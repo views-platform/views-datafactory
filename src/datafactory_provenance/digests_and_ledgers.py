@@ -118,22 +118,30 @@ def compute_file_digest(
 
 
 _STALE_LOCK_SECONDS: int = 300  # 5 minutes
+_DEFAULT_LOCK_TIMEOUT: float = 60.0
+_LOCK_POLL_INTERVAL: float = 0.1
+_LOCK_WARN_SECONDS: float = 5.0
 
 
 @contextmanager
-def file_lock(path: Path) -> Iterator[None]:
-    """Advisory file lock via fcntl.flock.
+def file_lock(
+    path: Path,
+    timeout: float = _DEFAULT_LOCK_TIMEOUT,
+) -> Iterator[None]:
+    """Advisory file lock via fcntl.flock with timeout.
 
     Creates a .lock file alongside the target path and holds an
     exclusive lock for the duration of the context. Other processes
     using file_lock on the same path will block until the lock is
-    released.
+    released or the timeout expires.
 
     If the lock file is older than 5 minutes (indicating a crashed
     process), it is removed with a warning before acquiring.
 
     Args:
         path: Path to the file being protected.
+        timeout: Maximum seconds to wait for lock acquisition.
+            Raises TimeoutError if exceeded.
     """
     lock_path = path.with_suffix(path.suffix + ".lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,7 +161,30 @@ def file_lock(path: Path) -> Iterator[None]:
             pass  # Race with another process; proceed to flock
 
     with open(lock_path, "w") as lock_file:
-        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        deadline = time.monotonic() + timeout
+        warned = False
+        while True:
+            try:
+                fcntl.flock(
+                    lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB,
+                )
+                break
+            except BlockingIOError:
+                elapsed = timeout - (deadline - time.monotonic())
+                if not warned and elapsed >= _LOCK_WARN_SECONDS:
+                    logger.warning(
+                        "Waiting for lock on %s (%.1fs elapsed)",
+                        lock_path,
+                        elapsed,
+                    )
+                    warned = True
+                if time.monotonic() >= deadline:
+                    msg = (
+                        f"Timed out waiting for lock on "
+                        f"{lock_path} after {timeout:.0f}s"
+                    )
+                    raise TimeoutError(msg) from None
+                time.sleep(_LOCK_POLL_INTERVAL)
         try:
             yield
         finally:

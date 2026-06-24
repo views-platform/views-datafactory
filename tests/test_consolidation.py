@@ -741,3 +741,109 @@ class TestStoreCharacterization:
         assert result is not None
         assert result.num_rows == 7
         assert result.equals(new)
+
+
+# ---- Provenance locking hardening (C-294, C-295, #238) ----
+
+
+class TestDigestUnderLockRed:
+    """Digest must be computed inside the file lock (ADR-005)."""
+
+    def test_digest_matches_file_contents(
+        self, tmp_path: Path,
+    ) -> None:
+        """write_store returns digest matching on-disk file."""
+        store = tmp_path / "store.parquet"
+        table = _sample_table(5)
+        digest = write_store(table, store)
+        assert digest == compute_file_digest(store)
+
+    def test_digest_changes_on_rewrite(
+        self, tmp_path: Path,
+    ) -> None:
+        """Rewriting with different data produces different digest."""
+        store = tmp_path / "store.parquet"
+        d1 = write_store(_sample_table(3), store)
+        d2 = write_store(_sample_table(7), store)
+        assert d1 != d2
+
+
+class TestFileLockTimeoutRed:
+    """file_lock timeout behavior (C-295, ADR-005)."""
+
+    def test_lock_timeout_raises(self, tmp_path: Path) -> None:
+        """Held lock + short timeout → TimeoutError."""
+        from datafactory_provenance.digests_and_ledgers import (
+            file_lock,
+        )
+
+        target = tmp_path / "data.parquet"
+        target.touch()
+
+        lock_path = target.with_suffix(".parquet.lock")
+        import fcntl
+
+        lock_file = open(lock_path, "w")  # noqa: SIM115
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        try:
+            with pytest.raises(TimeoutError, match="Timed out"), \
+                 file_lock(target, timeout=0.3):
+                pass  # pragma: no cover
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+            lock_file.close()
+
+    def test_lock_acquires_after_release(
+        self, tmp_path: Path,
+    ) -> None:
+        """Lock acquired once holder releases."""
+        from datafactory_provenance.digests_and_ledgers import (
+            file_lock,
+        )
+
+        target = tmp_path / "data.parquet"
+        target.touch()
+
+        acquired = threading.Event()
+        released = threading.Event()
+
+        def hold_then_release() -> None:
+            with file_lock(target, timeout=5.0):
+                acquired.set()
+                released.wait(timeout=2.0)
+
+        t = threading.Thread(target=hold_then_release)
+        t.start()
+        acquired.wait(timeout=2.0)
+
+        released.set()
+
+        with file_lock(target, timeout=5.0):
+            pass
+
+        t.join(timeout=5.0)
+
+    def test_lock_timeout_error_message_includes_path(
+        self, tmp_path: Path,
+    ) -> None:
+        """TimeoutError message names the lock file path."""
+        import fcntl as _fcntl
+
+        from datafactory_provenance.digests_and_ledgers import (
+            file_lock,
+        )
+
+        target = tmp_path / "data.parquet"
+        target.touch()
+        lock_path = target.with_suffix(".parquet.lock")
+
+        lock_file = open(lock_path, "w")  # noqa: SIM115
+        _fcntl.flock(lock_file, _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+        try:
+            with pytest.raises(
+                TimeoutError, match=str(lock_path),
+            ), file_lock(target, timeout=0.3):
+                pass  # pragma: no cover
+        finally:
+            _fcntl.flock(lock_file, _fcntl.LOCK_UN)
+            lock_file.close()
