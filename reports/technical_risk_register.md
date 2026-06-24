@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-06-24)
-**Last update:** WDI readiness falsification (2026-06-24) — C-223 resolved (memmap implemented in pregridded_compilation.py:191 + grid_compilation.py:257, ADR-037); C-298 added and resolved (integration guide updated with tabular non-event path). Header counts: 297→298 IDs, 256→258 resolved, 38→37 open, Tier 3: 8→7. Prior: Pre-WDI Test Hardening sprint (2026-06-24, #234) — 5 concerns resolved: C-290 (#237, query module tests), C-294 (#238, digest inside lock), C-295 (#238, lock timeout), C-296 (#236, grid_from_feature_frame tests), C-297 (#235, assembly Red/Beige tests); D-38 deferred by design; Provenance locking work package fully resolved. Header counts: 43→38 open, 251→256 resolved, Tier 3: 11→8, Tier 4: 24→22. Prior: review-rr strategic curation (2026-06-24) — C-290 updated (RemoteConfig zero tests merged); C-296, C-297 added; lossless-append gap skipped (ADR-045 gap table). Header counts: 295→297 concern IDs, 46→48 open. Prior: WDI readiness gate sprint (#208–#213, 2026-06-19) — 10 concerns resolved: C-293 (#208, registry↔assembly sync test), C-36/C-37/C-45 (#209, ADR-046 UCDP schema evolution), C-252 (#210, ACLED cross-run dedup fix), C-268/C-247/C-292/C-250 (#211, GAUL data integrity), C-257 (#212, DGP validation contracts). Header counts: 236→246 resolved, 56→46 open. Prior: expert-code-review register-risk for sprint issues (2026-06-19) — C-252 update note (timestamp format heterogeneity); C-257 update note (DGP failure mode); D-40 added (DGP check module placement). Prior: review-rr strategic curation (2026-06-19) — header arithmetic corrected (235→236 resolved, dedup noted); C-195 demoted; C-293 promoted 3→2; C-267, C-270, C-237, C-289 struck through in work packages; D-32 added to summary table; 5 trigger rewrites (C-29, C-46, C-155, C-180, C-189); D-38/D-39 added to WET-before-DRY; C-293 added to Source registry; new Provenance locking work package (C-294, C-295); 5 entries relocated to correct tier sections. Prior: expert-code-review register-risk (2026-06-18) — C-293, C-294, C-295 added; D-38, D-39 added. Prior: review-rr strategic curation (2026-06-16) — C-136, C-148 demoted; 4 fully-resolved work packages struck through; C-258, C-79 struck through in work packages; header counts corrected. Prior: repo-assimilation v1.3.0 (2026-06-16) — C-291 added; C-267 updated; C-223 updated. Story 2 — C-258 closed; Story 0 — C-264, C-282, C-283, C-284, C-285 closed; C-288 closed (Story 1); C-79, C-177 demoted; D-30, D-31 resolved; C-46, C-173 triggers rewritten; C-288, C-289, C-290 added from test-review (2026-06-14)
+**Last update:** Count conservation hardening sprint (#258, 2026-06-24) — 4 concerns resolved: C-131 (heartbeat operational since v1.2.29), C-291 (#260, NaN pre-check guard in _conservation.py), C-249 (#261, float64 regression test at 500K cells), C-241 (#262, intensive feature UserWarning in grid_to_country_month.py). Header counts: 258→262 resolved, 37→33 open, Tier 2: 2→1, Tier 3: 7→6, Tier 4: 22→20. Prior: WDI readiness falsification (2026-06-24) — C-223 resolved (memmap implemented in pregridded_compilation.py:191 + grid_compilation.py:257, ADR-037); C-298 added and resolved (integration guide updated with tabular non-event path). Header counts: 297→298 IDs, 256→258 resolved, 38→37 open, Tier 3: 8→7. Prior: Pre-WDI Test Hardening sprint (2026-06-24, #234) — 5 concerns resolved: C-290 (#237, query module tests), C-294 (#238, digest inside lock), C-295 (#238, lock timeout), C-296 (#236, grid_from_feature_frame tests), C-297 (#235, assembly Red/Beige tests); D-38 deferred by design; Provenance locking work package fully resolved. Header counts: 43→38 open, 251→256 resolved, Tier 3: 11→8, Tier 4: 24→22. Prior: review-rr strategic curation (2026-06-24) — C-290 updated (RemoteConfig zero tests merged); C-296, C-297 added; lossless-append gap skipped (ADR-045 gap table). Header counts: 295→297 concern IDs, 46→48 open. Prior: WDI readiness gate sprint (#208–#213, 2026-06-19) — 10 concerns resolved: C-293 (#208, registry↔assembly sync test), C-36/C-37/C-45 (#209, ADR-046 UCDP schema evolution), C-252 (#210, ACLED cross-run dedup fix), C-268/C-247/C-292/C-250 (#211, GAUL data integrity), C-257 (#212, DGP validation contracts). Header counts: 236→246 resolved, 56→46 open. Prior: expert-code-review register-risk for sprint issues (2026-06-19) — C-252 update note (timestamp format heterogeneity); C-257 update note (DGP failure mode); D-40 added (DGP check module placement). Prior: review-rr strategic curation (2026-06-19) — header arithmetic corrected (235→236 resolved, dedup noted); C-195 demoted; C-293 promoted 3→2; C-267, C-270, C-237, C-289 struck through in work packages; D-32 added to summary table; 5 trigger rewrites (C-29, C-46, C-155, C-180, C-189); D-38/D-39 added to WET-before-DRY; C-293 added to Source registry; new Provenance locking work package (C-294, C-295); 5 entries relocated to correct tier sections. Prior: expert-code-review register-risk (2026-06-18) — C-293, C-294, C-295 added; D-38, D-39 added. Prior: review-rr strategic curation (2026-06-16) — C-136, C-148 demoted; 4 fully-resolved work packages struck through; C-258, C-79 struck through in work packages; header counts corrected. Prior: repo-assimilation v1.3.0 (2026-06-16) — C-291 added; C-267 updated; C-223 updated. Story 2 — C-258 closed; Story 0 — C-264, C-282, C-283, C-284, C-285 closed; C-288 closed (Story 1); C-79, C-177 demoted; D-30, D-31 resolved; C-46, C-173 triggers rewritten; C-288, C-289, C-290 added from test-review (2026-06-14)
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10, repo-assimilation v1.3.0 2026-06-16, expert-code-review register-risk 2026-06-18, test-review v1.4.0 2026-06-24
-**Status:** 298 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 258 resolved, 37 open concerns (0 Tier 1, 2 Tier 2, 7 Tier 3, 22 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 74 struck-through in active register (258 unique after dedup — 3 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
+**Status:** 298 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 262 resolved, 33 open concerns (0 Tier 1, 1 Tier 2, 6 Tier 3, 20 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 78 struck-through in active register (262 unique after dedup — 3 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -33,7 +33,7 @@
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
 | C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
 | C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
-| C-131 | 2 | No external monitoring for cron job failure on Hetzner | Before 2nd month without `HEARTBEAT_URL` configured, or server reboots without cron re-enable | Operational monitoring |
+| ~~C-131~~ | ~~2~~ | ~~No external monitoring for cron job failure on Hetzner~~ | Resolved 2026-06-24 (heartbeat in refresh_pipeline.sh:260-263 + ADR-018 bounded staleness SLO) | Operational monitoring |
 | ~~C-136~~ | ~~4~~ | ~~`read_last_entries()` crashes on non-UTF8 ledger files~~ | Demoted to tech-debt backlog 2026-06-16 (mechanical fix, single-file, perpetual trigger, loud failure) | — |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
 | ~~C-177~~ | ~~4~~ | ~~`_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3)~~ | Demoted to tech-debt backlog 2026-06-14 (function not actively used; dead code concern) | — |
@@ -64,11 +64,11 @@
 | ~~C-238~~ | ~~3~~ | ~~Issue #104 stale Caddy claims + orphaned daily cron requirement~~ | Resolved 2026-06-06 (#104 closed, superseded by #123) | Operational monitoring |
 | ~~C-239~~ | ~~2~~ | ~~Issue #104 paths produce silent wrong status page~~ | Resolved 2026-06-06 (#104 closed, superseded by #123) | Operational monitoring |
 | ~~C-240~~ | ~~4~~ | ~~generate_status.py docstring specifies nonexistent /www/ path~~ | Resolved 2026-06-06 (commit dd69544, docstring updated) | Status page |
-| C-241 | 4 | No invariant for intensive feature conservation across resolution or aggregation | First consumer aggregates intensive features (HDI, built-up fraction) to country-month or grid resolution changes | Aggregation correctness |
+| ~~C-241~~ | ~~4~~ | ~~No invariant for intensive feature conservation across resolution or aggregation~~ | Resolved 2026-06-24 (UserWarning in grid_to_country_month.py for intensive features, #258) | Aggregation correctness |
 | ~~C-246~~ | ~~2~~ | ~~`_compute_cell_polygon_map` is production code path with zero direct tests~~ | Resolved 2026-06-07 (#136: 15 tests — Green/Beige/Red/Equivalence) | GAUL data integrity |
 | ~~C-247~~ | ~~3~~ | ~~Dual source of truth for GAUL name files~~ | Resolved 2026-06-19 (pipeline ordering guard test + docstrings, #211) | GAUL data integrity |
 | ~~C-248~~ | ~~4~~ | ~~`area_majority_join` string tiebreaker crashes on mixed types~~ | Resolved 2026-06-07 (#136: type-safe tiebreaker + regression test) | GAUL data integrity |
-| C-249 | 4 | Float64 CM conservation fix has no regression guard | Developer reverts `dtype=np.float64` in `_conservation.py` | Count conservation |
+| ~~C-249~~ | ~~4~~ | ~~Float64 CM conservation fix has no regression guard~~ | Resolved 2026-06-24 (regression test at 500K cells proves float32 divergence, #258) | Count conservation |
 | ~~C-250~~ | ~~4~~ | ~~Hierarchical reconciliation not wired into any production code path~~ | Resolved 2026-06-19 (check_nesting() wired into generate_area_majority_gaul.py, #211) | GAUL data integrity |
 | ~~C-251~~ | ~~1~~ | ~~ACLED consolidator cross-file event duplication (2× overcounting)~~ | Resolved 2026-06-07 (#138: dedup on event_id_cnty alone + overlap detection + 6 tests) | ACLED consolidation |
 | ~~C-252~~ | ~~2~~ | ~~ACLED cross-run dedup drops updated events (first-seen wins, not latest)~~ | Resolved 2026-06-19 (latest-wins dedup with replacement tracking, #210) | ACLED consolidation |
@@ -130,7 +130,7 @@
 | ~~C-290~~ | ~~3~~ | ~~datafactory_query has 25% module coverage — consumer API mostly untested~~ | Resolved 2026-06-24 (RemoteConfig, PARTITIONS, country_month tests, #237) | Test coverage |
 | ~~C-296~~ | ~~3~~ | ~~grid_from_feature_frame has zero tests — 89-line consumer-facing adapter untested~~ | Resolved 2026-06-24 (8 standalone Green/Beige/Red tests, #236) | Test coverage |
 | ~~C-297~~ | ~~3~~ | ~~Assembly has zero Red team tests — partial-flag footgun unguarded~~ | Resolved 2026-06-24 (8 Red/Beige tests in test_assemble.py, #235) | Test coverage |
-| C-291 | 3 | Conservation assertions use np.nansum() — NaN exclusion weakens partition invariant | NaN-type corruption introduced during grid-to-country-month aggregation | Count conservation |
+| ~~C-291~~ | ~~3~~ | ~~Conservation assertions use np.nansum() — NaN exclusion weakens partition invariant~~ | Resolved 2026-06-24 (assert_no_unexpected_nan pre-check in _conservation.py, #258) | Count conservation |
 | ~~C-292~~ | ~~3~~ | ~~Fuvahmulah-signature cells unverified — distance discriminator proven unreliable~~ | Resolved 2026-06-19 (3 pgids verified in classification JSON, #211) | GAUL data integrity |
 | ~~C-263~~ | ~~3~~ | ~~Assembly finally block `mkdir` outside `contextlib.suppress` — can mask original exception~~ | Resolved 2026-06-10 (removed redundant mkdir — append_ledger_entry handles directory creation internally) | Ledger reliability |
 | ~~C-159~~ | ~~4~~ | ~~ACLED snapshot archiving and revision comparison paths untested~~ | Demoted to tech-debt backlog 2026-06-06 | — |
@@ -150,11 +150,11 @@ Items that should be resolved together:
 | **UCDP API resilience** | C-70, C-72, ~~C-181~~ (C-181 added 2026-06-12; C-181 demoted 2026-06-24) | Multi-operator deployment or UCDP rate-limiting observed |
 | ~~**UCDP schema defense**~~ | ~~C-36~~, ~~C-37~~, ~~C-45~~, ~~C-175~~ | Resolved 2026-06-19 (ADR-046 + DGP validation, #209/#212) |
 | **Test infrastructure** | C-29, ~~C-79~~, C-146, ~~C-267~~, ~~C-270~~ (C-60, C-169 resolved; C-78 demoted; C-79 demoted 2026-06-14; C-146 recalibrated 3→4; C-267, C-270 resolved 2026-06-18) | Test suite growth |
-| **Operational monitoring** | C-131, ~~C-136~~, C-147, ~~C-237~~ (C-132, C-191 resolved; C-238, C-239 resolved 2026-06-06; C-265 resolved 2026-06-10; C-136 demoted 2026-06-16; C-237 resolved 2026-06-18) | Before relying on Hetzner pipeline without manual checks |
+| **Operational monitoring** | ~~C-131~~, ~~C-136~~, C-147, ~~C-237~~ (C-132, C-191 resolved; C-238, C-239 resolved 2026-06-06; C-265 resolved 2026-06-10; C-136 demoted 2026-06-16; C-237 resolved 2026-06-18; C-131 resolved 2026-06-24 #258) | Before relying on Hetzner pipeline without manual checks |
 | **Source registry integrity** | ~~C-236~~, ~~C-293~~, D-33 (C-235, D-32 resolved #105; C-293 resolved 2026-06-19 #208) | Before next data source integration (WDI) |
 | **Scaling headroom** | C-144, C-145, ~~C-179~~, ~~C-223~~ (C-179 demoted 2026-06-24; C-223 resolved 2026-06-24 — memmap implemented, ADR-037) | Before consolidated store exceeds ~5M rows |
 | ~~**Harvest correctness**~~ | ~~C-185~~ (C-182, C-184, C-186, C-188 resolved; C-185 demoted 2026-06-24) | All items resolved or demoted |
-| **Count conservation** | C-241, C-249, C-291 (C-242, C-243, C-244 resolved PR #135) | C-241 deferred: intensive feature conservation; C-291: NaN weakens conservation check |
+| ~~**Count conservation**~~ | ~~C-241~~, ~~C-249~~, ~~C-291~~ (C-242, C-243, C-244 resolved PR #135; C-291 resolved #260, C-249 resolved #261, C-241 resolved #262 — sprint #258) | Resolved 2026-06-24 (all items resolved) |
 | ~~**GAUL data integrity**~~ | ~~C-247~~, ~~C-250~~, ~~C-268~~ (C-246, C-248 resolved #136) | Resolved 2026-06-19 (#211) |
 | **WET-before-DRY refactor** | C-07, C-154, C-155, C-164, ~~C-195~~, ~~C-230~~, C-287, D-38, D-39 (C-44 merged into C-164; C-230 resolved 2026-06-18; C-154 added 2026-06-12; C-287 added 2026-06-14; C-195 demoted 2026-06-19; D-38, D-39 added 2026-06-19) | Before WDI or next refactor sprint |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
@@ -260,13 +260,16 @@ SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN
 **Source:** PRIO IT security guidance, server setup 2026-03-28
 
 
-### C-131: No external monitoring for cron job failure on Hetzner — [RESOLVING]
+### ~~C-131: No external monitoring for cron job failure on Hetzner~~ — RESOLVED
+
+**Resolved 2026-06-24:** Heartbeat ping implemented in `refresh_pipeline.sh:260-263` — on successful pipeline completion, pings `$HEARTBEAT_URL` (env var) via `curl -fsS --max-time 10`. healthchecks.io service configured and operational since v1.2.29. ADR-018 documents bounded staleness SLO with operator monitoring mandate. Deployment guide (`docs/guides/hetzner_deployment_guide.md`) documents healthchecks.io setup procedure.
+
 The monthly pipeline runs via a single cron job (`0 0 21 * *`) under the `views-deploy` user. If the cron daemon crashes, the server reboots without re-enabling cron, or the `views-deploy` user is deleted during maintenance, the pipeline silently stops running. No external monitoring (cronitor, uptime check, systemd watchdog) exists to detect this. ADR-018 explicitly defers monitoring to operators (line 76: "Operators must monitor and intervene during outages") but no operator-side monitoring has been configured. The `ALERT_EMAIL` variable in `refresh_pipeline.sh:68` is a documented TODO (deployment log line 332) and is not set on the server.
 
 **Fix applied (2026-04-22):** Added optional heartbeat ping to `refresh_pipeline.sh` — on successful pipeline completion, pings `$HEARTBEAT_URL` (env var) if set. Operator must configure a healthchecks.io/cronitor service and set the URL on the server. Architectural review confirmed this is a deployment concern (not a new module) per ADR-018.
 
-**Trigger:** Before 2nd month of production cron without `HEARTBEAT_URL` configured on server, or Hetzner server reboots and cron daemon fails to restart.
-**Location:** Server crontab (`views-deploy` user), `scripts/refresh_pipeline.sh:61-72` (failure trap), `docs/ADRs/018_operational_resilience.md:76,90`.
+**Trigger:** ~~Before 2nd month of production cron without `HEARTBEAT_URL` configured on server, or Hetzner server reboots and cron daemon fails to restart.~~ Resolved.
+**Location:** Server crontab (`views-deploy` user), `scripts/refresh_pipeline.sh:260-263` (heartbeat ping), `docs/ADRs/018_operational_resilience.md:76,90`.
 **Source:** Falsification audit P1/P2 (2026-04-22).
 
 
@@ -870,19 +873,21 @@ Cross-ref: C-116 (remote zarr no retry + zero test coverage note), C-117 (remote
 
 ---
 
-### C-291: Conservation assertions use np.nansum() — NaN exclusion weakens partition invariant
+### ~~C-291: Conservation assertions use np.nansum() — NaN exclusion weakens partition invariant~~ — RESOLVED
+
+**Resolved 2026-06-24:** `assert_no_unexpected_nan()` added to `_conservation.py` — raises `RuntimeError` before nansum if any extensive feature column contains NaN. Called for all three partitions (all, land, excluded) inside `assert_cm_conservation()`. NaN in intensive features (SHDI, V-Dem) is still allowed. 5 tests: `test_nan_in_extensive_feature_raises`, `test_nan_in_non_extensive_feature_does_not_raise`, `test_nan_detected_in_all_partition`, `test_clean_data_passes`, `test_empty_array_passes`. Sprint epic #258, issue #260.
 
 | Field | Value |
 |-------|-------|
 | ID | C-291 |
-| Tier | 3 — weakened correctness check; NaN-type corruption passes conservation gate undetected |
+| Tier | ~~3~~ → Resolved |
 | Source | repo-assimilation (2026-06-16) |
-| Trigger | NaN-type corruption introduced during grid-to-country-month aggregation (e.g., division by zero in area weighting, or upstream bug that converts valid counts to NaN) |
-| Location | `src/datafactory_adapters/_conservation.py:36-46` (`assert_cm_conservation`), `src/datafactory_adapters/grid_to_country_month.py` |
+| Trigger | ~~NaN-type corruption introduced during grid-to-country-month aggregation~~ Resolved. |
+| Location | `src/datafactory_adapters/_conservation.py` (`assert_no_unexpected_nan`, `assert_cm_conservation`) |
 
 `assert_cm_conservation()` verifies the partition invariant `grid_total ≈ land_total + excluded_total` using `np.nansum()` and `np.allclose()`. The `np.nansum()` call silently excludes NaN values from all three sums. If a bug during aggregation converts valid counts to NaN (e.g., division by zero in area-weighted aggregation), the conservation check still passes because NaN is excluded from both sides of the comparison. The check verifies that the partition holds for non-NaN values, but does not verify that the NaN pattern is consistent across the partition or that NaN count hasn't increased relative to the input grid. The placement conservation at the compilation boundary (`assert_placement_conservation`) uses exact integer equality and would catch most corruption — this gap is specifically in the downstream aggregation path. Currently mitigated by: (1) compilation-level conservation catches most corruption vectors, (2) NaN is expected in the grid (SHDI 10.1% of land cells, V-Dem 9 dropped countries), so `np.nansum()` is the correct function choice. The gap is that NaN-producing bugs in the aggregation code itself would pass this check.
 
-See also C-241 (intensive feature conservation — different invariant), C-249 (float64 regression guard — same module). Part of causal cluster: **Count conservation**.
+See also ~~C-241~~ (resolved — intensive feature warning), ~~C-249~~ (resolved — float64 regression guard). Part of causal cluster: **Count conservation**.
 
 ---
 
@@ -1321,21 +1326,21 @@ Resolved 2026-06-06 (commit dd69544). Docstring updated to show `--output data/s
 
 **Source:** falsification audit (2026-06-04, G1). Cross-ref: C-239 (resolved), C-238 (resolved).
 
-### C-241: No invariant for intensive feature conservation across resolution or aggregation — [DEFER]
+### ~~C-241: No invariant for intensive feature conservation across resolution or aggregation~~ — RESOLVED
+
+**Resolved 2026-06-24:** `UserWarning` added to `grid_to_country_month.py` — emitted when intensive features (matching prefixes `shdi`, `healthindex`, `edindex`, `incindex`, `vdem_`, `ghs_built_`) are included in the aggregation. Warning names specific features found and recommends `output_format='dataframe'` with weighted mean. Aggregation still proceeds — consumers can suppress with `warnings.filterwarnings("ignore", ...)`. 2 tests: `test_intensive_feature_warning_emitted`, `test_no_warning_for_extensive_only`. Sprint epic #258, issue #262.
 
 | Field | Value |
 |-------|-------|
 | ID | C-241 |
-| Tier | 4 |
+| Tier | ~~4~~ → Resolved |
 | Source | ADR-040 scoping discussion (2026-06-05) |
-| Trigger | First consumer aggregates intensive features (HDI, built-up fraction, democracy scores) to country-month level, or grid resolution changes from 0.5° to a finer scale |
-| Location | `src/datafactory_adapters/grid_to_country_month.py` (aggregation path), ADR-040 (explicit scope exclusion) |
+| Trigger | ~~First consumer aggregates intensive features~~ Resolved. |
+| Location | `src/datafactory_adapters/grid_to_country_month.py` (`_INTENSIVE_PREFIXES`, warning block) |
 
 ADR-040 establishes count conservation (Invariant 1) and hierarchical reconciliation (Invariant 2) for extensive quantities — fatalities, event counts, population counts — where sums must balance across layers and aggregation levels. Intensive features (V-Dem democracy scores, SHDI human development index, GHS-BUILT-S built-up surface fraction) are explicitly out of scope because sums are not meaningful for these quantities. There is no ADR and no defined invariant for how intensive features should behave under aggregation (area-weighted average? population-weighted average?) or when grid resolution changes (does a 0.25° cell inherit its parent 0.5° cell's value? does it interpolate?).
 
 Currently this is not acute: `grid_to_country_month.py` sums all features including intensive ones (line 115), which is mathematically wrong for HDI and democracy scores but harmless because no downstream consumer currently uses country-month intensive feature totals. The problem becomes acute when: (a) a model or consumer aggregates V-Dem or SHDI to country-month and interprets the sum as meaningful, or (b) grid resolution changes and intensive features must be resampled. Both scenarios require defining what "conservation" means for non-additive quantities — likely area-weighted or population-weighted averaging, which is a research decision, not an engineering one.
-
-**Resolution:** Write a future ADR defining intensive feature aggregation semantics when a concrete consumer requires it. Until then, ADR-040's explicit exclusion of intensive features serves as the documented gap.
 
 Cross-ref: ADR-040 (scope boundary table, "Intensive feature conservation"), ADR-024 (Invariant 6: country-level broadcast for V-Dem), ADR-035 (GHS-BUILT-S integration).
 
@@ -1391,19 +1396,21 @@ Cross-ref: C-223 (compilation memory — same functions, different concern), C-4
 
 Cross-ref: C-246 (resolved — production code path tested), C-247 (dual source of truth).
 
-### C-249: Float64 CM conservation fix has no regression guard — [DEFER]
+### ~~C-249: Float64 CM conservation fix has no regression guard~~ — RESOLVED
+
+**Resolved 2026-06-24:** Two regression tests added in `TestRedFloat64Regression`: (1) `test_float32_has_nonzero_partition_error` — at 500K cells with values in [10, 100], proves float32 accumulation introduces 0.6875 gap (>0.01) while float64 has zero gap. (2) `test_production_code_passes_at_scale` — verifies `assert_cm_conservation()` passes at 500K-cell production scale. The float64 path is demonstrated as providing exact partition-sum equality vs measurable float32 error. Sprint epic #258, issue #261.
 
 | Field | Value |
 |-------|-------|
 | ID | C-249 |
-| Tier | 4 |
+| Tier | ~~4~~ → Resolved |
 | Source | Pre-deployment test coverage audit (2026-06-07) |
-| Trigger | When `_conservation.py` is refactored: verify `test_count_conservation` still catches float32 vs float64 divergence at scale >10M cells (trigger rewritten during review-rr 2026-06-24) |
-| Location | `src/datafactory_adapters/_conservation.py:35-37` (`dtype=np.float64` in `np.nansum`), `tests/test_count_conservation.py:91-109` (tolerance test) |
+| Trigger | ~~When `_conservation.py` is refactored~~ Resolved. |
+| Location | `tests/test_count_conservation.py::TestRedFloat64Regression` (2 tests) |
 
 The `dtype=np.float64` fix prevents float32 summation order divergence between `nansum(all)` and `nansum(land) + nansum(excluded)`. But the test uses 10,000 cells with values in [0,1), producing sums around 5,000 — well within float32's exact range. The `allclose(rtol=1e-6, atol=1e-4)` tolerance passes with or without the fix at this scale. Removing `dtype=np.float64` causes zero test failures. The same gap applies to the `assert_cm_conservation` wiring in `grid_to_country_month.py:99-104` — deleting the call also causes no test failure.
 
-Cross-ref: C-242 (resolved — the assertion this fix belongs to), C-241 (intensive feature conservation), ADR-040.
+Cross-ref: ~~C-242~~ (resolved — the assertion this fix belongs to), ~~C-241~~ (resolved — intensive feature warning), ADR-040.
 
 ### ~~C-250: Hierarchical reconciliation not wired into any production code path~~ — Resolved 2026-06-19 (#211)
 
