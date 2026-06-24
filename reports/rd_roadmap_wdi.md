@@ -1,7 +1,7 @@
 # R&D Roadmap — WDI (World Development Indicators) Integration
 
-**Date:** 2026-06-20
-**Status:** Planning. Prerequisites remain before implementation.
+**Date:** 2026-06-20 (updated 2026-06-24)
+**Status:** Ready. 4 of 5 prerequisites resolved; remaining item (ISO→GAUL crosswalk) is Phase 0 investigation work.
 
 ---
 
@@ -128,32 +128,28 @@ mapping from views-models names to WDI API codes is mechanical:
 
 ## Prerequisites
 
-These must be resolved before WDI integration begins:
+Status as of 2026-06-24:
 
-1. **dev↔main sync** — development is 12 commits ahead of main. Merge before
-   starting new source work.
+1. ~~**dev↔main sync**~~ — **DONE.** v1.4.0 merged to main, tagged, and
+   deployed (2026-06-24).
 
-2. **Open readiness gate stories** — Stories 4 (#211: GAUL data integrity) and
-   5 (#212: DGP validation) from the readiness gate sprint are still
-   pending/in-progress. Story 6 (#213: register update for 10 resolved
-   concerns) also pending.
+2. ~~**Open readiness gate stories**~~ — **DONE.** #211 (GAUL data integrity),
+   #212 (DGP validation), and #213 (register update) all closed.
 
 3. **ISO→GAUL country crosswalk** — WDI uses ISO 3166-1 alpha-3 country codes;
    our spatial infrastructure uses GAUL codes. Need a mapping table. GAUL's own
    metadata includes ISO codes — this may already be extractable from our
-   existing GAUL shapefiles.
+   existing GAUL shapefiles. **First step of WDI Phase 0 investigation.**
 
-4. **C-223: Compilation memory** (Tier 3) — Adding 27 features pushes
-   single-source compilation past current memory budget. Solution (memmap via
-   `np.lib.format.open_memmap`) is researched
-   (`rd_plan_bounded_memory_compilation.md`) but not yet implemented. Must land
-   before or during WDI compilation phase.
+4. ~~**C-223: Compilation memory**~~ — **DONE.** Memmap implemented in both
+   `pregridded_compilation.py:191` and `grid_compilation.py:257` (ADR-037).
+   Peak RSS stays ~200 MB regardless of feature count. C-223 resolved.
 
 5. **C-164: WET-before-DRY** (Tier 3, trigger fired) — With 9 sources
    integrated, shared patterns across harvest/viewpoint/compilation layers are
    proven. Sequencing decision: extract shared utilities *before* WDI (so WDI
    is the first consumer of extracted code) or *after* (WDI as one more WET
-   instance, then extract from 10). Either is viable.
+   instance, then extract from 10). Either is viable. Accepted at Tier 3.
 
 ---
 
