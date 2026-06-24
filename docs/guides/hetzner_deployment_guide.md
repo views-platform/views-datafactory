@@ -13,10 +13,12 @@ what all of this means.
 If the server is already set up and you're just deploying a new tag:
 
 ```bash
-# 1. On your laptop — tag and push
+# 1. On your laptop — merge development to main, tag, and push
 git checkout development && git pull
+git checkout main && git pull
+git merge development --ff-only
 git tag vX.Y.Z
-git push origin vX.Y.Z
+git push origin main --tags
 
 # 2. SSH into the server (replace <your-user> with your username)
 ssh <your-user>@204.168.219.108
@@ -787,14 +789,16 @@ It will never run an unknown version. This is the "fail-loud" principle
 **On your laptop** (where you develop):
 
 ```bash
-# 1. Make sure main is up to date
+# 1. Merge development into main (fast-forward only)
+git checkout development && git pull
 git checkout main && git pull
+git merge development --ff-only
 
 # 2. Create a tag on main
-git tag v1.2.0
+git tag v1.4.0
 
-# 3. Push the tag to GitHub
-git push --tags
+# 3. Push main and the tag to GitHub
+git push origin main --tags
 ```
 
 **On the server** (SSH in):
