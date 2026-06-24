@@ -1,8 +1,8 @@
 # Data Source Integration Guide
 
 How to add a new data source to the VIEWS data factory. Distilled from
-four source integrations (UCDP, ACLED, GHS-POP, GHS-BUILT-S) and two
-pre-deployment post-mortems.
+eight source integrations (UCDP, ACLED, GHS-POP, GHS-BUILT-S, V-Dem,
+SHDI, PRIO-GRID static, GAUL admin) and thirteen post-mortems.
 
 Read this document before writing any code for a new data source.
 
@@ -22,6 +22,7 @@ Read this document before writing any code for a new data source.
    |------|---------|--------|
    | Event data (API) | UCDP, ACLED | Harvest → Consolidation → Viewpoint → Compilation → Assembly |
    | Raster data (GeoTIFF) | GHS-POP, GHS-BUILT-S | Harvest → Viewpoint → Compilation → Assembly |
+   | Tabular, non-event (CSV/JSON) | V-Dem, SHDI, WDI | Harvest → Viewpoint → Compilation → Assembly |
    | Static data | PRIO-GRID, GAUL | Harvest → Assembly (loaded directly) |
 
 3. Estimate implementation scope honestly. Production code for a
@@ -100,7 +101,7 @@ for GHS-BUILT-S.
 
 ## Phase 4: Compilation and assembly
 
-**Goal:** Place viewpoint output into the [T, H, W, F] grid.
+**Goal:** Place viewpoint output into the [T, H, W, C] grid.
 
 - Pipeline script with explicit `--end-year` argument. Do not rely
   on `TemporalConfig` defaults.
