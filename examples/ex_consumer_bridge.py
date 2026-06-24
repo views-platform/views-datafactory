@@ -25,12 +25,6 @@ END = 483
 NCOL = DEFAULT_GRID_CONFIG.ncol
 
 FACTORY_FEATURES = ["ged_sb_best", "ged_ns_best", "ged_os_best", "gaul0_code"]
-FEATURE_RENAME = {
-    "ged_sb_best": "lr_sb_best",
-    "ged_ns_best": "lr_ns_best",
-    "ged_os_best": "lr_os_best",
-    "gaul0_code": "c_id",
-}
 
 
 def main() -> int:
@@ -43,10 +37,8 @@ def main() -> int:
         data_dir=DATA_DIR,
     )
 
-    df = df.rename(columns=FEATURE_RENAME)
-    expected_cols = list(FEATURE_RENAME.values())
-    assert list(df.columns) == expected_cols, (
-        f"After rename: expected {expected_cols}, got {list(df.columns)}"
+    assert list(df.columns) == FACTORY_FEATURES, (
+        f"Expected {FACTORY_FEATURES}, got {list(df.columns)}"
     )
 
     pgids = df.index.get_level_values("priogrid_gid")

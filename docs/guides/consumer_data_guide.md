@@ -123,18 +123,18 @@ data/consumer/
 
 Each parquet has:
 - **Index:** `(month_id, priogrid_gid)` — both integers, sorted
-- **Columns:** `lr_sb_best`, `lr_ns_best`, `lr_os_best`, `c_id`, `row`, `col`
+- **Columns:** `ged_sb_best`, `ged_ns_best`, `ged_os_best`, `gaul0_code`, `row`, `col`
 
-### Column rename mapping
+### Column names
 
-The data factory uses UCDP's original field names. Training scripts use VIEWSER's `lr_*` convention. The script renames automatically:
+The bridge emits source column names — no renaming. Consumer-side renaming (if any) is the model's responsibility via `config_queryset.py`.
 
-| Data factory name | Training script name | What it is |
-|-------------------|---------------------|-----------|
-| `ged_sb_best` | `lr_sb_best` | State-based conflict fatalities (best estimate) |
-| `ged_ns_best` | `lr_ns_best` | Non-state conflict fatalities (best estimate) |
-| `ged_os_best` | `lr_os_best` | One-sided violence fatalities (best estimate) |
-| `gaul0_code` | `c_id` | Country identifier (GAUL administrative code) |
+| Column | What it is |
+|--------|-----------|
+| `ged_sb_best` | State-based conflict fatalities (best estimate) |
+| `ged_ns_best` | Non-state conflict fatalities (best estimate) |
+| `ged_os_best` | One-sided violence fatalities (best estimate) |
+| `gaul0_code` | Country identifier (GAUL administrative code) |
 
 `row` and `col` are derived from `priogrid_gid`:
 - `row = (priogrid_gid - 1) // 720 + 1` (1-indexed, south to north)

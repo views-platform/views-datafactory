@@ -175,15 +175,15 @@ Layers are decoupled by the filesystem, not by imports. Each layer computes SHA-
 
 ### Consumer Contract
 
-The `generate_consumer_data.py` script bridges factory vocabulary to the format expected by VIEWS training scripts (`purple_alien`, `white_ranger`, etc.):
+The `generate_consumer_data.py` script produces parquet files for VIEWS training scripts (`purple_alien`, `white_ranger`, etc.). Column names are the factory's source names — consumer-side renaming (if any) is the model's responsibility via `config_queryset.py`.
 
-| Factory column | Consumer column | Meaning |
-|----------------|----------------|---------|
-| `ged_sb_best` | `lr_sb_best` | State-based conflict fatalities (best estimate) |
-| `ged_ns_best` | `lr_ns_best` | Non-state conflict fatalities |
-| `ged_os_best` | `lr_os_best` | One-sided violence fatalities |
-| `gaul0_code` | `c_id` | Country identifier (GAUL Level 0) |
-| _(derived)_ | `row`, `col` | Grid position derived from `priogrid_gid` |
+| Column | Meaning |
+|--------|---------|
+| `ged_sb_best` | State-based conflict fatalities (best estimate) |
+| `ged_ns_best` | Non-state conflict fatalities |
+| `ged_os_best` | One-sided violence fatalities |
+| `gaul0_code` | Country identifier (GAUL Level 0) |
+| `row`, `col` | Grid position (derived from `priogrid_gid`) |
 
 Training partitions use VIEWS month_id encoding (epoch: January 1980):
 - **Calibration:** train 121–444, test 445–492

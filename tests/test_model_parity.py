@@ -23,7 +23,6 @@ import pytest
 from gold_set_config import (
     DATA_DIR,
     FACTORY_FEATURES,
-    FEATURE_RENAME,
     GAUL_DIR,
     GOLD_PGM_AFRICA_ME,
     MONTH_ID_EPOCH,
@@ -42,19 +41,28 @@ CM_SUM_GAP_THRESHOLD = 0.05  # 5% — CM drops ~603 unmapped coastal cells
 
 def _build_parity_df(df: pd.DataFrame) -> pd.DataFrame:
     """Transform factory DataFrame into gold set format."""
-    result = df[list(FEATURE_RENAME.keys())].rename(
-        columns=FEATURE_RENAME,
-    )
+    result = df[FACTORY_FEATURES].copy()
     pgids = result.index.get_level_values("priogrid_gid")
-    result = result.copy()
     result["row"] = ((pgids - 1) // NCOL + 1).astype(np.float64)
     result["col"] = ((pgids - 1) % NCOL + 1).astype(np.float64)
     result = result[PARITY_COLS].fillna(0.0).astype(np.float64)
     return result.sort_index()
 
 
+_VIEWSER_TO_FACTORY = {
+    "lr_sb_best": "ged_sb_best",
+    "lr_ns_best": "ged_ns_best",
+    "lr_os_best": "ged_os_best",
+}
+
+
 def _align_gold(gold: pd.DataFrame) -> pd.DataFrame:
-    """Select only parity columns from gold set."""
+    """Select only parity columns from gold set.
+
+    The VIEWSER gold set uses lr_* column names; rename to factory names
+    so both sides of the parity comparison use the same vocabulary.
+    """
+    gold = gold.rename(columns=_VIEWSER_TO_FACTORY)
     return gold[PARITY_COLS].sort_index()
 
 
@@ -288,7 +296,7 @@ class TestPGMLandParity:
                 f"Negative values in {col} outside gold set region"
             )
 
-        nonzero_sb = (rest["lr_sb_best"] > 0).sum()
+        nonzero_sb = (rest["ged_sb_best"] > 0).sum()
         assert nonzero_sb > 0, (
             "No conflict events outside africa_me — "
             "Americas/Europe/Asia should have events"
@@ -343,8 +351,7 @@ class TestCMParity:
     def factory_cm_totals(
         self, factory_cm_df: pd.DataFrame,
     ) -> pd.DataFrame:
-        renamed = factory_cm_df.rename(columns=FEATURE_RENAME)
-        return renamed.groupby("month_id")[
+        return factory_cm_df.groupby("month_id")[
             PARITY_FEATURES
         ].sum()
 
