@@ -784,6 +784,31 @@ that doesn't exist, the script prints `FATAL` and stops immediately.
 It will never run an unknown version. This is the "fail-loud" principle
 (ADR-011): crash visibly rather than run the wrong code silently.
 
+### Terminology: bump vs tag
+
+**Bump** and **tag** are two separate operations that happen in a
+fixed order:
+
+1. **Bump** = changing `version` in `pyproject.toml` (e.g. `1.3.0`
+   → `1.4.0`). This is a normal code change: feature branch → PR →
+   merge to `development`. It happens during development, well before
+   deployment.
+
+2. **Merge** = fast-forward `development` into `main`. This is the
+   release ceremony. `main` only moves forward at deploy time.
+
+3. **Tag** = `git tag vX.Y.Z` on the merge commit on `main`. This
+   is a git label, not a code change. The version in `pyproject.toml`
+   and the tag name must agree (`version = "1.4.0"` → `v1.4.0`).
+
+4. **Deploy** = update `~/.views-deploy-tag` on the server to the
+   new tag. The pipeline checks out whatever tag that file contains.
+
+**Why this order:** If you tag before bumping, the tag points at code
+with the old version string — wrong. If you tag on `development`
+instead of `main`, the canonical release branch falls behind. Bump
+first, merge second, tag third.
+
 ### How to deploy a new version
 
 **On your laptop** (where you develop):
@@ -794,8 +819,8 @@ git checkout development && git pull
 git checkout main && git pull
 git merge development --ff-only
 
-# 2. Create a tag on main
-git tag v1.4.0
+# 2. Create a tag on main (must match pyproject.toml version)
+git tag vX.Y.Z
 
 # 3. Push main and the tag to GitHub
 git push origin main --tags
@@ -805,11 +830,11 @@ git push origin main --tags
 
 ```bash
 # 4. Update the deploy tag file
-echo 'v1.2.0' > ~/.views-deploy-tag
+echo 'vX.Y.Z' > ~/.views-deploy-tag
 ```
 
 That's it. The next cron run (21st of the month) will automatically
-use `v1.2.0`. If you want to apply it right now instead of waiting:
+use the new tag. If you want to apply it right now instead of waiting:
 
 ```bash
 # Run the pipeline manually (same command cron uses)
@@ -822,11 +847,11 @@ bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 If a new version breaks the pipeline:
 
 ```bash
-# On the server — point back to the old version
-echo 'v1.0.0' > ~/.views-deploy-tag
+# On the server — point back to the previous version
+echo 'vPREVIOUS' > ~/.views-deploy-tag
 ```
 
-The next pipeline run will check out `v1.0.0` and run that code
+The next pipeline run will check out that tag and run its code
 instead. The old version is always available — git never deletes tags.
 
 You can also run the pipeline manually to roll back immediately
