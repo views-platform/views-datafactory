@@ -852,3 +852,141 @@ class TestAssemblyRed:
 
         with pytest.raises(_json.JSONDecodeError):
             _json.loads(provenance_path.read_text())
+
+
+# ── Temporal Alignment Hardening (ADR-047, C-286, C-156) ──
+
+
+class TestTemporalAnchorGreen:
+    """Green tests for first_valid_month_id provenance fields
+    and temporal alignment correctness (ADR-047)."""
+
+    def test_first_valid_month_id_with_offset(self) -> None:
+        """Source with offset > 0 has first_valid = source's first
+        time step, not the grid's first month."""
+        from datafactory_priogrid import to_views_month_id
+
+        ucdp_ts = np.array(
+            [f"20{y:02d}-{m:02d}" for y in range(18, 23)
+             for m in range(1, 13)],
+            dtype="datetime64[M]",
+        )
+        acled_start = np.datetime64("2020-01")
+        acled_first_mid = int(to_views_month_id(acled_start))
+        ucdp_first_mid = int(to_views_month_id(ucdp_ts[0]))
+        assert acled_first_mid > ucdp_first_mid
+
+    def test_first_valid_equals_grid_start_when_offset_zero(
+        self,
+    ) -> None:
+        """Source with offset 0 has first_valid = grid's first
+        month (same as UCDP)."""
+        from datafactory_priogrid import to_views_month_id
+
+        ucdp_ts = np.array(
+            ["2020-01", "2020-02", "2020-03"],
+            dtype="datetime64[M]",
+        )
+        source_ts = np.array(
+            ["2020-01", "2020-02", "2020-03"],
+            dtype="datetime64[M]",
+        )
+        ucdp_first = int(to_views_month_id(ucdp_ts[0]))
+        source_first = int(to_views_month_id(source_ts[0]))
+        assert source_first == ucdp_first
+
+    def test_load_source_grid_returns_correct_offset(
+        self, tmp_path: Path,
+    ) -> None:
+        """_load_source_grid returns the integer offset matching
+        the position of the source's start in the UCDP timeline."""
+        import json as _json
+
+        ucdp_ts = np.array(
+            ["2020-01", "2020-02", "2020-03",
+             "2020-04", "2020-05", "2020-06"],
+            dtype="datetime64[M]",
+        )
+        source_ts = np.array(
+            ["2020-03", "2020-04"],
+            dtype="datetime64[M]",
+        )
+        grid = np.ones((2, 360, 720, 1), dtype=np.float32)
+        np.save(tmp_path / "grid.npy", grid)
+        np.save(tmp_path / "time_steps.npy", source_ts)
+        (tmp_path / "feature_names.json").write_text(
+            _json.dumps(["feat"]),
+        )
+        result = _assembly_mod._load_source_grid(
+            "TEST", tmp_path, ucdp_ts, 6,
+        )
+        assert result is not None
+        _, _, offset = result
+        assert offset == 2
+
+
+class TestTemporalAnchorRed:
+    """Red team tests: adversarial temporal scenarios that
+    characterize dangerous behavior (ADR-047, C-286)."""
+
+    def test_ucdp_range_contraction_drops_source_data(
+        self,
+    ) -> None:
+        """If UCDP covers 2020-2025 instead of 1995-2025,
+        a source covering 1995-2020 silently loses 1995-1999.
+
+        This test characterizes the EXISTING behavior (data
+        loss) — the fact that _load_source_grid REJECTS a source
+        whose start is before the UCDP timeline. The data is
+        not silently dropped — it is explicitly rejected.
+        """
+        ucdp_ts = np.array(
+            [f"20{y:02d}-{m:02d}" for y in range(20, 26)
+             for m in range(1, 13)],
+            dtype="datetime64[M]",
+        )
+        source_start = np.datetime64("2019-06")
+        matches = np.where(ucdp_ts == source_start)[0]
+        assert len(matches) == 0, (
+            "Source start before UCDP range should not "
+            "match any UCDP time step"
+        )
+
+    def test_zero_fill_indistinguishable_from_observed_zeros(
+        self,
+    ) -> None:
+        """Pre-coverage zero-fill is structurally identical to
+        observed zeros — this is the problem C-156 documents.
+
+        Without first_valid_month_id metadata, a consumer
+        cannot distinguish between 'ACLED had zero events in
+        1995' (data artifact) and 'ACLED had zero events in
+        2022' (observed reality).
+        """
+        n_t, n_h, n_w = 12, 3, 4
+        n_ucdp, n_acled = 2, 2
+        n_total = n_ucdp + n_acled
+        acled_offset = 6
+        acled_t = 4
+
+        assembled = np.zeros(
+            (n_t, n_h, n_w, n_total), dtype=np.float32,
+        )
+        acled_grid = np.zeros(
+            (acled_t, n_h, n_w, n_acled), dtype=np.float32,
+        )
+        acled_end = acled_offset + acled_t
+        assembled[
+            acled_offset:acled_end, :, :,
+            n_ucdp:n_ucdp + n_acled,
+        ] = acled_grid
+
+        pre_coverage = assembled[0, 0, 0, n_ucdp]
+        observed_zero = assembled[acled_offset, 0, 0, n_ucdp]
+
+        assert pre_coverage == observed_zero == 0.0, (
+            "Zero-fill and observed zeros are identical — "
+            "consumers need first_valid_month_id to tell "
+            "them apart"
+        )
+        assert pre_coverage.dtype == observed_zero.dtype

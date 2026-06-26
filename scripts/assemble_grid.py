@@ -791,11 +791,15 @@ def main() -> int:
 
         # ACLED data boundary
         last_valid_acled_month_id: int | None = None
+        first_valid_acled_month_id: int | None = None
         if has_acled:
             acled_grid_ro = np.load(
                 config.acled_grid_dir / "grid.npy", mmap_mode="r",
             )
             acled_ts = np.load(config.acled_grid_dir / "time_steps.npy")
+            first_valid_acled_month_id = int(
+                to_views_month_id(acled_ts[0])
+            )
             acled_has_data = acled_grid_ro.sum(axis=(1, 2, 3)) > 0
             acled_valid = np.where(acled_has_data)[0]
             if len(acled_valid) > 0:
@@ -808,16 +812,24 @@ def main() -> int:
                     f"Last valid ACLED month: "
                     f"{last_valid_acled_month_id} ({acled_last_dt})"
                 )
+            print(
+                f"First valid ACLED month: "
+                f"{first_valid_acled_month_id} ({acled_ts[0]})"
+            )
             del acled_grid_ro
 
         # GHS-POP data boundary
         last_valid_ghspop_month_id: int | None = None
+        first_valid_ghspop_month_id: int | None = None
         if has_ghspop:
             ghspop_grid_ro = np.load(
                 config.ghspop_grid_dir / "grid.npy", mmap_mode="r",
             )
             ghspop_ts = np.load(
                 config.ghspop_grid_dir / "time_steps.npy",
+            )
+            first_valid_ghspop_month_id = int(
+                to_views_month_id(ghspop_ts[0])
             )
             ghspop_has_data = ghspop_grid_ro.sum(axis=(1, 2, 3)) > 0
             ghspop_valid = np.where(ghspop_has_data)[0]
@@ -832,10 +844,15 @@ def main() -> int:
                     f"{last_valid_ghspop_month_id} "
                     f"({ghspop_last_dt})"
                 )
+            print(
+                f"First valid GHS-POP month: "
+                f"{first_valid_ghspop_month_id} ({ghspop_ts[0]})"
+            )
             del ghspop_grid_ro
 
         # GHS-BUILT-S data boundary
         last_valid_ghsbuilts_month_id: int | None = None
+        first_valid_ghsbuilts_month_id: int | None = None
         if has_ghsbuilts:
             ghsbuilts_grid_ro = np.load(
                 config.ghsbuilts_grid_dir / "grid.npy",
@@ -843,6 +860,9 @@ def main() -> int:
             )
             ghsbuilts_ts = np.load(
                 config.ghsbuilts_grid_dir / "time_steps.npy",
+            )
+            first_valid_ghsbuilts_month_id = int(
+                to_views_month_id(ghsbuilts_ts[0])
             )
             ghsbuilts_has_data = (
                 ghsbuilts_grid_ro.sum(axis=(1, 2, 3)) > 0
@@ -859,10 +879,16 @@ def main() -> int:
                     f"{last_valid_ghsbuilts_month_id} "
                     f"({ghsbuilts_last_dt})"
                 )
+            print(
+                f"First valid GHS-BUILT-S month: "
+                f"{first_valid_ghsbuilts_month_id} "
+                f"({ghsbuilts_ts[0]})"
+            )
             del ghsbuilts_grid_ro
 
         # V-Dem data boundary
         last_valid_vdem_month_id: int | None = None
+        first_valid_vdem_month_id: int | None = None
         if has_vdem:
             vdem_grid_ro = np.load(
                 config.vdem_grid_dir / "grid.npy",
@@ -870,6 +896,9 @@ def main() -> int:
             )
             vdem_ts = np.load(
                 config.vdem_grid_dir / "time_steps.npy",
+            )
+            first_valid_vdem_month_id = int(
+                to_views_month_id(vdem_ts[0])
             )
             vdem_has_data = np.nansum(vdem_grid_ro, axis=(1, 2, 3)) > 0
             vdem_valid = np.where(vdem_has_data)[0]
@@ -884,10 +913,15 @@ def main() -> int:
                     f"{last_valid_vdem_month_id} "
                     f"({vdem_last_dt})"
                 )
+            print(
+                f"First valid V-Dem month: "
+                f"{first_valid_vdem_month_id} ({vdem_ts[0]})"
+            )
             del vdem_grid_ro
 
         # SHDI data boundary
         last_valid_shdi_month_id: int | None = None
+        first_valid_shdi_month_id: int | None = None
         if has_shdi:
             shdi_grid_ro = np.load(
                 config.shdi_grid_dir / "grid.npy",
@@ -895,6 +929,9 @@ def main() -> int:
             )
             shdi_ts = np.load(
                 config.shdi_grid_dir / "time_steps.npy",
+            )
+            first_valid_shdi_month_id = int(
+                to_views_month_id(shdi_ts[0])
             )
             shdi_has_data = np.nansum(
                 shdi_grid_ro, axis=(1, 2, 3),
@@ -911,6 +948,10 @@ def main() -> int:
                     f"{last_valid_shdi_month_id} "
                     f"({shdi_last_dt})"
                 )
+            print(
+                f"First valid SHDI month: "
+                f"{first_valid_shdi_month_id} ({shdi_ts[0]})"
+            )
             del shdi_grid_ro
 
         provenance = {
@@ -980,21 +1021,41 @@ def main() -> int:
             provenance["last_valid_acled_month_id"] = (
                 last_valid_acled_month_id
             )
+        if first_valid_acled_month_id is not None:
+            provenance["first_valid_acled_month_id"] = (
+                first_valid_acled_month_id
+            )
         if last_valid_ghspop_month_id is not None:
             provenance["last_valid_ghspop_month_id"] = (
                 last_valid_ghspop_month_id
+            )
+        if first_valid_ghspop_month_id is not None:
+            provenance["first_valid_ghspop_month_id"] = (
+                first_valid_ghspop_month_id
             )
         if last_valid_ghsbuilts_month_id is not None:
             provenance["last_valid_ghsbuilts_month_id"] = (
                 last_valid_ghsbuilts_month_id
             )
+        if first_valid_ghsbuilts_month_id is not None:
+            provenance["first_valid_ghsbuilts_month_id"] = (
+                first_valid_ghsbuilts_month_id
+            )
         if last_valid_vdem_month_id is not None:
             provenance["last_valid_vdem_month_id"] = (
                 last_valid_vdem_month_id
             )
+        if first_valid_vdem_month_id is not None:
+            provenance["first_valid_vdem_month_id"] = (
+                first_valid_vdem_month_id
+            )
         if last_valid_shdi_month_id is not None:
             provenance["last_valid_shdi_month_id"] = (
                 last_valid_shdi_month_id
+            )
+        if first_valid_shdi_month_id is not None:
+            provenance["first_valid_shdi_month_id"] = (
+                first_valid_shdi_month_id
             )
         (config.output_dir / "provenance.json").write_text(
             json.dumps(provenance, indent=2)
