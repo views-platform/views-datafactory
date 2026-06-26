@@ -1239,3 +1239,114 @@ class TestProfilesRed:
 
         with pytest.raises(KeyError, match="Unknown viewpoint profile"):
             load_profile("nonexistent", tmp_path / "store.parquet")
+
+
+# ---- Column-selective reads (C-145): Green ----
+
+
+class TestColumnSelectionGreen:
+    """Verify viewpoint builders skip metadata columns at read time."""
+
+    def test_ucdp_output_excludes_harvest_metadata(
+        self, tmp_path: Path,
+    ) -> None:
+        """UCDP builder strips _harvest_* and _ingested_at."""
+        events = [
+            _make_consolidated_event(event_id=1),
+            _make_consolidated_event(event_id=2, best=20),
+        ]
+        for ev in events:
+            ev["_harvest_digest"] = "abc123"
+            ev["_harvest_timestamp"] = "2026-01-01T00:00:00Z"
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events,
+        )
+        cfg = _config(tmp_path, store)
+        result = build_ucdp_v1(cfg)
+
+        output = pq.read_table(result.output_path)
+        for col in ("_harvest_digest", "_harvest_timestamp",
+                     "_ingested_at", "_source_type",
+                     "_source_version"):
+            assert col not in output.column_names
+
+    def test_ucdp_survivorship_works_with_column_selection(
+        self, tmp_path: Path,
+    ) -> None:
+        """Survivorship still works when metadata columns are skipped."""
+        events = [
+            _make_consolidated_event(
+                event_id=42,
+                source_type="annual",
+                source_version="25.1",
+                best=10,
+            ),
+            _make_consolidated_event(
+                event_id=42,
+                source_type="candidate",
+                source_version="25.0.6",
+                best=15,
+            ),
+        ]
+        for ev in events:
+            ev["_harvest_digest"] = "abc123"
+            ev["_harvest_timestamp"] = "2026-01-01T00:00:00Z"
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events,
+        )
+        cfg = _config(tmp_path, store)
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 1
+        output = pq.read_table(result.output_path)
+        assert output.column("best").to_pylist()[0] == 10
+
+    def test_acled_output_excludes_metadata(
+        self, tmp_path: Path,
+    ) -> None:
+        """ACLED builder strips all metadata columns."""
+        from datafactory_viewpoint.builders.acled_v1 import (
+            AcledViewpointConfig,
+            build_acled_v1,
+        )
+
+        table = pa.table({
+            "event_id_cnty": pa.array(["ETH1", "ETH2"]),
+            "event_date": pa.array(
+                ["2024-01-15", "2024-02-20"],
+            ),
+            "event_type": pa.array(
+                ["Battles", "Riots"],
+            ),
+            "latitude": pa.array([9.0, 9.5]),
+            "longitude": pa.array([38.0, 38.5]),
+            "fatalities": pa.array([5, 2]),
+            "_source_type": pa.array(["acled", "acled"]),
+            "_source_version": pa.array(["v1", "v1"]),
+            "_ingested_at": pa.array(
+                ["2026-01-01", "2026-01-01"],
+            ),
+            "_harvest_digest": pa.array(["abc", "abc"]),
+            "_harvest_timestamp": pa.array(
+                ["2026-01-01T00:00:00Z",
+                 "2026-01-01T00:00:00Z"],
+            ),
+        })
+        store = tmp_path / "store.parquet"
+        store.parent.mkdir(parents=True, exist_ok=True)
+        pq.write_table(table, store)
+
+        cfg = AcledViewpointConfig(
+            consolidated_path=store,
+            output_path=tmp_path / "out" / "acled.parquet",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        result = build_acled_v1(cfg)
+
+        output = pq.read_table(result.output_path)
+        for col in ("_source_type", "_source_version",
+                     "_ingested_at", "_harvest_digest",
+                     "_harvest_timestamp"):
+            assert col not in output.column_names
+        assert "date_month" in output.column_names
+        assert output.num_rows == 2

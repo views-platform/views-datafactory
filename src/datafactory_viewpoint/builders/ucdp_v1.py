@@ -108,8 +108,17 @@ def build_ucdp_v1(
         logger.error(err_msg)
         raise FileNotFoundError(err_msg)
 
-    # Read consolidated store
-    table = pq.read_table(config.consolidated_path)
+    # Read consolidated store, skipping metadata columns not
+    # needed for processing (keep _source_type/_source_version
+    # for survivorship, skip _ingested_at/_harvest_* metadata).
+    schema = pq.read_schema(config.consolidated_path)
+    skip_cols = STRIPPED_FIELDS - REQUIRED_CONSOLIDATED_FIELDS
+    read_cols = [
+        c for c in schema.names if c not in skip_cols
+    ]
+    table = pq.read_table(
+        config.consolidated_path, columns=read_cols,
+    )
     n_read = table.num_rows
     if n_read == 0:
         err_msg = "Consolidated store is empty"
