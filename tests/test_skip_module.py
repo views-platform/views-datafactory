@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from datafactory_provenance import compute_file_digest
 from datafactory_provenance.skip import (
     check_assembly_skip,
@@ -207,3 +209,111 @@ class TestCheckExportSkip:
         verdict = check_export_skip(prov_path, zarr_dir)
 
         assert verdict.should_skip is False
+
+
+# ── Corrupted input tests (#282, C-280) ─────────────────────
+
+
+class TestAssemblySkipCorruptedBeige:
+    """Boundary: missing keys and null values in provenance."""
+
+    def test_empty_provenance_file(self, tmp_path: Path) -> None:
+        output_path = tmp_path / "grid.npy"
+        _write_output(output_path)
+        prov_path = tmp_path / "provenance.json"
+        prov_path.write_text("")
+
+        with pytest.raises(json.JSONDecodeError):
+            check_assembly_skip({"ucdp_digest": "abc"}, prov_path, output_path)
+
+    def test_missing_source_digest_key(self, tmp_path: Path) -> None:
+        output_path = tmp_path / "grid.npy"
+        output_digest = _write_output(output_path)
+        prov_path = tmp_path / "provenance.json"
+        prov_path.write_text(json.dumps({
+            "output_digest": output_digest,
+        }))
+
+        current = {"ucdp_digest": "abc123"}
+        verdict = check_assembly_skip(current, prov_path, output_path)
+        assert verdict.should_skip is False
+
+    def test_null_digest_values(self, tmp_path: Path) -> None:
+        output_path = tmp_path / "grid.npy"
+        output_digest = _write_output(output_path)
+        prov_path = tmp_path / "provenance.json"
+        prov_path.write_text(json.dumps({
+            "sources": {"ucdp_digest": None, "acled_digest": None},
+            "output_digest": output_digest,
+        }))
+
+        verdict = check_assembly_skip({}, prov_path, output_path)
+        assert verdict.should_skip is True
+
+
+class TestAssemblySkipCorruptedRed:
+    """Adversarial: malformed JSON provenance crashes pipeline."""
+
+    def test_malformed_json(self, tmp_path: Path) -> None:
+        output_path = tmp_path / "grid.npy"
+        _write_output(output_path)
+        prov_path = tmp_path / "provenance.json"
+        prov_path.write_text("{truncated")
+
+        with pytest.raises(json.JSONDecodeError):
+            check_assembly_skip({"ucdp_digest": "abc"}, prov_path, output_path)
+
+
+class TestExportSkipCorruptedBeige:
+    """Boundary: missing keys in export provenance."""
+
+    def test_empty_provenance_file(self, tmp_path: Path) -> None:
+        prov_path = tmp_path / "provenance.json"
+        prov_path.write_text("")
+        zarr_dir = tmp_path / "grid.zarr"
+        zarr_dir.mkdir()
+        (zarr_dir / ".zattrs").write_text(json.dumps({
+            "source_digest": "abc",
+        }))
+
+        with pytest.raises(json.JSONDecodeError):
+            check_export_skip(prov_path, zarr_dir)
+
+    def test_missing_output_digest_key(self, tmp_path: Path) -> None:
+        prov_path = tmp_path / "provenance.json"
+        prov_path.write_text(json.dumps({"sources": {}}))
+        zarr_dir = tmp_path / "grid.zarr"
+        zarr_dir.mkdir()
+        (zarr_dir / ".zattrs").write_text(json.dumps({
+            "source_digest": "abc",
+        }))
+
+        verdict = check_export_skip(prov_path, zarr_dir)
+        assert verdict.should_skip is False
+        assert "not recorded" in verdict.reason
+
+
+class TestExportSkipCorruptedRed:
+    """Adversarial: malformed JSON in provenance and .zattrs."""
+
+    def test_malformed_provenance_json(self, tmp_path: Path) -> None:
+        prov_path = tmp_path / "provenance.json"
+        prov_path.write_text("not json at all")
+        zarr_dir = tmp_path / "grid.zarr"
+        zarr_dir.mkdir()
+        (zarr_dir / ".zattrs").write_text(json.dumps({
+            "source_digest": "abc",
+        }))
+
+        with pytest.raises(json.JSONDecodeError):
+            check_export_skip(prov_path, zarr_dir)
+
+    def test_malformed_zattrs(self, tmp_path: Path) -> None:
+        prov_path = tmp_path / "provenance.json"
+        _write_provenance(prov_path, {}, "grid_digest_abc")
+        zarr_dir = tmp_path / "grid.zarr"
+        zarr_dir.mkdir()
+        (zarr_dir / ".zattrs").write_text("{broken")
+
+        with pytest.raises(json.JSONDecodeError):
+            check_export_skip(prov_path, zarr_dir)

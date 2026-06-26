@@ -109,7 +109,23 @@ def build_acled_v1(
         logger.error(err_msg)
         raise FileNotFoundError(err_msg)
 
-    table = pq.read_table(config.consolidated_path)
+    schema = pq.read_schema(config.consolidated_path)
+    missing = REQUIRED_CONSOLIDATED_FIELDS - set(schema.names)
+    if missing:
+        err_msg = (
+            f"Consolidated store missing required fields: "
+            f"{sorted(missing)}"
+        )
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    keep_cols = [
+        c for c in schema.names
+        if c not in STRIPPED_FIELDS
+    ]
+    table = pq.read_table(
+        config.consolidated_path, columns=keep_cols,
+    )
     n_input = table.num_rows
     if n_input == 0:
         err_msg = "Consolidated store is empty"
@@ -121,17 +137,6 @@ def build_acled_v1(
         n_input,
         config.consolidated_path,
     )
-
-    missing = REQUIRED_CONSOLIDATED_FIELDS - set(
-        table.column_names
-    )
-    if missing:
-        err_msg = (
-            f"Consolidated store missing required fields: "
-            f"{sorted(missing)}"
-        )
-        logger.error(err_msg)
-        raise ValueError(err_msg)
 
     n_filtered = 0
 
@@ -149,12 +154,6 @@ def build_acled_v1(
             table.num_rows,
             n_filtered,
         )
-
-    keep_cols = [
-        c for c in table.column_names
-        if c not in STRIPPED_FIELDS
-    ]
-    table = table.select(keep_cols)
 
     event_dates = table.column("event_date").to_pylist()
     date_months = [_assign_date_month(d) for d in event_dates]

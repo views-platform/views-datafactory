@@ -406,3 +406,447 @@ class TestGhsBuiltSCompilationRed:
         )
         with pytest.raises(FileNotFoundError):
             compile_pregridded(config)
+
+
+# ===================================================================
+# GREEN — Config details (#284, C-189)
+# ===================================================================
+
+
+class TestPregriddedCompilationConfigDetailsGreen:
+    """Config default values and feature spec."""
+
+    def test_default_fill_value(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+        )
+        assert config.fill_value == 0.0
+
+    def test_default_output_dtype(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+        )
+        assert config.output_dtype == "float32"
+
+    def test_default_pgid_field(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+        )
+        assert config.pgid_field == "pgid"
+
+    def test_default_month_id_field(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+        )
+        assert config.month_id_field == "month_id"
+
+    def test_feature_spec_accessible(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedFeatureSpec,
+        )
+
+        spec = PregriddedFeatureSpec("ghsbuilts_built_area", "built_area")
+        assert spec.name == "ghsbuilts_built_area"
+        assert spec.value_field == "built_area"
+
+    def test_frozen_config_rejects_mutation(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+        )
+        with pytest.raises(AttributeError):
+            config.fill_value = 999.0  # type: ignore[misc]
+
+
+# ===================================================================
+# GREEN — Compile behavior (#284, C-189)
+# ===================================================================
+
+
+class TestCompilePregriddedBehaviorGreen:
+    """Additional green-path behavior tests."""
+
+    def test_nan_values_skipped(self, tmp_path: Path) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1, 1],
+            month_ids=[1, 2],
+            built_areas=[100.0, float("nan")],
+        )
+        assert grid[0, 0, 0, 0] == pytest.approx(100.0, rel=1e-5)
+        assert grid[1, 0, 0, 0] == 0.0
+
+    def test_multiple_cells_different_months(
+        self, tmp_path: Path,
+    ) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1, 2, 3],
+            month_ids=[1, 1, 2],
+            built_areas=[10.0, 20.0, 30.0],
+        )
+        assert grid[0, 0, 0, 0] == pytest.approx(10.0, rel=1e-5)
+
+    def test_output_dir_created(self, tmp_path: Path) -> None:
+        out_dir = tmp_path / "deep" / "nested" / "compiled"
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+            compile_pregridded,
+        )
+        from datafactory_priogrid import GridConfig, TemporalConfig
+
+        source = tmp_path / "source.parquet"
+        _make_ghsbuilts_parquet(source, [1], [1], [100.0])
+
+        config = PregriddedCompilationConfig(
+            source_path=source,
+            grid_config=GridConfig(),
+            temporal_config=TemporalConfig(
+                start_year=1980, start_month=1,
+                end_year=1980, end_month=12,
+            ),
+            features=(
+                PregriddedFeatureSpec(
+                    "ghsbuilts_built_area", "built_area",
+                ),
+            ),
+            output_dir=out_dir,
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_pregridded(config)
+        assert out_dir.exists()
+
+    def test_grid_shape_is_thwc(self, tmp_path: Path) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1],
+            month_ids=[1],
+            built_areas=[50.0],
+        )
+        assert len(grid.shape) == 4
+        assert grid.shape[3] == 1
+
+    def test_provenance_json_written(self, tmp_path: Path) -> None:
+        out_dir, _ = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1],
+            month_ids=[1],
+            built_areas=[50.0],
+        )
+        prov = out_dir / "provenance.json"
+        assert prov.exists()
+        data = json.loads(prov.read_text())
+        assert "source_digest" in data
+
+
+# ===================================================================
+# BEIGE — Config boundaries (#284, C-189)
+# ===================================================================
+
+
+class TestPregriddedConfigBeigeExtra:
+    """Additional config boundary tests."""
+
+    def test_float64_dtype_accepted(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+            output_dtype="float64",
+        )
+        assert config.output_dtype == "float64"
+
+    def test_int32_dtype_accepted(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+            output_dtype="int32",
+        )
+        assert config.output_dtype == "int32"
+
+    def test_float16_dtype_accepted(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+            output_dtype="float16",
+        )
+        assert config.output_dtype == "float16"
+
+    def test_multiple_features_accepted(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(
+                PregriddedFeatureSpec("feat_a", "col_a"),
+                PregriddedFeatureSpec("feat_b", "col_b"),
+            ),
+        )
+        assert len(config.features) == 2
+
+    def test_custom_fill_value(self, tmp_path: Path) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[],
+            month_ids=[],
+            built_areas=[],
+            fill_value=-1.0,
+        )
+        assert grid[0, 0, 0, 0] == pytest.approx(-1.0, rel=1e-5)
+
+
+# ===================================================================
+# RED — Config adversarial (#284, C-189)
+# ===================================================================
+
+
+class TestPregriddedConfigRed:
+    """Config adversarial: invalid dtypes, duplicate features."""
+
+    def test_invalid_dtype_raises(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        with pytest.raises(ValueError, match="output_dtype"):
+            PregriddedCompilationConfig(
+                source_path=Path("/tmp/test.parquet"),
+                features=(PregriddedFeatureSpec("a", "a"),),
+                output_dtype="bfloat16",
+            )
+
+    def test_empty_features_raises(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+        )
+
+        with pytest.raises(ValueError, match="features"):
+            PregriddedCompilationConfig(
+                source_path=Path("/tmp/test.parquet"),
+                features=(),
+            )
+
+    def test_duplicate_feature_names_raises(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        with pytest.raises(ValueError, match="duplicate"):
+            PregriddedCompilationConfig(
+                source_path=Path("/tmp/test.parquet"),
+                features=(
+                    PregriddedFeatureSpec("dup", "col_a"),
+                    PregriddedFeatureSpec("dup", "col_b"),
+                ),
+            )
+
+    def test_config_mutation_rejected(self) -> None:
+        from datafactory_compilation.pregridded_compilation import (
+            PregriddedCompilationConfig,
+            PregriddedFeatureSpec,
+        )
+
+        config = PregriddedCompilationConfig(
+            source_path=Path("/tmp/test.parquet"),
+            features=(PregriddedFeatureSpec("a", "a"),),
+        )
+        with pytest.raises(AttributeError):
+            config.source_path = Path("/evil")  # type: ignore[misc]
+
+
+# ===================================================================
+# GREEN — Sidecar file integrity (#284, C-189)
+# ===================================================================
+
+
+class TestCompileSidecarFilesGreen:
+    """Verify all sidecar files are written correctly."""
+
+    def test_feature_names_json_content(
+        self, tmp_path: Path,
+    ) -> None:
+        out_dir, _ = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1, 2],
+            month_ids=[1, 1],
+            built_areas=[100.0, 200.0],
+        )
+        names_path = out_dir / "feature_names.json"
+        assert names_path.exists()
+        names = json.loads(names_path.read_text())
+        assert names == ["ghsbuilts_built_area"]
+
+    def test_time_steps_npy_shape(self, tmp_path: Path) -> None:
+        out_dir, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1],
+            month_ids=[1],
+            built_areas=[50.0],
+        )
+        ts = np.load(out_dir / "time_steps.npy")
+        assert ts.shape[0] == grid.shape[0]
+
+    def test_pgids_npy_shape(self, tmp_path: Path) -> None:
+        out_dir, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1],
+            month_ids=[1],
+            built_areas=[50.0],
+        )
+        pgids = np.load(out_dir / "pgids.npy")
+        assert pgids.shape == (grid.shape[1], grid.shape[2])
+
+    def test_grid_npy_dtype_is_float32(
+        self, tmp_path: Path,
+    ) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1],
+            month_ids=[1],
+            built_areas=[50.0],
+        )
+        assert grid.dtype == np.float32
+
+    def test_ledger_has_n_placed(
+        self, tmp_path: Path,
+    ) -> None:
+        _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1, 2],
+            month_ids=[1, 1],
+            built_areas=[100.0, 200.0],
+        )
+        ledger = tmp_path / "ledger.jsonl"
+        entry = json.loads(ledger.read_text().strip().splitlines()[-1])
+        assert entry["n_placed"] == 2
+        assert entry["n_skipped_spatial"] == 0
+        assert entry["n_skipped_temporal"] == 0
+
+    def test_provenance_source_digest_is_16_hex(
+        self, tmp_path: Path,
+    ) -> None:
+        out_dir, _ = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1],
+            month_ids=[1],
+            built_areas=[50.0],
+        )
+        prov = json.loads((out_dir / "provenance.json").read_text())
+        digest = prov["source_digest"]
+        assert len(digest) == 16
+        assert all(c in "0123456789abcdef" for c in digest)
+
+    def test_ledger_entry_written(self, tmp_path: Path) -> None:
+        _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1],
+            month_ids=[1],
+            built_areas=[50.0],
+        )
+        ledger = tmp_path / "ledger.jsonl"
+        assert ledger.exists()
+        entry = json.loads(ledger.read_text().strip().splitlines()[-1])
+        assert entry["dataset"] == "pregridded_compilation"
+        assert "output_digest" in entry
+
+
+# ===================================================================
+# GREEN — Spatial placement math (#284, C-189)
+# ===================================================================
+
+
+class TestSpatialPlacementGreen:
+    """Verify pgid → (row, col) mapping in compilation."""
+
+    def test_pgid_1_is_bottom_left(self, tmp_path: Path) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1],
+            month_ids=[1],
+            built_areas=[42.0],
+        )
+        assert grid[0, 0, 0, 0] == pytest.approx(42.0, rel=1e-5)
+
+    def test_pgid_720_is_first_row_last_col(
+        self, tmp_path: Path,
+    ) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[720],
+            month_ids=[1],
+            built_areas=[99.0],
+        )
+        assert grid[0, 0, 719, 0] == pytest.approx(99.0, rel=1e-5)
+
+    def test_pgid_721_is_second_row_first_col(
+        self, tmp_path: Path,
+    ) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[721],
+            month_ids=[1],
+            built_areas=[77.0],
+        )
+        assert grid[0, 1, 0, 0] == pytest.approx(77.0, rel=1e-5)
+
+    def test_values_placed_at_correct_time_index(
+        self, tmp_path: Path,
+    ) -> None:
+        _, grid = _compile_ghsbuilts(
+            tmp_path,
+            pgids=[1, 1],
+            month_ids=[1, 6],
+            built_areas=[10.0, 60.0],
+        )
+        assert grid[0, 0, 0, 0] == pytest.approx(10.0, rel=1e-5)
+        assert grid[5, 0, 0, 0] == pytest.approx(60.0, rel=1e-5)
+        assert grid[3, 0, 0, 0] == 0.0

@@ -77,19 +77,23 @@ def _parse_month_index(
 def _place_events(
     table: pa.Table,
     config: CompilationConfig,
-) -> dict[tuple[int, int], list[dict]]:
+) -> tuple[
+    dict[tuple[int, int], np.ndarray], dict[str, np.ndarray]
+]:
     """Assign events to (pgid_index, time_index) bins.
 
     Extracts placement columns (lat, lon, date) as lists, computes
-    bin assignments, then materializes event dicts only for events
-    that land in valid bins.
+    bin assignments, then extracts remaining columns as numpy arrays.
+    Returns row-index bins and column arrays for aggregation.
 
     Args:
         table: A PyArrow Table with event data.
         config: Compilation configuration.
 
     Returns:
-        Dict mapping (pgid_0based_index, time_index) to list of events.
+        Tuple of (bins, col_arrays) where bins maps
+        (pgid_idx, time_idx) to numpy arrays of row indices,
+        and col_arrays maps column names to numpy arrays.
     """
     from datafactory_priogrid.cell_generator import latlon_to_pgid
 
@@ -163,26 +167,31 @@ def _place_events(
             n_skipped_temporal,
         )
 
-    # Phase 2: materialize dicts only for placed events
+    # Phase 2: extract columns as numpy arrays, build row-index bins
     if not row_bins:
         logger.info("Placed 0 events into 0 non-empty bins")
-        return {}
+        return {}, {}
 
-    # Get all column data as dict-of-lists (one pass)
-    col_data = table.to_pydict()
-    col_names = list(col_data.keys())
+    col_arrays: dict[str, np.ndarray] = {
+        col: table[col].to_numpy(zero_copy_only=False)
+        for col in table.column_names
+    }
+    del table
 
-    bins: dict[tuple[int, int], list[dict]] = defaultdict(list)
+    idx_lists: dict[tuple[int, int], list[int]] = defaultdict(list)
     for row_idx, bin_key in row_bins.items():
-        ev = {col: col_data[col][row_idx] for col in col_names}
-        bins[bin_key].append(ev)
+        idx_lists[bin_key].append(row_idx)
+    bins = {
+        k: np.array(v, dtype=np.intp)
+        for k, v in idx_lists.items()
+    }
 
     logger.info(
         "Placed %d events into %d non-empty bins",
         len(row_bins),
         len(bins),
     )
-    return dict(bins)
+    return bins, col_arrays
 
 
 def compile_grid(config: CompilationConfig) -> Path:
@@ -225,10 +234,11 @@ def compile_grid(config: CompilationConfig) -> Path:
     table = pq.read_table(config.source_path, columns=sorted(needed_cols))
 
     # Place events into (cell, month) bins using columnar extraction.
-    # Only placement columns (lat, lon, date) are read as lists;
-    # full event dicts are materialized only for placed events.
+    # Placement columns (lat, lon, date) are read as lists;
+    # remaining columns are extracted as numpy arrays for aggregation.
     logger.info("Read %d events from %s", table.num_rows, config.source_path)
-    bins = _place_events(table, config)
+    bins, col_arrays = _place_events(table, config)
+    del table
 
     # Build output array: [T, H, W, C] — canonical z-stack layout
     nrow = config.grid_config.nrow
@@ -269,8 +279,9 @@ def compile_grid(config: CompilationConfig) -> Path:
         ]
         feature_names = [feat.name for feat in config.features]
 
-        # Aggregate (with optional per-feature filtering)
-        for (pgid_idx, time_idx), cell_events in sorted(
+        # Aggregate using columnar lookups with ephemeral dicts.
+        # Memory bounded by max bin size (~100), not total events.
+        for (pgid_idx, time_idx), row_indices in sorted(
             bins.items()
         ):
             row = pgid_idx // ncol
@@ -281,18 +292,27 @@ def compile_grid(config: CompilationConfig) -> Path:
                 )
             ):
                 if spec.filter:
-                    filtered = [
-                        e
-                        for e in cell_events
-                        if all(
-                            e.get(k) == v
-                            for k, v in spec.filter.items()
+                    mask = np.ones(
+                        len(row_indices), dtype=bool,
+                    )
+                    for k, v in spec.filter.items():
+                        mask &= (
+                            col_arrays[k][row_indices] == v
                         )
+                    filtered = row_indices[mask]
+                else:
+                    filtered = row_indices
+
+                vf = spec.value_field
+                if vf and vf in col_arrays:
+                    events = [
+                        {vf: col_arrays[vf][i]}
+                        for i in filtered
                     ]
                 else:
-                    filtered = cell_events
+                    events = [{}] * len(filtered)
                 grid_array[time_idx, row, col, feat_idx] = (
-                    strategy_fn(filtered, spec.value_field)
+                    strategy_fn(events, vf)
                 )
 
         # Generate coordinate arrays

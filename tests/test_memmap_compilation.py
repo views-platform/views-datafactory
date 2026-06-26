@@ -3,13 +3,14 @@
 Verifies that compile_grid and compile_pregridded use memory-mapped
 arrays instead of in-memory np.full(), that temp files are cleaned
 up after compilation, and that output is bit-identical to the
-in-memory approach.
+in-memory approach. Also tests columnar extraction (C-144).
 
-Green: memmap output correctness, temp cleanup, determinism.
-Beige: disk space pre-flight check.
+Green: memmap output correctness, temp cleanup, determinism,
+       columnar extraction, filtered aggregation.
+Beige: disk space pre-flight check, empty bins after filter.
 Red: temp file cleanup on failure.
 
-Ref: ADR-037 (bounded-memory compilation), C-223.
+Ref: ADR-037 (bounded-memory compilation), C-223, C-144.
 """
 
 from __future__ import annotations
@@ -27,7 +28,10 @@ from datafactory_compilation.compilation_config import (
     CompilationConfig,
     FeatureSpec,
 )
-from datafactory_compilation.grid_compilation import compile_grid
+from datafactory_compilation.grid_compilation import (
+    _place_events,
+    compile_grid,
+)
 from datafactory_compilation.pregridded_compilation import (
     PregriddedCompilationConfig,
     PregriddedFeatureSpec,
@@ -348,3 +352,181 @@ class TestMemmapCompilationRed:
             compile_pregridded(cfg)
         tmp_npy = list(tmp_path.rglob("_memmap_*.npy"))
         assert tmp_npy == []
+
+
+# ---- Green: Columnar extraction (C-144) ----
+
+
+class TestColumnarExtractionGreen:
+    """Verify _place_events uses row-index bins, not event dicts."""
+
+    def test_place_events_returns_row_index_arrays(
+        self, tmp_path: Path,
+    ) -> None:
+        """_place_events returns ndarray row indices, not list[dict]."""
+        src = _make_event_parquet(tmp_path / "source.parquet")
+        table = pq.read_table(src)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(FeatureSpec("event_count", "count"),),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        bins, col_arrays = _place_events(table, cfg)
+
+        assert len(bins) > 0
+        for key, indices in bins.items():
+            assert isinstance(key, tuple)
+            assert len(key) == 2
+            assert isinstance(indices, np.ndarray)
+            assert indices.dtype == np.intp
+
+        assert isinstance(col_arrays, dict)
+        for col_name, arr in col_arrays.items():
+            assert isinstance(col_name, str)
+            assert isinstance(arr, np.ndarray)
+
+    def test_place_events_col_arrays_match_table(
+        self, tmp_path: Path,
+    ) -> None:
+        """col_arrays values match the original table data."""
+        src = _make_event_parquet(tmp_path / "source.parquet")
+        table = pq.read_table(src)
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(
+                FeatureSpec("best_sum", "sum_field", "best"),
+            ),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        bins, col_arrays = _place_events(table, cfg)
+
+        assert "best" in col_arrays
+        assert len(col_arrays["best"]) == 3
+        assert list(col_arrays["best"]) == [10, 5, 20]
+
+    def test_filtered_feature_with_columnar_lookups(
+        self, tmp_path: Path,
+    ) -> None:
+        """Per-feature filter works correctly with columnar data."""
+        events = pa.table({
+            "latitude": pa.array([-45.0, -45.0, -45.0]),
+            "longitude": pa.array([-90.0, -90.0, -90.0]),
+            "date_start": pa.array(
+                ["2024-01-15", "2024-01-20", "2024-01-25"],
+            ),
+            "best": pa.array([10, 5, 20], type=pa.int64()),
+            "event_type": pa.array(
+                ["battles", "riots", "battles"],
+            ),
+        })
+        src = tmp_path / "source.parquet"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        pq.write_table(events, src)
+
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(
+                FeatureSpec(
+                    "battle_count", "count",
+                    filter={"event_type": "battles"},
+                ),
+                FeatureSpec(
+                    "battle_best", "sum_field",
+                    filter={"event_type": "battles"},
+                    value_field="best",
+                ),
+                FeatureSpec(
+                    "all_count", "count",
+                ),
+            ),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_grid(cfg)
+        grid = np.load(tmp_path / "output" / "grid.npy")
+
+        # All 3 events land in same cell (lat=-45, lon=-90)
+        # battles: events 0 and 2 → count=2, sum=30
+        # all: 3 events → count=3
+        cell_values = grid[0, :, :, :]
+        battle_count = cell_values[:, :, 0].sum()
+        battle_best = cell_values[:, :, 1].sum()
+        all_count = cell_values[:, :, 2].sum()
+
+        assert battle_count == 2.0
+        assert battle_best == 30.0
+        assert all_count == 3.0
+
+    def test_place_events_empty_returns_empty(
+        self, tmp_path: Path,
+    ) -> None:
+        """_place_events with no valid events returns empty dicts."""
+        table = pa.table({
+            "latitude": pa.array([], type=pa.float64()),
+            "longitude": pa.array([], type=pa.float64()),
+            "date_start": pa.array([], type=pa.string()),
+            "best": pa.array([], type=pa.int64()),
+        })
+        src = tmp_path / "source.parquet"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        pq.write_table(table, src)
+
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(FeatureSpec("event_count", "count"),),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        bins, col_arrays = _place_events(table, cfg)
+        assert bins == {}
+        assert col_arrays == {}
+
+
+# ---- Beige: Empty bins after filter (C-144) ----
+
+
+class TestColumnarExtractionBeige:
+
+    def test_filter_excludes_all_events_produces_fill(
+        self, tmp_path: Path,
+    ) -> None:
+        """Filter that matches no events produces fill value."""
+        events = pa.table({
+            "latitude": pa.array([-45.0, -45.0]),
+            "longitude": pa.array([-90.0, -90.0]),
+            "date_start": pa.array(
+                ["2024-01-15", "2024-01-20"],
+            ),
+            "best": pa.array([10, 5], type=pa.int64()),
+            "event_type": pa.array(["riots", "riots"]),
+        })
+        src = tmp_path / "source.parquet"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        pq.write_table(events, src)
+
+        cfg = CompilationConfig(
+            source_path=src,
+            grid_config=TINY_GRID,
+            temporal_config=TINY_TEMPORAL,
+            features=(
+                FeatureSpec(
+                    "battle_count", "count",
+                    filter={"event_type": "battles"},
+                ),
+            ),
+            output_dir=tmp_path / "output",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+        compile_grid(cfg)
+        grid = np.load(tmp_path / "output" / "grid.npy")
+        assert grid.sum() == 0.0

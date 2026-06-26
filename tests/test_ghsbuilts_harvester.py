@@ -315,6 +315,281 @@ class TestFetchGhsBuiltSGreen:
 
 
 # ===================================================================
+# GREEN — Config details (#284, C-189)
+# ===================================================================
+
+
+class TestGhsBuiltSConfigDetailsGreen:
+    """Per-epoch URL and filename generation."""
+
+    def test_each_epoch_url_unique(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        urls = [cfg.download_url(e) for e in KNOWN_EPOCHS]
+        assert len(urls) == len(set(urls))
+
+    def test_each_epoch_tif_unique(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        names = [cfg.tif_filename(e) for e in KNOWN_EPOCHS]
+        assert len(names) == len(set(names))
+
+    def test_url_contains_epoch_year(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        for epoch in KNOWN_EPOCHS:
+            assert f"E{epoch}" in cfg.download_url(epoch)
+
+    def test_tif_contains_epoch_year(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        for epoch in KNOWN_EPOCHS:
+            assert f"E{epoch}" in cfg.tif_filename(epoch)
+
+    def test_url_ends_with_zip(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        for epoch in KNOWN_EPOCHS:
+            assert cfg.download_url(epoch).endswith(".zip")
+
+    def test_tif_ends_with_tif(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        for epoch in KNOWN_EPOCHS:
+            assert cfg.tif_filename(epoch).endswith(".tif")
+
+    def test_release_in_url(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        assert cfg.release in cfg.download_url(2020)
+
+    def test_crs_in_url(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        assert cfg.crs in cfg.download_url(2020)
+
+    def test_resolution_in_url(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        assert cfg.resolution in cfg.download_url(2020)
+
+    def test_known_epochs_constant_matches_config(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            KNOWN_EPOCHS as SRC_KNOWN_EPOCHS,
+        )
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+        )
+
+        cfg = GhsBuiltSConfig()
+        assert cfg.epochs == SRC_KNOWN_EPOCHS
+        assert cfg.epochs == KNOWN_EPOCHS
+
+    def test_dataset_id_is_ghsbuilts(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import DATASET_ID
+
+        assert DATASET_ID == "ghsbuilts"
+
+
+# ===================================================================
+# GREEN — Fetch result structure (#284, C-189)
+# ===================================================================
+
+
+class TestFetchResultStructureGreen:
+    """Result dict structure for each outcome."""
+
+    def test_success_result_has_required_keys(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_name = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        mock_resp = MagicMock()
+        mock_resp.content = _make_fake_geotiff_zip(tif_name)
+
+        config = GhsBuiltSConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=mock_resp,
+        ):
+            results = fetch_ghsbuilts(config)
+
+        r = results[0]
+        assert "dataset" in r
+        assert "epoch" in r
+        assert "outcome" in r
+        assert "content_digest" in r
+
+    def test_cached_result_has_digest(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_name = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        mock_resp = MagicMock()
+        mock_resp.content = _make_fake_geotiff_zip(tif_name)
+
+        config = GhsBuiltSConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=mock_resp,
+        ):
+            fetch_ghsbuilts(config)
+            results = fetch_ghsbuilts(config)
+
+        r = results[0]
+        assert r["outcome"] == "cached"
+        assert "content_digest" in r
+        assert len(r["content_digest"]) == 16
+
+    def test_data_dir_created_if_absent(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_name = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        mock_resp = MagicMock()
+        mock_resp.content = _make_fake_geotiff_zip(tif_name)
+
+        deep_dir = tmp_path / "a" / "b" / "c"
+        config = GhsBuiltSConfig(
+            epochs=(2020,),
+            data_dir=deep_dir,
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=mock_resp,
+        ):
+            fetch_ghsbuilts(config)
+
+        assert deep_dir.exists()
+
+    def test_provenance_entry_has_version(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_name = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        mock_resp = MagicMock()
+        mock_resp.content = _make_fake_geotiff_zip(tif_name)
+
+        config = GhsBuiltSConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=mock_resp,
+        ):
+            fetch_ghsbuilts(config)
+
+        entry = json.loads(
+            (tmp_path / "ledger.jsonl").read_text().strip()
+        )
+        assert entry["version"] == "E2020"
+        assert entry["epoch"] == 2020
+
+    def test_provenance_has_size_and_digest(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_name = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        mock_resp = MagicMock()
+        mock_resp.content = _make_fake_geotiff_zip(tif_name)
+
+        config = GhsBuiltSConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=mock_resp,
+        ):
+            fetch_ghsbuilts(config)
+
+        entry = json.loads(
+            (tmp_path / "ledger.jsonl").read_text().strip()
+        )
+        assert "size_bytes" in entry
+        assert "content_digest" in entry
+        assert entry["size_bytes"] > 0
+
+    def test_default_config_not_none(self, tmp_path: Path) -> None:
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            side_effect=Exception("should not reach"),
+        ), patch(
+            "datafactory_harvester.sources.ghsbuilts.GhsBuiltSConfig"
+            ".data_dir",
+            new_callable=lambda: property(lambda _: tmp_path),
+        ):
+            pass
+        # Just verify None config creates a default
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+        cfg = GhsBuiltSConfig()
+        assert cfg is not None
+
+
+# ===================================================================
 # BEIGE — Validation
 # ===================================================================
 
@@ -347,6 +622,38 @@ class TestGhsBuiltSConfigBeige:
             data_dir=Path("/custom/path"),
         )
         assert cfg.data_dir == Path("/custom/path")
+
+    def test_negative_timeout_raises(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        with pytest.raises(ValueError, match="timeout"):
+            GhsBuiltSConfig(timeout=-1)
+
+    def test_single_epoch_accepted(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig(epochs=(1975,))
+        assert cfg.epochs == (1975,)
+
+    def test_first_known_epoch_accepted(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig(epochs=(1975,))
+        assert 1975 in cfg.epochs
+
+    def test_last_known_epoch_accepted(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig(epochs=(2030,))
+        assert 2030 in cfg.epochs
+
+    def test_custom_ledger_path(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig(
+            ledger_path=Path("/custom/ledger.jsonl"),
+        )
+        assert cfg.ledger_path == Path("/custom/ledger.jsonl")
 
 
 # ===================================================================
@@ -466,9 +773,201 @@ class TestFetchGhsBuiltSRed:
         assert entries[-1]["outcome"] == "failed"
 
 
+class TestGhsBuiltSConfigRed:
+    """Config adversarial: mutation, type abuse."""
+
+    def test_config_mutation_rejected(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        with pytest.raises(AttributeError):
+            cfg.epochs = (2020,)  # type: ignore[misc]
+
+    def test_config_mutation_data_dir_rejected(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        cfg = GhsBuiltSConfig()
+        with pytest.raises(AttributeError):
+            cfg.data_dir = Path("/evil")  # type: ignore[misc]
+
+    def test_multiple_unknown_epochs_raises(self) -> None:
+        from datafactory_harvester.sources.ghsbuilts import GhsBuiltSConfig
+
+        with pytest.raises(ValueError, match="Unknown epoch"):
+            GhsBuiltSConfig(epochs=(1999, 2001))
+
+
+class TestFetchEpochIsolationRed:
+    """Failure isolation: one epoch's failure doesn't corrupt another."""
+
+    def test_first_epoch_failure_preserves_second(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            _fetch_epoch,
+        )
+
+        tif_2025 = (
+            "GHS_BUILT_S_E2025_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+
+        config = GhsBuiltSConfig(
+            epochs=(2020, 2025),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        bad_resp = MagicMock()
+        bad_resp.content = b"not a zip"
+
+        good_resp = MagicMock()
+        good_resp.content = _make_fake_geotiff_zip(tif_2025)
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=bad_resp,
+        ), pytest.raises(zipfile.BadZipFile):
+            _fetch_epoch(config, 2020, False)
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=good_resp,
+        ):
+            result = _fetch_epoch(config, 2025, False)
+
+        assert result["outcome"] == "success"
+        assert result["epoch"] == 2025
+
+
 # ===================================================================
 # GREEN — Registry
 # ===================================================================
+
+
+# ===================================================================
+# GREEN — Provenance details (#284, C-189)
+# ===================================================================
+
+
+class TestHarvesterProvenanceDetailsGreen:
+    """Provenance ledger entry structure and content."""
+
+    def test_provenance_has_ledger_version(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_name = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        mock_resp = MagicMock()
+        mock_resp.content = _make_fake_geotiff_zip(tif_name)
+
+        config = GhsBuiltSConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=mock_resp,
+        ):
+            fetch_ghsbuilts(config)
+
+        entry = json.loads(
+            (tmp_path / "ledger.jsonl").read_text().strip()
+        )
+        assert "ledger_version" in entry
+        assert "digest_algorithm" in entry
+        assert entry["ledger_version"] >= 1
+        assert "sha256" in entry["digest_algorithm"]
+
+    def test_provenance_digest_is_16_hex(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_name = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        mock_resp = MagicMock()
+        mock_resp.content = _make_fake_geotiff_zip(tif_name)
+
+        config = GhsBuiltSConfig(
+            epochs=(2020,),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            return_value=mock_resp,
+        ):
+            fetch_ghsbuilts(config)
+
+        entry = json.loads(
+            (tmp_path / "ledger.jsonl").read_text().strip()
+        )
+        digest = entry["content_digest"]
+        assert len(digest) == 16
+        assert all(c in "0123456789abcdef" for c in digest)
+
+    def test_multi_epoch_provenance_entries(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ghsbuilts import (
+            GhsBuiltSConfig,
+            fetch_ghsbuilts,
+        )
+
+        tif_2020 = (
+            "GHS_BUILT_S_E2020_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+        tif_2025 = (
+            "GHS_BUILT_S_E2025_GLOBE_R2023A_4326_30ss_V1_0.tif"
+        )
+
+        def _side_effect(url, **kwargs):
+            resp = MagicMock()
+            if "E2020" in url:
+                resp.content = _make_fake_geotiff_zip(tif_2020)
+            else:
+                resp.content = _make_fake_geotiff_zip(tif_2025)
+            return resp
+
+        config = GhsBuiltSConfig(
+            epochs=(2020, 2025),
+            data_dir=tmp_path / "raw",
+            ledger_path=tmp_path / "ledger.jsonl",
+        )
+
+        with patch(
+            "datafactory_harvester.sources.ghsbuilts"
+            ".request_with_retry",
+            side_effect=_side_effect,
+        ):
+            fetch_ghsbuilts(config)
+
+        lines = (tmp_path / "ledger.jsonl").read_text().strip().splitlines()
+        assert len(lines) == 2
+        e1 = json.loads(lines[0])
+        e2 = json.loads(lines[1])
+        assert e1["version"] == "E2020"
+        assert e2["version"] == "E2025"
+        assert e1["outcome"] == "success"
+        assert e2["outcome"] == "success"
 
 
 class TestGhsBuiltSRegistryGreen:
