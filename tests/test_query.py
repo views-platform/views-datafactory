@@ -739,7 +739,7 @@ class TestDataBoundaryConsistency:
         )
         ds.to_zarr(zarr_path, mode="w")
 
-        _, _, _, _, last_valid = _load_grid_from_zarr(str(zarr_path))
+        _, _, _, _, last_valid, _ = _load_grid_from_zarr(str(zarr_path))
         assert last_valid == expected_mid
 
 
@@ -809,8 +809,8 @@ class TestFeatureOrderParity:
         )
         ds.to_zarr(zarr_path, mode="w")
 
-        _, _, _, npy_features, _ = _load_grid_from_npy(npy_dir)
-        _, _, _, zarr_features, _ = _load_grid_from_zarr(
+        _, _, _, npy_features, _, _ = _load_grid_from_npy(npy_dir)
+        _, _, _, zarr_features, _, _ = _load_grid_from_zarr(
             str(zarr_path),
         )
         assert npy_features == zarr_features
@@ -870,7 +870,7 @@ class TestZarrFeatureOrderFallback:
         zarr_path = self._make_zarr_no_feature_order(tmp_path)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            _, _, _, features, _ = _load_grid_from_zarr(
+            _, _, _, features, _, _ = _load_grid_from_zarr(
                 str(zarr_path)
             )
         assert features == ["aa_first", "bb_mid", "zz_last"]
@@ -1445,3 +1445,115 @@ class TestLoadDatasetCountryMonthGreen:
         assert isinstance(df, pd.DataFrame)
         assert "gaul0_code" not in df.columns
         assert "feat_0" in df.columns
+
+
+# ── Pre-coverage Warning (ADR-047, C-156) ─────────────
+
+
+class TestLoadDatasetTemporalWarning:
+    """Consumer warning for pre-coverage queries (C-156)."""
+
+    def _make_grid_with_first_valid(
+        self, tmp_path: Path, first_valid_acled: int,
+    ) -> Path:
+        """Create a minimal assembled grid with provenance
+        containing first_valid_acled_month_id."""
+        import json as _json
+
+        data_dir = tmp_path / "assembled"
+        data_dir.mkdir()
+        n_t, n_h, n_w = 6, 2, 2
+        grid = np.zeros(
+            (n_t, n_h, n_w, 3), dtype=np.float32,
+        )
+        np.save(data_dir / "grid.npy", grid)
+        pgids = np.arange(n_h * n_w).reshape(n_h, n_w) + 1
+        np.save(data_dir / "pgids.npy", pgids)
+        ts = np.array(
+            ["2020-01", "2020-02", "2020-03",
+             "2020-04", "2020-05", "2020-06"],
+            dtype="datetime64[M]",
+        )
+        np.save(data_dir / "time_steps.npy", ts)
+        features = ["ged_sb_best", "acled_count", "acled_fatalities"]
+        (data_dir / "feature_names.json").write_text(
+            _json.dumps(features),
+        )
+        prov = {
+            "last_valid_month_id": 486,
+            "first_valid_acled_month_id": first_valid_acled,
+        }
+        (data_dir / "provenance.json").write_text(
+            _json.dumps(prov),
+        )
+        return data_dir
+
+    def test_warning_emitted_for_pre_coverage_query(
+        self, tmp_path: Path,
+    ) -> None:
+        """Requesting ACLED features starting before their
+        first_valid month emits UserWarning."""
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = self._make_grid_with_first_valid(
+            tmp_path, first_valid_acled=483,
+        )
+        with pytest.warns(
+            UserWarning, match="ACLED data begins at month_id",
+        ):
+            load_dataset(
+                data_dir=data_dir,
+                region="global",
+                output_format="feature_frame",
+                features=["acled_count"],
+            )
+
+    def test_no_warning_for_in_coverage_query(
+        self, tmp_path: Path,
+    ) -> None:
+        """Requesting ACLED features within coverage emits no
+        pre-coverage warning."""
+        import warnings as _warnings
+
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = self._make_grid_with_first_valid(
+            tmp_path, first_valid_acled=481,
+        )
+        with _warnings.catch_warnings():
+            _warnings.filterwarnings(
+                "error",
+                message="ACLED data begins",
+                category=UserWarning,
+            )
+            load_dataset(
+                data_dir=data_dir,
+                region="global",
+                output_format="feature_frame",
+                features=["acled_count"],
+            )
+
+    def test_no_warning_when_non_acled_features_only(
+        self, tmp_path: Path,
+    ) -> None:
+        """Requesting only UCDP features does not trigger
+        pre-coverage ACLED warning."""
+        import warnings as _warnings
+
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = self._make_grid_with_first_valid(
+            tmp_path, first_valid_acled=483,
+        )
+        with _warnings.catch_warnings():
+            _warnings.filterwarnings(
+                "error",
+                message="ACLED data begins",
+                category=UserWarning,
+            )
+            load_dataset(
+                data_dir=data_dir,
+                region="global",
+                output_format="feature_frame",
+                features=["ged_sb_best"],
+            )

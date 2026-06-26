@@ -110,7 +110,10 @@ def _load_grid_from_zarr(
     start: str | int | None = None,
     end: str | int | None = None,
     feature_sel: list[str] | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], int | None]:
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, list[str],
+    int | None, dict[str, int],
+]:
     """Load assembled grid from a zarr store.
 
     Opens the store once, computes time/feature subsets lazily on
@@ -125,7 +128,8 @@ def _load_grid_from_zarr(
         feature_sel: Optional feature names to load (skips others).
 
     Returns:
-        (grid, pgids, time_steps, feature_names, last_valid_month_id)
+        (grid, pgids, time_steps, feature_names,
+         last_valid_month_id, first_valid_month_ids)
     """
     import xarray as xr
 
@@ -214,16 +218,20 @@ def _load_grid_from_zarr(
     ).astype(np.float32)
 
     ds.close()
-    return grid, pgids, time_steps, feature_names, last_valid_month_id
+    return grid, pgids, time_steps, feature_names, last_valid_month_id, {}
 
 
 def _load_grid_from_npy(
     data_dir: Path,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], int | None]:
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, list[str],
+    int | None, dict[str, int],
+]:
     """Load assembled grid + sidecars from npy files on disk.
 
     Returns:
-        (grid, pgids, time_steps, feature_names, last_valid_month_id)
+        (grid, pgids, time_steps, feature_names,
+         last_valid_month_id, first_valid_month_ids)
     """
     grid_path = data_dir / "grid.npy"
     if not grid_path.exists():
@@ -241,12 +249,19 @@ def _load_grid_from_npy(
     )
 
     last_valid_month_id: int | None = None
+    first_valid_month_ids: dict[str, int] = {}
     provenance_path = data_dir / "provenance.json"
     if provenance_path.exists():
         prov = json.loads(provenance_path.read_text())
         last_valid_month_id = prov.get("last_valid_month_id")
+        for key, val in prov.items():
+            if key.startswith("first_valid_") and val is not None:
+                first_valid_month_ids[key] = val
 
-    return grid, pgids, time_steps, feature_names, last_valid_month_id
+    return (
+        grid, pgids, time_steps, feature_names,
+        last_valid_month_id, first_valid_month_ids,
+    )
 
 
 def _load_grid(
@@ -255,7 +270,10 @@ def _load_grid(
     start: str | int | None = None,
     end: str | int | None = None,
     feature_sel: list[str] | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[str], int | None]:
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, list[str],
+    int | None, dict[str, int],
+]:
     """Load assembled grid from npy directory or zarr store.
 
     For zarr stores, start/end and feature_sel are applied lazily
@@ -263,7 +281,8 @@ def _load_grid(
     stores when only a subset is needed.
 
     Returns:
-        (grid, pgids, time_steps, feature_names, last_valid_month_id)
+        (grid, pgids, time_steps, feature_names,
+         last_valid_month_id, first_valid_month_ids)
     """
     if _use_zarr_loader(data_dir):
         storage_options = _resolve_storage_options(str(data_dir))
@@ -293,6 +312,56 @@ def _resolve_feature_indices(
             raise ValueError(msg)
         indices.append(name_to_idx[f])
     return indices
+
+
+_SOURCE_PREFIXES: dict[str, tuple[str, ...]] = {
+    "first_valid_acled_month_id": ("acled_",),
+    "first_valid_ghspop_month_id": ("ghspop_",),
+    "first_valid_ghsbuilts_month_id": ("ghsbuilts_",),
+    "first_valid_vdem_month_id": ("vdem_",),
+    "first_valid_shdi_month_id": ("shdi_",),
+}
+
+_SOURCE_DISPLAY_NAMES: dict[str, str] = {
+    "first_valid_acled_month_id": "ACLED",
+    "first_valid_ghspop_month_id": "GHS-POP",
+    "first_valid_ghsbuilts_month_id": "GHS-BUILT-S",
+    "first_valid_vdem_month_id": "V-Dem",
+    "first_valid_shdi_month_id": "SHDI",
+}
+
+
+def _warn_pre_coverage(
+    query_start_mid: int,
+    first_valid_month_ids: dict[str, int],
+    requested_features: set[str],
+) -> None:
+    """Emit UserWarning for each source whose data starts after
+    the query's start month, when the query includes features
+    from that source (ADR-047, C-156)."""
+    for key, first_mid in first_valid_month_ids.items():
+        if query_start_mid >= first_mid:
+            continue
+        prefixes = _SOURCE_PREFIXES.get(key)
+        if prefixes is None:
+            continue
+        affected = [
+            f for f in requested_features
+            if f.startswith(prefixes)
+        ]
+        if not affected:
+            continue
+        source_name = _SOURCE_DISPLAY_NAMES.get(key, key)
+        warnings.warn(
+            f"{source_name} data begins at month_id "
+            f"{first_mid}, but query starts at "
+            f"{query_start_mid}. Months "
+            f"{query_start_mid}–{first_mid - 1} contain "
+            f"zero-fill, not observed data. Affected "
+            f"features: {affected}",
+            UserWarning,
+            stacklevel=3,
+        )
 
 
 def load_dataset(
@@ -358,7 +427,10 @@ def load_dataset(
     # inside _load_grid_from_zarr (single open, no probe).
     # For npy: full grid loaded via mmap, subsetted after.
     is_zarr = _use_zarr_loader(data_dir)
-    grid, pgids, time_steps, all_features, last_valid_month_id = _load_grid(
+    (
+        grid, pgids, time_steps, all_features,
+        last_valid_month_id, first_valid_month_ids,
+    ) = _load_grid(
         data_dir,
         start=start if is_zarr else None,
         end=end if is_zarr else None,
@@ -390,6 +462,20 @@ def load_dataset(
                 f"contain zeros, not observed data.",
                 stacklevel=2,
             )
+
+    # Warn if loaded data starts before a source's coverage
+    if first_valid_month_ids and len(time_steps) > 0:
+        from datafactory_priogrid import to_views_month_id
+
+        effective_start_mid = int(
+            to_views_month_id(time_steps[0])
+        )
+        requested = set(feature_sel or all_features)
+        _warn_pre_coverage(
+            effective_start_mid,
+            first_valid_month_ids,
+            requested,
+        )
 
     # Feature subsetting (npy path — zarr already subsetted)
     if feature_sel is not None and not is_zarr:
