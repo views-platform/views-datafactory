@@ -119,9 +119,10 @@ def build_acled_v1(
         logger.error(err_msg)
         raise ValueError(err_msg)
 
+    skip_cols = STRIPPED_FIELDS - REQUIRED_CONSOLIDATED_FIELDS
     keep_cols = [
         c for c in schema.names
-        if c not in STRIPPED_FIELDS
+        if c not in skip_cols
     ]
     table = pq.read_table(
         config.consolidated_path, columns=keep_cols,

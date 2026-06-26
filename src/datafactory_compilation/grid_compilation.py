@@ -172,9 +172,13 @@ def _place_events(
         logger.info("Placed 0 events into 0 non-empty bins")
         return {}, {}
 
+    placement_cols = {
+        config.lat_field, config.lon_field, config.date_field,
+    }
     col_arrays: dict[str, np.ndarray] = {
         col: table[col].to_numpy(zero_copy_only=False)
         for col in table.column_names
+        if col not in placement_cols
     }
     del table
 
@@ -310,7 +314,7 @@ def compile_grid(config: CompilationConfig) -> Path:
                         for i in filtered
                     ]
                 else:
-                    events = [{}] * len(filtered)
+                    events = [{} for _ in range(len(filtered))]
                 grid_array[time_idx, row, col, feat_idx] = (
                     strategy_fn(events, vf)
                 )
