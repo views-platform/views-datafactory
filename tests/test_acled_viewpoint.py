@@ -212,6 +212,11 @@ class TestBuildAcledV1Beige:
         store_path.parent.mkdir(parents=True)
         empty = pa.table({
             "event_id_cnty": pa.array([], type=pa.string()),
+            "event_date": pa.array([], type=pa.string()),
+            "event_type": pa.array([], type=pa.string()),
+            "latitude": pa.array([], type=pa.float64()),
+            "longitude": pa.array([], type=pa.float64()),
+            "fatalities": pa.array([], type=pa.int64()),
         })
         pq.write_table(empty, store_path)
 

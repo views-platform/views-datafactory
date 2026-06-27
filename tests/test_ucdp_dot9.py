@@ -301,6 +301,173 @@ class TestFetchUcdpDot9Green:
         assert entry["version"] == "25.9.1"
 
 
+# ---- Per-version failure modes (#283, C-276) ----
+
+
+class TestDot9PerVersionBeige:
+    """Boundary: not_served, all-cached."""
+
+    def test_not_served_version_returns_not_served(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ucdp_dot9 import _fetch_dot9_version
+
+        config = UcdpDot9Config(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = _make_api_response([])
+        mock_resp.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                return_value=mock_resp,
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+        ):
+            result = _fetch_dot9_version(config, "25.9.1")
+
+        assert result["outcome"] == "not_served"
+        assert result["version"] == "25.9.1"
+
+    def test_all_versions_cached(self, tmp_path: Path) -> None:
+        from datafactory_harvester.sources.ucdp_dot9 import _fetch_dot9_version
+
+        events = _make_events(3)
+        config = UcdpDot9Config(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = _make_api_response(events)
+        mock_resp.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                return_value=mock_resp,
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+        ):
+            _fetch_dot9_version(config, "25.9.1")
+
+        r2 = _fetch_dot9_version(config, "25.9.1")
+        assert r2["outcome"] == "cached"
+
+
+class TestDot9PerVersionRed:
+    """Adversarial: mixed outcomes, failure isolation, network error."""
+
+    def test_mixed_batch_outcomes(self, tmp_path: Path) -> None:
+        config = UcdpDot9Config(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        def mock_fetch_version(_config, version, **_kw):
+            outcomes = {
+                "25.9.1": {"version": "25.9.1", "outcome": "success",
+                           "digest": "abc", "n_events": 3},
+                "25.9.2": {"version": "25.9.2", "outcome": "cached",
+                           "digest": "def"},
+                "25.9.3": {"version": "25.9.3", "outcome": "failed",
+                           "errors": ["bad data"]},
+            }
+            return outcomes[version]
+
+        with (
+            patch(
+                "datafactory_harvester.sources.ucdp_dot9._fetch_dot9_version",
+                side_effect=mock_fetch_version,
+            ),
+            patch(
+                "datafactory_harvester.sources.ucdp_dot9.discover_dot9_versions",
+                return_value=["25.9.1", "25.9.2", "25.9.3"],
+            ),
+        ):
+            results = fetch_ucdp_dot9(config)
+
+        assert len(results) == 3
+        outcomes = {r["version"]: r["outcome"] for r in results}
+        assert outcomes == {
+            "25.9.1": "success",
+            "25.9.2": "cached",
+            "25.9.3": "failed",
+        }
+
+    def test_validation_failure_does_not_corrupt_prior_success(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.sources.ucdp_dot9 import _fetch_dot9_version
+
+        events = _make_events(3)
+        config = UcdpDot9Config(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        good_resp = MagicMock()
+        good_resp.json.return_value = _make_api_response(events)
+        good_resp.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                return_value=good_resp,
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+        ):
+            r1 = _fetch_dot9_version(config, "25.9.1")
+
+        assert r1["outcome"] == "success"
+        snap1 = Path(r1["path"])
+        assert snap1.exists()
+
+        bad_events = [{"id": 999}]
+        bad_resp = MagicMock()
+        bad_resp.json.return_value = _make_api_response(bad_events)
+        bad_resp.raise_for_status = MagicMock()
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                return_value=bad_resp,
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+        ):
+            r2 = _fetch_dot9_version(config, "25.9.2")
+
+        assert r2["outcome"] == "failed"
+        assert snap1.exists()
+
+    def test_network_error_on_fetch_version(
+        self, tmp_path: Path,
+    ) -> None:
+        import requests
+
+        from datafactory_harvester.sources.ucdp_dot9 import _fetch_dot9_version
+
+        config = UcdpDot9Config(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+            max_retries=1,
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=requests.ConnectionError("server down"),
+            ),
+            patch.dict("os.environ", {"UCDP_API_TOKEN": "test"}),
+            pytest.raises(requests.ConnectionError),
+        ):
+            _fetch_dot9_version(config, "25.9.1")
+
+
 # ---- Source Registration ----
 
 

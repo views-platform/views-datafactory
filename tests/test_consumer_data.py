@@ -25,7 +25,7 @@ _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
 
 generate_partition = _mod.generate_partition
 PARTITIONS = _mod.PARTITIONS
-FEATURE_RENAME = _mod.FEATURE_RENAME
+FACTORY_FEATURES = _mod.FACTORY_FEATURES
 _forecasting_partition = _mod._forecasting_partition
 
 
@@ -85,8 +85,8 @@ class TestGeneratePartition:
             data_dir=data_dir, gaul_dir=gaul_dir,
         )
         assert sorted(df.columns.tolist()) == [
-            "c_id", "col", "lr_ns_best", "lr_os_best",
-            "lr_sb_best", "row",
+            "col", "gaul0_code", "ged_ns_best", "ged_os_best",
+            "ged_sb_best", "row",
         ]
 
     def test_index_names(self, tmp_path: Path) -> None:
@@ -109,12 +109,12 @@ class TestGeneratePartition:
             "test", 481, 486,
             data_dir=data_dir, gaul_dir=gaul_dir,
         )
-        # ged_sb_best renamed to lr_sb_best
-        assert "lr_sb_best" in df.columns
-        assert "ged_sb_best" not in df.columns
-        # gaul0_code renamed to c_id
-        assert "c_id" in df.columns
-        assert "gaul0_code" not in df.columns
+        assert "ged_sb_best" in df.columns
+        assert "ged_ns_best" in df.columns
+        assert "ged_os_best" in df.columns
+        assert "gaul0_code" in df.columns
+        assert "lr_sb_best" not in df.columns
+        assert "c_id" not in df.columns
 
     def test_row_col_derivation(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "assembled"
@@ -183,12 +183,10 @@ class TestPartitionBoundaries:
         assert fp["test"][1] == fp["test"][0] + 36
 
 
-class TestFeatureRename:
+class TestFactoryFeatures:
 
-    def test_rename_map_complete(self) -> None:
-        assert FEATURE_RENAME == {
-            "ged_sb_best": "lr_sb_best",
-            "ged_ns_best": "lr_ns_best",
-            "ged_os_best": "lr_os_best",
-            "gaul0_code": "c_id",
-        }
+    def test_factory_features_are_source_names(self) -> None:
+        assert FACTORY_FEATURES == [
+            "ged_sb_best", "ged_ns_best",
+            "ged_os_best", "gaul0_code",
+        ]

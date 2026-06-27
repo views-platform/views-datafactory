@@ -17,10 +17,5 @@ CONSOLIDATED_DIR = REPO_ROOT / "data" / "consolidated"
 MONTH_ID_EPOCH = 1980
 PARITY_THRESHOLD = 0.001  # 0.1%
 
-FEATURE_RENAME = {
-    "ged_sb_best": "lr_sb_best",
-    "ged_ns_best": "lr_ns_best",
-    "ged_os_best": "lr_os_best",
-}
-FACTORY_FEATURES = list(FEATURE_RENAME.keys())
-PARITY_FEATURES = list(FEATURE_RENAME.values())
+FACTORY_FEATURES = ["ged_sb_best", "ged_ns_best", "ged_os_best"]
+PARITY_FEATURES = FACTORY_FEATURES

@@ -97,7 +97,7 @@ generate_status_on_exit() {
         --output data/status.html \
         || echo "Warning: status page generation failed (non-fatal)"
     if [ -f "data/status.html" ]; then
-        echo "  Status page written to data/status.html"
+        echo "  Status page: http://204.168.219.108/status.html"
     else
         echo "  WARNING: data/status.html not found after generation"
     fi

@@ -34,7 +34,7 @@ The system is designed as a **graph of independent nodes**, not a linear pipelin
 
 ### Key Capabilities
 
-- **Auditable data harvesting** — UCDP (annual, candidate, .9), ACLED, GHS-POP, GHS-BUILT-S, V-Dem, PRIO-GRID static, and GAUL admin boundaries, all with schema validation, drift detection, and JSONL provenance ledgers
+- **Auditable data harvesting** — UCDP (annual, candidate, .9), ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI, PRIO-GRID static, and GAUL admin boundaries, all with schema validation, drift detection, and JSONL provenance ledgers
 - **PRIO-GRID spatial backbone** — pure-numpy generation of the standard 259,200-cell global grid at 0.5° resolution, validated cell-by-cell against the official PRIO reference shapefile
 - **Temporal backbone** with VIEWS month_id adapters (epoch: January 1980)
 - **Vintage-aware consolidation** — lossless, append-only, bitemporal event store from all three UCDP sources with content-digest deduplication
@@ -79,14 +79,15 @@ PRIO-GRID API ──→ datafactory_harvester ──→ data/raw/priogrid_static
 FAO GAUL API ───→ datafactory_harvester ──→ data/raw/gaul_admin/
 JRC GHSL ───────→ datafactory_harvester ──→ data/raw/ghspop/ + ghsbuilts/
 V-Dem ──────────→ datafactory_harvester ──→ data/raw/vdem/
-                    (GHS-POP, GHS-BUILT-S, V-Dem skip consolidation — single releases)
+GDL SHDI ───────→ datafactory_harvester ──→ data/raw/shdi/
+                    (GHS-POP, GHS-BUILT-S, V-Dem, SHDI skip consolidation — single releases)
                                         │     │
                                   datafactory_compilation ──→ data/compiled/grid.npy [T,H,W,C]
                                               │
                                          ─ ─ ─ ─ ─ ─ ─ ─  filesystem boundary
                                               │
-                                  assemble_grid.py ──→ data/assembled/grid.npy [T,H,W,F]
-                                     (compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin)
+                                  assemble_grid.py ──→ data/assembled/grid.npy [T,H,W,C]
+                                     (compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + SHDI + static + admin)
                                               │
                                          ─ ─ ─ ─ ─ ─ ─ ─  filesystem boundary
                                               │
@@ -104,7 +105,7 @@ V-Dem ──────────→ datafactory_harvester ──→ data/raw
 
 ```
 
-Not all paths traverse all layers. GHS-POP, GHS-BUILT-S, and V-Dem skip consolidation (single releases; ADR-029, ADR-034, ADR-035).
+Not all paths traverse all layers. GHS-POP, GHS-BUILT-S, V-Dem, and SHDI skip consolidation (single releases; ADR-029, ADR-034, ADR-035, ADR-036).
 
 ---
 
@@ -134,7 +135,7 @@ Consumer-facing (no datafactory_* imports):
   datafactory_adapters          Grid → DataFrame, Grid → FeatureFrame
 
 Assembly (script, not package — combines compiled sources):
-  scripts/assemble_grid.py      Compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin → [T,H,W,F]
+  scripts/assemble_grid.py      Compiled UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + SHDI + static + admin → [T,H,W,C]
 
 Consumer entry point (imports priogrid + adapters, reads assembled files):
   datafactory_query             load_dataset() — region/time/feature subsetting, npy or zarr
@@ -157,7 +158,7 @@ Consumer entry point (imports priogrid + adapters, reads assembled files):
 | **Graph, not pipeline** | Sources don't know about consumers. Compilation edges are consumer-driven. |
 | **Provenance all the way through** | Every node that produces data writes a JSONL ledger entry. Mission-critical. |
 | **Config-driven, fail-loud** | Frozen dataclasses with `__post_init__` validation. No silent defaults. |
-| **npy now, zarr-ready** | Dimension order: `(cells, time, features)`. Coordinate arrays shipped alongside data. |
+| **npy now, zarr-ready** | Dimension order: `[T, H, W, C]` (time, height, width, channels). Coordinate arrays shipped alongside data. |
 | **Screaming architecture** | Package and file names communicate domain, not programming taxonomy. |
 
 ### Filesystem Boundaries and Data Contracts
@@ -170,19 +171,19 @@ Layers are decoupled by the filesystem, not by imports. Each layer computes SHA-
 | Consolidation → Viewpoint | `consolidate_ucdp.py` | `build_viewpoint.py` | `data/consolidated/` | Parquet | All harvest columns + `_source_type`, `_source_version`, `_ingested_at` |
 | Viewpoint → Compilation | `build_viewpoint.py` | `compile_grid.py` | `data/viewpoint/*.parquet` | Parquet | `latitude`, `longitude`, `date_month`, `best`, `type_of_violence` |
 | Compilation → Assembly | `compile_grid.py` | `assemble_grid.py` | `data/compiled/` | npy `[T,H,W,C]` | `grid.npy` + `pgids.npy` + `time_steps.npy` + `feature_names.json` |
-| Assembly → Query/Consumer | `assemble_grid.py` | `load_dataset()` | `data/assembled/` or `.zarr` | npy or zarr | `grid.npy [T,H,W,F]` with same sidecars |
+| Assembly → Query/Consumer | `assemble_grid.py` | `load_dataset()` | `data/assembled/` or `.zarr` | npy or zarr | `grid.npy [T,H,W,C]` with same sidecars |
 
 ### Consumer Contract
 
-The `generate_consumer_data.py` script bridges factory vocabulary to the format expected by VIEWS training scripts (`purple_alien`, `white_ranger`, etc.):
+The `generate_consumer_data.py` script produces parquet files for VIEWS training scripts (`purple_alien`, `white_ranger`, etc.). Column names are the factory's source names — consumer-side renaming (if any) is the model's responsibility via `config_queryset.py`.
 
-| Factory column | Consumer column | Meaning |
-|----------------|----------------|---------|
-| `ged_sb_best` | `lr_sb_best` | State-based conflict fatalities (best estimate) |
-| `ged_ns_best` | `lr_ns_best` | Non-state conflict fatalities |
-| `ged_os_best` | `lr_os_best` | One-sided violence fatalities |
-| `gaul0_code` | `c_id` | Country identifier (GAUL Level 0) |
-| _(derived)_ | `row`, `col` | Grid position derived from `priogrid_gid` |
+| Column | Meaning |
+|--------|---------|
+| `ged_sb_best` | State-based conflict fatalities (best estimate) |
+| `ged_ns_best` | Non-state conflict fatalities |
+| `ged_os_best` | One-sided violence fatalities |
+| `gaul0_code` | Country identifier (GAUL Level 0) |
+| `row`, `col` | Grid position (derived from `priogrid_gid`) |
 
 Training partitions use VIEWS month_id encoding (epoch: January 1980):
 - **Calibration:** train 121–444, test 445–492
@@ -200,7 +201,7 @@ Output: `{calibration,validation,forecasting}_viewser_df.parquet` with MultiInde
 | `datafactory_provenance` | 0 | Content digests, JSONL ledgers, file locking, rotation | Done |
 | `datafactory_http` | 0 | HTTP request utilities: retry with exponential backoff | Done |
 | `datafactory_priogrid` | 1 | PRIO-GRID spatial + temporal backbone (259,200 cells, monthly) | Done |
-| `datafactory_harvester` | 1 | Data harvesting: UCDP (annual/candidate/.9), ACLED, GHS-POP, GHS-BUILT-S, V-Dem, PRIO-GRID static, GAUL admin | Done |
+| `datafactory_harvester` | 1 | Data harvesting: UCDP (annual/candidate/.9), ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI, PRIO-GRID static, GAUL admin | Done |
 | `datafactory_consolidation` | 2 | Lossless, vintage-aware consolidation of UCDP and ACLED sources | Done |
 | `datafactory_viewpoint` | 3 | Opinionated views: survivorship, temporal distribution, profiles | Done |
 | `datafactory_compilation` | 4 | Viewpoint output → grid npy with coordinate sidecars | Done |
@@ -243,6 +244,7 @@ views-datafactory/
 │   │       ├── ghspop.py                                 GHS-POP R2023A (JRC GHSL raster)
 │   │       ├── ghsbuilts.py                              GHS-BUILT-S R2023A (JRC GHSL raster)
 │   │       ├── vdem.py                                   V-Dem v16 democracy indicators
+│   │       ├── shdi.py                                   SHDI subnational human development
 │   │       ├── priogrid_static.py                        PRIO-GRID static covariates
 │   │       └── gaul_admin.py                             GAUL 2024 admin boundaries
 │   ├── datafactory_consolidation/                    # Layer 2 — lossless event stores
@@ -261,7 +263,8 @@ views-datafactory/
 │   │       ├── ucdp_v1.py                                UCDP viewpoint builder
 │   │       ├── ghspop_v1.py                              GHS-POP viewpoint builder
 │   │       ├── ghsbuilts_v1.py                           GHS-BUILT-S viewpoint builder
-│   │       └── vdem_v1.py                                V-Dem viewpoint builder
+│   │       ├── vdem_v1.py                                V-Dem viewpoint builder
+│   │       └── shdi_v1.py                                SHDI viewpoint builder
 │   ├── datafactory_compilation/                      # Layer 4 — grid compilation
 │   │   ├── compilation_config.py                       CompilationConfig
 │   │   ├── grid_compilation.py                         compile_grid (event sources)
@@ -276,7 +279,7 @@ views-datafactory/
 │       ├── dataset.py                                  load_dataset (npy + zarr backends)
 │       ├── regions.py                                  Region name → PRIO-GRID cell set
 │       └── temporal.py                                 Flexible time range parsing
-├── tests/                                            # 1094 tests
+├── tests/                                            # ~2000 tests
 ├── scripts/                                          # Operational scripts
 │   ├── harvest_ucdp.py                                 UCDP harvest (annual + candidate + .9)
 │   ├── harvest_acled.py                                ACLED event harvest (year-by-year)
@@ -295,18 +298,20 @@ views-datafactory/
 │   ├── harvest_vdem.py                                  V-Dem CSV harvest
 │   ├── compile_vdem.py                                  V-Dem grid compilation
 │   ├── run_vdem_pipeline.py                             V-Dem end-to-end pipeline
-│   ├── assemble_grid.py                                UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + static + admin
+│   ├── harvest_shdi.py                                  SHDI subnational HDI harvest
+│   ├── run_shdi_pipeline.py                             SHDI end-to-end pipeline
+│   ├── assemble_grid.py                                UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + SHDI + static + admin
 │   ├── generate_consumer_data.py                      Factory → VIEWSER parquet for training
 │   ├── export_dataframe.py                             Grid → DataFrame export
 │   ├── export_zarr.py                                  Grid → zarr store (HTTP-servable)
 │   ├── preflight.py                                    Pre-pipeline disk + env checks
 │   ├── check_health.py                                 System health check
-│   ├── refresh_pipeline.sh                             Full pipeline orchestrator (11 steps)
+│   ├── refresh_pipeline.sh                             Full pipeline orchestrator (14 steps)
 │   ├── visualize_audit.py                              Data audit visualization
 │   └── ...                                             verify_parity, verify_remote, etc.
 ├── docs/                                             # ADRs, CICs, protocols, standards
-│   ├── ADRs/                                           10 constitutional + 26 project-specific
-│   ├── CICs/                                           28 active class intent contracts
+│   ├── ADRs/                                           10 constitutional + 39 project-specific
+│   ├── CICs/                                           34 active class intent contracts
 │   ├── contributor_protocols/                          carbon, silicon, hardened
 │   └── standards/                                      logging & observability
 ├── reports/                                          # Strategic documents + audit outputs
@@ -341,7 +346,7 @@ uv run pytest -v
 ## Quick Start
 
 ```bash
-# Full pipeline (automated): runs all 11 steps end-to-end
+# Full pipeline (automated): runs all 14 steps end-to-end
 bash scripts/refresh_pipeline.sh
 
 # Or run individual steps:
@@ -356,11 +361,13 @@ uv run python scripts/compile_acled.py             # ACLED → grid.npy
 uv run python scripts/run_ghspop_pipeline.py       # GHS-POP viewpoint + compile
 uv run python scripts/run_ghsbuilts_pipeline.py    # GHS-BUILT-S viewpoint + compile
 uv run python scripts/run_vdem_pipeline.py         # V-Dem viewpoint + compile
+uv run python scripts/run_shdi_pipeline.py         # SHDI viewpoint + compile
 uv run python scripts/assemble_grid.py \            # assemble all sources into one grid
     --acled-grid data/compiled/acled \               #   (each --*-grid flag is optional;
     --ghspop-grid data/compiled/ghspop \             #    omitted sources are silently skipped,
     --ghsbuilts-grid data/compiled/ghsbuilts \       #    producing a partial grid)
-    --vdem-grid data/compiled/vdem
+    --vdem-grid data/compiled/vdem \
+    --shdi-grid data/compiled/shdi
 uv run python scripts/generate_consumer_data.py    # factory → VIEWSER training parquets
 
 # Visualize the assembled grid
@@ -411,7 +418,7 @@ The `reports/` directory contains living documents that define the project's dir
 
 - **[R&D Roadmap](reports/rd_roadmap11.md)** — Research questions, hypotheses, data agenda, milestones. Focuses on what must be *discovered*.
 - **[Product Development Plan](reports/product_development_plan11.md)** — Users, requirements, architecture, release plan. Focuses on what must be *built*.
-- **[Technical Risk Register](reports/technical_risk_register.md)** — 202 concerns tracked, 114 resolved, 63 open with trigger conditions (ADR-020).
+- **[Technical Risk Register](reports/technical_risk_register.md)** — 298 concerns tracked, 258 resolved, 37 open with trigger conditions (ADR-020).
 - **[.9 Investigation](reports/dot9_investigation/)** — Empirical findings on UCDP .9 data stream characteristics.
 
 ---
@@ -450,7 +457,7 @@ When adding new packages, follow the existing `datafactory_*` naming convention 
 
 ## License
 
-This project is part of the VIEWS Platform. See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License — see [LICENSE](LICENSE). The license covers the software in this repository only; upstream data sources (UCDP, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI, PRIO-GRID, GAUL, WDI) are subject to their respective providers' terms of use.
 
 ---
 

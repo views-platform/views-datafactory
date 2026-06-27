@@ -165,6 +165,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-046** -- UCDP Schema Evolution Strategy
   Documents how the harvester handles UCDP API schema changes across versions: field addition detection, type-change detection, and the schema fingerprint mechanism that flags breaking changes in the provenance ledger.
 
+- **ADR-047** -- Assembly Temporal Anchor
+  Declares UCDP as the temporal anchor for the assembled grid. All sources align to UCDP's `time_steps.npy`; partial-coverage sources are zero-filled. Each source records `first_valid_*_month_id` in provenance; `load_dataset()` warns consumers about pre-coverage zero-fill.
+
 These must comply with the constitutional ADRs above.
 
 ---

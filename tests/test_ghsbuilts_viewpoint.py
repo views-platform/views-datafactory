@@ -933,6 +933,447 @@ class TestBuildGhsBuiltSV1Red:
 
 
 # ===================================================================
+# GREEN — Config details (#284, C-189)
+# ===================================================================
+
+
+class TestGhsBuiltSViewpointConfigDetailsGreen:
+    """Config field defaults and methods."""
+
+    def test_default_version(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        assert cfg.version == "ghsbuilts_v1"
+
+    def test_default_temporal_interpolation(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        assert cfg.temporal_interpolation == "linear"
+
+    def test_default_aggregation(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        assert cfg.aggregation == "sum"
+
+    def test_default_start_year(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        assert cfg.start_year == 1975
+
+    def test_default_end_year(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        assert cfg.end_year == 2030
+
+    def test_default_resolution(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        assert cfg.resolution == "30ss"
+
+    def test_default_crs(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        assert cfg.crs == "4326"
+
+    def test_tif_filename_per_epoch(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        for epoch in cfg.epochs:
+            name = cfg.tif_filename(epoch)
+            assert f"E{epoch}" in name
+            assert name.endswith(".tif")
+
+    def test_from_shortcuts_returns_config(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig.from_shortcuts(
+            source_dir=Path("/tmp"),
+        )
+        assert isinstance(cfg, GhsBuiltSViewpointConfig)
+        assert cfg.source_dir == Path("/tmp")
+
+
+# ===================================================================
+# GREEN — Aggregation conservation (#284, C-189)
+# ===================================================================
+
+
+class TestAggregationConservationGreen:
+    """Sum conservation: input pixel sum = output cell sum."""
+
+    def test_sum_conservation_uniform(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            _aggregate_with_alignment,
+        )
+
+        raster = np.full((120, 120), 1, dtype=np.uint32)
+        result = _aggregate_with_alignment(raster, 0, 0)
+        expected = 60 * 60
+        assert result[0, 0] == expected
+        assert result[1, 1] == expected
+
+    def test_sum_conservation_nonuniform(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            _aggregate_with_alignment,
+        )
+
+        rng = np.random.default_rng(42)
+        raster = rng.integers(0, 1000, (120, 120), dtype=np.uint32)
+        result = _aggregate_with_alignment(raster, 0, 0)
+        assert np.isclose(result.sum(), raster.astype(np.float64).sum())
+
+    def test_sum_conservation_large_values(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            _aggregate_with_alignment,
+        )
+
+        raster = np.full((60, 60), 2**30, dtype=np.uint32)
+        result = _aggregate_with_alignment(raster, 0, 0)
+        assert result[0, 0] == float(2**30) * 60 * 60
+
+
+# ===================================================================
+# GREEN — Build output schema (#284, C-189)
+# ===================================================================
+
+
+class TestBuildOutputSchemaGreen:
+    """Output Parquet has expected columns and types."""
+
+    def test_output_columns_are_pgid_month_built(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        build_ghsbuilts_v1(config)
+
+        table = pq.read_table(config.output_path)
+        assert set(table.column_names) == {
+            "pgid", "month_id", "built_area",
+        }
+
+    def test_pgid_is_int32(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        build_ghsbuilts_v1(config)
+
+        schema = pq.read_schema(config.output_path)
+        assert schema.field("pgid").type == "int32"
+
+    def test_month_id_is_int32(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        build_ghsbuilts_v1(config)
+
+        schema = pq.read_schema(config.output_path)
+        assert schema.field("month_id").type == "int32"
+
+    def test_built_area_is_float64(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        build_ghsbuilts_v1(config)
+
+        schema = pq.read_schema(config.output_path)
+        assert schema.field("built_area").type == "double"
+
+    def test_built_area_all_nonneg_in_output(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        build_ghsbuilts_v1(config)
+
+        table = pq.read_table(config.output_path)
+        areas = table.column("built_area").to_numpy()
+        assert np.all(areas >= 0)
+
+    def test_provenance_has_output_digest(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        build_ghsbuilts_v1(config)
+
+        entry = json.loads(
+            config.ledger_path.read_text().strip().splitlines()[-1]
+        )
+        assert "output_digest" in entry
+        assert len(entry["output_digest"]) == 16
+
+    def test_provenance_has_n_cells(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        build_ghsbuilts_v1(config)
+
+        entry = json.loads(
+            config.ledger_path.read_text().strip().splitlines()[-1]
+        )
+        assert "n_cells_output" in entry
+        assert entry["n_cells_output"] > 0
+
+
+# ===================================================================
+# BEIGE — Config boundaries (#284, C-189)
+# ===================================================================
+
+
+class TestGhsBuiltSViewpointConfigBeigeExtra:
+    """Additional boundary conditions."""
+
+    def test_single_epoch_config_accepted(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(
+            source_dir=Path("/tmp"),
+            epochs=(2020,),
+        )
+        assert cfg.epochs == (2020,)
+
+    def test_first_known_epoch_only(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(
+            source_dir=Path("/tmp"),
+            epochs=(1975,),
+        )
+        assert cfg.epochs == (1975,)
+
+    def test_last_known_epoch_only(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(
+            source_dir=Path("/tmp"),
+            epochs=(2030,),
+        )
+        assert cfg.epochs == (2030,)
+
+    def test_custom_start_end_years(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(
+            source_dir=Path("/tmp"),
+            start_year=2000,
+            end_year=2020,
+        )
+        assert cfg.start_year == 2000
+        assert cfg.end_year == 2020
+
+
+# ===================================================================
+# RED — Aggregation adversarial (#284, C-189)
+# ===================================================================
+
+
+class TestAggregationAdversarialRed:
+    """Additional adversarial cases for spatial aggregation."""
+
+    def test_zero_raster_produces_all_zeros(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            _aggregate_with_alignment,
+        )
+
+        raster = np.zeros((120, 120), dtype=np.uint32)
+        result = _aggregate_with_alignment(raster, 0, 0)
+        assert np.all(result == 0)
+
+    def test_max_uint32_no_float64_overflow(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            _aggregate_with_alignment,
+        )
+
+        raster = np.full((60, 60), np.iinfo(np.uint32).max, dtype=np.uint32)
+        result = _aggregate_with_alignment(raster, 0, 0)
+        assert np.isfinite(result[0, 0])
+        assert result[0, 0] > 0
+
+
+class TestBuildAdversarialRed:
+    """Additional adversarial cases for the builder."""
+
+    def test_frozen_config_rejects_mutation(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        with pytest.raises(AttributeError):
+            cfg.version = "hacked"  # type: ignore[misc]
+
+    def test_frozen_config_source_dir_mutation(self) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            GhsBuiltSViewpointConfig,
+        )
+
+        cfg = GhsBuiltSViewpointConfig(source_dir=Path("/tmp"))
+        with pytest.raises(AttributeError):
+            cfg.source_dir = Path("/evil")  # type: ignore[misc]
+
+
+# ===================================================================
+# GREEN — ViewpointResult structure (#284, C-189)
+# ===================================================================
+
+
+class TestViewpointResultGreen:
+    """ViewpointResult fields populated correctly."""
+
+    def test_result_has_output_path(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        result = build_ghsbuilts_v1(config)
+        assert result.output_path == config.output_path
+        assert result.output_path.exists()
+
+    def test_result_has_version(self, tmp_path: Path) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        result = build_ghsbuilts_v1(config)
+        assert result.version == "ghsbuilts_v1"
+
+    def test_result_n_events_input_positive(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        result = build_ghsbuilts_v1(config)
+        assert result.n_events_input > 0
+
+    def test_result_output_digest_16_hex(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        result = build_ghsbuilts_v1(config)
+        assert len(result.output_digest) == 16
+        assert all(c in "0123456789abcdef" for c in result.output_digest)
+
+    def test_result_n_filtered_is_zero(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        result = build_ghsbuilts_v1(config)
+        assert result.n_filtered == 0
+
+    def test_result_n_summary_expanded_is_zero(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        result = build_ghsbuilts_v1(config)
+        assert result.n_summary_expanded == 0
+
+
+# ===================================================================
+# GREEN — Provenance ledger details (#284, C-189)
+# ===================================================================
+
+
+class TestViewpointProvenanceGreen:
+    """Ledger entry structure and completeness."""
+
+    def test_provenance_has_all_fields(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_viewpoint.builders.ghsbuilts_v1 import (
+            build_ghsbuilts_v1,
+        )
+
+        config, _ = _two_epoch_config(tmp_path)
+        build_ghsbuilts_v1(config)
+
+        entry = json.loads(
+            config.ledger_path.read_text().strip().splitlines()[-1]
+        )
+        assert entry["dataset"] == "ghsbuilts_viewpoint"
+        assert entry["version"] == "ghsbuilts_v1"
+        assert entry["outcome"] == "success"
+        assert "output_digest" in entry
+        assert "n_cells_output" in entry
+        assert "n_epochs" in entry
+        assert entry["n_epochs"] == 2
+        assert entry["temporal_interpolation"] == "linear"
+        assert entry["aggregation"] == "sum"
+        assert "ledger_version" in entry
+        assert "digest_algorithm" in entry
+        assert "sha256" in entry["digest_algorithm"]
+        assert entry["ledger_version"] >= 1
+
+
+# ===================================================================
 # GREEN — Registry
 # ===================================================================
 

@@ -23,6 +23,11 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["grid_to_country_month"]
 
+_INTENSIVE_PREFIXES = (
+    "shdi", "healthindex", "edindex", "incindex",
+    "vdem_", "ghs_built_",
+)
+
 
 def grid_to_country_month(
     grid: np.ndarray,
@@ -112,6 +117,21 @@ def grid_to_country_month(
         f for i, f in enumerate(feature_names) if i != country_idx
     ]
     value_data = np.delete(flat_data, country_idx, axis=1)
+
+    intensive = [
+        f for f in value_features
+        if f.startswith(_INTENSIVE_PREFIXES)
+    ]
+    if intensive:
+        warnings.warn(
+            f"Country-month aggregation sums all features. "
+            f"Intensive features {intensive} are indices, not counts "
+            f"— their sums across cells are not meaningful. "
+            f"Consider using output_format='dataframe' and "
+            f"aggregating intensive features with a weighted mean.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     df = pd.DataFrame(
         value_data,

@@ -108,7 +108,7 @@ class TestConsumerProvenance:
         required = {
             "generation_timestamp",
             "source_grid_digest",
-            "feature_mapping",
+            "features",
             "output_files",
         }
         assert required <= set(manifest.keys()), (

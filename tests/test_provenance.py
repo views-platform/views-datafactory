@@ -15,6 +15,7 @@ import pytest
 from datafactory_provenance import (
     append_ledger_entry,
     compute_content_digest,
+    compute_file_digest,
     last_digest,
     last_digest_for_version,
 )
@@ -333,6 +334,70 @@ class TestComputeContentDigestRed:
     def test_unknown_algorithm_raises(self) -> None:
         with pytest.raises(ValueError):
             compute_content_digest(b"test", algorithm="not_a_real_algo")
+
+
+# ============================================================
+# compute_file_digest — Green / Beige / Red (#281, C-271)
+# ============================================================
+
+
+class TestComputeFileDigestGreen:
+    """File digest: determinism, length, equivalence with content digest."""
+
+    def test_deterministic(self, tmp_path: Path) -> None:
+        f = tmp_path / "data.bin"
+        f.write_bytes(b"deterministic input")
+        assert compute_file_digest(f) == compute_file_digest(f)
+
+    def test_length_is_16_hex(self, tmp_path: Path) -> None:
+        f = tmp_path / "data.bin"
+        f.write_bytes(b"hello world")
+        result = compute_file_digest(f)
+        assert len(result) == 16
+        assert all(c in "0123456789abcdef" for c in result)
+
+    def test_equivalence_with_content_digest(self, tmp_path: Path) -> None:
+        payload = b"equivalence check payload"
+        f = tmp_path / "data.bin"
+        f.write_bytes(payload)
+        assert compute_file_digest(f) == compute_content_digest(payload)
+
+
+class TestComputeFileDigestBeige:
+    """File digest boundaries: empty file, large file (multi-chunk)."""
+
+    def test_empty_file(self, tmp_path: Path) -> None:
+        f = tmp_path / "empty.bin"
+        f.write_bytes(b"")
+        result = compute_file_digest(f)
+        assert len(result) == 16
+        assert result == compute_content_digest(b"")
+
+    def test_large_file_multi_chunk(self, tmp_path: Path) -> None:
+        payload = b"X" * (65536 * 3 + 17)  # 3 full chunks + partial
+        f = tmp_path / "large.bin"
+        f.write_bytes(payload)
+        assert compute_file_digest(f) == compute_content_digest(payload)
+
+
+class TestComputeFileDigestRed:
+    """File digest adversarial: missing file, directory, binary content."""
+
+    def test_missing_file_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            compute_file_digest(tmp_path / "nonexistent.bin")
+
+    def test_directory_raises(self, tmp_path: Path) -> None:
+        with pytest.raises((IsADirectoryError, PermissionError)):
+            compute_file_digest(tmp_path)
+
+    def test_binary_content(self, tmp_path: Path) -> None:
+        payload = bytes(range(256)) * 10
+        f = tmp_path / "binary.bin"
+        f.write_bytes(payload)
+        result = compute_file_digest(f)
+        assert len(result) == 16
+        assert result == compute_content_digest(payload)
 
 
 # ---------------------------------------------------------------------------
