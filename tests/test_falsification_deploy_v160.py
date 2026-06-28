@@ -15,8 +15,6 @@ from __future__ import annotations
 
 import subprocess
 
-import pytest
-
 
 def _current_version() -> str:
     import tomllib
@@ -39,10 +37,6 @@ def _tag_exists(tag: str) -> bool:
 class TestF1VersionBumped:
     """F1: version in pyproject.toml must be newer than any existing tag."""
 
-    @pytest.mark.xfail(
-        condition=_tag_exists(f"v{_current_version()}"),
-        reason="version already tagged — expected post-deploy",
-    )
     def test_version_not_already_tagged(self) -> None:
         """Current version must not already have a git tag."""
         version = _current_version()
@@ -83,20 +77,28 @@ class TestF6IssueHygiene:
         Checks a subset of known-completed epics. If any are still open,
         the issue tracker is misleading about project state.
         """
-        completed_epics = [258, 264, 266, 272, 274, 279, 280, 286, 290, 298]
-        still_open = []
-        for issue_num in completed_epics:
-            result = subprocess.run(
-                [
-                    "gh", "issue", "view",
-                    str(issue_num),
-                    "--json", "state", "-q", ".state",
-                ],
-                capture_output=True,
-                text=True,
-            )
-            if result.stdout.strip() == "OPEN":
-                still_open.append(issue_num)
+        completed_epics = [
+            258, 264, 266, 272, 274, 279, 280, 286, 290, 298,
+        ]
+        probe = subprocess.run(
+            ["gh", "issue", "list", "--state", "open",
+             "--json", "number", "-L", "500"],
+            capture_output=True,
+            text=True,
+        )
+        assert probe.returncode == 0, (
+            "gh CLI failed — cannot verify issue state. "
+            f"stderr: {probe.stderr.strip()}"
+        )
+        import json
+
+        open_numbers = {
+            i["number"]
+            for i in json.loads(probe.stdout)
+        }
+        still_open = [
+            n for n in completed_epics if n in open_numbers
+        ]
         assert not still_open, (
             f"{len(still_open)} completed sprint epics still OPEN: "
             f"{still_open}. Close before release."
@@ -110,9 +112,14 @@ class TestF7ProductPlanCurrency:
         """Product plan title should reference a version >= current."""
         from pathlib import Path
 
-        plan = Path("reports/product_development_plan11.md")
-        if not plan.exists():
-            pytest.skip("No product plan found")
+        plans = sorted(
+            Path("reports").glob("product_development_plan*.md"),
+        )
+        assert plans, (
+            "No product development plan found in reports/. "
+            "Expected reports/product_development_plan*.md"
+        )
+        plan = plans[-1]
         first_line = plan.read_text().splitlines()[0]
         version = _current_version()
         major_minor = ".".join(version.split(".")[:2])
