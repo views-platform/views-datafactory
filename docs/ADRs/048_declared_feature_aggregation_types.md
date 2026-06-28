@@ -59,7 +59,7 @@ Downstream consumers read `feature_agg_types` from provenance. No consumer may i
 
 ### 5. Prefix lists deleted
 
-`_INTENSIVE_PREFIXES`, `_EXTENSIVE_PREFIXES`, `_SOURCE_PREFIXES`, and `_SOURCE_DISPLAY_NAMES` are deleted. No replacement prefix list is created.
+`_INTENSIVE_PREFIXES`, `_EXTENSIVE_PREFIXES`, and `_SOURCE_PREFIXES` are deleted. No replacement prefix list is created. `_SOURCE_DISPLAY_NAMES` is retained — it maps source keys to human-readable names for warning messages, not for inference.
 
 ---
 
