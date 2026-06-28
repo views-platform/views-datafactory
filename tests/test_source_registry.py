@@ -16,6 +16,7 @@ from datafactory_provenance.source_registry import (
     PIPELINE_SOURCES,
     SourceEntry,
     get_all_features,
+    get_feature_agg_type_map,
     get_required_env_vars,
     get_source_slo,
     validate_preflight,
@@ -30,6 +31,7 @@ class TestSourceEntry:
             name="test",
             required_env_vars=("TOKEN",),
             features=("feat_a",),
+            feature_agg_types=("extensive",),
             slo_hours=744,
         )
         assert entry.name == "test"
@@ -134,6 +136,113 @@ class TestPipelineSources:
         assert 8760 in slos  # yearly sources
 
 
+class TestFeatureAggTypes:
+    """ADR-048: feature_agg_types coherence with features."""
+
+    def test_every_source_has_matching_lengths(self) -> None:
+        for s in PIPELINE_SOURCES:
+            assert len(s.feature_agg_types) == len(s.features), (
+                f"{s.name}: feature_agg_types length "
+                f"({len(s.feature_agg_types)}) != features length "
+                f"({len(s.features)})"
+            )
+
+    def test_all_types_are_valid(self) -> None:
+        valid = {"extensive", "intensive", "static"}
+        for s in PIPELINE_SOURCES:
+            for agg_type in s.feature_agg_types:
+                assert agg_type in valid, (
+                    f"{s.name}: invalid agg type {agg_type!r}"
+                )
+
+    def test_map_returns_79_entries(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert len(agg_map) == 79
+
+    def test_map_covers_all_features(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        all_feats = get_all_features()
+        assert set(agg_map.keys()) == set(all_feats)
+
+    def test_extensive_count_is_15(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        extensive = [f for f, t in agg_map.items() if t == "extensive"]
+        assert len(extensive) == 15
+
+    def test_intensive_count_is_27(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        intensive = [f for f, t in agg_map.items() if t == "intensive"]
+        assert len(intensive) == 27
+
+    def test_static_count_is_37(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        static = [f for f, t in agg_map.items() if t == "static"]
+        assert len(static) == 37
+
+    def test_ucdp_features_are_extensive(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert agg_map["ged_sb_best"] == "extensive"
+        assert agg_map["ged_os_count"] == "extensive"
+
+    def test_acled_features_are_extensive(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert agg_map["acled_count"] == "extensive"
+        assert agg_map["acled_fatalities"] == "extensive"
+
+    def test_ghspop_is_extensive(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert agg_map["ghspop_pop_count"] == "extensive"
+
+    def test_ghsbuilts_is_intensive(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert agg_map["ghsbuilts_built_area"] == "intensive"
+
+    def test_vdem_features_are_intensive(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert agg_map["vdem_v2x_libdem"] == "intensive"
+
+    def test_shdi_features_are_intensive(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert agg_map["shdi_shdi"] == "intensive"
+        assert agg_map["shdi_healthindex"] == "intensive"
+
+    def test_gaul_features_are_static(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert agg_map["gaul0_code"] == "static"
+
+    def test_priogrid_static_features_are_static(self) -> None:
+        agg_map = get_feature_agg_type_map()
+        assert agg_map["landarea"] == "static"
+        assert agg_map["mountains_mean"] == "static"
+
+    def test_length_mismatch_rejected(self) -> None:
+        with pytest.raises(ValueError, match="must match"):
+            SourceEntry(
+                name="bad",
+                features=("a", "b"),
+                feature_agg_types=("extensive",),
+            )
+
+    def test_invalid_type_rejected(self) -> None:
+        with pytest.raises(ValueError, match="invalid"):
+            SourceEntry(
+                name="bad",
+                features=("a",),
+                feature_agg_types=("unknown",),
+            )
+
+    def test_custom_sources(self) -> None:
+        sources = (
+            SourceEntry(
+                name="a",
+                features=("x", "y"),
+                feature_agg_types=("extensive", "intensive"),
+            ),
+        )
+        agg_map = get_feature_agg_type_map(sources)
+        assert agg_map == {"x": "extensive", "y": "intensive"}
+
+
 class TestGetSourceSlo:
     """get_source_slo() derives SLO dict from registry."""
 
@@ -162,8 +271,16 @@ class TestGetAllFeatures:
 
     def test_custom_sources(self) -> None:
         sources = (
-            SourceEntry(name="a", features=("x", "y")),
-            SourceEntry(name="b", features=("z",)),
+            SourceEntry(
+                name="a",
+                features=("x", "y"),
+                feature_agg_types=("extensive", "intensive"),
+            ),
+            SourceEntry(
+                name="b",
+                features=("z",),
+                feature_agg_types=("static",),
+            ),
         )
         assert get_all_features(sources) == ("x", "y", "z")
 
