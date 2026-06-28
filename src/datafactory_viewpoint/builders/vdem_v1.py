@@ -409,6 +409,7 @@ def build_vdem_v1(
         n_events_input=n_input,
         n_events_output=n_output,
         n_summary_expanded=0,
+        n_spatially_distributed=0,
         n_filtered=n_filtered,
         output_digest=output_digest,
         version=config.version,

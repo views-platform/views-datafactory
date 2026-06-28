@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-04-08
-**Related ADRs:** ADR-009, ADR-014, ADR-016, ADR-023
+**Last reviewed:** 2026-06-28
+**Related ADRs:** ADR-009, ADR-014, ADR-016, ADR-023, ADR-049
 
 ---
 
@@ -11,7 +11,7 @@
 
 > Immutable configuration declaring which strategies and filters to apply when building a viewpoint from a consolidated event store.
 
-Combines strategy selection (survivorship, distribution), event filtering (priogrid_gid, type_of_violence, where_prec), version tagging, and I/O paths into a single frozen config. Strategy names are validated against the strategy registries at config time.
+Combines strategy selection (survivorship, temporal distribution, spatial distribution), event filtering (priogrid_gid, type_of_violence, where_prec), version tagging, and I/O paths into a single frozen config. Strategy names are validated against the strategy registries at config time.
 
 ---
 
@@ -31,6 +31,7 @@ Combines strategy selection (survivorship, distribution), event filtering (priog
 - Guarantees `version` is non-empty
 - Guarantees `survivorship_strategy` is a registered strategy name
 - Guarantees `distribution_strategy` is a registered strategy name
+- Guarantees `spatial_distribution_strategy` is a registered spatial distribution strategy name
 - Guarantees all strategies in `source_distribution_map` values are registered distribution strategy names
 - All guarantees enforced via `__post_init__` validation
 
@@ -43,6 +44,9 @@ Combines strategy selection (survivorship, distribution), event filtering (priog
 - `ledger_path`: Path, provenance ledger (default: `provenance/viewpoint/ucdp_v1_ledger.jsonl`)
 - `survivorship_strategy`: str, must be registered (default: `"annual_wins"`)
 - `distribution_strategy`: str, must be registered (default: `"even_split"`)
+- `spatial_distribution_strategy`: str, must be registered (default: `"proportional"`)
+- `gaul1_crosswalk_path`: Path, GAUL admin-1 crosswalk for spatial distribution (default: `data/raw/gaul_admin/gaul1_code.parquet`)
+- `gaul0_crosswalk_path`: Path, GAUL country crosswalk for spatial distribution (default: `data/raw/gaul_admin/gaul0_code.parquet`)
 - `filter_stale_versions`: bool, controls stale-version filtering in builder (default: `True`)
 - `source_distribution_map`: dict[str, str] | None, per-source-type distribution strategy overrides. Keys are source type strings, values are registered strategy names. When None, `distribution_strategy` applies uniformly. (default: `None`)
 - `min_priogrid_gid`: int | None, spatial filter threshold (default: None = no filter)
@@ -66,6 +70,7 @@ Assumptions not met cause immediate `ValueError`.
 - `ValueError` on empty `version`
 - `ValueError` on unregistered `survivorship_strategy` (chained from `KeyError` via `from exc` for debuggability)
 - `ValueError` on unregistered `distribution_strategy` (chained from `KeyError` via `from exc` for debuggability)
+- `ValueError` on unregistered `spatial_distribution_strategy` (chained from `KeyError` via `from exc` for debuggability)
 - `ValueError` on unregistered strategy in `source_distribution_map` values
 - `AttributeError` on any attempt to mutate fields (frozen)
 
@@ -77,7 +82,7 @@ All failures are immediate and loud. No silent fallbacks.
 
 - Created directly, via `profiles.load_profile()`, or via `from_shortcuts(consolidated_path=...)`
 - Consumed by viewpoint builders (e.g., `builders/ucdp_v1.py`)
-- Strategy names resolved via `survivorship.get_survivorship()` and `temporal_distribution.get_distribution()`
+- Strategy names resolved via `survivorship.get_survivorship()`, `temporal_distribution.get_distribution()`, and `spatial_distribution.get_spatial_distribution()`
 - Must not depend on any other `datafactory_*` config class
 
 ---

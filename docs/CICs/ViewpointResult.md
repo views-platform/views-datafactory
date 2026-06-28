@@ -2,8 +2,8 @@
 
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
-**Last reviewed:** 2026-03-22
-**Related ADRs:** ADR-008, ADR-014
+**Last reviewed:** 2026-06-28
+**Related ADRs:** ADR-008, ADR-014, ADR-049
 
 ---
 
@@ -30,6 +30,7 @@ Provides a structured summary of what the viewpoint builder produced: how many e
 - Carries `n_events_input`: events in the consolidated store
 - Carries `n_events_output`: rows in the viewpoint output (may differ due to survivorship dedup and summary event expansion)
 - Carries `n_summary_expanded`: summary events that were expanded across months
+- Carries `n_spatially_distributed`: events that were spatially distributed across polygon cells (ADR-049)
 - Carries `n_filtered`: events removed by filters
 - Carries `output_digest`: SHA-256 content digest of the output file
 - Carries `version`: viewpoint version tag from config
@@ -42,6 +43,7 @@ Provides a structured summary of what the viewpoint builder produced: how many e
 - `n_events_input`: int, input event count
 - `n_events_output`: int, output row count
 - `n_summary_expanded`: int, summary events expanded
+- `n_spatially_distributed`: int, events spatially distributed across polygon cells
 - `n_filtered`: int, events removed by filters
 - `output_digest`: str, content digest of the output
 - `version`: str, version tag
@@ -77,7 +79,7 @@ All fields are required. No defaults.
 ```python
 result = build_ucdp_v1(config)
 print(f"Input: {result.n_events_input}, Output: {result.n_events_output}")
-print(f"Expanded {result.n_summary_expanded} summary events, filtered {result.n_filtered}")
+print(f"Expanded {result.n_summary_expanded} summary, distributed {result.n_spatially_distributed} spatial, filtered {result.n_filtered}")
 ```
 
 ---

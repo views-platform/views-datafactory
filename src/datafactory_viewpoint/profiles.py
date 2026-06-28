@@ -99,6 +99,7 @@ _register(
     "production_parity",
     survivorship_strategy="dot9_wins",
     distribution_strategy="ceil_split",
+    spatial_distribution_strategy="passthrough",
     source_distribution_map={"annual": "date_end_only"},
     filter_stale_versions=True,
     min_priogrid_gid=1,
