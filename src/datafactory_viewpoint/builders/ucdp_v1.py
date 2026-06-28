@@ -286,6 +286,8 @@ def build_ucdp_v1(
     n_filtered = 0
     n_spatially_distributed = 0
     n_spatial_cells_created = 0
+    n_excluded_where_prec = 0
+    n_passthrough_where_prec = 0
 
     # Process groups: walk sorted id column, slice per group
     i = 0
@@ -333,10 +335,25 @@ def build_ucdp_v1(
                 n_spatially_distributed += 1
             distributed = spatially_expanded
 
+        # Count passthrough events (where_prec >= 4 but not distributed)
+        for row in distributed:
+            if (
+                row.get("where_prec", 1) >= 4
+                and not row.get("_spatial_distributed")
+            ):
+                n_passthrough_where_prec += 1
+
         # Filter + append to output columns
         for row in distributed:
             if not _passes_filters(row, config):
                 n_filtered += 1
+                if (
+                    config.exclude_where_prec
+                    and not row.get("_spatial_distributed")
+                    and row.get("where_prec")
+                    in config.exclude_where_prec
+                ):
+                    n_excluded_where_prec += 1
                 continue
             for col in output_col_names:
                 output_columns[col].append(row.get(col))
@@ -346,9 +363,11 @@ def build_ucdp_v1(
     logger.info(
         "Processed %d groups: %d summary expanded, "
         "%d spatially distributed (%d cells), "
+        "%d passthrough where_prec, %d excluded where_prec, "
         "%d filtered, %d output rows",
         n_groups, n_summary,
         n_spatially_distributed, n_spatial_cells_created,
+        n_passthrough_where_prec, n_excluded_where_prec,
         n_filtered, len(output_columns["date_month"]),
     )
 
@@ -388,6 +407,8 @@ def build_ucdp_v1(
         "n_summary_expanded": n_summary,
         "n_spatially_distributed": n_spatially_distributed,
         "n_spatial_cells_created": n_spatial_cells_created,
+        "n_excluded_where_prec": n_excluded_where_prec,
+        "n_passthrough_where_prec": n_passthrough_where_prec,
         "n_filtered": n_filtered,
         "output_path": str(config.output_path),
         "output_digest": output_digest,

@@ -45,10 +45,10 @@ class ViewpointConfig:
 
     # GAUL crosswalk paths for spatial distribution
     gaul1_crosswalk_path: Path = Path(
-        "data/raw/gaul_admin_area_majority/gaul1_code.parquet"
+        "data/raw/gaul_admin/gaul1_code.parquet"
     )
     gaul0_crosswalk_path: Path = Path(
-        "data/raw/gaul_admin_area_majority/gaul0_code.parquet"
+        "data/raw/gaul_admin/gaul0_code.parquet"
     )
 
     # Pre-processing

@@ -563,6 +563,12 @@ class TestProportionalBeige:
         assert result[0]["best"] == 77
         assert result[0]["priogrid_gid"] == 100
 
+    def test_where_prec_3_boundary_passthrough(self) -> None:
+        """where_prec=3 (boundary) passes through unchanged."""
+        event = _make_event(where_prec=3, best=100)
+        result = proportional(event, _simple_weight_map())
+        assert result == [event]
+
     def test_centroid_in_water_passthrough(self) -> None:
         """Centroid cell with no GAUL code passes through."""
         wm = SpatialWeightMap(
@@ -575,6 +581,22 @@ class TestProportionalBeige:
         )
         event = _make_event(
             where_prec=5, priogrid_gid=999, best=10,
+        )
+        result = proportional(event, wm)
+        assert result == [event]
+
+    def test_country_centroid_in_water_passthrough(self) -> None:
+        """Country-level (where_prec=6) centroid in water passes through."""
+        wm = SpatialWeightMap(
+            admin1_weights={},
+            country_weights={},
+            pgid_to_gaul1={},
+            pgid_to_gaul0={},
+            admin1_all_cells={},
+            country_all_cells={},
+        )
+        event = _make_event(
+            where_prec=6, priogrid_gid=999, best=10,
         )
         result = proportional(event, wm)
         assert result == [event]
@@ -718,3 +740,30 @@ class TestProfileGreen:
             overrides["spatial_distribution_strategy"]
             == "passthrough"
         )
+
+
+# ---- Red: ViewpointResult frozen ----
+
+
+class TestViewpointResultRed:
+
+    def test_frozen_prevents_mutation(self) -> None:
+        """ViewpointResult rejects field mutation."""
+        from dataclasses import FrozenInstanceError
+
+        from datafactory_viewpoint.viewpoint_result import (
+            ViewpointResult,
+        )
+
+        result = ViewpointResult(
+            output_path=Path("/tmp/out.parquet"),
+            n_events_input=100,
+            n_events_output=90,
+            n_summary_expanded=5,
+            n_spatially_distributed=10,
+            n_filtered=5,
+            output_digest="abc123",
+            version="v1",
+        )
+        with pytest.raises(FrozenInstanceError):
+            result.version = "v2"  # type: ignore[misc]

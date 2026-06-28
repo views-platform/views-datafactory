@@ -42,12 +42,11 @@ The same two-step mechanism applies at all levels — only the polygon source va
 
 | `where_prec` | Polygon | How determined |
 |--------------|---------|----------------|
-| 4 | Admin-1 region | `adm_1` field from UCDP, matched to GAUL admin-1 polygon |
-| 5 (with `adm_1`) | Admin-1 region | `adm_1` field from UCDP, matched to GAUL admin-1 polygon |
-| 5 (without `adm_1`) | Admin-1 region | Spatial join of centroid lat/lon against GAUL admin-1 boundaries |
-| 6 | Country | `country_id` from UCDP, matched to GAUL country polygon |
+| 4 | Admin-1 region | Centroid cell's GAUL admin-1 code via `gaul1_code.parquet` crosswalk |
+| 5 | Admin-1 region | Centroid cell's GAUL admin-1 code via `gaul1_code.parquet` crosswalk |
+| 6 | Country | Centroid cell's GAUL country code via `gaul0_code.parquet` crosswalk |
 
-For `where_prec = 5` without an `adm_1` field, the centroid coordinates that UCDP provides are joined against GAUL to find the containing admin-1 polygon. This is a coordinate-based spatial operation — no free-text parsing of `where_coordinates`.
+All precision levels use the same mechanism: the centroid PRIO-GRID cell is looked up in the precomputed GAUL crosswalk parquet to find the containing polygon. No free-text field parsing or name matching is required.
 
 ### 3. Proportional weighting
 
