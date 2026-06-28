@@ -1,20 +1,23 @@
 """UCDP viewpoint v1 — production-parity materialized view.
 
 Reads the consolidated event store, applies configurable
-survivorship rules and temporal distribution, then writes a
-single Parquet with one row per event-month.
+survivorship rules, temporal and spatial distribution, then
+writes a single Parquet with one row per event-month-cell.
 
 Processing order:
 1. Stale-version filtering (configurable via filter_stale_versions)
 2. Survivorship — one winner per event id (strategy via config)
-3. Distribution — expand summary events (strategy via config,
-   with optional per-source-type overrides via source_distribution_map)
-4. Filtering — priogrid_gid, type_of_violence, where_prec
-5. Output — Parquet with date_month column, metadata stripped
+3. Temporal distribution — expand summary events (strategy via
+   config, with optional per-source-type overrides)
+4. Spatial distribution — expand imprecise events across polygon
+   cells (ADR-049, strategy via config)
+5. Filtering — priogrid_gid, type_of_violence, where_prec
+6. Output — Parquet with date_month column, metadata stripped
 
 Non-configurable invariants documented in ADR-023.
-Implements ADR-014 (viewpoints as derived views) and
-ADR-015 (UCDP-specific rules).
+Implements ADR-014 (viewpoints as derived views),
+ADR-015 (UCDP-specific rules), and
+ADR-049 (spatial distribution of imprecise events).
 """
 
 from __future__ import annotations
@@ -33,6 +36,12 @@ from datafactory_provenance import (
     compute_file_digest,
 )
 from datafactory_viewpoint.builders import register_builder
+from datafactory_viewpoint.spatial_distribution import (
+    get_spatial_distribution,
+)
+from datafactory_viewpoint.spatial_weights import (
+    build_spatial_weight_map,
+)
 from datafactory_viewpoint.survivorship import get_survivorship
 from datafactory_viewpoint.temporal_distribution import (
     get_distribution,
@@ -50,6 +59,7 @@ REQUIRED_CONSOLIDATED_FIELDS: set[str] = {
     "id", "_source_type", "_source_version",
     "date_start", "date_end", "date_prec",
     "best", "low", "high",
+    "priogrid_gid", "where_prec",
 }
 
 # What this layer PRODUCES (columns added to output)
@@ -77,6 +87,8 @@ def _passes_filters(
         > config.max_type_of_violence
     ):
         return False
+    if row.get("_spatial_distributed"):
+        return True
     return not (
         config.exclude_where_prec
         and row.get("where_prec") in config.exclude_where_prec
@@ -231,6 +243,9 @@ def build_ucdp_v1(
     # Look up strategies
     survivorship_fn = get_survivorship(config.survivorship_strategy)
     distribution_fn = get_distribution(config.distribution_strategy)
+    spatial_dist_fn = get_spatial_distribution(
+        config.spatial_distribution_strategy,
+    )
 
     # Pre-resolve source-distribution overrides
     source_dist_fns: (
@@ -241,6 +256,15 @@ def build_ucdp_v1(
             src: get_distribution(strat)
             for src, strat in config.source_distribution_map.items()
         }
+
+    # Build spatial weight map (if distributing)
+    weight_map = None
+    if config.spatial_distribution_strategy != "passthrough":
+        weight_map = build_spatial_weight_map(
+            table,
+            config.gaul1_crosswalk_path,
+            config.gaul0_crosswalk_path,
+        )
 
     # Sort by event id for grouped processing
     table = table.sort_by("id")
@@ -261,6 +285,8 @@ def build_ucdp_v1(
     n_groups = 0
     n_summary = 0
     n_filtered = 0
+    n_spatially_distributed = 0
+    n_spatial_cells_created = 0
 
     # Process groups: walk sorted id column, slice per group
     i = 0
@@ -294,6 +320,17 @@ def build_ucdp_v1(
         if len(distributed) > 1:
             n_summary += 1
 
+        # Spatial distribution: expand imprecise events
+        if weight_map is not None:
+            spatially_expanded: list[dict] = []
+            for row in distributed:
+                expanded = spatial_dist_fn(row, weight_map)
+                if len(expanded) > 1:
+                    n_spatially_distributed += 1
+                    n_spatial_cells_created += len(expanded)
+                spatially_expanded.extend(expanded)
+            distributed = spatially_expanded
+
         # Filter + append to output columns
         for row in distributed:
             if not _passes_filters(row, config):
@@ -306,9 +343,11 @@ def build_ucdp_v1(
 
     logger.info(
         "Processed %d groups: %d summary expanded, "
+        "%d spatially distributed (%d cells), "
         "%d filtered, %d output rows",
-        n_groups, n_summary, n_filtered,
-        len(output_columns["date_month"]),
+        n_groups, n_summary,
+        n_spatially_distributed, n_spatial_cells_created,
+        n_filtered, len(output_columns["date_month"]),
     )
 
     # Build output table from accumulated columns
@@ -333,6 +372,9 @@ def build_ucdp_v1(
         "version": config.version,
         "survivorship_strategy": config.survivorship_strategy,
         "distribution_strategy": config.distribution_strategy,
+        "spatial_distribution_strategy": (
+            config.spatial_distribution_strategy
+        ),
         "filter_stale_versions": config.filter_stale_versions,
         "source_distribution_map": config.source_distribution_map,
         "n_events_read": n_read,
@@ -342,6 +384,8 @@ def build_ucdp_v1(
         "n_survivorship_discarded": n_survivorship_discarded,
         "n_events_output": n_output,
         "n_summary_expanded": n_summary,
+        "n_spatially_distributed": n_spatially_distributed,
+        "n_spatial_cells_created": n_spatial_cells_created,
         "n_filtered": n_filtered,
         "output_path": str(config.output_path),
         "output_digest": output_digest,
@@ -359,6 +403,7 @@ def build_ucdp_v1(
         n_events_input=n_input,
         n_events_output=n_output,
         n_summary_expanded=n_summary,
+        n_spatially_distributed=n_spatially_distributed,
         n_filtered=n_filtered,
         output_digest=output_digest,
         version=config.version,

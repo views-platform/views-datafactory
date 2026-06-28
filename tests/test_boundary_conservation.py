@@ -570,6 +570,7 @@ class TestUcdpViewpointConservation:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             filter_stale_versions=False,
+            spatial_distribution_strategy="passthrough",
         )
         result = build_ucdp_v1(config)
 
@@ -624,6 +625,7 @@ class TestUcdpViewpointConservation:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             filter_stale_versions=True,
+            spatial_distribution_strategy="passthrough",
         )
         build_ucdp_v1(config)
 
@@ -671,6 +673,7 @@ class TestUcdpViewpointConservation:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             filter_stale_versions=False,
+            spatial_distribution_strategy="passthrough",
         )
         build_ucdp_v1(config)
 
@@ -728,6 +731,7 @@ class TestUcdpViewpointConservation:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             filter_stale_versions=False,
+            spatial_distribution_strategy="passthrough",
         )
         result = build_ucdp_v1(config)
 

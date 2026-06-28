@@ -6,6 +6,9 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from datafactory_viewpoint.spatial_distribution import (
+    get_spatial_distribution,
+)
 from datafactory_viewpoint.survivorship import get_survivorship
 from datafactory_viewpoint.temporal_distribution import (
     get_distribution,
@@ -38,6 +41,15 @@ class ViewpointConfig:
     # Strategy selection
     survivorship_strategy: str = "annual_wins"
     distribution_strategy: str = "even_split"
+    spatial_distribution_strategy: str = "proportional"
+
+    # GAUL crosswalk paths for spatial distribution
+    gaul1_crosswalk_path: Path = Path(
+        "data/raw/gaul_admin_area_majority/gaul1_code.parquet"
+    )
+    gaul0_crosswalk_path: Path = Path(
+        "data/raw/gaul_admin_area_majority/gaul0_code.parquet"
+    )
 
     # Pre-processing
     filter_stale_versions: bool = True
@@ -77,6 +89,17 @@ class ViewpointConfig:
             err_msg = (
                 f"Unknown distribution strategy: "
                 f"'{self.distribution_strategy}'"
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg) from exc
+        try:
+            get_spatial_distribution(
+                self.spatial_distribution_strategy,
+            )
+        except KeyError as exc:
+            err_msg = (
+                f"Unknown spatial distribution strategy: "
+                f"'{self.spatial_distribution_strategy}'"
             )
             logger.error(err_msg)
             raise ValueError(err_msg) from exc

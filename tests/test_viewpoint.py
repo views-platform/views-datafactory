@@ -89,11 +89,17 @@ def _write_consolidated(path: Path, events: list[dict]) -> Path:
 def _config(
     tmp_path: Path, consolidated_path: Path
 ) -> ViewpointConfig:
-    """Build a test config."""
+    """Build a test config.
+
+    Defaults to spatial_distribution_strategy="passthrough" because
+    these tests don't provide GAUL crosswalk data. Spatial
+    distribution is tested in test_spatial_distribution.py.
+    """
     return ViewpointConfig(
         consolidated_path=consolidated_path,
         output_path=tmp_path / "viewpoint" / "output.parquet",
         ledger_path=tmp_path / "provenance" / "ledger.jsonl",
+        spatial_distribution_strategy="passthrough",
     )
 
 
@@ -866,6 +872,7 @@ class TestBuildConfigFields:
             output_path=tmp_path / "on" / "out.parquet",
             ledger_path=tmp_path / "on" / "ledger.jsonl",
             filter_stale_versions=True,
+            spatial_distribution_strategy="passthrough",
         )
         result_on = build_ucdp_v1(cfg_on)
 
@@ -875,6 +882,7 @@ class TestBuildConfigFields:
             output_path=tmp_path / "off" / "out.parquet",
             ledger_path=tmp_path / "off" / "ledger.jsonl",
             filter_stale_versions=False,
+            spatial_distribution_strategy="passthrough",
         )
         result_off = build_ucdp_v1(cfg_off)
 
@@ -906,6 +914,7 @@ class TestBuildConfigFields:
             output_path=tmp_path / "u" / "out.parquet",
             ledger_path=tmp_path / "u" / "ledger.jsonl",
             distribution_strategy="ceil_split",
+            spatial_distribution_strategy="passthrough",
         )
         result_uniform = build_ucdp_v1(cfg_uniform)
         assert result_uniform.n_events_output == 3
@@ -919,6 +928,7 @@ class TestBuildConfigFields:
             source_distribution_map={
                 "annual": "date_end_only",
             },
+            spatial_distribution_strategy="passthrough",
         )
         result_mapped = build_ucdp_v1(cfg_mapped)
         assert result_mapped.n_events_output == 1
@@ -987,6 +997,7 @@ class TestFilteringGreen:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             min_priogrid_gid=1,
+            spatial_distribution_strategy="passthrough",
         )
 
         result = build_ucdp_v1(cfg)
@@ -1013,6 +1024,7 @@ class TestFilteringGreen:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             max_type_of_violence=3,
+            spatial_distribution_strategy="passthrough",
         )
 
         result = build_ucdp_v1(cfg)
@@ -1037,6 +1049,7 @@ class TestFilteringGreen:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             exclude_where_prec=(4, 6),
+            spatial_distribution_strategy="passthrough",
         )
 
         result = build_ucdp_v1(cfg)
@@ -1103,6 +1116,7 @@ class TestFilteringBeige:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             max_type_of_violence=3,
+            spatial_distribution_strategy="passthrough",
         )
         result = build_ucdp_v1(cfg)
         assert result.n_events_output == 1
@@ -1126,6 +1140,7 @@ class TestFilteringBeige:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             exclude_where_prec=(4, 6),
+            spatial_distribution_strategy="passthrough",
         )
         result = build_ucdp_v1(cfg)
         assert result.n_events_output == 1
