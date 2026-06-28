@@ -171,6 +171,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-048** -- Declared Feature Aggregation Types
   Every feature's aggregation type (extensive/intensive/static) is declared in `SourceEntry.feature_agg_types`, propagated through assembly provenance, and read by downstream consumers. Eliminates prefix-sniffing violations of ADR-003.
 
+- **ADR-049** -- Spatial Distribution of Imprecise UCDP Events (Known Geographical Imprecision)
+  UCDP events with low spatial precision (`where_prec` ≥ 4) are distributed across the cells of their target polygon (admin-1 or country), weighted proportionally by existing well-located fatalities. Mirrors `temporal_distribution.py`. On by default; viewser parity available via configuration.
+
 These must comply with the constitutional ADRs above.
 
 ---
