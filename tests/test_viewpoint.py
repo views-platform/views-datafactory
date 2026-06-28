@@ -1093,6 +1093,7 @@ class TestFilteringBeige:
             output_path=tmp_path / "vp" / "out.parquet",
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
             min_priogrid_gid=1,
+            spatial_distribution_strategy="passthrough",
         )
         result = build_ucdp_v1(cfg)
         assert result.n_events_output == 1

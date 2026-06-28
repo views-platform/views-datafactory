@@ -87,10 +87,9 @@ def _passes_filters(
         > config.max_type_of_violence
     ):
         return False
-    if row.get("_spatial_distributed"):
-        return True
     return not (
         config.exclude_where_prec
+        and not row.get("_spatial_distributed")
         and row.get("where_prec") in config.exclude_where_prec
     )
 
@@ -323,12 +322,15 @@ def build_ucdp_v1(
         # Spatial distribution: expand imprecise events
         if weight_map is not None:
             spatially_expanded: list[dict] = []
+            event_was_distributed = False
             for row in distributed:
                 expanded = spatial_dist_fn(row, weight_map)
                 if len(expanded) > 1:
-                    n_spatially_distributed += 1
+                    event_was_distributed = True
                     n_spatial_cells_created += len(expanded)
                 spatially_expanded.extend(expanded)
+            if event_was_distributed:
+                n_spatially_distributed += 1
             distributed = spatially_expanded
 
         # Filter + append to output columns

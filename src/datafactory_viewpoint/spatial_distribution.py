@@ -162,9 +162,9 @@ def proportional(
         else:
             return [event]
 
-    best = event.get("best") or 0
-    low = event.get("low") or 0
-    high = event.get("high") or 0
+    best = int(event.get("best") or 0)
+    low = int(event.get("low") or 0)
+    high = int(event.get("high") or 0)
 
     best_alloc = _distribute_value(best, weights)
     low_alloc = _distribute_value(low, weights)
