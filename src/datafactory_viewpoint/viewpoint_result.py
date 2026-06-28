@@ -16,6 +16,9 @@ class ViewpointResult:
         n_events_output: Rows in the viewpoint output (may differ
             due to survivorship dedup and summary event expansion).
         n_summary_expanded: Summary events that were expanded.
+        n_spatially_distributed: Events spatially distributed
+            across polygon cells (ADR-049).
+        n_filtered: Events removed by filters.
         output_digest: SHA-256 content digest of the output file.
         version: Viewpoint version tag from config.
     """
