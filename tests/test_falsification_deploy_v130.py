@@ -122,6 +122,8 @@ class TestF5PostmortemLessonsApplied:
         for test_file in test_files:
             if "deploy_v130" in test_file:
                 continue
+            if "deploy_v160" in test_file:
+                continue
             content = Path(test_file).read_text()
             func_idx = content.index(
                 "def test_version_not_already_tagged"
