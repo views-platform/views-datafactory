@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-06-28)
-**Last update:** ADR-049 pre-merge fixes (2026-06-28) — C-303, C-304, C-305 resolved (provenance counters added, ADR §2 table corrected, config paths aligned). Header counts: 271→274 resolved, 31→28 open, Tier 4: 20→17. Prior: ADR-049 epic (#300, 2026-06-28) — C-303/C-304/C-305 registered via falsification; ADR-003 epic (#290, 2026-06-28) — C-299 resolved, C-300/C-301/C-302 registered; infrastructure test coverage (#280, 2026-06-26) — C-271/C-280/C-276/C-189 resolved; scaling headroom (#274, 2026-06-26) — C-144/C-145 resolved; temporal alignment (#266, 2026-06-26) — C-286/C-156 resolved; count conservation (#258, 2026-06-24) — C-131/C-291/C-249/C-241 resolved; WDI readiness (2026-06-24) — C-223/C-298 resolved; test hardening (#234, 2026-06-24) — C-290/C-294/C-295/C-296/C-297 resolved. Earlier history in git log
+**Last update:** PR #307 review findings (2026-06-28) — C-306/C-307/C-308 registered and resolved (xfail removed, gh CLI error guard added, plan path globbed). Header counts: 274→277 resolved, 305→308 IDs. Prior: ADR-049 pre-merge fixes (2026-06-28) — C-303, C-304, C-305 resolved (provenance counters added, ADR §2 table corrected, config paths aligned). Header counts: 271→274 resolved, 31→28 open, Tier 4: 20→17. Prior: ADR-049 epic (#300, 2026-06-28) — C-303/C-304/C-305 registered via falsification; ADR-003 epic (#290, 2026-06-28) — C-299 resolved, C-300/C-301/C-302 registered; infrastructure test coverage (#280, 2026-06-26) — C-271/C-280/C-276/C-189 resolved; scaling headroom (#274, 2026-06-26) — C-144/C-145 resolved; temporal alignment (#266, 2026-06-26) — C-286/C-156 resolved; count conservation (#258, 2026-06-24) — C-131/C-291/C-249/C-241 resolved; WDI readiness (2026-06-24) — C-223/C-298 resolved; test hardening (#234, 2026-06-24) — C-290/C-294/C-295/C-296/C-297 resolved. Earlier history in git log
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10, repo-assimilation v1.3.0 2026-06-16, expert-code-review register-risk 2026-06-18, test-review v1.4.0 2026-06-24
-**Status:** 305 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 274 resolved, 28 open concerns (0 Tier 1, 1 Tier 2, 4 Tier 3, 17 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 90 struck-through in active register (274 unique after dedup — 3 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
+**Status:** 308 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 277 resolved, 28 open concerns (0 Tier 1, 1 Tier 2, 4 Tier 3, 17 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 93 struck-through in active register (277 unique after dedup — 3 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -140,6 +140,9 @@
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
+| ~~C-306~~ | ~~4~~ | ~~xfail neutralizes F1 hard falsification — test never blocks deployment~~ | Resolved 2026-06-28 (xfail removed, test fails loud pre-deploy) | Test quality |
+| ~~C-307~~ | ~~4~~ | ~~gh CLI failure silently treated as "all issues closed" in F6~~ | Resolved 2026-06-28 (returncode guard + fail-loud on gh unavailable) | Test quality |
+| ~~C-308~~ | ~~4~~ | ~~Hardcoded plan path in F7 silently skips when plan renamed~~ | Resolved 2026-06-28 (glob pattern finds highest-numbered plan) | Test quality |
 | ~~C-159~~ | ~~4~~ | ~~ACLED snapshot archiving and revision comparison paths untested~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
 | C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
@@ -1701,6 +1704,54 @@ Cross-ref: C-303 (ADR-049 §Validation counter gap — same ADR, different secti
 | Location | `src/datafactory_viewpoint/viewpoint_config.py:47-51` (config defaults), `scripts/refresh_pipeline.sh:168` (pipeline `--data-dir`) |
 
 Cross-ref: C-303 (ADR-049 provenance counters), C-304 (ADR-049 §2 method divergence).
+
+---
+
+### ~~C-306: xfail neutralizes F1 hard falsification — test never blocks deployment~~
+
+`test_falsification_deploy_v160.py:42-45` wraps the version-tag check with `@pytest.mark.xfail(condition=_tag_exists(...))`. When the tag already exists (the exact condition the test should flag), the assertion failure is caught as XFAIL and CI stays green. The "hard falsification" F1 can never turn the suite red, defeating its purpose as a deploy gate.
+
+| Field | Value |
+|-------|-------|
+| ID | C-306 |
+| Tier | 4 — test quality, no production data impact |
+| Source | PR #307 review (2026-06-28), Angle A |
+| Trigger | Developer relies on F1 to block deployment when version is not bumped |
+| Location | `tests/test_falsification_deploy_v160.py:42-45` |
+
+Cross-ref: C-307 (same file, different test quality gap).
+
+---
+
+### ~~C-307: gh CLI failure silently treated as "all issues closed" in F6~~
+
+`test_falsification_deploy_v160.py:88-98` loops over 10 issue numbers calling `gh issue view`. If `gh` is missing, unauthenticated, or the API fails, `result.stdout` is empty (not `"OPEN"`), so every issue silently passes as closed. The test gives a false green when it has no data.
+
+| Field | Value |
+|-------|-------|
+| ID | C-307 |
+| Tier | 4 — test quality, no production data impact |
+| Source | PR #307 review (2026-06-28), Angle A |
+| Trigger | CI runs without `gh` installed or authenticated |
+| Location | `tests/test_falsification_deploy_v160.py:88-98` |
+
+Cross-ref: C-306 (same file, different gap), C-308 (same file, different gap).
+
+---
+
+### ~~C-308: Hardcoded plan path in F7 silently skips when plan renamed~~
+
+`test_falsification_deploy_v160.py:113` hardcodes `product_development_plan11.md`. When the plan is renamed to v12+, the path doesn't exist, `pytest.skip` fires, and the staleness check is permanently disabled. A falsification test that skips when its input is absent is self-defeating.
+
+| Field | Value |
+|-------|-------|
+| ID | C-308 |
+| Tier | 4 — test quality, no production data impact |
+| Source | PR #307 review (2026-06-28), Altitude angle |
+| Trigger | Product plan renamed from v11 to v12+ |
+| Location | `tests/test_falsification_deploy_v160.py:113` |
+
+Cross-ref: C-306 (same file), C-307 (same file).
 
 ---
 
