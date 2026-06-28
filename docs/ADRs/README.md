@@ -168,6 +168,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-047** -- Assembly Temporal Anchor
   Declares UCDP as the temporal anchor for the assembled grid. All sources align to UCDP's `time_steps.npy`; partial-coverage sources are zero-filled. Each source records `first_valid_*_month_id` in provenance; `load_dataset()` warns consumers about pre-coverage zero-fill.
 
+- **ADR-048** -- Declared Feature Aggregation Types
+  Every feature's aggregation type (extensive/intensive/static) is declared in `SourceEntry.feature_agg_types`, propagated through assembly provenance, and read by downstream consumers. Eliminates prefix-sniffing violations of ADR-003.
+
 These must comply with the constitutional ADRs above.
 
 ---
