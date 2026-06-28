@@ -23,11 +23,6 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["grid_to_country_month"]
 
-_INTENSIVE_PREFIXES = (
-    "shdi", "healthindex", "edindex", "incindex",
-    "vdem_", "ghs_built_",
-)
-
 
 def grid_to_country_month(
     grid: np.ndarray,
@@ -38,11 +33,16 @@ def grid_to_country_month(
     country_feature: str = "gaul0_code",
     land_pgids: set[int] | None = None,
     month_id_epoch: int = 0,
+    feature_agg_types: dict[str, str] | None = None,
 ) -> pd.DataFrame:
     """Convert a [T, H, W, C] grid to a country-month DataFrame.
 
     Flattens the grid to cell level, then groups by
     (month_id, country_id) and sums numeric features.
+
+    When *feature_agg_types* is provided (ADR-048), intensive
+    features raise ``ValueError`` (fail-loud, ADR-011) and static
+    features are excluded from the aggregation.
 
     Args:
         grid: Grid array of shape [T, H, W, C].
@@ -54,13 +54,18 @@ def grid_to_country_month(
         land_pgids: Optional set of land cell IDs. If provided,
             only land cells are included.
         month_id_epoch: Base year for month_id encoding.
+        feature_agg_types: Feature name → aggregation type mapping
+            from the source registry (ADR-048). When provided,
+            enables type-aware aggregation.
 
     Returns:
         DataFrame with (month_id, country_id) MultiIndex and
-        one column per feature (excluding the country_feature).
+        one column per extensive feature.
 
     Raises:
-        ValueError: If country_feature is not in feature_names.
+        ValueError: If country_feature is not in feature_names,
+            or if intensive features are present when
+            feature_agg_types is provided.
     """
     if country_feature not in feature_names:
         msg = (
@@ -118,20 +123,27 @@ def grid_to_country_month(
     ]
     value_data = np.delete(flat_data, country_idx, axis=1)
 
-    intensive = [
-        f for f in value_features
-        if f.startswith(_INTENSIVE_PREFIXES)
-    ]
-    if intensive:
-        warnings.warn(
-            f"Country-month aggregation sums all features. "
-            f"Intensive features {intensive} are indices, not counts "
-            f"— their sums across cells are not meaningful. "
-            f"Consider using output_format='dataframe' and "
-            f"aggregating intensive features with a weighted mean.",
-            UserWarning,
-            stacklevel=2,
-        )
+    if feature_agg_types is not None:
+        intensive = [
+            f for f in value_features
+            if feature_agg_types.get(f) == "intensive"
+        ]
+        if intensive:
+            msg = (
+                f"Country-month aggregation cannot sum intensive "
+                f"features (ADR-048, ADR-011). Intensive features "
+                f"are indices, not counts — their sums across "
+                f"cells are not meaningful. Remove these features "
+                f"or use output_format='dataframe': {intensive}"
+            )
+            raise ValueError(msg)
+        # Exclude static features from aggregation
+        keep = [
+            i for i, f in enumerate(value_features)
+            if feature_agg_types.get(f) != "static"
+        ]
+        value_features = [value_features[i] for i in keep]
+        value_data = value_data[:, keep]
 
     df = pd.DataFrame(
         value_data,

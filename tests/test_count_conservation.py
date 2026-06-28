@@ -11,7 +11,6 @@ Uses if/raise RuntimeError, not assert — assert is stripped with -O.
 from __future__ import annotations
 
 import inspect
-import warnings
 
 import numpy as np
 import pytest
@@ -274,12 +273,12 @@ class TestRedNaNGuard:
 
 
 # ---------------------------------------------------------------------------
-# Green tier — intensive feature warning (C-241)
+# Green tier — intensive feature aggregation types (ADR-048)
 # ---------------------------------------------------------------------------
 
 
-class TestGreenIntensiveWarning:
-    """C-241: Warning when intensive features included in CM aggregation."""
+class TestIntensiveFeatureAggTypes:
+    """ADR-048: intensive features raise ValueError in CM aggregation."""
 
     def _make_grid(
         self, feature_names: list[str], n_t: int = 2,
@@ -295,7 +294,72 @@ class TestGreenIntensiveWarning:
         )[:n_t]
         return grid, pgids, time_steps
 
-    def test_intensive_feature_warning_emitted(self) -> None:
+    def test_intensive_feature_raises_when_types_declared(
+        self,
+    ) -> None:
+        from datafactory_adapters.grid_to_country_month import (
+            grid_to_country_month,
+        )
+
+        features = ["ged_sb_best", "shdi", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "shdi": "intensive",
+            "gaul0_code": "static",
+        }
+        grid, pgids, ts = self._make_grid(features)
+
+        with pytest.raises(ValueError, match="intensive"):
+            grid_to_country_month(
+                grid, pgids, ts, features,
+                feature_agg_types=agg_types,
+            )
+
+    def test_extensive_only_succeeds_with_types(self) -> None:
+        from datafactory_adapters.grid_to_country_month import (
+            grid_to_country_month,
+        )
+
+        features = ["ged_sb_best", "acled_count", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "acled_count": "extensive",
+            "gaul0_code": "static",
+        }
+        grid, pgids, ts = self._make_grid(features)
+
+        df = grid_to_country_month(
+            grid, pgids, ts, features,
+            feature_agg_types=agg_types,
+        )
+        assert "ged_sb_best" in df.columns
+        assert "acled_count" in df.columns
+        assert "gaul0_code" not in df.columns
+
+    def test_static_features_excluded_from_output(self) -> None:
+        from datafactory_adapters.grid_to_country_month import (
+            grid_to_country_month,
+        )
+
+        features = [
+            "ged_sb_best", "landarea", "gaul0_code",
+        ]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "landarea": "static",
+            "gaul0_code": "static",
+        }
+        grid, pgids, ts = self._make_grid(features)
+
+        df = grid_to_country_month(
+            grid, pgids, ts, features,
+            feature_agg_types=agg_types,
+        )
+        assert "ged_sb_best" in df.columns
+        assert "landarea" not in df.columns
+
+    def test_no_types_falls_through_without_error(self) -> None:
+        """Without feature_agg_types, all features are summed."""
         from datafactory_adapters.grid_to_country_month import (
             grid_to_country_month,
         )
@@ -303,24 +367,10 @@ class TestGreenIntensiveWarning:
         features = ["ged_sb_best", "shdi", "gaul0_code"]
         grid, pgids, ts = self._make_grid(features)
 
-        with pytest.warns(UserWarning, match="Intensive features"):
-            grid_to_country_month(
-                grid, pgids, ts, features,
-            )
-
-    def test_no_warning_for_extensive_only(self) -> None:
-        from datafactory_adapters.grid_to_country_month import (
-            grid_to_country_month,
+        df = grid_to_country_month(
+            grid, pgids, ts, features,
         )
-
-        features = ["ged_sb_best", "acled_count", "gaul0_code"]
-        grid, pgids, ts = self._make_grid(features)
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", UserWarning)
-            grid_to_country_month(
-                grid, pgids, ts, features,
-            )
+        assert "shdi" in df.columns
 
 
 class TestRedFloat64Regression:
