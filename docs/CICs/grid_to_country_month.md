@@ -3,7 +3,7 @@
 **Status:** Active
 **Owner:** Simon Polichinel von der Maase
 **Last reviewed:** 2026-06-24
-**Related ADRs:** ADR-012, ADR-025, ADR-039, ADR-040
+**Related ADRs:** ADR-012, ADR-025, ADR-039, ADR-040, ADR-048
 
 ---
 
@@ -46,6 +46,7 @@ This is the bridge between grid-native data (one row per cell per month) and cou
 - `country_feature`: str, must exist in `feature_names` (default: `"gaul0_code"`)
 - `land_pgids`: optional set of land cell IDs for filtering
 - `month_id_epoch`: int, base year for month_id encoding (default: 0)
+- `feature_agg_types`: optional `dict[str, str]` mapping feature names to aggregation types (`"extensive"`, `"intensive"`, `"static"`). When provided, enables type-aware aggregation (ADR-048).
 
 Assumptions not met cause immediate `ValueError`.
 
@@ -54,17 +55,18 @@ Assumptions not met cause immediate `ValueError`.
 ## 5. Outputs and Side Effects
 
 - Returns a `pd.DataFrame` with `(month_id, country_id)` MultiIndex
-- One column per feature except the country feature
+- When `feature_agg_types` is provided: one column per extensive feature (static features excluded from output). When not provided: one column per feature except the country feature.
 - All values are sums over grid cells belonging to each (month, country) group
 - Emits `UserWarning` when excluded cells (country_id <= 0) have nonzero event feature values (features starting with `ged_` or `acled_`). The warning includes the count of excluded cell-months and how many carry events. Since ADR-039, the number of excluded cells with events is substantially reduced.
-- Emits `UserWarning` when intensive features (SHDI, V-Dem, GHS-BUILT-S — prefixes `shdi`, `healthindex`, `edindex`, `incindex`, `vdem_`, `ghs_built_`) are included in the aggregation. Summation is not meaningful for these indices; the warning recommends `output_format='dataframe'` with weighted mean aggregation. Aggregation still proceeds — consumers can suppress the warning.
+- When `feature_agg_types` is provided (ADR-048): raises `ValueError` if any intensive features are present — summation is not meaningful for indices (fail-loud per ADR-011). Callers must remove intensive features or use `output_format='dataframe'`.
 
 ---
 
 ## 6. Failure Modes and Loudness
 
 - `ValueError` if `country_feature` is not in `feature_names`
-- `RuntimeError` if any extensive feature column (prefixes `ged_`, `acled_`) contains NaN — this indicates a pipeline bug, not missing data (C-291). Raised by `assert_cm_conservation` before summation.
+- `ValueError` if intensive features are present when `feature_agg_types` is provided (ADR-048, ADR-011)
+- `RuntimeError` if any extensive feature column contains NaN when `feature_agg_types` identifies them — this indicates a pipeline bug, not missing data (C-291). Raised by `assert_cm_conservation` before summation.
 - Delegates to `_flatten_grid()` for shape mismatches
 
 All failures are immediate and loud. No silent fallbacks.
@@ -112,8 +114,8 @@ df.loc[(500, 12345)]  # 12345 is a pgid, not a country_id
 
 ## 10. Test Alignment
 
-- **Green:** Correct aggregation with default country feature, correct MultiIndex shape; intensive feature warning emitted when SHDI/V-Dem/GHS-BUILT-S features present; no warning for extensive-only feature sets
-- **Beige:** Missing country feature raises ValueError, all-ocean grid produces empty DataFrame
+- **Green:** Correct aggregation with default country feature, correct MultiIndex shape; intensive feature raises ValueError when `feature_agg_types` is provided (ADR-048); extensive-only features aggregate correctly; static features excluded from output
+- **Beige:** Missing country feature raises ValueError, all-ocean grid produces empty DataFrame; without `feature_agg_types`, all features are summed (backward compat)
 - **Red:** Aggregation correctness: manual sum of known cells matches grouped output; count conservation equation verified per ADR-040 (`grid_total = cm_total + excluded_total` for all extensive features); NaN in extensive features raises RuntimeError before summation; NaN in intensive features does not raise; float64 regression guard proves partition-sum precision at 500K cells
 
 Tests in `tests/test_grid_to_country_month.py` (if present).

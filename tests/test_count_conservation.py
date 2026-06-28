@@ -74,6 +74,11 @@ class TestGreenCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "ged_ns_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "ged_ns_best": "extensive",
+            "gaul0_code": "static",
+        }
         n_cells = 20
         flat_all = np.ones((n_cells, 3), dtype=np.float32)
         flat_all[:, 2] = np.repeat([10, 20], 10)
@@ -86,12 +91,17 @@ class TestGreenCMConservation:
 
         assert_cm_conservation(
             feature_names, flat_all, flat_land, excluded_data,
+            feature_agg_types=agg_types,
         )
 
     def test_cm_conservation_float_tolerance(self) -> None:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         n_cells = 10000
         rng = np.random.default_rng(42)
         flat_all = rng.random((n_cells, 2)).astype(np.float32)
@@ -106,6 +116,7 @@ class TestGreenCMConservation:
 
         assert_cm_conservation(
             feature_names, flat_all, flat_land, excluded_data,
+            feature_agg_types=agg_types,
         )
 
 
@@ -137,6 +148,10 @@ class TestBeigeCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         flat_all = np.ones((10, 2), dtype=np.float32)
         flat_all[:, 1] = 0  # all ocean
 
@@ -147,21 +162,26 @@ class TestBeigeCMConservation:
 
         assert_cm_conservation(
             feature_names, flat_all, flat_land, excluded_data,
+            feature_agg_types=agg_types,
         )
 
     def test_no_extensive_features_skips_check(self) -> None:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["hdi", "democracy_score", "gaul0_code"]
+        agg_types = {
+            "hdi": "intensive",
+            "democracy_score": "intensive",
+            "gaul0_code": "static",
+        }
         flat_all = np.ones((10, 3), dtype=np.float32)
 
-        # Even with mismatched shapes, should not raise
-        # because no features match extensive prefixes
         flat_land = flat_all[:5]
         excluded_data = flat_all[5:]
 
         assert_cm_conservation(
             feature_names, flat_all, flat_land, excluded_data,
+            feature_agg_types=agg_types,
         )
 
 
@@ -177,6 +197,10 @@ class TestRedCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         flat_all = np.ones((10, 2), dtype=np.float32)
         flat_all[:, 1] = 10
 
@@ -187,6 +211,7 @@ class TestRedCMConservation:
         with pytest.raises(RuntimeError, match="conservation violated"):
             assert_cm_conservation(
                 feature_names, flat_all, flat_land, excluded_data,
+                feature_agg_types=agg_types,
             )
 
     def test_uses_raise_not_assert(self) -> None:
@@ -204,6 +229,10 @@ class TestRedCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         flat_all = np.ones((10, 2), dtype=np.float32)
         flat_all[:, 1] = 10
         flat_all[3, 0] = np.nan  # inject NaN into extensive feature
@@ -217,6 +246,7 @@ class TestRedCMConservation:
                 flat_all,
                 flat_all[land_mask],
                 flat_all[~land_mask],
+                feature_agg_types=agg_types,
             )
 
     def test_nan_in_non_extensive_feature_does_not_raise(self) -> None:
@@ -224,6 +254,10 @@ class TestRedCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "shdi"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "shdi": "intensive",
+        }
         flat_all = np.ones((10, 2), dtype=np.float32)
         flat_all[3, 1] = np.nan  # NaN in intensive feature only
 
@@ -235,6 +269,7 @@ class TestRedCMConservation:
             flat_all,
             flat_all[land_mask],
             flat_all[~land_mask],
+            feature_agg_types=agg_types,
         )
 
 
@@ -247,11 +282,17 @@ class TestRedNaNGuard:
         )
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         data = np.ones((5, 2), dtype=np.float32)
         data[2, 0] = np.nan
 
         with pytest.raises(RuntimeError, match="Unexpected NaN"):
-            assert_no_unexpected_nan(feature_names, data)
+            assert_no_unexpected_nan(
+                feature_names, data, feature_agg_types=agg_types,
+            )
 
     def test_clean_data_passes(self) -> None:
         from datafactory_adapters._conservation import (
@@ -259,8 +300,14 @@ class TestRedNaNGuard:
         )
 
         feature_names = ["ged_sb_best", "acled_count"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "acled_count": "extensive",
+        }
         data = np.ones((100, 2), dtype=np.float32)
-        assert_no_unexpected_nan(feature_names, data)
+        assert_no_unexpected_nan(
+            feature_names, data, feature_agg_types=agg_types,
+        )
 
     def test_empty_array_passes(self) -> None:
         from datafactory_adapters._conservation import (
@@ -268,8 +315,11 @@ class TestRedNaNGuard:
         )
 
         feature_names = ["ged_sb_best"]
+        agg_types = {"ged_sb_best": "extensive"}
         data = np.ones((0, 1), dtype=np.float32)
-        assert_no_unexpected_nan(feature_names, data)
+        assert_no_unexpected_nan(
+            feature_names, data, feature_agg_types=agg_types,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -418,6 +468,10 @@ class TestRedFloat64Regression:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         n_cells = 500_000
         rng = np.random.default_rng(99)
         flat_all = (rng.random((n_cells, 2)) * 90 + 10).astype(np.float32)
@@ -429,4 +483,5 @@ class TestRedFloat64Regression:
         assert_cm_conservation(
             feature_names, flat_all,
             flat_all[land_mask], flat_all[~land_mask],
+            feature_agg_types=agg_types,
         )

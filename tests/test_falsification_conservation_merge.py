@@ -17,20 +17,19 @@ from __future__ import annotations
 from pathlib import Path
 
 
-class TestF1CicIntensiveWarning:
-    """CIC §5 (Outputs and Side Effects) must document the new
-    intensive feature UserWarning."""
+class TestF1CicIntensiveBehavior:
+    """CIC §5 (Outputs and Side Effects) must document
+    intensive feature handling (ADR-048)."""
 
-    def test_cic_mentions_intensive_warning(self) -> None:
+    def test_cic_mentions_intensive(self) -> None:
         cic = Path("docs/CICs/grid_to_country_month.md").read_text()
         section5_start = cic.index("## 5.")
         section6_start = cic.index("## 6.")
         section5 = cic[section5_start:section6_start]
         assert "intensive" in section5.lower(), (
-            "CIC §5 does not mention the intensive feature "
-            "UserWarning added by PR #265. The module now emits "
-            "UserWarning when intensive features (SHDI, V-Dem, "
-            "GHS-BUILT-S) are included in CM sum aggregation."
+            "CIC §5 does not mention intensive feature handling. "
+            "The module raises ValueError for intensive features "
+            "when feature_agg_types is provided (ADR-048)."
         )
 
 

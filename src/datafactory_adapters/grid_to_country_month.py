@@ -111,6 +111,7 @@ def grid_to_country_month(
         flat_data,
         flat_data[land_mask],
         flat_data[excluded_mask],
+        feature_agg_types=feature_agg_types,
     )
 
     flat_data = flat_data[land_mask]

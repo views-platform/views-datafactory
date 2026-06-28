@@ -3,6 +3,9 @@
 Invariant 1 at CM boundary: for extensive features (count/sum),
 grid_total = land_total + excluded_total.
 
+Extensive features are identified from the declared
+feature_agg_types mapping (ADR-048), not from name prefixes.
+
 Uses np.allclose for float32 sums (rounding tolerance).
 Uses if/raise RuntimeError — assert is stripped with -O.
 """
@@ -13,14 +16,24 @@ import numpy as np
 
 __all__ = ["assert_cm_conservation", "assert_no_unexpected_nan"]
 
-# Extend when new count/sum sources are added (e.g. WDI).
-_EXTENSIVE_PREFIXES = ("ged_", "acled_")
+
+def _extensive_indices(
+    feature_names: list[str],
+    feature_agg_types: dict[str, str] | None,
+) -> list[int]:
+    """Return column indices of extensive features."""
+    if feature_agg_types is None:
+        return []
+    return [
+        i for i, f in enumerate(feature_names)
+        if feature_agg_types.get(f) == "extensive"
+    ]
 
 
 def assert_no_unexpected_nan(
     feature_names: list[str],
     data: np.ndarray,
-    extensive_prefixes: tuple[str, ...] = _EXTENSIVE_PREFIXES,
+    feature_agg_types: dict[str, str] | None = None,
     label: str = "grid",
 ) -> None:
     """Raise if any extensive feature column contains NaN.
@@ -30,10 +43,7 @@ def assert_no_unexpected_nan(
     nansum would silently exclude these values, weakening the
     conservation invariant (C-291).
     """
-    indices = [
-        i for i, f in enumerate(feature_names)
-        if f.startswith(extensive_prefixes)
-    ]
+    indices = _extensive_indices(feature_names, feature_agg_types)
     if not indices or data.size == 0:
         return
 
@@ -53,24 +63,21 @@ def assert_cm_conservation(
     flat_data_all: np.ndarray,
     flat_data_land: np.ndarray,
     excluded_data: np.ndarray,
-    extensive_prefixes: tuple[str, ...] = _EXTENSIVE_PREFIXES,
+    feature_agg_types: dict[str, str] | None = None,
 ) -> None:
     """Verify grid_total = land_total + excluded_total for extensive features."""
-    indices = [
-        i for i, f in enumerate(feature_names)
-        if f.startswith(extensive_prefixes)
-    ]
+    indices = _extensive_indices(feature_names, feature_agg_types)
     if not indices:
         return
 
     assert_no_unexpected_nan(
-        feature_names, flat_data_all, extensive_prefixes, "all",
+        feature_names, flat_data_all, feature_agg_types, "all",
     )
     assert_no_unexpected_nan(
-        feature_names, flat_data_land, extensive_prefixes, "land",
+        feature_names, flat_data_land, feature_agg_types, "land",
     )
     assert_no_unexpected_nan(
-        feature_names, excluded_data, extensive_prefixes, "excluded",
+        feature_names, excluded_data, feature_agg_types, "excluded",
     )
 
     for i in indices:
