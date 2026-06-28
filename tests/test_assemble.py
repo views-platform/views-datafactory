@@ -646,6 +646,35 @@ class TestRegistryAssemblySync:
             f"registry GAUL Admin features {gaul_entry.features}"
         )
 
+    def test_feature_agg_types_cover_all_features(self) -> None:
+        """get_feature_agg_type_map() returns a type for every feature."""
+        from datafactory_provenance.source_registry import (
+            get_all_features,
+            get_feature_agg_type_map,
+        )
+
+        agg_map = get_feature_agg_type_map()
+        all_features = get_all_features()
+        for feat in all_features:
+            assert feat in agg_map, (
+                f"Feature {feat!r} has no agg type in registry"
+            )
+
+    def test_feature_agg_types_list_parallel_to_features(self) -> None:
+        """Assembly's feature_agg_types list is parallel to all_features."""
+        from datafactory_provenance.source_registry import (
+            get_all_features,
+            get_feature_agg_type_map,
+        )
+
+        all_features = list(get_all_features())
+        agg_map = get_feature_agg_type_map()
+        agg_types = [agg_map[f] for f in all_features]
+        assert len(agg_types) == len(all_features)
+        valid = {"extensive", "intensive", "static"}
+        for t in agg_types:
+            assert t in valid
+
 
 # ---- Assembly Red/Beige tests (C-297, #235) ----
 

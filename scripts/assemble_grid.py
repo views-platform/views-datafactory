@@ -423,6 +423,9 @@ def main() -> int:
         append_ledger_entry,
         compute_file_digest,
     )
+    from datafactory_provenance.source_registry import (
+        get_feature_agg_type_map,
+    )
     _ledger_path = config.output_dir / "ledger.jsonl"
     _ledger_written = False
 
@@ -594,6 +597,8 @@ def main() -> int:
             + ghsbuilts_features + vdem_features + shdi_features
             + static_names + admin_names
         )
+        agg_type_map = get_feature_agg_type_map()
+        feature_agg_types = [agg_type_map[f] for f in all_features]
 
         print(
             f"Assembling [T={n_t}, H={n_h}, "
@@ -738,6 +743,9 @@ def main() -> int:
         np.save(config.output_dir / "time_steps.npy", time_steps)
         (config.output_dir / "feature_names.json").write_text(
             json.dumps(all_features)
+        )
+        (config.output_dir / "feature_agg_types.json").write_text(
+            json.dumps(feature_agg_types)
         )
 
         # Provenance
@@ -1013,6 +1021,7 @@ def main() -> int:
             "output_shape": [n_t, n_h, n_w, n_total],
             "n_features": len(all_features),
             "feature_names": all_features,
+            "feature_agg_types": feature_agg_types,
             "output_digest": output_digest,
         }
         if last_valid_month_id is not None:
