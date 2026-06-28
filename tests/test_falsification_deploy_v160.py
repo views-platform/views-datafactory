@@ -77,6 +77,8 @@ class TestF6IssueHygiene:
         Checks a subset of known-completed epics. If any are still open,
         the issue tracker is misleading about project state.
         """
+        import json
+
         completed_epics = [
             258, 264, 266, 272, 274, 279, 280, 286, 290, 298,
         ]
@@ -90,8 +92,6 @@ class TestF6IssueHygiene:
             "gh CLI failed — cannot verify issue state. "
             f"stderr: {probe.stderr.strip()}"
         )
-        import json
-
         open_numbers = {
             i["number"]
             for i in json.loads(probe.stdout)
