@@ -113,6 +113,7 @@ def _load_grid_from_zarr(
 ) -> tuple[
     np.ndarray, np.ndarray, np.ndarray, list[str],
     int | None, dict[str, int],
+    dict[str, str] | None, dict[str, list[str]],
 ]:
     """Load assembled grid from a zarr store.
 
@@ -129,7 +130,8 @@ def _load_grid_from_zarr(
 
     Returns:
         (grid, pgids, time_steps, feature_names,
-         last_valid_month_id, first_valid_month_ids)
+         last_valid_month_id, first_valid_month_ids,
+         feature_agg_types, source_features)
     """
     import xarray as xr
 
@@ -218,7 +220,7 @@ def _load_grid_from_zarr(
     ).astype(np.float32)
 
     ds.close()
-    return grid, pgids, time_steps, feature_names, last_valid_month_id, {}
+    return grid, pgids, time_steps, feature_names, last_valid_month_id, {}, None, {}
 
 
 def _load_grid_from_npy(
@@ -226,12 +228,14 @@ def _load_grid_from_npy(
 ) -> tuple[
     np.ndarray, np.ndarray, np.ndarray, list[str],
     int | None, dict[str, int],
+    dict[str, str] | None, dict[str, list[str]],
 ]:
     """Load assembled grid + sidecars from npy files on disk.
 
     Returns:
         (grid, pgids, time_steps, feature_names,
-         last_valid_month_id, first_valid_month_ids)
+         last_valid_month_id, first_valid_month_ids,
+         feature_agg_types, source_features)
     """
     grid_path = data_dir / "grid.npy"
     if not grid_path.exists():
@@ -250,6 +254,7 @@ def _load_grid_from_npy(
 
     last_valid_month_id: int | None = None
     first_valid_month_ids: dict[str, int] = {}
+    source_features: dict[str, list[str]] = {}
     provenance_path = data_dir / "provenance.json"
     if provenance_path.exists():
         prov = json.loads(provenance_path.read_text())
@@ -257,10 +262,29 @@ def _load_grid_from_npy(
         for key, val in prov.items():
             if key.startswith("first_valid_") and val is not None:
                 first_valid_month_ids[key] = val
+            if key.endswith("_features") and isinstance(val, list):
+                source_features[key] = val
+
+    feature_agg_types: dict[str, str] | None = None
+    agg_path = data_dir / "feature_agg_types.json"
+    if agg_path.exists():
+        agg_list = json.loads(agg_path.read_text())
+        if len(agg_list) != len(feature_names):
+            msg = (
+                f"feature_agg_types.json has {len(agg_list)} "
+                f"entries but feature_names has "
+                f"{len(feature_names)} — file is corrupt or "
+                f"stale (ADR-011)"
+            )
+            raise RuntimeError(msg)
+        feature_agg_types = dict(
+            zip(feature_names, agg_list, strict=True),
+        )
 
     return (
         grid, pgids, time_steps, feature_names,
         last_valid_month_id, first_valid_month_ids,
+        feature_agg_types, source_features,
     )
 
 
@@ -273,6 +297,7 @@ def _load_grid(
 ) -> tuple[
     np.ndarray, np.ndarray, np.ndarray, list[str],
     int | None, dict[str, int],
+    dict[str, str] | None, dict[str, list[str]],
 ]:
     """Load assembled grid from npy directory or zarr store.
 
@@ -282,7 +307,8 @@ def _load_grid(
 
     Returns:
         (grid, pgids, time_steps, feature_names,
-         last_valid_month_id, first_valid_month_ids)
+         last_valid_month_id, first_valid_month_ids,
+         feature_agg_types, source_features)
     """
     if _use_zarr_loader(data_dir):
         storage_options = _resolve_storage_options(str(data_dir))
@@ -314,20 +340,12 @@ def _resolve_feature_indices(
     return indices
 
 
-_SOURCE_PREFIXES: dict[str, tuple[str, ...]] = {
-    "first_valid_acled_month_id": ("acled_",),
-    "first_valid_ghspop_month_id": ("ghspop_",),
-    "first_valid_ghsbuilts_month_id": ("ghsbuilts_",),
-    "first_valid_vdem_month_id": ("vdem_",),
-    "first_valid_shdi_month_id": ("shdi_",),
-}
-
 _SOURCE_DISPLAY_NAMES: dict[str, str] = {
-    "first_valid_acled_month_id": "ACLED",
-    "first_valid_ghspop_month_id": "GHS-POP",
-    "first_valid_ghsbuilts_month_id": "GHS-BUILT-S",
-    "first_valid_vdem_month_id": "V-Dem",
-    "first_valid_shdi_month_id": "SHDI",
+    "acled": "ACLED",
+    "ghspop": "GHS-POP",
+    "ghsbuilts": "GHS-BUILT-S",
+    "vdem": "V-Dem",
+    "shdi": "SHDI",
 }
 
 
@@ -335,23 +353,35 @@ def _warn_pre_coverage(
     query_start_mid: int,
     first_valid_month_ids: dict[str, int],
     requested_features: set[str],
+    source_features: dict[str, list[str]],
 ) -> None:
     """Emit UserWarning for each source whose data starts after
     the query's start month, when the query includes features
-    from that source (ADR-047, C-156)."""
+    from that source (ADR-047, ADR-048, C-156).
+
+    Uses declared source-feature lists from provenance instead
+    of prefix inference (ADR-003 compliance).
+    """
     for key, first_mid in first_valid_month_ids.items():
         if query_start_mid >= first_mid:
             continue
-        prefixes = _SOURCE_PREFIXES.get(key)
-        if prefixes is None:
+        source_key = (
+            key.removeprefix("first_valid_")
+            .removesuffix("_month_id")
+        )
+        features_key = f"{source_key}_features"
+        src_feats = source_features.get(features_key)
+        if src_feats is None:
             continue
+        src_set = set(src_feats)
         affected = [
-            f for f in requested_features
-            if f.startswith(prefixes)
+            f for f in requested_features if f in src_set
         ]
         if not affected:
             continue
-        source_name = _SOURCE_DISPLAY_NAMES.get(key, key)
+        source_name = _SOURCE_DISPLAY_NAMES.get(
+            source_key, source_key,
+        )
         warnings.warn(
             f"{source_name} data begins at month_id "
             f"{first_mid}, but query starts at "
@@ -430,6 +460,7 @@ def load_dataset(
     (
         grid, pgids, time_steps, all_features,
         last_valid_month_id, first_valid_month_ids,
+        feature_agg_types, source_features,
     ) = _load_grid(
         data_dir,
         start=start if is_zarr else None,
@@ -475,6 +506,7 @@ def load_dataset(
             effective_start_mid,
             first_valid_month_ids,
             requested,
+            source_features,
         )
 
     # Feature subsetting (npy path — zarr already subsetted)
@@ -517,6 +549,7 @@ def load_dataset(
             all_features,
             land_pgids=region_pgids,
             month_id_epoch=month_id_epoch,
+            feature_agg_types=feature_agg_types,
         )
 
     # output_format == "dataframe"

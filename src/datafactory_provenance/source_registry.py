@@ -18,10 +18,13 @@ __all__ = [
     "PIPELINE_SOURCES",
     "SourceEntry",
     "get_all_features",
+    "get_feature_agg_type_map",
     "get_required_env_vars",
     "get_source_slo",
     "validate_preflight",
 ]
+
+_VALID_AGG_TYPES = frozenset({"extensive", "intensive", "static"})
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,7 @@ class SourceEntry:
     name: str
     required_env_vars: tuple[str, ...] = ()
     features: tuple[str, ...] = ()
+    feature_agg_types: tuple[str, ...] = ()
     slo_hours: int | None = None
     ledger_path: Path | None = None
 
@@ -66,6 +70,19 @@ class SourceEntry:
             if not feat:
                 msg = "features must not contain empty strings"
                 raise ValueError(msg)
+        if len(self.feature_agg_types) != len(self.features):
+            msg = (
+                f"feature_agg_types length ({len(self.feature_agg_types)}) "
+                f"must match features length ({len(self.features)})"
+            )
+            raise ValueError(msg)
+        for agg_type in self.feature_agg_types:
+            if agg_type not in _VALID_AGG_TYPES:
+                msg = (
+                    f"invalid feature_agg_type {agg_type!r}, "
+                    f"must be one of {sorted(_VALID_AGG_TYPES)}"
+                )
+                raise ValueError(msg)
         if self.slo_hours is not None and self.slo_hours <= 0:
             msg = f"slo_hours must be positive, got {self.slo_hours}"
             raise ValueError(msg)
@@ -80,6 +97,11 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
             "ged_sb_count", "ged_sb_best",
             "ged_ns_count", "ged_ns_best",
             "ged_os_count", "ged_os_best",
+        ),
+        feature_agg_types=(
+            "extensive", "extensive",
+            "extensive", "extensive",
+            "extensive", "extensive",
         ),
         slo_hours=8760,
         ledger_path=Path(
@@ -111,6 +133,12 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
             "acled_protests", "acled_riots",
             "acled_strategic", "acled_fatalities",
         ),
+        feature_agg_types=(
+            "extensive", "extensive",
+            "extensive", "extensive",
+            "extensive", "extensive",
+            "extensive", "extensive",
+        ),
         slo_hours=744,
         ledger_path=Path(
             "acled/ingestion_ledger.jsonl"
@@ -121,6 +149,9 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         features=(
             "ghspop_pop_count",
         ),
+        feature_agg_types=(
+            "extensive",
+        ),
         slo_hours=None,
         ledger_path=Path(
             "ghspop/ingestion_ledger.jsonl"
@@ -130,6 +161,9 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         name="GHS-BUILT-S",
         features=(
             "ghsbuilts_built_area",
+        ),
+        feature_agg_types=(
+            "intensive",
         ),
         slo_hours=None,
         ledger_path=Path(
@@ -152,6 +186,21 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
             "shrub_gc",
             "ttime_max", "ttime_mean", "ttime_min", "ttime_sd",
             "urban_gc", "water_gc",
+        ),
+        feature_agg_types=(
+            "static", "static", "static",
+            "static", "static", "static", "static",
+            "static", "static",
+            "static", "static",
+            "static", "static", "static",
+            "static", "static", "static",
+            "static",
+            "static", "static", "static", "static",
+            "static", "static", "static",
+            "static", "static",
+            "static",
+            "static", "static", "static", "static",
+            "static", "static",
         ),
         slo_hours=None,
         ledger_path=Path(
@@ -184,6 +233,16 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
             "vdem_v2xcl_rol",
             "vdem_v2x_accountability",
         ),
+        feature_agg_types=(
+            "intensive", "intensive", "intensive",
+            "intensive", "intensive", "intensive",
+            "intensive", "intensive", "intensive",
+            "intensive", "intensive", "intensive",
+            "intensive", "intensive", "intensive",
+            "intensive", "intensive", "intensive",
+            "intensive", "intensive", "intensive",
+            "intensive",
+        ),
         slo_hours=None,
         ledger_path=Path(
             "vdem/ingestion_ledger.jsonl"
@@ -195,6 +254,10 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         features=(
             "shdi_shdi", "shdi_healthindex",
             "shdi_edindex", "shdi_incindex",
+        ),
+        feature_agg_types=(
+            "intensive", "intensive",
+            "intensive", "intensive",
         ),
         slo_hours=None,
         ledger_path=Path(
@@ -212,6 +275,9 @@ PIPELINE_SOURCES: tuple[SourceEntry, ...] = (
         name="GAUL Admin",
         features=(
             "gaul0_code", "gaul1_code", "gaul2_code",
+        ),
+        feature_agg_types=(
+            "static", "static", "static",
         ),
         slo_hours=None,
         # No ledger_path: GAUL admin boundaries are static shapefiles
@@ -335,6 +401,19 @@ def get_all_features(
     for s in sources:
         result.extend(s.features)
     return tuple(result)
+
+
+def get_feature_agg_type_map(
+    sources: tuple[SourceEntry, ...] = PIPELINE_SOURCES,
+) -> dict[str, str]:
+    """Build feature_name → agg_type mapping from the registry."""
+    result: dict[str, str] = {}
+    for s in sources:
+        for feat, agg_type in zip(
+            s.features, s.feature_agg_types, strict=True,
+        ):
+            result[feat] = agg_type
+    return result
 
 
 def get_required_env_vars(

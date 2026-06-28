@@ -739,7 +739,7 @@ class TestDataBoundaryConsistency:
         )
         ds.to_zarr(zarr_path, mode="w")
 
-        _, _, _, _, last_valid, _ = _load_grid_from_zarr(str(zarr_path))
+        _, _, _, _, last_valid, _, _, _ = _load_grid_from_zarr(str(zarr_path))
         assert last_valid == expected_mid
 
 
@@ -809,8 +809,8 @@ class TestFeatureOrderParity:
         )
         ds.to_zarr(zarr_path, mode="w")
 
-        _, _, _, npy_features, _, _ = _load_grid_from_npy(npy_dir)
-        _, _, _, zarr_features, _, _ = _load_grid_from_zarr(
+        _, _, _, npy_features, _, _, _, _ = _load_grid_from_npy(npy_dir)
+        _, _, _, zarr_features, _, _, _, _ = _load_grid_from_zarr(
             str(zarr_path),
         )
         assert npy_features == zarr_features
@@ -870,7 +870,7 @@ class TestZarrFeatureOrderFallback:
         zarr_path = self._make_zarr_no_feature_order(tmp_path)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            _, _, _, features, _, _ = _load_grid_from_zarr(
+            _, _, _, features, _, _, _, _ = _load_grid_from_zarr(
                 str(zarr_path)
             )
         assert features == ["aa_first", "bb_mid", "zz_last"]
@@ -1482,6 +1482,7 @@ class TestLoadDatasetTemporalWarning:
         prov = {
             "last_valid_month_id": 486,
             "first_valid_acled_month_id": first_valid_acled,
+            "acled_features": ["acled_count", "acled_fatalities"],
         }
         (data_dir / "provenance.json").write_text(
             _json.dumps(prov),

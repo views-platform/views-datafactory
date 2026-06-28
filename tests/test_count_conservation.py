@@ -11,7 +11,6 @@ Uses if/raise RuntimeError, not assert — assert is stripped with -O.
 from __future__ import annotations
 
 import inspect
-import warnings
 
 import numpy as np
 import pytest
@@ -75,6 +74,11 @@ class TestGreenCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "ged_ns_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "ged_ns_best": "extensive",
+            "gaul0_code": "static",
+        }
         n_cells = 20
         flat_all = np.ones((n_cells, 3), dtype=np.float32)
         flat_all[:, 2] = np.repeat([10, 20], 10)
@@ -87,12 +91,17 @@ class TestGreenCMConservation:
 
         assert_cm_conservation(
             feature_names, flat_all, flat_land, excluded_data,
+            feature_agg_types=agg_types,
         )
 
     def test_cm_conservation_float_tolerance(self) -> None:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         n_cells = 10000
         rng = np.random.default_rng(42)
         flat_all = rng.random((n_cells, 2)).astype(np.float32)
@@ -107,6 +116,7 @@ class TestGreenCMConservation:
 
         assert_cm_conservation(
             feature_names, flat_all, flat_land, excluded_data,
+            feature_agg_types=agg_types,
         )
 
 
@@ -138,6 +148,10 @@ class TestBeigeCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         flat_all = np.ones((10, 2), dtype=np.float32)
         flat_all[:, 1] = 0  # all ocean
 
@@ -148,21 +162,26 @@ class TestBeigeCMConservation:
 
         assert_cm_conservation(
             feature_names, flat_all, flat_land, excluded_data,
+            feature_agg_types=agg_types,
         )
 
     def test_no_extensive_features_skips_check(self) -> None:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["hdi", "democracy_score", "gaul0_code"]
+        agg_types = {
+            "hdi": "intensive",
+            "democracy_score": "intensive",
+            "gaul0_code": "static",
+        }
         flat_all = np.ones((10, 3), dtype=np.float32)
 
-        # Even with mismatched shapes, should not raise
-        # because no features match extensive prefixes
         flat_land = flat_all[:5]
         excluded_data = flat_all[5:]
 
         assert_cm_conservation(
             feature_names, flat_all, flat_land, excluded_data,
+            feature_agg_types=agg_types,
         )
 
 
@@ -178,6 +197,10 @@ class TestRedCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         flat_all = np.ones((10, 2), dtype=np.float32)
         flat_all[:, 1] = 10
 
@@ -188,6 +211,7 @@ class TestRedCMConservation:
         with pytest.raises(RuntimeError, match="conservation violated"):
             assert_cm_conservation(
                 feature_names, flat_all, flat_land, excluded_data,
+                feature_agg_types=agg_types,
             )
 
     def test_uses_raise_not_assert(self) -> None:
@@ -205,6 +229,10 @@ class TestRedCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         flat_all = np.ones((10, 2), dtype=np.float32)
         flat_all[:, 1] = 10
         flat_all[3, 0] = np.nan  # inject NaN into extensive feature
@@ -218,6 +246,7 @@ class TestRedCMConservation:
                 flat_all,
                 flat_all[land_mask],
                 flat_all[~land_mask],
+                feature_agg_types=agg_types,
             )
 
     def test_nan_in_non_extensive_feature_does_not_raise(self) -> None:
@@ -225,6 +254,10 @@ class TestRedCMConservation:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "shdi"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "shdi": "intensive",
+        }
         flat_all = np.ones((10, 2), dtype=np.float32)
         flat_all[3, 1] = np.nan  # NaN in intensive feature only
 
@@ -236,6 +269,7 @@ class TestRedCMConservation:
             flat_all,
             flat_all[land_mask],
             flat_all[~land_mask],
+            feature_agg_types=agg_types,
         )
 
 
@@ -248,11 +282,17 @@ class TestRedNaNGuard:
         )
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         data = np.ones((5, 2), dtype=np.float32)
         data[2, 0] = np.nan
 
         with pytest.raises(RuntimeError, match="Unexpected NaN"):
-            assert_no_unexpected_nan(feature_names, data)
+            assert_no_unexpected_nan(
+                feature_names, data, feature_agg_types=agg_types,
+            )
 
     def test_clean_data_passes(self) -> None:
         from datafactory_adapters._conservation import (
@@ -260,8 +300,14 @@ class TestRedNaNGuard:
         )
 
         feature_names = ["ged_sb_best", "acled_count"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "acled_count": "extensive",
+        }
         data = np.ones((100, 2), dtype=np.float32)
-        assert_no_unexpected_nan(feature_names, data)
+        assert_no_unexpected_nan(
+            feature_names, data, feature_agg_types=agg_types,
+        )
 
     def test_empty_array_passes(self) -> None:
         from datafactory_adapters._conservation import (
@@ -269,17 +315,20 @@ class TestRedNaNGuard:
         )
 
         feature_names = ["ged_sb_best"]
+        agg_types = {"ged_sb_best": "extensive"}
         data = np.ones((0, 1), dtype=np.float32)
-        assert_no_unexpected_nan(feature_names, data)
+        assert_no_unexpected_nan(
+            feature_names, data, feature_agg_types=agg_types,
+        )
 
 
 # ---------------------------------------------------------------------------
-# Green tier — intensive feature warning (C-241)
+# Green tier — intensive feature aggregation types (ADR-048)
 # ---------------------------------------------------------------------------
 
 
-class TestGreenIntensiveWarning:
-    """C-241: Warning when intensive features included in CM aggregation."""
+class TestIntensiveFeatureAggTypes:
+    """ADR-048: intensive features raise ValueError in CM aggregation."""
 
     def _make_grid(
         self, feature_names: list[str], n_t: int = 2,
@@ -295,7 +344,72 @@ class TestGreenIntensiveWarning:
         )[:n_t]
         return grid, pgids, time_steps
 
-    def test_intensive_feature_warning_emitted(self) -> None:
+    def test_intensive_feature_raises_when_types_declared(
+        self,
+    ) -> None:
+        from datafactory_adapters.grid_to_country_month import (
+            grid_to_country_month,
+        )
+
+        features = ["ged_sb_best", "shdi", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "shdi": "intensive",
+            "gaul0_code": "static",
+        }
+        grid, pgids, ts = self._make_grid(features)
+
+        with pytest.raises(ValueError, match="intensive"):
+            grid_to_country_month(
+                grid, pgids, ts, features,
+                feature_agg_types=agg_types,
+            )
+
+    def test_extensive_only_succeeds_with_types(self) -> None:
+        from datafactory_adapters.grid_to_country_month import (
+            grid_to_country_month,
+        )
+
+        features = ["ged_sb_best", "acled_count", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "acled_count": "extensive",
+            "gaul0_code": "static",
+        }
+        grid, pgids, ts = self._make_grid(features)
+
+        df = grid_to_country_month(
+            grid, pgids, ts, features,
+            feature_agg_types=agg_types,
+        )
+        assert "ged_sb_best" in df.columns
+        assert "acled_count" in df.columns
+        assert "gaul0_code" not in df.columns
+
+    def test_static_features_excluded_from_output(self) -> None:
+        from datafactory_adapters.grid_to_country_month import (
+            grid_to_country_month,
+        )
+
+        features = [
+            "ged_sb_best", "landarea", "gaul0_code",
+        ]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "landarea": "static",
+            "gaul0_code": "static",
+        }
+        grid, pgids, ts = self._make_grid(features)
+
+        df = grid_to_country_month(
+            grid, pgids, ts, features,
+            feature_agg_types=agg_types,
+        )
+        assert "ged_sb_best" in df.columns
+        assert "landarea" not in df.columns
+
+    def test_no_types_falls_through_without_error(self) -> None:
+        """Without feature_agg_types, all features are summed."""
         from datafactory_adapters.grid_to_country_month import (
             grid_to_country_month,
         )
@@ -303,24 +417,10 @@ class TestGreenIntensiveWarning:
         features = ["ged_sb_best", "shdi", "gaul0_code"]
         grid, pgids, ts = self._make_grid(features)
 
-        with pytest.warns(UserWarning, match="Intensive features"):
-            grid_to_country_month(
-                grid, pgids, ts, features,
-            )
-
-    def test_no_warning_for_extensive_only(self) -> None:
-        from datafactory_adapters.grid_to_country_month import (
-            grid_to_country_month,
+        df = grid_to_country_month(
+            grid, pgids, ts, features,
         )
-
-        features = ["ged_sb_best", "acled_count", "gaul0_code"]
-        grid, pgids, ts = self._make_grid(features)
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", UserWarning)
-            grid_to_country_month(
-                grid, pgids, ts, features,
-            )
+        assert "shdi" in df.columns
 
 
 class TestRedFloat64Regression:
@@ -368,6 +468,10 @@ class TestRedFloat64Regression:
         from datafactory_adapters._conservation import assert_cm_conservation
 
         feature_names = ["ged_sb_best", "gaul0_code"]
+        agg_types = {
+            "ged_sb_best": "extensive",
+            "gaul0_code": "static",
+        }
         n_cells = 500_000
         rng = np.random.default_rng(99)
         flat_all = (rng.random((n_cells, 2)) * 90 + 10).astype(np.float32)
@@ -379,4 +483,5 @@ class TestRedFloat64Regression:
         assert_cm_conservation(
             feature_names, flat_all,
             flat_all[land_mask], flat_all[~land_mask],
+            feature_agg_types=agg_types,
         )
