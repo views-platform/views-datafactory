@@ -104,7 +104,13 @@ def _make_events(n: int = 3) -> list[dict]:
 
 class TestFetchUcdpAnnualGreen:
 
-    def test_full_flow(self, tmp_path: Path) -> None:
+    @patch(
+        "datafactory_harvester.sources.ucdp_annual.discover_annual_version",
+        return_value="25.1",
+    )
+    def test_full_flow(
+        self, _mock_discover: MagicMock, tmp_path: Path,
+    ) -> None:
         """Mock API: fetch -> validate -> store -> provenance."""
         events = _make_events(5)
         mock_resp = MagicMock()
@@ -136,7 +142,13 @@ class TestFetchUcdpAnnualGreen:
         assert entry["outcome"] == "success"
         assert "content_digest" in entry
 
-    def test_skips_when_snapshot_exists(self, tmp_path: Path) -> None:
+    @patch(
+        "datafactory_harvester.sources.ucdp_annual.discover_annual_version",
+        return_value="25.1",
+    )
+    def test_skips_when_snapshot_exists(
+        self, _mock_discover: MagicMock, tmp_path: Path,
+    ) -> None:
         """When snapshot and ledger exist, skip fetch."""
         config = UcdpAnnualConfig(
             data_dir=tmp_path / "data",
@@ -167,7 +179,13 @@ class TestFetchUcdpAnnualGreen:
 
 class TestFetchUcdpAnnualBeige:
 
-    def test_validation_failure_records_ledger(self, tmp_path: Path) -> None:
+    @patch(
+        "datafactory_harvester.sources.ucdp_annual.discover_annual_version",
+        return_value="25.1",
+    )
+    def test_validation_failure_records_ledger(
+        self, _mock_discover: MagicMock, tmp_path: Path,
+    ) -> None:
         """When validation fails, a failed ledger entry is still recorded."""
         # Events missing required fields
         bad_events = [{"id": 1}]
@@ -373,6 +391,103 @@ class TestValidateEnvelopeRed:
 
         with pytest.raises(ValueError, match="missing keys"):
             validate_envelope({})
+
+
+# ---- Version Discovery ----
+
+
+class TestDiscoverAnnualVersionGreen:
+    """discover_annual_version finds newer versions via API probing."""
+
+    @patch(
+        "datafactory_harvester.sources.ucdp_annual.get_ucdp_token",
+        return_value="fake-token",
+    )
+    @patch("datafactory_harvester.sources.ucdp_annual.request_with_retry")
+    def test_discovers_newer_version(
+        self, mock_req: MagicMock, _mock_token: MagicMock,
+    ) -> None:
+        from datafactory_harvester.sources.ucdp_annual import (
+            discover_annual_version,
+        )
+
+        def _side_effect(url: str, **kwargs: object) -> MagicMock:
+            resp = MagicMock()
+            if "26.1" in url:
+                resp.json.return_value = _make_api_response(
+                    _make_events(5)
+                )
+            else:
+                resp.json.return_value = _make_api_response([])
+            return resp
+
+        mock_req.side_effect = _side_effect
+
+        result = discover_annual_version("25.1")
+        assert result == "26.1"
+
+    @patch(
+        "datafactory_harvester.sources.ucdp_annual.get_ucdp_token",
+        return_value="fake-token",
+    )
+    @patch("datafactory_harvester.sources.ucdp_annual.request_with_retry")
+    def test_stays_on_current_when_no_newer(
+        self, mock_req: MagicMock, _mock_token: MagicMock,
+    ) -> None:
+        from datafactory_harvester.sources.ucdp_annual import (
+            discover_annual_version,
+        )
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = _make_api_response([])
+        mock_req.return_value = mock_resp
+
+        result = discover_annual_version("25.1")
+        assert result == "25.1"
+
+    @patch(
+        "datafactory_harvester.sources.ucdp_annual.get_ucdp_token",
+        return_value="fake-token",
+    )
+    @patch("datafactory_harvester.sources.ucdp_annual.request_with_retry")
+    def test_discovers_multiple_new_versions(
+        self, mock_req: MagicMock, _mock_token: MagicMock,
+    ) -> None:
+        from datafactory_harvester.sources.ucdp_annual import (
+            discover_annual_version,
+        )
+
+        def _side_effect(url: str, **kwargs: object) -> MagicMock:
+            resp = MagicMock()
+            if "26.1" in url or "27.1" in url:
+                resp.json.return_value = _make_api_response(
+                    _make_events(3)
+                )
+            else:
+                resp.json.return_value = _make_api_response([])
+            return resp
+
+        mock_req.side_effect = _side_effect
+
+        result = discover_annual_version("25.1")
+        assert result == "27.1"
+
+    @patch(
+        "datafactory_harvester.sources.ucdp_annual.get_ucdp_token",
+        return_value="fake-token",
+    )
+    @patch("datafactory_harvester.sources.ucdp_annual.request_with_retry")
+    def test_handles_api_error(
+        self, mock_req: MagicMock, _mock_token: MagicMock,
+    ) -> None:
+        from datafactory_harvester.sources.ucdp_annual import (
+            discover_annual_version,
+        )
+
+        mock_req.side_effect = requests.RequestException("timeout")
+
+        result = discover_annual_version("25.1")
+        assert result == "25.1"
 
 
 # ---- Source Registration ----

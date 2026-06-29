@@ -120,9 +120,7 @@ def main() -> int:
 def _harvest_annual(
     data_dir: Path, prov_dir: Path, force: bool
 ) -> dict:
-    """Harvest UCDP annual data."""
-    print("[annual] Fetching v25.1 (1989-2024)...")
-
+    """Harvest UCDP annual data (with automatic version discovery)."""
     from datafactory_harvester.sources.ucdp_annual import (
         UcdpAnnualConfig,
         fetch_ucdp_annual,
@@ -134,10 +132,18 @@ def _harvest_annual(
         timeout=120,
     )
 
+    print(
+        f"[annual] Discovering versions "
+        f"(current: v{config.version})..."
+    )
+
     r = run_harvest(
         source_name="UCDP Annual",
         fetch_fn=fetch_ucdp_annual,
-        config_summary={"Version": "v25.1", "Range": "1989-2024"},
+        config_summary={
+            "Default version": f"v{config.version}",
+            "Range": f"1989-{config.end_year}",
+        },
         force_refresh=force,
         fetch_kwargs={"config": config},
     )

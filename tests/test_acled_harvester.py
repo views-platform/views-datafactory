@@ -37,9 +37,11 @@ from datafactory_provenance import (
 class TestAcledConfigGreen:
 
     def test_defaults(self) -> None:
+        import datetime
+
         cfg = AcledConfig()
         assert cfg.start_year == 1997
-        assert cfg.end_year == 2025
+        assert cfg.end_year == datetime.datetime.now(tz=datetime.UTC).year
         assert cfg.event_types == ALL_EVENT_TYPES
         assert cfg.page_size == 5000
         assert cfg.page_delay == 2.0
@@ -523,6 +525,57 @@ class TestYearCacheGreen:
             },
         )
         assert not _year_is_cached(2024, config)
+
+
+class TestYearCacheCurrentYearBypass:
+    """The current year is never cached — ACLED publishes biweekly."""
+
+    def test_current_year_not_cached_even_with_snapshot(
+        self, tmp_path: Path,
+    ) -> None:
+        import datetime
+
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        current = datetime.datetime.now(tz=datetime.UTC).year
+        _write_cached_snapshot(
+            config.data_dir / f"acled_{current}_{current}.parquet",
+            config.ledger_path,
+            _make_acled_events(3),
+            f"{current}_{current}",
+        )
+        assert not _year_is_cached(current, config)
+
+    def test_past_year_still_cached(
+        self, tmp_path: Path,
+    ) -> None:
+        config = AcledConfig(
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+        _write_cached_snapshot(
+            config.data_dir / "acled_2024_2024.parquet",
+            config.ledger_path,
+            _make_acled_events(3),
+            "2024_2024",
+        )
+        assert _year_is_cached(2024, config)
+
+
+class TestAcledConfigDynamicEndYear:
+    """AcledConfig.end_year defaults to the current year."""
+
+    def test_default_end_year_is_current_year(self) -> None:
+        import datetime
+
+        cfg = AcledConfig()
+        assert cfg.end_year == datetime.datetime.now(tz=datetime.UTC).year
+
+    def test_explicit_end_year_preserved(self) -> None:
+        cfg = AcledConfig(end_year=2030)
+        assert cfg.end_year == 2030
 
 
 class TestFetchAcledBeige:
