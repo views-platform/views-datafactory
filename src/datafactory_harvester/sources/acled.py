@@ -14,6 +14,7 @@ harvester skeleton (validation, storage, provenance).
 
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import os
@@ -160,7 +161,7 @@ class AcledConfig:
     """Configuration for fetching ACLED event data."""
 
     start_year: int = 1997
-    end_year: int = 2025
+    end_year: int = 0
 
     event_types: tuple[str, ...] = ALL_EVENT_TYPES
 
@@ -177,6 +178,11 @@ class AcledConfig:
     ledger_path: Path = Path("provenance/acled/ingestion_ledger.jsonl")
 
     def __post_init__(self) -> None:
+        if self.end_year == 0:
+            object.__setattr__(
+                self, "end_year",
+                datetime.datetime.now(tz=datetime.UTC).year,
+            )
         validate_year_range(self.start_year, self.end_year)
         validate_positive_int(self.page_size, "page_size")
         validate_positive_int(self.max_retries, "max_retries")
@@ -501,7 +507,13 @@ def _recompute_content_digest(snap_path: Path) -> str | None:
 
 
 def _year_is_cached(year: int, config: AcledConfig) -> bool:
-    """Check if a year's snapshot exists with a matching ledger digest."""
+    """Check if a year's snapshot exists with a matching ledger digest.
+
+    The current year is never considered cached because ACLED publishes
+    new events biweekly — the local snapshot is always stale.
+    """
+    if year >= datetime.datetime.now(tz=datetime.UTC).year:
+        return False
     version = f"{year}_{year}"
     snap_path = config.data_dir / f"acled_{year}_{year}.parquet"
     if not snap_path.exists():

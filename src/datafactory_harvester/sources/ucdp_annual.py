@@ -10,6 +10,7 @@ token handling, version string. Uses the shared harvester skeleton
 
 from __future__ import annotations
 
+import datetime
 import logging
 import os
 import random
@@ -53,6 +54,7 @@ DATASET_ID = "ucdp_annual"
 _LOG_EVERY_N_PAGES: int = 50
 _FETCH_DURATION_PRECISION: int = 1  # Decimal places for fetch_duration_s in ledger
 _RATE_LIMIT_MAX_RETRIES: int = 5
+_YEAR_OFFSET: int = 1999  # v25.1 covers through 2024 → major + 1999
 _RATE_LIMIT_BASE_DELAY: float = 30.0  # seconds; UCDP rate window is ~1 minute
 _TOTALCOUNT_ABS_TOLERANCE: int = 1100
 _TOTALCOUNT_PCT_TOLERANCE: float = 0.01
@@ -184,10 +186,10 @@ class UcdpAnnualConfig:
     No ranking_months, escalation_months, or top_n_countries here.
     """
 
-    # Dataset identity
-    version: str = "25.1"
+    # Dataset identity — sentinels resolved in __post_init__
+    version: str = ""
     start_year: int = 1989
-    end_year: int = 2024
+    end_year: int = 0
 
     # API transport
     base_url: str = UCDP_GED_API_BASE
@@ -201,6 +203,12 @@ class UcdpAnnualConfig:
     ledger_path: Path = Path("provenance/ucdp_annual/ingestion_ledger.jsonl")
 
     def __post_init__(self) -> None:
+        if not self.version:
+            major = datetime.datetime.now(tz=datetime.UTC).year - 2001
+            object.__setattr__(self, "version", f"{major}.1")
+        if self.end_year == 0:
+            major = int(self.version.split(".")[0])
+            object.__setattr__(self, "end_year", major + _YEAR_OFFSET)
         validate_year_range(self.start_year, self.end_year)
         validate_positive_int(self.page_size, "page_size")
         validate_positive_int(self.max_retries, "max_retries")
@@ -370,6 +378,85 @@ def fetch_paginated(
     return all_events
 
 
+# ---- Version Discovery ----
+
+_ANNUAL_DISCOVERY_MAX_PROBES: int = 3
+_ANNUAL_DISCOVERY_PROBE_PAGE_SIZE: int = 1
+
+
+def discover_annual_version(
+    current_version: str,
+    *,
+    base_url: str = UCDP_GED_API_BASE,
+    timeout: int = 30,
+    max_retries: int = 3,
+    token: str | None = None,
+) -> str:
+    """Probe the UCDP API for a newer annual version.
+
+    Annual versions follow the pattern ``{major}.1`` (25.1, 26.1, …).
+    Probes forward from the current major number until no data is found
+    or the probe limit is reached.
+
+    Returns the newest version with data, or *current_version* if
+    nothing newer exists.
+    """
+    api_token = get_ucdp_token(token)
+    current_major = int(current_version.split(".")[0])
+    latest = current_version
+
+    for major in range(
+        current_major + 1,
+        current_major + 1 + _ANNUAL_DISCOVERY_MAX_PROBES,
+    ):
+        probe_version = f"{major}.1"
+        url = f"{base_url}/{probe_version}"
+        headers = {"x-ucdp-access-token": api_token}
+        params = {"pagesize": _ANNUAL_DISCOVERY_PROBE_PAGE_SIZE}
+
+        try:
+            resp = request_with_retry(
+                url,
+                headers=headers,
+                params=params,
+                max_retries=max_retries,
+                timeout=timeout,
+            )
+        except requests.RequestException:
+            logger.debug(
+                "Annual version %s not available — stopping discovery",
+                probe_version,
+            )
+            break
+
+        data = resp.json()
+        try:
+            validate_envelope(data)
+        except ValueError:
+            logger.debug(
+                "Annual version %s returned invalid envelope",
+                probe_version,
+            )
+            break
+
+        total = data["TotalCount"]
+        if total == 0:
+            logger.info(
+                "Annual version %s has 0 events — stopping discovery",
+                probe_version,
+            )
+            break
+
+        latest = probe_version
+        logger.info(
+            "Discovered annual version %s (%d events)",
+            probe_version,
+            total,
+        )
+
+    return latest
+
+
 # ---- Orchestrator ----
 
 
@@ -399,6 +486,34 @@ def fetch_ucdp_annual(
     """
     if config is None:
         config = UcdpAnnualConfig()
+
+    # Probe for a newer annual release before checking the cache.
+    discovered = discover_annual_version(
+        config.version,
+        base_url=config.base_url,
+        timeout=config.timeout,
+        max_retries=config.max_retries,
+        token=token,
+    )
+    if discovered != config.version:
+        new_major = int(discovered.split(".")[0])
+        config = UcdpAnnualConfig(
+            version=discovered,
+            start_year=config.start_year,
+            end_year=new_major + _YEAR_OFFSET,
+            base_url=config.base_url,
+            page_size=config.page_size,
+            timeout=config.timeout,
+            max_retries=config.max_retries,
+            page_delay=config.page_delay,
+            data_dir=config.data_dir,
+            ledger_path=config.ledger_path,
+        )
+        logger.info(
+            "Upgraded to annual version %s (end_year=%d)",
+            discovered,
+            config.end_year,
+        )
 
     snap_path = _snapshot_path(config)
 
