@@ -13,10 +13,11 @@ what all of this means.
 If the server is already set up and you're just deploying a new tag:
 
 ```bash
-# 1. On your laptop — merge development to main, tag, and push
+# 1. On your laptop — ensure main is ancestor of development, then merge to main
 git checkout development && git pull
 git checkout main && git pull
-git merge development --ff-only
+git checkout development && git merge main --no-edit && git push origin development
+git checkout main && git merge development --ff-only
 git tag vX.Y.Z
 git push origin main --tags
 
@@ -814,22 +815,31 @@ first, merge second, tag third.
 **On your laptop** (where you develop):
 
 ```bash
-# 1. Merge development into main (fast-forward only)
+# 1. Ensure main is an ancestor of development
+#    GitHub PR merge commits can put commits on main that don't exist
+#    on development. If so, ff-only will fail. Fix: merge main into
+#    development first (this is always conflict-free).
 git checkout development && git pull
 git checkout main && git pull
+git checkout development
+git merge main --no-edit          # no-op if main is already ancestor
+git push origin development
+
+# 2. Merge development into main (fast-forward only)
+git checkout main
 git merge development --ff-only
 
-# 2. Create a tag on main (must match pyproject.toml version)
+# 3. Create a tag on main (must match pyproject.toml version)
 git tag vX.Y.Z
 
-# 3. Push main and the tag to GitHub
+# 4. Push main and the tag to GitHub
 git push origin main --tags
 ```
 
 **On the server** (SSH in):
 
 ```bash
-# 4. Update the deploy tag file
+# 5. Update the deploy tag file
 echo 'vX.Y.Z' > ~/.views-deploy-tag
 ```
 
