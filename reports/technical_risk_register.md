@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-06-28)
-**Last update:** PR #307 review findings (2026-06-28) — C-306/C-307/C-308 registered and resolved (xfail removed, gh CLI error guard added, plan path globbed). Header counts: 274→277 resolved, 305→308 IDs. Prior: ADR-049 pre-merge fixes (2026-06-28) — C-303, C-304, C-305 resolved (provenance counters added, ADR §2 table corrected, config paths aligned). Header counts: 271→274 resolved, 31→28 open, Tier 4: 20→17. Prior: ADR-049 epic (#300, 2026-06-28) — C-303/C-304/C-305 registered via falsification; ADR-003 epic (#290, 2026-06-28) — C-299 resolved, C-300/C-301/C-302 registered; infrastructure test coverage (#280, 2026-06-26) — C-271/C-280/C-276/C-189 resolved; scaling headroom (#274, 2026-06-26) — C-144/C-145 resolved; temporal alignment (#266, 2026-06-26) — C-286/C-156 resolved; count conservation (#258, 2026-06-24) — C-131/C-291/C-249/C-241 resolved; WDI readiness (2026-06-24) — C-223/C-298 resolved; test hardening (#234, 2026-06-24) — C-290/C-294/C-295/C-296/C-297 resolved. Earlier history in git log
+**Last update:** Deploy v1.6.0 readiness (2026-06-29) — C-309/C-310 registered and resolved (merge topology fixed, deploy guide updated). Header counts: 308→310 IDs, 277→279 resolved. Prior: PR #307 review findings (2026-06-28) — C-306/C-307/C-308 registered and resolved (xfail removed, gh CLI error guard added, plan path globbed). Header counts: 274→277 resolved, 305→308 IDs. Prior: ADR-049 pre-merge fixes (2026-06-28) — C-303, C-304, C-305 resolved (provenance counters added, ADR §2 table corrected, config paths aligned). Header counts: 271→274 resolved, 31→28 open, Tier 4: 20→17. Prior: ADR-049 epic (#300, 2026-06-28) — C-303/C-304/C-305 registered via falsification; ADR-003 epic (#290, 2026-06-28) — C-299 resolved, C-300/C-301/C-302 registered; infrastructure test coverage (#280, 2026-06-26) — C-271/C-280/C-276/C-189 resolved; scaling headroom (#274, 2026-06-26) — C-144/C-145 resolved; temporal alignment (#266, 2026-06-26) — C-286/C-156 resolved; count conservation (#258, 2026-06-24) — C-131/C-291/C-249/C-241 resolved; WDI readiness (2026-06-24) — C-223/C-298 resolved; test hardening (#234, 2026-06-24) — C-290/C-294/C-295/C-296/C-297 resolved. Earlier history in git log
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10, repo-assimilation v1.3.0 2026-06-16, expert-code-review register-risk 2026-06-18, test-review v1.4.0 2026-06-24
-**Status:** 308 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 277 resolved, 28 open concerns (0 Tier 1, 1 Tier 2, 4 Tier 3, 17 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 93 struck-through in active register (277 unique after dedup — 3 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
+**Status:** 310 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 279 resolved, 28 open concerns (0 Tier 1, 1 Tier 2, 4 Tier 3, 17 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 95 struck-through in active register (279 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -137,6 +137,8 @@
 | C-300 | 4 | Zarr path returns empty `source_features` — pre-coverage warnings silently skipped | Consumer loads data via zarr backend and misinterprets zero-padding as observed | Query layer resilience |
 | C-301 | 3 | Conservation no-op for direct callers without `feature_agg_types` — ADR-040 regression | New consumer calls `grid_to_country_month()` directly without `feature_agg_types` | Aggregation correctness |
 | C-302 | 4 | Inline prefix check in excluded-cell warning — 4th ADR-003 pattern survived epic | New extensive source added; excluded-cell warning misses its features | ADR-003 compliance |
+| ~~C-309~~ | ~~4~~ | ~~Main/development divergence blocks ff-only merge~~ | Resolved 2026-06-29 (merged main into development, topology restored) | Deploy procedure |
+| ~~C-310~~ | ~~4~~ | ~~Deployment guide omits merge-main-into-development step~~ | Resolved 2026-06-29 (added step 1 to deployment procedure) | Deploy procedure |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -1752,6 +1754,38 @@ Cross-ref: C-306 (same file, different gap), C-308 (same file, different gap).
 | Location | `tests/test_falsification_deploy_v160.py:113` |
 
 Cross-ref: C-306 (same file), C-307 (same file).
+
+---
+
+### ~~C-309: Main/development divergence blocks ff-only merge — GitHub merge commits create non-ancestor topology~~
+
+GitHub PR squash-merges create merge commits on `main` that do not exist on `development`. After enough PRs, `main` is no longer an ancestor of `development`, causing `git merge development --ff-only` on main to fail. Fixed by merging main into development before the ff-only merge.
+
+| Field | Value |
+|-------|-------|
+| ID | C-309 |
+| Tier | 4 — operational procedure, single-developer scope, no correctness impact; merge is conflict-free |
+| Source | Falsification audit round 2 (2026-06-29), probe DF-1 |
+| Trigger | Operator runs `git merge development --ff-only` on main after GitHub PR merges created divergent topology |
+| Location | Git topology (main vs development branches), `docs/guides/hetzner_deployment_guide.md` |
+
+Cross-ref: C-310 (deploy guide omits the prerequisite step).
+
+---
+
+### ~~C-310: Deployment guide omits merge-main-into-development prerequisite step~~
+
+The Hetzner deployment guide says `git merge development --ff-only` without documenting that this requires main to be an ancestor of development. When GitHub PR merges create commits on main, the ff-only merge fails. Fixed by adding a prerequisite step to the guide: merge main into development first.
+
+| Field | Value |
+|-------|-------|
+| ID | C-310 |
+| Tier | 4 — documentation gap, single-developer scope, no correctness impact |
+| Source | Falsification audit round 2 (2026-06-29), probe DF-2 |
+| Trigger | Operator follows deployment guide verbatim; ff-only merge fails with no guidance on resolution |
+| Location | `docs/guides/hetzner_deployment_guide.md` (ff-only merge step without prerequisite) |
+
+Cross-ref: C-309 (the topology divergence this guide gap fails to prevent).
 
 ---
 
