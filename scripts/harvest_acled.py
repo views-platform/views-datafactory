@@ -15,6 +15,7 @@ Requires ACLED_USERNAME and ACLED_PASSWORD environment variables.
 from __future__ import annotations
 
 import argparse
+import datetime
 import sys
 import time
 from pathlib import Path
@@ -41,8 +42,8 @@ def main() -> int:
     parser.add_argument(
         "--end-year",
         type=int,
-        default=2025,
-        help="End year (default: 2025)",
+        default=datetime.datetime.now(tz=datetime.UTC).year,
+        help="End year (default: current year)",
     )
     parser.add_argument(
         "--force",
