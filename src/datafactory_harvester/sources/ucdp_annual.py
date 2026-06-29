@@ -10,6 +10,7 @@ token handling, version string. Uses the shared harvester skeleton
 
 from __future__ import annotations
 
+import datetime
 import logging
 import os
 import random
@@ -185,10 +186,10 @@ class UcdpAnnualConfig:
     No ranking_months, escalation_months, or top_n_countries here.
     """
 
-    # Dataset identity
-    version: str = "25.1"
+    # Dataset identity — sentinels resolved in __post_init__
+    version: str = ""
     start_year: int = 1989
-    end_year: int = 2024
+    end_year: int = 0
 
     # API transport
     base_url: str = UCDP_GED_API_BASE
@@ -202,6 +203,12 @@ class UcdpAnnualConfig:
     ledger_path: Path = Path("provenance/ucdp_annual/ingestion_ledger.jsonl")
 
     def __post_init__(self) -> None:
+        if not self.version:
+            major = datetime.datetime.now(tz=datetime.UTC).year - 2001
+            object.__setattr__(self, "version", f"{major}.1")
+        if self.end_year == 0:
+            major = int(self.version.split(".")[0])
+            object.__setattr__(self, "end_year", major + _YEAR_OFFSET)
         validate_year_range(self.start_year, self.end_year)
         validate_positive_int(self.page_size, "page_size")
         validate_positive_int(self.max_retries, "max_retries")

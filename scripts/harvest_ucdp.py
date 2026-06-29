@@ -141,8 +141,9 @@ def _harvest_annual(
         source_name="UCDP Annual",
         fetch_fn=fetch_ucdp_annual,
         config_summary={
-            "Default version": f"v{config.version}",
-            "Range": f"1989-{config.end_year}",
+            "Baseline version": f"v{config.version}",
+            "Range": f"{config.start_year}-{config.end_year}",
+            "Note": "discovery may upgrade to a newer version",
         },
         force_refresh=force,
         fetch_kwargs={"config": config},

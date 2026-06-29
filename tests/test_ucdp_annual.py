@@ -25,15 +25,42 @@ from datafactory_harvester.sources.ucdp_annual import (
 class TestUcdpAnnualConfigGreen:
 
     def test_defaults(self) -> None:
+        import datetime
+
+        expected_major = datetime.datetime.now(tz=datetime.UTC).year - 2001
         cfg = UcdpAnnualConfig()
-        assert cfg.version == "25.1"
+        assert cfg.version == f"{expected_major}.1"
         assert cfg.start_year == 1989
-        assert cfg.end_year == 2024
+        assert cfg.end_year == expected_major + 1999
 
     def test_frozen(self) -> None:
         cfg = UcdpAnnualConfig()
         with pytest.raises(AttributeError):
             cfg.version = "26.1"  # type: ignore[misc]
+
+
+class TestUcdpAnnualConfigDynamicVersion:
+
+    def test_default_version_is_current_year_minus_one(self) -> None:
+        import datetime
+
+        year = datetime.datetime.now(tz=datetime.UTC).year
+        cfg = UcdpAnnualConfig()
+        assert cfg.version == f"{year - 2001}.1"
+
+    def test_default_end_year_derived_from_version(self) -> None:
+        cfg = UcdpAnnualConfig(version="26.1")
+        assert cfg.end_year == 2025
+
+    def test_explicit_version_preserved(self) -> None:
+        cfg = UcdpAnnualConfig(version="24.1", end_year=2023)
+        assert cfg.version == "24.1"
+        assert cfg.end_year == 2023
+
+    def test_explicit_version_with_sentinel_end_year(self) -> None:
+        cfg = UcdpAnnualConfig(version="27.1")
+        assert cfg.version == "27.1"
+        assert cfg.end_year == 2026
 
 
 class TestUcdpAnnualConfigBeige:
@@ -49,10 +76,6 @@ class TestUcdpAnnualConfigBeige:
     def test_rejects_zero_retries(self) -> None:
         with pytest.raises(ValueError, match="max_retries"):
             UcdpAnnualConfig(max_retries=0)
-
-    def test_rejects_empty_version(self) -> None:
-        with pytest.raises(ValueError, match="version"):
-            UcdpAnnualConfig(version="")
 
     def test_rejects_nonpositive_page_delay(self) -> None:
         with pytest.raises(ValueError, match="page_delay"):
