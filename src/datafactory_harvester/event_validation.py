@@ -216,6 +216,7 @@ def validate_dgp_assumptions(
     checks: Sequence[Callable[[dict], str | None]],
     *,
     source_name: str = "unknown",
+    warn_only: bool = False,
 ) -> None:
     """Validate data-generating process assumptions on harvested events.
 
@@ -228,9 +229,13 @@ def validate_dgp_assumptions(
         events: List of raw event dicts.
         checks: Sequence of check callables.
         source_name: Source identifier for the error message.
+        warn_only: If True, log violations as a warning instead of
+            raising. For checks that describe known characteristics
+            of the published source data rather than hard invariants.
 
     Raises:
-        ValueError: If any DGP assumption is violated.
+        ValueError: If any DGP assumption is violated and warn_only
+            is False.
     """
     violations: list[str] = []
     for i, event in enumerate(events):
@@ -243,6 +248,15 @@ def validate_dgp_assumptions(
 
     if violations:
         summary = "; ".join(violations[:20])
+        if warn_only:
+            logger.warning(
+                "%s DGP validation: %d violation(s) "
+                "(known source characteristic, not blocking): %s",
+                source_name,
+                len(violations),
+                summary,
+            )
+            return
         raise ValueError(
             f"{source_name} DGP validation: {len(violations)} "
             f"violation(s): {summary}"

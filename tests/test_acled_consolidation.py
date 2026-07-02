@@ -774,3 +774,58 @@ class TestCrossRunDedupLatestWins:
         assert eid_to_fat["SOM0002"] == 0, "Unchanged event"
         assert eid_to_fat["SOM0003"] == 0, "Unchanged event"
         assert eid_to_fat["SOM0004"] == 50, "New event"
+
+
+class TestCorruptedStoreGuard:
+    """A store with duplicate event_ids must fail loud with remediation.
+
+    The 2026-07-02 incident: a store predating cross-file dedup
+    carried ~2x duplicates. The replacement filter removed ALL
+    copies of each replaced event, surfacing as a cryptic count
+    conservation failure. The guard diagnoses the corruption
+    directly and names the fix.
+    """
+
+    def test_duplicate_store_raises_with_remediation(
+        self, tmp_path: Path,
+    ) -> None:
+        """Existing store with duplicated rows → RuntimeError."""
+        from datafactory_consolidation.event_store import (
+            write_store,
+        )
+
+        source_dir = tmp_path / "raw"
+        path1 = _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            [_base_event("SOM0001", fatalities=1)],
+        )
+        os.utime(path1, (1_000_000, 1_000_000))
+
+        config = _make_config(tmp_path, source_dir)
+        consolidate_acled(config)
+
+        # Corrupt the store: duplicate every row
+        store = read_store(config.output_path)
+        corrupted = pa.concat_tables([store, store])
+        write_store(corrupted, config.output_path)
+
+        with pytest.raises(RuntimeError, match="duplicate") as ei:
+            consolidate_acled(config)
+        assert "Delete" in str(ei.value)
+        assert "rebuild" in str(ei.value)
+
+    def test_clean_store_unaffected_by_guard(
+        self, tmp_path: Path,
+    ) -> None:
+        """Re-consolidation over a clean store still succeeds."""
+        source_dir = tmp_path / "raw"
+        path1 = _write_parquet(
+            source_dir / "acled_2020_2025.parquet",
+            [_base_event("SOM0001", fatalities=1)],
+        )
+        os.utime(path1, (1_000_000, 1_000_000))
+
+        config = _make_config(tmp_path, source_dir)
+        consolidate_acled(config)
+        result = consolidate_acled(config)
+        assert isinstance(result, ConsolidationResult)

@@ -170,8 +170,17 @@ UCDP_DGP_CHECKS: tuple[
     _check_date_prec_range,
     _check_violence_type,
     _check_coordinate_bounds,
-    _check_best_high_low_ordering,
     _check_coords_non_null,
+)
+
+# Published UCDP data violates low <= best <= high in ~1.3% of
+# events (v25.1: 3,594 best>high + 1,415 low>best across
+# 1989-2024). A known source characteristic, not corruption —
+# warn, never block the harvest.
+UCDP_DGP_WARN_CHECKS: tuple[
+    Callable[[dict], str | None], ...
+] = (
+    _check_best_high_low_ordering,
 )
 
 
@@ -567,6 +576,12 @@ def fetch_ucdp_annual(
 
     validate_dgp_assumptions(
         events, UCDP_DGP_CHECKS, source_name="UCDP-annual",
+    )
+    validate_dgp_assumptions(
+        events,
+        UCDP_DGP_WARN_CHECKS,
+        source_name="UCDP-annual",
+        warn_only=True,
     )
 
     # Compare with previous snapshot
