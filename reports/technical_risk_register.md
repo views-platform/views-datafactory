@@ -1,9 +1,9 @@
 # Technical Risk Register
 
-**Date:** 2026-03-17 (updated 2026-06-28)
-**Last update:** Deploy v1.6.0 readiness (2026-06-29) — C-309/C-310 registered and resolved (merge topology fixed, deploy guide updated). Header counts: 308→310 IDs, 277→279 resolved. Prior: PR #307 review findings (2026-06-28) — C-306/C-307/C-308 registered and resolved (xfail removed, gh CLI error guard added, plan path globbed). Header counts: 274→277 resolved, 305→308 IDs. Prior: ADR-049 pre-merge fixes (2026-06-28) — C-303, C-304, C-305 resolved (provenance counters added, ADR §2 table corrected, config paths aligned). Header counts: 271→274 resolved, 31→28 open, Tier 4: 20→17. Prior: ADR-049 epic (#300, 2026-06-28) — C-303/C-304/C-305 registered via falsification; ADR-003 epic (#290, 2026-06-28) — C-299 resolved, C-300/C-301/C-302 registered; infrastructure test coverage (#280, 2026-06-26) — C-271/C-280/C-276/C-189 resolved; scaling headroom (#274, 2026-06-26) — C-144/C-145 resolved; temporal alignment (#266, 2026-06-26) — C-286/C-156 resolved; count conservation (#258, 2026-06-24) — C-131/C-291/C-249/C-241 resolved; WDI readiness (2026-06-24) — C-223/C-298 resolved; test hardening (#234, 2026-06-24) — C-290/C-294/C-295/C-296/C-297 resolved. Earlier history in git log
+**Date:** 2026-03-17 (updated 2026-07-02)
+**Last update:** v1.6.1 deploy incident (2026-07-02) — C-311/C-312 registered and resolved (DGP ordering check downgraded to warn-only after contradicting real UCDP data; ACLED store 2x-duplicate corruption rebuilt + uniqueness guard added). C-257 updated with lesson: DGP checks must be verified against real source data before being made blocking. Header counts: 310→312 IDs, 279→281 resolved. Prior: Deploy v1.6.0 readiness (2026-06-29) — C-309/C-310 registered and resolved (merge topology fixed, deploy guide updated). Header counts: 308→310 IDs, 277→279 resolved. Prior: PR #307 review findings (2026-06-28) — C-306/C-307/C-308 registered and resolved (xfail removed, gh CLI error guard added, plan path globbed). Header counts: 274→277 resolved, 305→308 IDs. Prior: ADR-049 pre-merge fixes (2026-06-28) — C-303, C-304, C-305 resolved (provenance counters added, ADR §2 table corrected, config paths aligned). Header counts: 271→274 resolved, 31→28 open, Tier 4: 20→17. Prior: ADR-049 epic (#300, 2026-06-28) — C-303/C-304/C-305 registered via falsification; ADR-003 epic (#290, 2026-06-28) — C-299 resolved, C-300/C-301/C-302 registered; infrastructure test coverage (#280, 2026-06-26) — C-271/C-280/C-276/C-189 resolved; scaling headroom (#274, 2026-06-26) — C-144/C-145 resolved; temporal alignment (#266, 2026-06-26) — C-286/C-156 resolved; count conservation (#258, 2026-06-24) — C-131/C-291/C-249/C-241 resolved; WDI readiness (2026-06-24) — C-223/C-298 resolved; test hardening (#234, 2026-06-24) — C-290/C-294/C-295/C-296/C-297 resolved. Earlier history in git log
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10, repo-assimilation v1.3.0 2026-06-16, expert-code-review register-risk 2026-06-18, test-review v1.4.0 2026-06-24
-**Status:** 310 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 279 resolved, 28 open concerns (0 Tier 1, 1 Tier 2, 4 Tier 3, 17 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 95 struck-through in active register (279 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
+**Status:** 312 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 281 resolved, 28 open concerns (0 Tier 1, 1 Tier 2, 4 Tier 3, 17 Tier 4, 6 deferred by design; 2 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 95 struck-through in active register (279 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 40 disagreement IDs total: 32 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -139,6 +139,8 @@
 | C-302 | 4 | Inline prefix check in excluded-cell warning — 4th ADR-003 pattern survived epic | New extensive source added; excluded-cell warning misses its features | ADR-003 compliance |
 | ~~C-309~~ | ~~4~~ | ~~Main/development divergence blocks ff-only merge~~ | Resolved 2026-06-29 (merged main into development, topology restored) | Deploy procedure |
 | ~~C-310~~ | ~~4~~ | ~~Deployment guide omits merge-main-into-development step~~ | Resolved 2026-06-29 (added step 1 to deployment procedure) | Deploy procedure |
+| ~~C-311~~ | ~~2~~ | ~~DGP ordering check contradicts observed UCDP data — blocked v26.1 harvest~~ | Resolved 2026-07-02 (ordering check moved to warn-only, verified on real v25.1 data) | Data soundness |
+| ~~C-312~~ | ~~2~~ | ~~ACLED store carried 2x duplicates — cryptic conservation crash~~ | Resolved 2026-07-02 (store rebuilt + uniqueness guard with remediation message) | Data soundness |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -368,6 +370,8 @@ The harvest layer trusts that external sources send data matching the pipeline's
 See also C-36 (UCDP API contract has no schema versioning — related but narrower), C-45 (no Parquet schema evolution strategy), C-153 (ACLED API has no TotalCount). Part of causal cluster: **Data soundness**.
 
 **Update (2026-06-19, expert-code-review of sprint issues):** Failure mode unspecified — original DoD had "or documented" escape clause allowing checks to exist without being wired in. Expert review correction: `validate_dgp_assumptions()` raises `ValueError` on any violation (fail-loud per ADR-011). No silent skip, no "log and continue." Check definitions live in per-source modules, not in `event_validation.py`. See also D-40 (DGP check module placement).
+
+**Update (2026-07-02, v1.6.1 deploy incident):** The `best/high/low` ordering check contradicted the observed UCDP DGP — published data violates the ordering in ~1.3% of events (all versions, all years). It blocked the first fresh fetch (v26.1) and was downgraded to warn-only (C-311). The "fail-loud on any violation" stance holds for genuine invariants only; checks encoding assumptions the source never promised must be verified against real data before being made blocking.
 
 
 ### ~~C-258: Count conservation not enforced at consolidation or viewpoint boundaries~~ RESOLVED
@@ -1786,6 +1790,38 @@ The Hetzner deployment guide says `git merge development --ff-only` without docu
 | Location | `docs/guides/hetzner_deployment_guide.md` (ff-only merge step without prerequisite) |
 
 Cross-ref: C-309 (the topology divergence this guide gap fails to prevent).
+
+---
+
+### ~~C-311: DGP ordering check contradicts observed UCDP data — blocked v26.1 harvest~~
+
+`_check_best_high_low_ordering` (added with C-257, #212) asserted `low <= best <= high` as a hard invariant. Published UCDP data violates this ordering in ~1.3% of events (v25.1: 3,594 best>high + 1,415 low>best across 1989-2024). The check never fired in production because v25.1 was harvested before the check existed and cache-hit ever since; the first v26.1 fetch (2026-07-02, triggered by v1.6.1 version discovery) crashed the harvest and killed the whole pipeline (`set -e`). Fixed by moving the ordering check to `UCDP_DGP_WARN_CHECKS` (warn-not-block) with `warn_only=True` support in `validate_dgp_assumptions()`. The four remaining hard checks verified clean on all 384,918 real v25.1 events.
+
+| Field | Value |
+|-------|-------|
+| ID | C-311 |
+| Tier | 2 — pipeline-blocking failure on real published data; a validation check encoding an assumption the source never promised |
+| Source | v1.6.1 deploy incident (2026-07-02), server refresh_pipeline failure |
+| Trigger | Any fresh UCDP Annual fetch (new version discovery or cache miss) |
+| Location | `src/datafactory_harvester/sources/ucdp_annual.py` (UCDP_DGP_CHECKS/UCDP_DGP_WARN_CHECKS), `src/datafactory_harvester/event_validation.py` (warn_only) |
+
+Resolved 2026-07-02 (warn-not-fail split; empirically verified against real v25.1 snapshot). Lesson: DGP checks must be validated against real source data before being made blocking — the check shipped in v1.4.0 but was only ever exercised by synthetic test events. Cross-ref: C-257 (the sprint that introduced the check), D-40 (check module placement).
+
+---
+
+### ~~C-312: ACLED consolidated store carried 2x duplicate events — cryptic conservation crash on replacement~~
+
+The server's ACLED store (4,095,646 rows, only 2,049,899 unique event_ids) predated cross-file dedup and carried ~2x duplicates. The C-252 cross-run replacement filter removes ALL rows matching a replaced event_id, so the merge lost ~2M more rows than the conservation formula expected, crashing with a numerically confusing error (`expected 4310703, got 2265408`). Store was rebuilt clean from raw snapshots (2,262,881 records). Guard added: `consolidate_acled()` now fails loud with a diagnostic error (row count vs unique count + remediation: delete store, re-run) when the existing store contains duplicate event_ids.
+
+| Field | Value |
+|-------|-------|
+| ID | C-312 |
+| Tier | 2 — silent store corruption persisted across runs until a replacement event exposed it; conservation check caught it only accidentally with a misleading message |
+| Source | v1.6.1 deploy incident (2026-07-02), server refresh_pipeline failure at ACLED consolidation |
+| Trigger | Consolidation merge into a store containing duplicate event_ids (historical corruption or future dedup regression) |
+| Location | `src/datafactory_consolidation/consolidators/acled.py` (uniqueness guard after existing_lookup) |
+
+Resolved 2026-07-02 (store rebuilt on server; uniqueness guard + 2 regression tests in `tests/test_acled_consolidation.py::TestCorruptedStoreGuard`). Cross-ref: C-252 (the replacement logic that exposed the corruption), C-258 (conservation assertions — the accidental guard).
 
 ---
 
