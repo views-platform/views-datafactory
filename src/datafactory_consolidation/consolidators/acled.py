@@ -336,6 +336,19 @@ def consolidate_acled(
         ):
             existing_lookup[eid] = (i, ts)
 
+        # The merge below assumes one row per event_id. A store
+        # with duplicates loses all copies of a replaced event,
+        # surfacing later as a cryptic conservation failure.
+        if len(existing_lookup) != len(existing_eids):
+            raise RuntimeError(
+                f"Existing store is corrupted: "
+                f"{len(existing_eids)} rows but only "
+                f"{len(existing_lookup)} unique event_ids "
+                f"(duplicate events). Delete "
+                f"{config.output_path} and re-run to rebuild "
+                f"from raw snapshots."
+            )
+
         new_ids = new_table.column("event_id_cnty").to_pylist()
         new_ts = new_table.column(
             "_harvest_timestamp"
