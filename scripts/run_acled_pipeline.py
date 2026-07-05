@@ -12,6 +12,7 @@ Requires ACLED_USERNAME and ACLED_PASSWORD environment variables.
 from __future__ import annotations
 
 import argparse
+import datetime
 import os
 import sys
 from pathlib import Path
@@ -34,8 +35,8 @@ def main() -> int:
         help="Harvest start year (default: 2020)",
     )
     parser.add_argument(
-        "--end-year", type=int, default=2025,
-        help="Harvest end year (default: 2025)",
+        "--end-year", type=int, default=datetime.datetime.now(tz=datetime.UTC).year,
+        help="Harvest end year (default: current year)",
     )
     parser.add_argument(
         "--skip-to",

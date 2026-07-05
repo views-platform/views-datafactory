@@ -16,6 +16,7 @@ No authentication required — V-Dem data is open access (CC-BY-SA).
 from __future__ import annotations
 
 import argparse
+import datetime
 import subprocess
 import sys
 import time
@@ -43,8 +44,8 @@ def main() -> int:
     parser.add_argument(
         "--end-year",
         type=int,
-        default=2026,
-        help="Temporal range end year (default: 2026)",
+        default=datetime.datetime.now(tz=datetime.UTC).year,
+        help="Temporal range end year (default: current year)",
     )
     parser.add_argument(
         "--force", action="store_true",

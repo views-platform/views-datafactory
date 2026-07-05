@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -232,6 +233,52 @@ class TestSourceSpecificArgs:
     def test_vdem_has_verify(self) -> None:
         result = _run_help("run_vdem_pipeline")
         assert "--verify" in result.stdout
+
+
+# ── Dynamic end-year defaults ────────────────────────────────────────
+
+
+class TestDynamicEndYearDefaults:
+    """No script may hardcode a year as its --end-year default.
+
+    Hardcoded year defaults rot annually. The 2026-07-05 incident:
+    run_acled_pipeline defaulted to 2025, silently clipping all
+    2026 ACLED events at the compile boundary while the consumer
+    saw zeros. Defaults must read "current year" in help text.
+    """
+
+    _SCRIPTS_WITH_END_YEAR = [
+        "run_acled_pipeline",
+        "run_ghspop_pipeline",
+        "run_ghsbuilts_pipeline",
+        "run_vdem_pipeline",
+        "run_shdi_pipeline",
+        "compile_acled",
+        "compile_grid",
+        "compile_vdem",
+        "compile_shdi",
+    ]
+
+    @pytest.mark.parametrize("script", _SCRIPTS_WITH_END_YEAR)
+    def test_end_year_default_is_current_year(
+        self, script: str,
+    ) -> None:
+        result = _run_help(script)
+        assert "default: current year" in result.stdout, (
+            f"{script} --end-year help must say "
+            f"'default: current year', got hardcoded year?"
+        )
+
+    @pytest.mark.parametrize("script", _SCRIPTS_WITH_END_YEAR)
+    def test_no_hardcoded_year_default_in_source(
+        self, script: str,
+    ) -> None:
+        source = (SCRIPTS_DIR / f"{script}.py").read_text()
+        # Start years are fixed historical anchors and may be
+        # hardcoded; end years rot annually and may not.
+        assert not re.search(
+            r'"--end-year"[^)]*default=20\d\d', source, re.DOTALL,
+        ), f"{script}.py hardcodes an --end-year default"
 
 
 # ── STEPS tuple content ──────────────────────────────────────────────
