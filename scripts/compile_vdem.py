@@ -15,6 +15,7 @@ Ref: ADR-035 (V-Dem source selection).
 from __future__ import annotations
 
 import argparse
+import datetime
 import sys
 import time
 from pathlib import Path
@@ -76,8 +77,8 @@ def main() -> int:
     parser.add_argument(
         "--end-year",
         type=int,
-        default=2026,
-        help="Temporal range end year (default: 2026)",
+        default=datetime.datetime.now(tz=datetime.UTC).year,
+        help="Temporal range end year (default: current year)",
     )
     args = parser.parse_args()
 

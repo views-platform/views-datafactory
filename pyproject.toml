@@ -1,6 +1,6 @@
 [project]
 name = "views-datafactory"
-version = "1.6.2"
+version = "1.6.3"
 description = "Data factory for the VIEWS conflict forecasting platform — provenance, harvesting, consolidation, viewpoint construction, compilation, and assembly."
 readme = "README.md"
 license = "MIT"

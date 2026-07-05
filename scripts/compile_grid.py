@@ -15,6 +15,7 @@ Does NOT fetch data, consolidate, or build viewpoints.
 from __future__ import annotations
 
 import argparse
+import datetime
 import sys
 import time
 from pathlib import Path
@@ -50,8 +51,8 @@ def main() -> int:
     parser.add_argument(
         "--end-year",
         type=int,
-        default=2026,
-        help="Temporal range end year (default: 2026)",
+        default=datetime.datetime.now(tz=datetime.UTC).year,
+        help="Temporal range end year (default: current year)",
     )
     parser.add_argument(
         "--date-field",
