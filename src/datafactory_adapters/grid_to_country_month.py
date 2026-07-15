@@ -87,10 +87,18 @@ def grid_to_country_month(
     n_excluded = int(excluded_mask.sum())
 
     if n_excluded > 0:
-        event_indices = [
-            i for i, f in enumerate(feature_names)
-            if f.startswith(("ged_", "acled_"))
-        ]
+        # Declared extensive features only (ADR-003/ADR-048, C-302):
+        # no name inference. Without the declaration the warning is
+        # skipped — the conservation check below is likewise a no-op
+        # for such callers (C-301).
+        event_indices = (
+            [
+                i for i, f in enumerate(feature_names)
+                if feature_agg_types.get(f) == "extensive"
+            ]
+            if feature_agg_types is not None
+            else []
+        )
         if event_indices:
             excluded_events = flat_data[excluded_mask][:, event_indices]
             rows_with_events = np.nansum(excluded_events, axis=1) > 0

@@ -294,6 +294,62 @@ sudo -u views-deploy bash -c 'cd ~/views-datafactory && cat logs/pipeline_durati
 
 ---
 
+## Dead-Man Heartbeat Monitoring (C-131, #324)
+
+The pipeline pings an external monitoring service so that failures
+alert a human even when nobody is watching a terminal. Two signals:
+
+- **Success ping** — end of `refresh_pipeline.sh`: `curl "$HEARTBEAT_URL"`.
+  If the ping does not arrive on schedule (cron missed, server down,
+  pipeline hung), the service alerts after its grace period. This is
+  the dead-man switch: silence itself is the alarm.
+- **Failure ping** — `on_failure()` trap: `curl "$HEARTBEAT_URL/fail"`.
+  Flips the check to failing immediately instead of waiting for the
+  missed schedule.
+
+Both are no-ops when `HEARTBEAT_URL` is unset, and both are guarded
+with `|| true` — an unreachable monitoring service must never mask
+the pipeline's own exit code.
+
+### Setup (one-time, operator)
+
+1. Create a check at [healthchecks.io](https://healthchecks.io)
+   (free tier, one check). Schedule: match the cron cadence
+   (currently monthly, 21st at 00:00). Grace period: 24 hours —
+   the full run can take ~8 hours.
+2. Add the ping URL to the deploy user's profile:
+
+   ```bash
+   echo 'export HEARTBEAT_URL="https://hc-ping.com/<uuid>"' | \
+     sudo tee -a /home/views-deploy/.profile
+   ```
+
+3. Verify both directions:
+
+   ```bash
+   # Failure signal → check goes red, email arrives
+   sudo -u views-deploy bash -c 'source ~/.profile && curl -fsS "$HEARTBEAT_URL/fail"'
+   # Success signal → check returns to healthy
+   sudo -u views-deploy bash -c 'source ~/.profile && curl -fsS "$HEARTBEAT_URL"'
+   ```
+
+### What an alert means
+
+The pipeline failed or never ran. First response:
+
+```bash
+sudo -u views-deploy cat /home/views-deploy/views-datafactory/logs/pipeline_failure.json
+sudo -u views-deploy tail -50 /home/views-deploy/views-datafactory/logs/refresh.log
+```
+
+Then check the status page: http://204.168.219.108/status.html
+(regenerates on every pipeline exit, success or failure).
+
+To rotate the URL: create a new check, update `~/.profile`, delete
+the old check.
+
+---
+
 ## Swap Configuration
 
 The CPX32 has 8 GB RAM. Assembly with 75+ features (UCDP + ACLED +

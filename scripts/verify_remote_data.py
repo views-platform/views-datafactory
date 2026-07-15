@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """Post-deploy data correctness verification (C-138).
 
+MANUAL TOOL — retired from the nightly pipeline (2026-07-15, #323).
+It compares the remote zarr against the operator's LOCAL assembled
+grid, so it false-alarms whenever the local copy is older than the
+server's (62 false MISMATCHes on 2026-07-05). Only run it right
+after building the local grid from the same inputs as the server.
+The nightly path uses scripts/verify_consumer_contract.py instead.
+
 Compares feature sums between the local assembled grid and the
 remote zarr store at representative time steps.  Catches the
 failure mode from the stale-zarr incident (2026-04-24): a zarr

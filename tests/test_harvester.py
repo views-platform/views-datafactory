@@ -234,6 +234,44 @@ class TestSaveEventSnapshotBeige:
             save_event_snapshot([], tmp_path / "empty.parquet")
 
 
+class TestSaveEventSnapshotRed:
+    """C-233 (#326): atomic writes — a crash mid-write must never
+    leave a truncated Parquet at the canonical path."""
+
+    def test_crash_mid_write_leaves_no_target(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import datafactory_harvester.snapshot_storage as ss
+
+        def _boom(*args: object, **kwargs: object) -> None:
+            raise OSError("disk full mid-write")
+
+        monkeypatch.setattr(ss.pq, "write_table", _boom)
+        path = tmp_path / "snap.parquet"
+        with pytest.raises(OSError, match="disk full"):
+            save_event_snapshot(_make_events(), path)
+        assert not path.exists()
+        assert list(tmp_path.glob("*.tmp")) == []
+
+    def test_crash_does_not_clobber_existing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A failed re-save must leave the previous snapshot intact."""
+        import datafactory_harvester.snapshot_storage as ss
+
+        path = tmp_path / "snap.parquet"
+        save_event_snapshot(_make_events(), path)
+        original = path.read_bytes()
+
+        def _boom(*args: object, **kwargs: object) -> None:
+            raise OSError("crash")
+
+        monkeypatch.setattr(ss.pq, "write_table", _boom)
+        with pytest.raises(OSError):
+            save_event_snapshot(_make_events(), path)
+        assert path.read_bytes() == original
+
+
 class TestArchiveSnapshotGreen:
 
     def test_archives_existing_file(self, tmp_path: Path) -> None:
@@ -251,6 +289,36 @@ class TestArchiveSnapshotGreen:
 
         result = archive_snapshot(tmp_path / "nope.parquet")
         assert result is None
+
+    def test_archive_lands_in_subdirectory(
+        self, tmp_path: Path,
+    ) -> None:
+        """C-234 (#326): archives go to archive/ so consolidation
+        globs structurally cannot see them."""
+        from datafactory_harvester.snapshot_storage import archive_snapshot
+
+        path = tmp_path / "acled_2020_2020.parquet"
+        path.write_text("data")
+        result = archive_snapshot(path)
+        assert result is not None
+        assert result.parent == tmp_path / "archive"
+        # The source-dir glob used by consolidators no longer
+        # matches the archived file.
+        assert list(tmp_path.glob("*.parquet")) == []
+
+    def test_save_archive_save_round_trip(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_harvester.snapshot_storage import archive_snapshot
+
+        path = tmp_path / "snap.parquet"
+        save_event_snapshot(_make_events(), path)
+        archived = archive_snapshot(path)
+        save_event_snapshot(_make_events(), path)
+        assert path.exists()
+        assert archived is not None and archived.exists()
+        assert pq.read_table(path).num_rows == 3
+        assert pq.read_table(archived).num_rows == 3
 
 
 # ---- Source Registry ----

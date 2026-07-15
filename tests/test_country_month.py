@@ -81,8 +81,17 @@ class TestGridToCountryMonth:
         grid, pgids, ts, feats = _synthetic_grid()
         # Set bottom row to ocean (gaul0_code = 0)
         grid[:, 3, :, 2] = 0
+        # C-302: the excluded-events warning requires declared agg
+        # types (ADR-003) — no feature-name inference remains.
+        agg = {
+            "ged_sb_best": "extensive",
+            "ged_ns_best": "extensive",
+            "gaul0_code": "static",
+        }
         with pytest.warns(UserWarning, match="unmapped GAUL"):
-            df = grid_to_country_month(grid, pgids, ts, feats)
+            df = grid_to_country_month(
+                grid, pgids, ts, feats, feature_agg_types=agg,
+            )
         countries = df.index.get_level_values("country_id").unique()
         assert 0 not in countries
         # Country B now has only 1 row = 5 cells
@@ -107,7 +116,41 @@ class TestGridToCountryMonth:
         grid, pgids, ts, feats = _synthetic_grid()
         # Set one row to unmapped (gaul0_code = -1) but keep event values
         grid[:, 3, :, 2] = -1
+        agg = {
+            "ged_sb_best": "extensive",
+            "ged_ns_best": "extensive",
+            "gaul0_code": "static",
+        }
         with pytest.warns(UserWarning, match="unmapped GAUL"):
+            grid_to_country_month(
+                grid, pgids, ts, feats, feature_agg_types=agg,
+            )
+
+    def test_excluded_warning_covers_novel_prefix(self) -> None:
+        """C-302: a declared-extensive feature with a prefix the old
+        inference tuple never knew (e.g. a future WDI feature) must
+        still trigger the excluded-events warning."""
+        grid, pgids, ts, _ = _synthetic_grid()
+        feats = ["wdi_deaths", "ged_ns_best", "gaul0_code"]
+        grid[:, 3, :, 2] = -1  # unmapped, keeps nonzero values
+        agg = {
+            "wdi_deaths": "extensive",
+            "ged_ns_best": "extensive",
+            "gaul0_code": "static",
+        }
+        with pytest.warns(UserWarning, match="unmapped GAUL"):
+            grid_to_country_month(
+                grid, pgids, ts, feats, feature_agg_types=agg,
+            )
+
+    def test_no_agg_types_no_event_warning(self) -> None:
+        """Without declared agg types the event warning is skipped
+        (matching the conservation no-op for such callers, C-301) —
+        never inferred from names."""
+        grid, pgids, ts, feats = _synthetic_grid()
+        grid[:, 3, :, 2] = -1
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             grid_to_country_month(grid, pgids, ts, feats)
 
     def test_no_warning_when_excluded_cells_all_zero(self) -> None:

@@ -1232,7 +1232,7 @@ class TestRemoteZarrSmoke:
         )
         assert df.shape[0] > 0
         assert "ged_sb_best" in df.columns
-        assert df.index.names == ["month_id", "priogrid_gid"]
+        assert df.index.names == ["month_id", "priogrid_id"]
 
     def test_load_feature_frame_africa(self) -> None:
         """Load 12 months of Africa as FeatureFrame."""
@@ -1557,4 +1557,169 @@ class TestLoadDatasetTemporalWarning:
                 region="global",
                 output_format="feature_frame",
                 features=["ged_sb_best"],
+            )
+
+
+class TestZarrSourceMetadata:
+    """C-300 (#325): zarr stores carry source metadata attrs so the
+    pre-coverage warning and type-aware aggregation work remotely."""
+
+    def _make_zarr(
+        self, tmp_path: Path, *, with_metadata: bool,
+    ) -> Path:
+        import xarray as xr
+
+        names = ["acled_fatalities", "ged_sb_best"]
+        n_t, n_h, n_w = 6, 3, 4
+        data_vars = {
+            n: (
+                ["time", "lat", "lon"],
+                np.full((n_t, n_h, n_w), i + 1, dtype=np.float32),
+            )
+            for i, n in enumerate(names)
+        }
+        attrs: dict = {
+            "feature_order": names,
+            "last_valid_month_id": 486,
+        }
+        if with_metadata:
+            attrs["source_features"] = {
+                "acled_features": ["acled_fatalities"],
+                "ucdp_features": ["ged_sb_best"],
+            }
+            attrs["first_valid_month_ids"] = {
+                "first_valid_acled_month_id": 481,
+            }
+            attrs["feature_agg_types"] = [
+                "extensive", "extensive",
+            ]
+        ds = xr.Dataset(
+            data_vars,
+            coords={
+                "time": np.arange(
+                    "2020-01", "2020-07", dtype="datetime64[M]"
+                ),
+                "lat": np.linspace(-45, 45, n_h),
+                "lon": np.linspace(-90, 90, n_w),
+                "pgid": (
+                    ["lat", "lon"],
+                    np.arange(1, n_h * n_w + 1).reshape(n_h, n_w),
+                ),
+            },
+            attrs=attrs,
+        )
+        zarr_path = tmp_path / "store.zarr"
+        ds.to_zarr(zarr_path, mode="w")
+        return zarr_path
+
+    def test_metadata_attrs_round_trip(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_query.dataset import _load_grid_from_zarr
+
+        zarr_path = self._make_zarr(tmp_path, with_metadata=True)
+        (
+            _, _, _, _, _,
+            first_valid, agg_types, source_features,
+        ) = _load_grid_from_zarr(str(zarr_path))
+        assert first_valid == {"first_valid_acled_month_id": 481}
+        assert agg_types == {
+            "acled_fatalities": "extensive",
+            "ged_sb_best": "extensive",
+        }
+        assert source_features == {
+            "acled_features": ["acled_fatalities"],
+            "ucdp_features": ["ged_sb_best"],
+        }
+
+    def test_missing_metadata_warns_once(
+        self, tmp_path: Path,
+    ) -> None:
+        from datafactory_query.dataset import _load_grid_from_zarr
+
+        zarr_path = self._make_zarr(tmp_path, with_metadata=False)
+        with pytest.warns(
+            UserWarning, match="source metadata",
+        ):
+            (
+                _, _, _, _, _,
+                first_valid, agg_types, source_features,
+            ) = _load_grid_from_zarr(str(zarr_path))
+        assert first_valid == {}
+        assert agg_types is None
+        assert source_features == {}
+
+    def test_agg_types_built_from_full_order_despite_subset(
+        self, tmp_path: Path,
+    ) -> None:
+        """feature_sel subsetting must not misalign the agg dict."""
+        from datafactory_query.dataset import _load_grid_from_zarr
+
+        zarr_path = self._make_zarr(tmp_path, with_metadata=True)
+        (
+            _, _, _, features, _,
+            _, agg_types, _,
+        ) = _load_grid_from_zarr(
+            str(zarr_path), feature_sel=["ged_sb_best"],
+        )
+        assert features == ["ged_sb_best"]
+        assert agg_types["ged_sb_best"] == "extensive"
+
+    def test_pre_coverage_warning_fires_on_zarr_path(
+        self, tmp_path: Path,
+    ) -> None:
+        """C-300 end-to-end: load_dataset over a zarr store warns
+        when the query predates a source's first valid month —
+        previously silently skipped because the zarr loader
+        returned empty source_features."""
+        import xarray as xr
+
+        from datafactory_query import load_dataset
+
+        names = ["acled_fatalities", "ged_sb_best"]
+        n_t, n_h, n_w = 12, 3, 4
+        data_vars = {
+            n: (
+                ["time", "lat", "lon"],
+                np.ones((n_t, n_h, n_w), dtype=np.float32),
+            )
+            for n in names
+        }
+        ds = xr.Dataset(
+            data_vars,
+            coords={
+                "time": np.arange(
+                    "2019-07", "2020-07", dtype="datetime64[M]"
+                ),
+                "lat": np.linspace(-45, 45, n_h),
+                "lon": np.linspace(-90, 90, n_w),
+                "pgid": (
+                    ["lat", "lon"],
+                    np.arange(1, n_h * n_w + 1).reshape(n_h, n_w),
+                ),
+            },
+            attrs={
+                "feature_order": names,
+                "last_valid_month_id": 486,
+                "source_features": {
+                    "acled_features": ["acled_fatalities"],
+                },
+                "first_valid_month_ids": {
+                    "first_valid_acled_month_id": 481,
+                },
+                "feature_agg_types": ["extensive", "extensive"],
+            },
+        )
+        zarr_path = tmp_path / "coverage.zarr"
+        ds.to_zarr(zarr_path, mode="w")
+
+        with pytest.warns(
+            UserWarning, match="begins at month_id 481",
+        ):
+            load_dataset(
+                region="global",
+                start="2019-08",
+                end="2020-03",
+                features=["acled_fatalities"],
+                data_dir=str(zarr_path),
             )
