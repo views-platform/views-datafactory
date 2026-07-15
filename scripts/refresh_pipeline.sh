@@ -83,6 +83,15 @@ on_failure() {
         echo "Pipeline failed at $CURRENT_STEP on $(hostname). Check logs/refresh.log" | \
             mail -s "VIEWS pipeline failure $(date -Iseconds)" "$ALERT_EMAIL"
     fi
+    # Immediate dead-man alert (C-131): the success ping at the end
+    # of the script never fires on failure, so healthchecks would
+    # only alert at the next missed schedule (up to the grace
+    # period). /fail flips the check to failing right now. The
+    # || true guard must stay — an unreachable monitoring service
+    # must never mask the original exit code under set -e.
+    if [ -n "${HEARTBEAT_URL:-}" ]; then
+        curl -fsS --max-time 10 "$HEARTBEAT_URL/fail" >/dev/null 2>&1 || true
+    fi
 }
 trap on_failure ERR
 
