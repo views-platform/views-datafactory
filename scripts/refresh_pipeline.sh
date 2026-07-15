@@ -18,7 +18,7 @@
 #  10.  Assemble all features (UCDP + ACLED + GHS-POP + GHS-BUILT-S + V-Dem + SHDI + static + admin)
 #  11.  Export to consumer formats (zarr, parquet)
 #  12.  Run health check
-#  13.  Verify remote data correctness (C-138)
+#  13.  Verify consumer contract — freshness + plausibility (#323)
 #
 # Status page (EXIT trap):
 #   generate_status.py runs on exit — success or failure — via
@@ -248,10 +248,15 @@ echo "── $CURRENT_STEP ──"
 uv run python scripts/check_health.py
 echo
 
-# Step 13: Remote data verification (C-138)
-CURRENT_STEP="13/14: Verify remote data"
+# Step 13: Consumer contract verification (#323)
+# Freshness (C-313 detector) + plausibility (C-314 detector),
+# checked at the consumer boundary via load_dataset(). Replaces
+# verify_remote_data.py in the nightly path — that script compares
+# against the operator's LOCAL grid copy and false-alarms when the
+# local copy is stale (62 false MISMATCHes on 2026-07-05).
+CURRENT_STEP="13/14: Verify consumer contract"
 echo "── $CURRENT_STEP ──"
-uv run python scripts/verify_remote_data.py
+uv run python scripts/verify_consumer_contract.py
 echo
 
 # Success — remove any stale failure sentinel
