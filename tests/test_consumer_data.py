@@ -98,7 +98,7 @@ class TestGeneratePartition:
             "test", 481, 486,
             data_dir=data_dir, gaul_dir=gaul_dir,
         )
-        assert df.index.names == ["month_id", "priogrid_gid"]
+        assert df.index.names == ["month_id", "priogrid_id"]
 
     def test_feature_rename(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "assembled"

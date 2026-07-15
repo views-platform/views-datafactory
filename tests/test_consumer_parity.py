@@ -73,7 +73,7 @@ def build_parity_df(df: pd.DataFrame) -> pd.DataFrame:
     """Select GED features, derive row/col, fill NaN, coerce to float64."""
     result = df[DF_FEATURES].copy()
 
-    pgids = result.index.get_level_values("priogrid_gid")
+    pgids = result.index.get_level_values("priogrid_id")
     ncol = DEFAULT_GRID_CONFIG.ncol
     result["row"] = ((pgids - 1) // ncol + 1).astype(np.float64)
     result["col"] = ((pgids - 1) % ncol + 1).astype(np.float64)
@@ -104,7 +104,7 @@ def assert_consumer_parity(
         == reference.index.get_level_values("month_id").tolist()
     )
     assert (
-        result.index.get_level_values("priogrid_gid").tolist()
+        result.index.get_level_values("priogrid_id").tolist()
         == reference.index.get_level_values("priogrid_gid").tolist()
     )
 
@@ -193,7 +193,7 @@ class TestDataFrameConsumer:
             month_id_epoch=MONTH_ID_EPOCH,
         )
 
-        mask = df.index.get_level_values("priogrid_gid").isin(
+        mask = df.index.get_level_values("priogrid_id").isin(
             reference_pgids,
         )
         df = df.loc[mask]
@@ -232,12 +232,12 @@ class TestFeatureFrameConsumer:
             columns=ff.feature_names,
             index=pd.MultiIndex.from_arrays(
                 [ff.identifiers["time"], ff.identifiers["unit"]],
-                names=["month_id", "priogrid_gid"],
+                names=["month_id", "priogrid_id"],
             ),
         )
         df = df.sort_index()
 
-        mask = df.index.get_level_values("priogrid_gid").isin(
+        mask = df.index.get_level_values("priogrid_id").isin(
             reference_pgids,
         )
         df = df.loc[mask]
@@ -310,7 +310,7 @@ class TestZarrConsumer:
             columns=DF_FEATURES,
             index=pd.MultiIndex.from_arrays(
                 [all_month_ids, all_pgids],
-                names=["month_id", "priogrid_gid"],
+                names=["month_id", "priogrid_id"],
             ),
         )
         df = df.sort_index()

@@ -1,7 +1,7 @@
 """Grid array to DataFrame conversion.
 
 Converts the canonical [T, H, W, C] grid output to a pandas
-DataFrame with (month_id, priogrid_gid) MultiIndex. Supports
+DataFrame with (month_id, priogrid_id) MultiIndex. Supports
 land filtering and configurable month_id encoding.
 
 Designed to be extractable: depends only on numpy + pandas.
@@ -112,7 +112,7 @@ def grid_to_dataframe(
             (default), keep all rows (dense time series).
 
     Returns:
-        DataFrame with (month_id, priogrid_gid) MultiIndex
+        DataFrame with (month_id, priogrid_id) MultiIndex
         and one column per feature.
     """
     flat_data, all_month_ids, all_pgids = _flatten_grid(
@@ -127,7 +127,7 @@ def grid_to_dataframe(
 
     index = pd.MultiIndex.from_arrays(
         [all_month_ids, all_pgids],
-        names=["month_id", "priogrid_gid"],
+        names=["month_id", "priogrid_id"],
     )
     df = pd.DataFrame(
         flat_data, index=index, columns=feature_names
