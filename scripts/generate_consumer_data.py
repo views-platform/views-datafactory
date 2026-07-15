@@ -8,13 +8,13 @@ These scripts expect parquet files at:
     {model}/data/raw/{run_type}_viewser_df.parquet
 
 With structure:
-    - MultiIndex: (month_id, priogrid_gid)
+    - MultiIndex: (month_id, priogrid_id)
     - Columns: ged_sb_best, ged_ns_best, ged_os_best, gaul0_code, col, row
     - NaN replaced with 0
     - Sorted by index
 
 This script calls load_dataset() from the data factory, derives
-row/col from priogrid_gid, and saves parquet files for each partition.
+row/col from priogrid_id, and saves parquet files for each partition.
 Column names are the factory's source names — consumer-side renaming
 (if any) is the model's responsibility via config_queryset.py.
 
@@ -73,14 +73,14 @@ def _forecasting_partition(steps: int = 36) -> dict:
 def _derive_row_col(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Add row and col columns derived from priogrid_gid index.
+    """Add row and col columns derived from priogrid_id index.
 
     PRIO-GRID convention: 1-indexed, ncol columns per row.
     row = (pgid - 1) // ncol + 1
     col = (pgid - 1) % ncol + 1
     """
     ncol = DEFAULT_GRID_CONFIG.ncol
-    pgids = df.index.get_level_values("priogrid_gid")
+    pgids = df.index.get_level_values("priogrid_id")
     df = df.copy()
     df["row"] = ((pgids - 1) // ncol + 1).astype(np.float64)
     df["col"] = ((pgids - 1) % ncol + 1).astype(np.float64)
@@ -122,7 +122,7 @@ def generate_partition(
         month_id_epoch=1980,
     )
 
-    # Derive row/col from priogrid_gid
+    # Derive row/col from priogrid_id
     df = _derive_row_col(df)
 
     # Fill NaN with 0 (matches .transform.missing.replace_na())

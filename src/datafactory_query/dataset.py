@@ -187,6 +187,39 @@ def _load_grid_from_zarr(
         )
         feature_names = sorted(ds.data_vars)
 
+    # Source metadata (C-300): mirrors the npy sidecars so the
+    # pre-coverage warning and type-aware aggregation work on the
+    # zarr path too. Keyed exactly like provenance.json.
+    first_valid_month_ids: dict[str, int] = {}
+    source_features: dict[str, list[str]] = {}
+    feature_agg_types: dict[str, str] | None = None
+    if "source_features" in attrs:
+        source_features = {
+            k: list(v)
+            for k, v in attrs["source_features"].items()
+        }
+        first_valid_month_ids = {
+            k: int(v)
+            for k, v in attrs.get(
+                "first_valid_month_ids", {},
+            ).items()
+        }
+        agg_list = attrs.get("feature_agg_types")
+        if agg_list is not None:
+            feature_agg_types = dict(
+                zip(feature_names, list(agg_list), strict=True),
+            )
+    else:
+        warnings.warn(
+            f"Zarr store at {zarr_path} lacks source metadata "
+            f"attributes (source_features / first_valid_month_ids "
+            f"/ feature_agg_types). Pre-coverage warnings and "
+            f"type-aware aggregation are unavailable on this "
+            f"store. Re-export with export_zarr.py to fix.",
+            UserWarning,
+            stacklevel=2,
+        )
+
     # Apply feature subsetting (lazy — no data fetched yet)
     if feature_sel is not None:
         available = set(feature_names)
@@ -220,7 +253,11 @@ def _load_grid_from_zarr(
     ).astype(np.float32)
 
     ds.close()
-    return grid, pgids, time_steps, feature_names, last_valid_month_id, {}, None, {}
+    return (
+        grid, pgids, time_steps, feature_names,
+        last_valid_month_id, first_valid_month_ids,
+        feature_agg_types, source_features,
+    )
 
 
 def _load_grid_from_npy(

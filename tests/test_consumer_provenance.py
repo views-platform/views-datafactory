@@ -37,7 +37,7 @@ def _fake_partition(
     n_cells = 4
     idx = pd.MultiIndex.from_product(
         [range(start, end + 1), range(1, n_cells + 1)],
-        names=["month_id", "priogrid_gid"],
+        names=["month_id", "priogrid_id"],
     )
     return pd.DataFrame(
         {

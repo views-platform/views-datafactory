@@ -42,7 +42,7 @@ CM_SUM_GAP_THRESHOLD = 0.05  # 5% — CM drops ~603 unmapped coastal cells
 def _build_parity_df(df: pd.DataFrame) -> pd.DataFrame:
     """Transform factory DataFrame into gold set format."""
     result = df[FACTORY_FEATURES].copy()
-    pgids = result.index.get_level_values("priogrid_gid")
+    pgids = result.index.get_level_values("priogrid_id")
     result["row"] = ((pgids - 1) // NCOL + 1).astype(np.float64)
     result["col"] = ((pgids - 1) % NCOL + 1).astype(np.float64)
     result = result[PARITY_COLS].fillna(0.0).astype(np.float64)
@@ -180,7 +180,7 @@ class TestPGMAfricaMeParity:
         gold_pgids: set[int],
     ) -> None:
         f_pgids = set(
-            factory_df.index.get_level_values("priogrid_gid").unique()
+            factory_df.index.get_level_values("priogrid_id").unique()
         )
         assert f_pgids == gold_pgids, (
             f"PGIDs: factory={len(f_pgids)}, gold={len(gold_pgids)}, "
@@ -244,7 +244,7 @@ class TestPGMLandParity:
     ) -> None:
         f_pgids = set(
             factory_land_df.index.get_level_values(
-                "priogrid_gid"
+                "priogrid_id"
             ).unique()
         )
         missing = gold_pgids - f_pgids
@@ -259,7 +259,7 @@ class TestPGMLandParity:
         gold_pgids: set[int],
     ) -> None:
         mask = factory_land_df.index.get_level_values(
-            "priogrid_gid"
+            "priogrid_id"
         ).isin(gold_pgids)
         overlap = factory_land_df.loc[mask].sort_index()
         assert overlap.shape == gold_df.shape, (
@@ -273,7 +273,7 @@ class TestPGMLandParity:
         self, factory_land_df: pd.DataFrame,
     ) -> None:
         n_pgids = factory_land_df.index.get_level_values(
-            "priogrid_gid"
+            "priogrid_id"
         ).nunique()
         assert n_pgids == 64818, f"Expected 64,818 land cells, got {n_pgids}"
 
@@ -283,11 +283,11 @@ class TestPGMLandParity:
         gold_pgids: set[int],
     ) -> None:
         mask = ~factory_land_df.index.get_level_values(
-            "priogrid_gid"
+            "priogrid_id"
         ).isin(gold_pgids)
         rest = factory_land_df.loc[mask]
 
-        rest_pgids = rest.index.get_level_values("priogrid_gid")
+        rest_pgids = rest.index.get_level_values("priogrid_id")
         assert rest_pgids.min() >= 1
         assert rest_pgids.max() <= 259200
 

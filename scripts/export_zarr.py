@@ -232,6 +232,35 @@ def main() -> int:
             datetime.now(tz=UTC).isoformat()
         )
 
+        # Source metadata (C-300): mirror the npy sidecars into
+        # zarr attrs so remote consumers get pre-coverage warnings
+        # and type-aware aggregation. Keys match provenance.json.
+        if provenance_path.exists():
+            prov = json.loads(provenance_path.read_text())
+            first_valid = {
+                k: v for k, v in prov.items()
+                if k.startswith("first_valid_") and v is not None
+            }
+            src_feats = {
+                k: v for k, v in prov.items()
+                if k.endswith("_features") and isinstance(v, list)
+            }
+            if first_valid:
+                attrs["first_valid_month_ids"] = first_valid
+            if src_feats:
+                attrs["source_features"] = src_feats
+        agg_path = grid_path.parent / "feature_agg_types.json"
+        if agg_path.exists():
+            agg_list = json.loads(agg_path.read_text())
+            if len(agg_list) == n_f:
+                attrs["feature_agg_types"] = agg_list
+            else:
+                print(
+                    f"WARNING: feature_agg_types.json has "
+                    f"{len(agg_list)} entries, grid has {n_f} "
+                    f"features — not embedding (stale sidecar)"
+                )
+
         # Data boundary: last month with real UCDP observations.
         # The grid is pre-allocated through --end-year (ADR-003) but
         # only months through this boundary have observed data; later

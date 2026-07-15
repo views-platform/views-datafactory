@@ -165,7 +165,7 @@ class TestGridToDataframeGreen:
 
         assert list(df.columns) == ["count", "fatalities"]
         assert df.index.names == [
-            "month_id", "priogrid_gid"
+            "month_id", "priogrid_id"
         ]
         # 2 months × 12 cells = 24 rows
         assert len(df) == 24
