@@ -57,7 +57,7 @@ Assumptions not met cause immediate `ValueError`.
 - Returns a `pd.DataFrame` with `(month_id, country_id)` MultiIndex
 - When `feature_agg_types` is provided: one column per extensive feature (static features excluded from output). When not provided: one column per feature except the country feature.
 - All values are sums over grid cells belonging to each (month, country) group
-- Emits `UserWarning` when excluded cells (country_id <= 0) have nonzero event feature values (features starting with `ged_` or `acled_`). The warning includes the count of excluded cell-months and how many carry events. Since ADR-039, the number of excluded cells with events is substantially reduced.
+- Emits `UserWarning` when excluded cells (country_id <= 0) have nonzero values in declared-extensive features (`feature_agg_types` membership per ADR-048; no name inference per ADR-003 — C-302 resolved 2026-07-15). When `feature_agg_types` is not provided the warning is skipped, matching the conservation no-op for such callers (C-301). The warning includes the count of excluded cell-months and how many carry events. Since ADR-039, the number of excluded cells with events is substantially reduced.
 - When `feature_agg_types` is provided (ADR-048): raises `ValueError` if any intensive features are present — summation is not meaningful for indices (fail-loud per ADR-011). Callers must remove intensive features or use `output_format='dataframe'`.
 
 ---
