@@ -18,11 +18,9 @@ import pytest
 class TestQ2NoPrefixCheckInExcludedCellWarning:
     """Excluded-cell warning should use declared types, not prefixes."""
 
-    @pytest.mark.xfail(
-        reason="C-302: grid_to_country_month.py:92 inline prefix check "
-        "in excluded-cell warning — registered Tier 4, deferred",
-    )
     def test_no_prefix_startswith_in_grid_to_country_month(self) -> None:
+        """C-302 resolved 2026-07-15 (#325, PR #331) — xfail removed;
+        this now guards against the prefix check returning."""
         from pathlib import Path
 
         src = Path(
