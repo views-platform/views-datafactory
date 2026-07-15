@@ -7,6 +7,8 @@ No knowledge of specific data sources.
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -17,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 _PARQUET_COMPRESSION: str = "snappy"
 
+_ARCHIVE_DIRNAME: str = "archive"
+
 
 def save_event_snapshot(
     events: list[dict],
@@ -26,6 +30,11 @@ def save_event_snapshot(
 
     Preserves every field from the source — enables event-level
     revision detection and arbitrary re-analysis.
+
+    Atomic (C-233): writes to a temp file in the same directory,
+    then renames. A crash mid-write can never leave a truncated
+    Parquet at the canonical path — the raw layer is the recovery
+    layer, so its snapshots must be uncorruptible.
 
     Args:
         events: List of raw event dicts.
@@ -54,7 +63,18 @@ def save_event_snapshot(
         pa_columns[name] = pa.array(values, from_pandas=True)
 
     table = pa.table(pa_columns)
-    pq.write_table(table, path, compression=_PARQUET_COMPRESSION)
+
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        os.close(fd)
+        tmp_path = Path(tmp)
+        pq.write_table(
+            table, tmp_path, compression=_PARQUET_COMPRESSION,
+        )
+        tmp_path.rename(path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
     logger.info(
         "Saved event snapshot to %s (%d events, %d fields)",
@@ -65,7 +85,12 @@ def save_event_snapshot(
 
 
 def archive_snapshot(path: Path) -> Path | None:
-    """Rename an existing snapshot to a dated archive.
+    """Move an existing snapshot to a dated archive.
+
+    Archives land in an ``archive/`` subdirectory (C-234) so
+    consolidation source-file globs structurally cannot pick them
+    up — same-directory archives were excluded only by filename
+    convention, and tripped spurious year-overlap warnings.
 
     Uses the current UTC timestamp for the archive suffix.
     Returns the archive path, or None if the source doesn't exist.
@@ -80,8 +105,13 @@ def archive_snapshot(path: Path) -> Path | None:
         return None
 
     stamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
-    archive_path = path.with_stem(f"{path.stem}_{stamp}")
+    archive_dir = path.parent / _ARCHIVE_DIRNAME
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    archive_path = archive_dir / f"{path.stem}_{stamp}{path.suffix}"
     path.rename(archive_path)
 
-    logger.info("Archived snapshot: %s -> %s", path.name, archive_path.name)
+    logger.info(
+        "Archived snapshot: %s -> %s/%s",
+        path.name, _ARCHIVE_DIRNAME, archive_path.name,
+    )
     return archive_path
