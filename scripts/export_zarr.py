@@ -237,14 +237,16 @@ def main() -> int:
         # and type-aware aggregation. Keys match provenance.json.
         if provenance_path.exists():
             prov = json.loads(provenance_path.read_text())
-            first_valid = {
-                k: v for k, v in prov.items()
-                if k.startswith("first_valid_") and v is not None
-            }
-            src_feats = {
-                k: v for k, v in prov.items()
-                if k.endswith("_features") and isinstance(v, list)
-            }
+            # *_features keys nest under "sources" in real assembly
+            # provenance; scan both levels (same as the npy loader).
+            first_valid: dict = {}
+            src_feats: dict = {}
+            for space in (prov, prov.get("sources", {})):
+                for k, v in space.items():
+                    if k.startswith("first_valid_") and v is not None:
+                        first_valid[k] = v
+                    if k.endswith("_features") and isinstance(v, list):
+                        src_feats[k] = v
             if first_valid:
                 attrs["first_valid_month_ids"] = first_valid
             if src_feats:
