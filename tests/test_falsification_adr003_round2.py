@@ -12,8 +12,6 @@ Q5 (soft): PR #299 body lists 5 commits but the 6th (c45b919,
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestQ2NoPrefixCheckInExcludedCellWarning:
     """Excluded-cell warning should use declared types, not prefixes."""

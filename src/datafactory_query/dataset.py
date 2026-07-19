@@ -296,11 +296,22 @@ def _load_grid_from_npy(
     if provenance_path.exists():
         prov = json.loads(provenance_path.read_text())
         last_valid_month_id = prov.get("last_valid_month_id")
-        for key, val in prov.items():
-            if key.startswith("first_valid_") and val is not None:
-                first_valid_month_ids[key] = val
-            if key.endswith("_features") and isinstance(val, list):
-                source_features[key] = val
+        # *_features keys live nested under "sources" in real
+        # assembly provenance; synthetic/test provenance may put
+        # them top-level. Scan both — reading only the top level
+        # silently disabled pre-coverage warnings on real data
+        # (found by verify_consumer_contract's first server run,
+        # 2026-07-19).
+        key_spaces = [prov, prov.get("sources", {})]
+        for space in key_spaces:
+            for key, val in space.items():
+                if (
+                    key.startswith("first_valid_")
+                    and val is not None
+                ):
+                    first_valid_month_ids[key] = val
+                if key.endswith("_features") and isinstance(val, list):
+                    source_features[key] = val
 
     feature_agg_types: dict[str, str] | None = None
     agg_path = data_dir / "feature_agg_types.json"
