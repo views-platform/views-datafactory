@@ -1534,6 +1534,45 @@ class TestLoadDatasetTemporalWarning:
                 features=["acled_count"],
             )
 
+    def test_warning_fires_with_real_nested_provenance(
+        self, tmp_path: Path,
+    ) -> None:
+        """Regression (2026-07-19): real assemble_grid.py nests
+        *_features under provenance["sources"], not top-level.
+        Both readers scanned only the top level, so the warning
+        passed synthetic tests but never fired on real data —
+        found by verify_consumer_contract's first server run."""
+        import json as _json
+
+        from datafactory_query.dataset import load_dataset
+
+        data_dir = self._make_grid_with_first_valid(
+            tmp_path, first_valid_acled=483,
+        )
+        # Rewrite provenance in the REAL assembly shape.
+        prov = {
+            "last_valid_month_id": 486,
+            "first_valid_acled_month_id": 483,
+            "sources": {
+                "acled_features": [
+                    "acled_count", "acled_fatalities",
+                ],
+                "acled_digest": "abc123",
+            },
+        }
+        (data_dir / "provenance.json").write_text(
+            _json.dumps(prov),
+        )
+        with pytest.warns(
+            UserWarning, match="ACLED data begins at month_id",
+        ):
+            load_dataset(
+                data_dir=data_dir,
+                region="global",
+                output_format="feature_frame",
+                features=["acled_count"],
+            )
+
     def test_no_warning_when_non_acled_features_only(
         self, tmp_path: Path,
     ) -> None:

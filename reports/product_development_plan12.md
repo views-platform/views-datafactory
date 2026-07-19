@@ -1,9 +1,30 @@
-# Product Development Plan v12 — v1.6 Deploy Ready, 9 Sources, 79 Features
+# Product Development Plan v12 — current through v1.7, 9 Sources, 79 Features
 
-**Date:** 2026-06-29
+**Date:** 2026-06-29 (v1.7 addendum 2026-07-19)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, 9 data sources across conflict, population, built environment, democracy, and human development.
+
+---
+
+## v1.7 Addendum (2026-07-19)
+
+Between v1.6 and this addendum, three releases shipped without changing the
+plan's gates or roadmap position:
+
+- **v1.6.1–v1.6.3 (staleness sprint):** dynamic version/year defaults across
+  harvest configs, DGP ordering check warn-only (C-311), ACLED store
+  uniqueness guard (C-312), dynamic script end-years (C-313). UCDP v26.1
+  (1989–2025) and ACLED through 2026 now serve with zero manual bumping.
+- **v1.7.0 (epic #322 "Trust what we serve"):** consumer contract
+  verification as the pipeline's final step (freshness FAILs, plausibility
+  WARNs), dead-man heartbeat failure ping (verified live), zarr source
+  metadata, canonical `priogrid_id`, atomic raw snapshots, ACLED Jan-2026
+  spike adjudicated REAL (#320).
+
+Next feature milestone remains **WDI (10th source)** — the WET-before-DRY
+inflection (D-38): pipeline registry, assembly extraction, named channel
+map (C-287).
 
 ---
 
