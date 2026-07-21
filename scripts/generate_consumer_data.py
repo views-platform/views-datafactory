@@ -176,7 +176,17 @@ def main() -> int:
         default=36,
         help="Forecasting horizon in months (default: 36)",
     )
+    parser.add_argument(
+        "--force-no-lock",
+        action="store_true",
+        help="Bypass the pipeline writer lock (C-316) — only for "
+        "deliberate recovery while no pipeline is running",
+    )
     args = parser.parse_args()
+
+    from datafactory_provenance import hold_pipeline_lock
+
+    hold_pipeline_lock(force=args.force_no_lock)
 
     output_dir = args.output_dir or Path("data/consumer")
     output_dir.mkdir(parents=True, exist_ok=True)

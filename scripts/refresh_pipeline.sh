@@ -149,6 +149,19 @@ if ! flock -n 200; then
     echo "FATAL: Another pipeline run is already in progress (lock: $LOCK_FILE)"
     exit 1
 fi
+echo "$$" >&200
+# Child writer scripts check this instead of contending with
+# their own parent's flock (C-316; see pipeline_lock.py).
+export VIEWS_PIPELINE_LOCK_HELD=1
+
+# Start-ping (C-317): SIGKILL (OOM killer) bypasses the ERR and
+# EXIT traps, so a killed run would otherwise leave no signal at
+# all until the next monthly schedule lapses. The /start ping
+# leaves a dangling "started" state that healthchecks flags at
+# the grace timeout (~24h) instead.
+if [ -n "${HEARTBEAT_URL:-}" ]; then
+    curl -fsS --max-time 10 "$HEARTBEAT_URL/start" >/dev/null 2>&1 || true
+fi
 
 PIPELINE_START=$(date +%s)
 PIPELINE_START_ISO=$(date -Iseconds)

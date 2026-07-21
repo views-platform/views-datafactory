@@ -49,7 +49,17 @@ def main() -> int:
         "--force", action="store_true",
         help="Force re-download even if cached",
     )
+    parser.add_argument(
+        "--force-no-lock",
+        action="store_true",
+        help="Bypass the pipeline writer lock (C-316) — only for "
+        "deliberate recovery while no pipeline is running",
+    )
     args = parser.parse_args()
+
+    from datafactory_provenance import hold_pipeline_lock
+
+    hold_pipeline_lock(force=args.force_no_lock)
 
     raw_path = Path("data/raw/shdi/shdi_v10.2.parquet")
     crosswalk_path = Path("data/raw/shdi/gdl_to_pgid.parquet")

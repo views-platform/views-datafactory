@@ -294,6 +294,30 @@ sudo -u views-deploy bash -c 'cd ~/views-datafactory && cat logs/pipeline_durati
 
 ---
 
+## Pipeline Writer Lock (C-316, #353)
+
+One lock, `/var/lock/views-pipeline.lock`, serializes everything
+that writes shared data directories. `refresh_pipeline.sh` holds
+it for the whole run; standalone writer scripts (assemble, export,
+run_*_pipeline, consumer bridge) acquire it via
+`datafactory_provenance.hold_pipeline_lock()` and **refuse to
+start** if a run is in progress:
+
+```
+PipelineLockHeldError: Pipeline lock ... is held (holder pid N) —
+a pipeline run is in progress. Wait for it to finish ...
+```
+
+That refusal is the system working — wait for the run (status
+page), don't fight it. `--force-no-lock` exists on every writer
+script as a deliberate recovery escape hatch; it logs loudly and
+you own the collision risk.
+
+Crash safety is kernel-level: an flock dies with its holder, so a
+crashed run's lock releases instantly and a live run's lock can
+never be stolen. There is no age-based staleness (the old 300s
+heuristic misfired on slow runs and was removed — C-267).
+
 ## Dead-Man Heartbeat Monitoring (C-131, #324)
 
 The pipeline pings an external monitoring service so that failures
@@ -306,6 +330,11 @@ alert a human even when nobody is watching a terminal. Two signals:
 - **Failure ping** — `on_failure()` trap: `curl "$HEARTBEAT_URL/fail"`.
   Flips the check to failing immediately instead of waiting for the
   missed schedule.
+- **Start ping** — after lock acquisition: `curl "$HEARTBEAT_URL/start"`.
+  Covers the SIGKILL blind spot (C-317): the OOM killer bypasses
+  bash traps entirely, so a killed run sends neither success nor
+  failure — but a dangling "started" state alerts at the grace
+  timeout (~24h) instead of the next monthly schedule (~31d).
 
 Both are no-ops when `HEARTBEAT_URL` is unset, and both are guarded
 with `|| true` — an unreachable monitoring service must never mask
@@ -347,6 +376,15 @@ Then check the status page: http://204.168.219.108/status.html
 
 To rotate the URL: create a new check, update `~/.profile`, delete
 the old check.
+
+**Vendor portability (#340):** the only coupling to healthchecks.io
+is the `HEARTBEAT_URL` value in `/home/views-deploy/.profile` — the
+ping semantics (`/start`, `/fail`, bare success) are the same
+convention Uptime Kuma and Better Stack heartbeats accept. Swapping
+vendors is a one-line URL change plus recreating the check + alert
+recipients on the new vendor's side (recipients live in the vendor
+dashboard; keep a note of them here when they change: currently the
+operator's PRIO address).
 
 ---
 
