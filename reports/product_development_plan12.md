@@ -1,4 +1,4 @@
-# Product Development Plan v12 — current through v1.7, 9 Sources, 79 Features
+# Product Development Plan v12 — current through v1.8, 9 Sources, 79 Features
 
 **Date:** 2026-06-29 (v1.7 addendum 2026-07-19)
 **Supersedes:** product_development_plan11.md (2026-05-08)
@@ -6,6 +6,17 @@
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, 9 data sources across conflict, population, built environment, democracy, and human development.
 
 ---
+
+## v1.8 Addendum (2026-07-21)
+
+**v1.8.0 (epic #342 "Own the consumer contract"):** public `OutputFormat` +
+`CONTRACT_VERSION` + `is_valid_output_format` (ADR-050); committed real-save()
+conformance fixture + language-neutral `contract.json` (executable layout
+spec with drift alarm); `datafactory_query` split by responsibility
+(dataset.py 613→263: backends_zarr / backends_npy / coverage);
+`docs/guides/consumer_contract.md`. Unblocks pipeline-core #162→#161
+(FeatureFrame-native pipeline); views-frames#200 formalizes byte-layout
+ownership. #116 closed. Gates unchanged; next milestone remains WDI.
 
 ## v1.7 Addendum (2026-07-19)
 
