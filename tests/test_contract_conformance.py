@@ -105,14 +105,15 @@ class TestContractDocument:
     def test_output_formats_match_load_dataset_vocabulary(
         self,
     ) -> None:
-        """contract.json formats == the vocabulary load_dataset
-        validates against. Story 2 (#345) upgrades this to the
-        three-way test including OutputFormat."""
+        """Three-way agreement: contract.json == OutputFormat ==
+        _VALID_FORMATS (upgraded by #345; mirrored in
+        tests/test_output_format.py)."""
+        from datafactory_query import OutputFormat
         from datafactory_query.dataset import _VALID_FORMATS
 
-        assert tuple(_contract()["output_formats"]) == tuple(
-            _VALID_FORMATS
-        )
+        formats = tuple(_contract()["output_formats"])
+        assert formats == tuple(_VALID_FORMATS)
+        assert formats == tuple(f.value for f in OutputFormat)
 
     def test_contract_version_present_and_semver(self) -> None:
         version = _contract()["contract_version"]
