@@ -14,6 +14,7 @@ import fcntl
 import hashlib
 import json
 import logging
+import os
 import tempfile
 import time
 from collections.abc import Iterator
@@ -117,7 +118,6 @@ def compute_file_digest(
     return hexdigest[:truncate] if truncate > 0 else hexdigest
 
 
-_STALE_LOCK_SECONDS: int = 300  # 5 minutes
 _DEFAULT_LOCK_TIMEOUT: float = 60.0
 _LOCK_POLL_INTERVAL: float = 0.1
 _LOCK_WARN_SECONDS: float = 5.0
@@ -135,8 +135,19 @@ def file_lock(
     using file_lock on the same path will block until the lock is
     released or the timeout expires.
 
-    If the lock file is older than 5 minutes (indicating a crashed
-    process), it is removed with a warning before acquiring.
+    Crash safety comes from the kernel, not from heuristics: an
+    fcntl.flock dies with its holder, so a crashed process's lock
+    is releasable instantly and a live process's lock is never
+    stealable. The previous age-based "stale lock" deletion
+    (>300s) actively broke mutual exclusion — deleting a live
+    holder's lock file made the next acquirer flock a different
+    inode, so both held "the" lock (C-267, fired 2026-07-21 when
+    a 9-hour swap-bound export exceeded the age threshold).
+    Leftover .lock files from crashed holders are harmless: their
+    flock is gone, so acquisition succeeds immediately.
+
+    The lock file records the holder's PID for operator
+    diagnostics only — it is never interpreted programmatically.
 
     Args:
         path: Path to the file being protected.
@@ -146,21 +157,7 @@ def file_lock(
     lock_path = path.with_suffix(path.suffix + ".lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Check for stale lock file from a crashed process
-    if lock_path.exists():
-        try:
-            age = time.time() - lock_path.stat().st_mtime
-            if age > _STALE_LOCK_SECONDS:
-                logger.warning(
-                    "Removing stale lock file %s (age: %.0fs)",
-                    lock_path,
-                    age,
-                )
-                lock_path.unlink(missing_ok=True)
-        except OSError:
-            pass  # Race with another process; proceed to flock
-
-    with open(lock_path, "w") as lock_file:
+    with open(lock_path, "a+") as lock_file:
         deadline = time.monotonic() + timeout
         warned = False
         while True:
@@ -186,6 +183,11 @@ def file_lock(
                     raise TimeoutError(msg) from None
                 time.sleep(_LOCK_POLL_INTERVAL)
         try:
+            # Holder PID — diagnostics only, never interpreted.
+            lock_file.seek(0)
+            lock_file.truncate()
+            lock_file.write(str(os.getpid()))
+            lock_file.flush()
             yield
         finally:
             fcntl.flock(lock_file, fcntl.LOCK_UN)

@@ -23,6 +23,12 @@ from datafactory_provenance.health import (
     report_ledger,
     verify_source_digest,
 )
+from datafactory_provenance.pipeline_lock import (
+    PIPELINE_LOCK_PATH,
+    PipelineLockHeldError,
+    hold_pipeline_lock,
+    pipeline_lock,
+)
 from datafactory_provenance.registry import Registry
 from datafactory_provenance.skip import (
     SkipVerdict,
@@ -43,6 +49,8 @@ __all__ = [
     "FRESHNESS_SLO_HOURS",
     "LEDGER_VERSION",
     "PIPELINE_SOURCES",
+    "PIPELINE_LOCK_PATH",
+    "PipelineLockHeldError",
     "Registry",
     "SOURCE_SLO",
     "SkipVerdict",
@@ -58,7 +66,9 @@ __all__ = [
     "get_all_features",
     "get_required_env_vars",
     "get_source_slo",
+    "hold_pipeline_lock",
     "last_digest",
+    "pipeline_lock",
     "last_digest_for_version",
     "read_last_entries",
     "report_ledger",
