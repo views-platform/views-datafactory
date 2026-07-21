@@ -701,7 +701,7 @@ class TestDataBoundaryConsistency:
         """Metadata survives assemble → zarr export → query load."""
         import xarray as xr
 
-        from datafactory_query.dataset import _load_grid_from_zarr
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
 
         zarr_path = tmp_path / "grid.zarr"
         n_t, n_h, n_w = 6, 3, 4
@@ -854,7 +854,7 @@ class TestZarrFeatureOrderFallback:
     def test_zarr_missing_feature_order_warns(
         self, tmp_path: Path
     ) -> None:
-        from datafactory_query.dataset import _load_grid_from_zarr
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
 
         zarr_path = self._make_zarr_no_feature_order(tmp_path)
         with pytest.warns(UserWarning, match="feature_order"):
@@ -865,7 +865,7 @@ class TestZarrFeatureOrderFallback:
     ) -> None:
         import warnings
 
-        from datafactory_query.dataset import _load_grid_from_zarr
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
 
         zarr_path = self._make_zarr_no_feature_order(tmp_path)
         with warnings.catch_warnings():
@@ -1184,22 +1184,22 @@ class TestGetLastValidMonthId:
 class TestIsRemote:
 
     def test_http_url(self) -> None:
-        from datafactory_query.dataset import _is_remote
+        from datafactory_query.backends_zarr import _is_remote
 
         assert _is_remote("http://server/grid.zarr") is True
 
     def test_https_url(self) -> None:
-        from datafactory_query.dataset import _is_remote
+        from datafactory_query.backends_zarr import _is_remote
 
         assert _is_remote("https://server/grid.zarr") is True
 
     def test_path_object(self) -> None:
-        from datafactory_query.dataset import _is_remote
+        from datafactory_query.backends_zarr import _is_remote
 
         assert _is_remote(Path("data/assembled")) is False
 
     def test_local_string(self) -> None:
-        from datafactory_query.dataset import _is_remote
+        from datafactory_query.backends_zarr import _is_remote
 
         assert _is_remote("/tmp/grid.zarr") is False
 
@@ -1654,7 +1654,7 @@ class TestZarrSourceMetadata:
     def test_metadata_attrs_round_trip(
         self, tmp_path: Path,
     ) -> None:
-        from datafactory_query.dataset import _load_grid_from_zarr
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
 
         zarr_path = self._make_zarr(tmp_path, with_metadata=True)
         (
@@ -1674,7 +1674,7 @@ class TestZarrSourceMetadata:
     def test_missing_metadata_warns_once(
         self, tmp_path: Path,
     ) -> None:
-        from datafactory_query.dataset import _load_grid_from_zarr
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
 
         zarr_path = self._make_zarr(tmp_path, with_metadata=False)
         with pytest.warns(
@@ -1692,7 +1692,7 @@ class TestZarrSourceMetadata:
         self, tmp_path: Path,
     ) -> None:
         """feature_sel subsetting must not misalign the agg dict."""
-        from datafactory_query.dataset import _load_grid_from_zarr
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
 
         zarr_path = self._make_zarr(tmp_path, with_metadata=True)
         (
@@ -1762,3 +1762,44 @@ class TestZarrSourceMetadata:
                 features=["acled_fatalities"],
                 data_dir=str(zarr_path),
             )
+
+
+class TestZarrAuthErrorMapping:
+    """Characterization before the #346 split: the zarr loader's
+    OSError→PermissionError/FileNotFoundError mapping (~line 150)
+    is only exercised by production networks — pin it before the
+    code moves to backends_zarr.py."""
+
+    def test_401_maps_to_permission_error_with_netrc_hint(
+        self,
+    ) -> None:
+        from unittest.mock import patch
+
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
+
+        with (
+            patch(
+                "xarray.open_zarr",
+                side_effect=OSError("HTTP 401 Unauthorized"),
+            ),
+            pytest.raises(PermissionError, match="netrc"),
+        ):
+            _load_grid_from_zarr("http://fake/grid.zarr")
+
+    def test_generic_oserror_maps_to_file_not_found(
+        self,
+    ) -> None:
+        from unittest.mock import patch
+
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
+
+        with (
+            patch(
+                "xarray.open_zarr",
+                side_effect=OSError("connection reset"),
+            ),
+            pytest.raises(
+                FileNotFoundError, match="Cannot open zarr store",
+            ),
+        ):
+            _load_grid_from_zarr("http://fake/grid.zarr")

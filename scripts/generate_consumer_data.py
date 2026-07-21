@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 
 from datafactory_priogrid.grid_config import DEFAULT_GRID_CONFIG
-from datafactory_query.dataset import _is_remote
+from datafactory_query.backends_zarr import _is_remote
 from datafactory_query.defaults import PARTITIONS as _BASE_PARTITIONS
 
 # ── Consumer contract ──────────────────────────────────────
