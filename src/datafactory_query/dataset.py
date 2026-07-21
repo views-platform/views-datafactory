@@ -25,6 +25,7 @@ from datafactory_adapters import (
     grid_to_dataframe,
     grid_to_feature_frame,
 )
+from datafactory_query.output_format import OutputFormat
 from datafactory_query.regions import load_region_pgids
 from datafactory_query.temporal import parse_time_range, time_range_to_slice
 
@@ -32,7 +33,8 @@ __all__ = ["load_dataset"]
 
 logger = logging.getLogger(__name__)
 
-_VALID_FORMATS = ("feature_frame", "dataframe", "country_month")
+# Internal alias — the public contract is OutputFormat (ADR-050).
+_VALID_FORMATS = tuple(f.value for f in OutputFormat)
 
 
 def _is_remote(data_dir: Path | str) -> bool:
