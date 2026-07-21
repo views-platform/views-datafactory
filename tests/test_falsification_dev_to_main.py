@@ -34,7 +34,7 @@ class TestF8NetrcHostnameFallback:
     def test_dataset_resolve_storage_with_netrc(self) -> None:
         """_resolve_storage_options for an HTTP URL exercises the
         netrc.authenticators(parsed.hostname or "") path."""
-        from datafactory_query.dataset import _resolve_storage_options
+        from datafactory_query.backends_zarr import _resolve_storage_options
 
         mock_nrc = MagicMock()
         mock_nrc.authenticators.return_value = ("user", "", "pass")
@@ -56,7 +56,7 @@ class TestF8NetrcHostnameFallback:
     def test_dataset_resolve_storage_no_netrc(self) -> None:
         """_resolve_storage_options still returns valid options
         when .netrc is missing."""
-        from datafactory_query.dataset import _resolve_storage_options
+        from datafactory_query.backends_zarr import _resolve_storage_options
 
         with patch("netrc.netrc", side_effect=FileNotFoundError):
             opts = _resolve_storage_options("http://example.com/grid.zarr")
