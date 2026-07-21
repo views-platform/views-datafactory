@@ -2149,6 +2149,19 @@ Cross-ref: C-257 (no input data validation), D-35 (test scope). Part of work pac
 
 ---
 
+### D-41: OutputFormat vocabulary home — datafactory (chosen) vs views-frames (rejected)
+
+| Field | Value |
+|-------|-------|
+| ID | D-41 |
+| Source | Multi-expert design review of #116 solutions (2026-07-21), Kleppmann vs Martin/Hickey |
+| Perspectives | Kleppmann (views-frames is the dependency-light shared package both sides already depend on — one contract home, cheap imports for every consumer), Martin/Hickey (`OutputFormat` names datafactory's `load_dataset` return shapes — placing it in views-frames couples the platform's stable leaf to one producer's API vocabulary; wrong dependency direction per SDP/SAP) |
+| Resolution | Resolved 2026-07-21 by ADR-050: vocabulary stays in datafactory (`output_format.py`); the no-install consumer path is `contract.json`, not a views-frames import. views-frames owns the byte-level layout spec (views-frames#200). Revisit condition: `OutputFormat` provably becomes multi-producer platform vocabulary. |
+
+Cross-ref: ADR-050, #116, epic #342, views-frames#200. Part of work package: **Consumer contract**.
+
+---
+
 ## Deferred by Design
 
 ### C-10: Ontology vocabulary overhead

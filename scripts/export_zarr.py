@@ -77,7 +77,17 @@ def main() -> int:
         action="store_true",
         help="Force export, bypassing content-addressed skip",
     )
+    parser.add_argument(
+        "--force-no-lock",
+        action="store_true",
+        help="Bypass the pipeline writer lock (C-316) — only for "
+        "deliberate recovery while no pipeline is running",
+    )
     args = parser.parse_args()
+
+    from datafactory_provenance import hold_pipeline_lock
+
+    hold_pipeline_lock(force=args.force_no_lock)
 
     grid_path = args.input / "grid.npy"
     pgids_path = args.input / "pgids.npy"
