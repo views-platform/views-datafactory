@@ -1,6 +1,6 @@
 [project]
 name = "views-datafactory"
-version = "1.8.1"
+version = "1.9.0"
 description = "Data factory for the VIEWS conflict forecasting platform — provenance, harvesting, consolidation, viewpoint construction, compilation, and assembly."
 authors = [
     { name = "Simon Polichinel von der Maase", email = "simmaa@prio.org" },
