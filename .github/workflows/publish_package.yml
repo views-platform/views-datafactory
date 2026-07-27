@@ -1,0 +1,58 @@
+name: Publish Package
+
+# Publishes views-datafactory to PyPI when a GitHub Release is published
+# (create a Release from a vX.Y.Z tag). Auth is PyPI Trusted Publishing (OIDC) —
+# no stored API token. See docs/guides/publishing_to_pypi.md.
+#
+# One-time PyPI setup (project Settings -> Publishing -> add a trusted publisher,
+# or a *pending* publisher for the first-ever release before the project exists):
+#   Publisher: GitHub  |  Owner: views-platform  |  Repo: views-datafactory
+#   Workflow:  publish_package.yml  |  Environment: (leave blank)
+#
+# The single `views-datafactory` wheel ships all nine `datafactory_*` packages —
+# one PyPI project, `pip install views-datafactory`. The wheel and sdist contain
+# ONLY src/ code — no data, no docs, no reports (data access stays netrc-gated
+# on the data server; see docs/guides/credential_setup.md).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:   # manual trigger (still publishes the committed version)
+
+permissions:
+  contents: read
+  id-token: write      # REQUIRED: mints the OIDC token for Trusted Publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv (+ Python 3.12)
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"   # requires-python is >=3.12; the wheel is pure-Python (py3-none-any)
+
+      - name: Guard — pyproject version must be newer than what's on PyPI
+        run: |
+          uv run --no-project --python 3.12 --with packaging python - <<'PY'
+          import json, tomllib, urllib.request
+          from packaging.version import parse
+          new = tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]
+          try:
+              cur = json.load(urllib.request.urlopen(
+                  "https://pypi.org/pypi/views-datafactory/json"))["info"]["version"]
+          except Exception:
+              cur = "0.0.0"
+          assert parse(new) > parse(cur), (
+              f"pyproject version {new} must be > current PyPI {cur} — bump it before releasing"
+          )
+          print(f"version guard OK: {new} > {cur}")
+          PY
+
+      - name: Build (hatchling, via uv)
+        run: uv build
+
+      - name: Publish to PyPI (Trusted Publishing — no token)
+        run: uv publish --trusted-publishing always
