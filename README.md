@@ -327,6 +327,14 @@ views-datafactory/
 
 ## Installation
 
+**As a consumer** (you want `load_dataset()` and the adapters):
+
+```bash
+pip install views-datafactory
+```
+
+**As a developer** (you want the tests, scripts, and docs):
+
 ```bash
 # Clone the repository
 git clone https://github.com/views-platform/views-datafactory.git
@@ -340,6 +348,16 @@ uv run pytest -v
 ```
 
 > **Note:** This project uses [uv](https://github.com/astral-sh/uv) for dependency management and [hatchling](https://hatch.pypa.io/) as the build backend.
+
+### Prerequisites — who needs credentials?
+
+| You want to... | Credentials needed |
+|----------------|--------------------|
+| Develop / run the test suite | **None.** A bare checkout runs the full suite. |
+| Read served data (remote zarr) | An entry in `~/.netrc` for the VIEWS data server — ask the data factory administrator for the password. |
+| Run the harvest pipeline yourself | `UCDP_API_TOKEN`, `ACLED_USERNAME`/`ACLED_PASSWORD`, `GDL_API_TOKEN` (free registrations with the respective providers). GHS-POP, GHS-BUILT-S, V-Dem, PRIO-GRID static, and GAUL need no credentials. |
+
+Setup instructions for all of these: **[docs/guides/credential_setup.md](docs/guides/credential_setup.md)**. New to the whole platform and just want to run a model? Start at **[docs/guides/model_consumer_quickstart.md](docs/guides/model_consumer_quickstart.md)**.
 
 ---
 
@@ -388,11 +406,13 @@ ff = load_dataset(region="Ethiopia", start="2020", end="2024")
 # Load global land cells as DataFrame
 df = load_dataset(region="land", output_format="dataframe")
 
-# Load from remote zarr store
+# Load from the remote zarr store (requires ~/.netrc — see docs/guides/credential_setup.md)
+from datafactory_query.defaults import DEFAULT_REMOTE
+
 ff = load_dataset(
     region="africa_me",
     start="2020",
-    data_dir="http://204.168.219.108/grid.zarr",
+    data_dir=DEFAULT_REMOTE.zarr_url,
 )
 ```
 
@@ -429,6 +449,7 @@ This system separates information by ownership and change frequency (ADR-003). D
 
 | If you need to know… | Look in… | Why there |
 |----------------------|----------|-----------|
+| How to set up credentials, get data, run a model, or operate the server | [`docs/guides/`](docs/guides/) — how-to guides (see its README for an index) | Task-oriented walkthroughs |
 | What data sources we use, who publishes them, what license/format/coverage | `docs/sources/` — catalog cards | Upstream facts, rarely change |
 | Why we chose a specific source, what alternatives we considered | `docs/ADRs/` — source selection ADRs (028, 029) | One-time decisions |
 | How a derived feature is constructed (aggregation, survivorship, distribution) | Viewpoint CICs (`docs/CICs/Viewpoint*.md`) and profile configs (`src/datafactory_viewpoint/profiles.py`) | Volatile — changes as research evolves |

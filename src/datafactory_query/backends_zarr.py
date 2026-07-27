@@ -142,6 +142,20 @@ def _load_grid_from_zarr(
             f"{type(exc).__name__}: {exc_msg}"
         )
         raise FileNotFoundError(msg) from exc
+    except Exception as exc:
+        # aiohttp's ClientResponseError is NOT an OSError, so an HTTP 401
+        # from the remote store escaped the mapping above and consumers
+        # got a raw client error instead of the documented
+        # PermissionError (C-321). Map 401s here; anything else re-raises
+        # untouched.
+        exc_msg = str(exc)
+        if "401" in exc_msg or "Unauthorized" in exc_msg:
+            msg = (
+                f"Authentication failed for {zarr_path}. "
+                f"Check ~/.netrc credentials."
+            )
+            raise PermissionError(msg) from exc
+        raise
 
     pgids = ds["pgid"].values  # [H, W]
     last_valid_month_id: int | None = ds.attrs.get(

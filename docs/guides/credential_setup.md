@@ -17,7 +17,12 @@ source code or config files distributed with the package.
 |------------|---------|-----------|-------------|
 | `UCDP_API_TOKEN` | Fetch UCDP event data | Environment variable | Pipeline operators |
 | `ACLED_USERNAME` / `ACLED_PASSWORD` | Fetch ACLED event data | Environment variables | Pipeline operators |
+| `GDL_API_TOKEN` | Fetch SHDI data (Global Data Lab) | Environment variable | Pipeline operators |
 | `~/.netrc` entry | HTTP auth for zarr data server | Standard Unix netrc | Data consumers |
+
+**Not every source needs credentials.** GHS-POP, GHS-BUILT-S, V-Dem,
+PRIO-GRID static, and GAUL admin boundaries are fetched anonymously —
+no registration, no token.
 
 ---
 
@@ -97,6 +102,38 @@ access.
 
 ---
 
+## GDL API Token (SHDI)
+
+### Get a token
+
+Register for a free account at [Global Data Lab](https://globaldatalab.org),
+then go to **My GDL → API Access** to obtain your token.
+
+### Set it up
+
+Add to your shell profile:
+
+```bash
+echo 'export GDL_API_TOKEN="your-token-here"' >> ~/.profile
+source ~/.profile
+```
+
+(Same `~/.profile`-not-`.bashrc` rationale as the UCDP token above —
+the harvester must find it from non-interactive shells.)
+
+### Verify
+
+```bash
+echo $GDL_API_TOKEN
+```
+
+### What happens if it's missing
+
+`get_gdl_token()` raises `ValueError` pointing you at `GDL_API_TOKEN`
+and the GDL registration page. No silent fallback, no anonymous access.
+
+---
+
 ## Hetzner Data Server (HTTP Auth)
 
 ### Get credentials
@@ -142,7 +179,8 @@ message pointing you to `~/.netrc`. No silent degradation.
 |--------|----------|------|
 | UCDP | `get_ucdp_token()` | `src/datafactory_harvester/sources/ucdp_annual.py` |
 | ACLED | `get_acled_credentials()` | `src/datafactory_harvester/sources/acled.py` |
-| Hetzner HTTP | `_resolve_storage_options()` | `src/datafactory_query/dataset.py` |
+| GDL (SHDI) | `get_gdl_token()` | `src/datafactory_harvester/sources/shdi.py` |
+| Hetzner HTTP | `_resolve_storage_options()` | `src/datafactory_query/backends_zarr.py` |
 
 ### Resolution order
 
@@ -178,4 +216,5 @@ two or more sources share identical auth flows.
 | `PermissionError: Authentication failed` | Wrong password or missing netrc entry | Check `~/.netrc` credentials |
 | `netrc: bad permissions` | File permissions too open | `chmod 600 ~/.netrc` |
 | `ValueError: ACLED credentials required` | `ACLED_USERNAME` or `ACLED_PASSWORD` not set | Add to `~/.profile`, then `source ~/.profile` |
+| `ValueError: GDL API token required` | `GDL_API_TOKEN` not set | Register at globaldatalab.org (My GDL → API Access), add to `~/.profile` |
 | `FileNotFoundError: Cannot open zarr store` | Server unreachable | Check network connectivity |
