@@ -61,6 +61,11 @@ Then `chmod 600 ~/.netrc`. See [`credential_setup.md`](credential_setup.md)
 for the full credential guide, or `hetzner_deployment_guide.md` Phase 5
 for server-side setup.
 
+> **Note:** this guide is deliberately package-free, so the server URL is
+> written out literally. The canonical address lives in
+> `datafactory_query.defaults.DEFAULT_REMOTE` — if the URL here ever stops
+> working, that constant (in the latest release) is the source of truth.
+
 ### From a local path
 
 ```python

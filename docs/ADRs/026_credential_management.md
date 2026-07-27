@@ -109,4 +109,4 @@ ACLED's EULA (as of 2025) imposes constraints that shape credential handling:
 - 12-Factor App, Factor III: Config -- store config in the environment
 - ACLED EULA (2025): credential sharing prohibition, redistribution restrictions, AI/ML clause
 - `get_ucdp_token()` in `src/datafactory_harvester/sources/ucdp_annual.py:132-142` -- reference implementation
-- `_resolve_storage_options()` in `src/datafactory_query/dataset.py:54-97` -- netrc implementation
+- `_resolve_storage_options()` in `src/datafactory_query/backends_zarr.py:45` -- netrc implementation (moved from dataset.py in the v1.8.0 query split)

@@ -67,16 +67,20 @@ Returns a pandas DataFrame with MultiIndex `(month_id, country_id)` where `count
 
 ### From the remote server
 
-Same code, different `data_dir`:
+Same code, different `data_dir` — use `DEFAULT_REMOTE` (the canonical
+server location) instead of typing a URL, so your code survives a future
+server move:
 
 ```python
+from datafactory_query.defaults import DEFAULT_REMOTE
+
 df = load_dataset(
     region="africa",
     start=480,
     end=491,
     features=["ged_sb_best"],
     output_format="dataframe",
-    data_dir="http://204.168.219.108/grid.zarr",
+    data_dir=DEFAULT_REMOTE.zarr_url,
 )
 ```
 
@@ -105,8 +109,9 @@ uv run python scripts/generate_consumer_data.py
 # Generate only calibration
 uv run python scripts/generate_consumer_data.py --partition calibration
 
-# Generate from remote server
-uv run python scripts/generate_consumer_data.py --data-dir http://204.168.219.108/grid.zarr
+# Generate from the remote server (URL from DEFAULT_REMOTE)
+uv run python scripts/generate_consumer_data.py \
+    --data-dir "$(uv run python -c 'from datafactory_query.defaults import DEFAULT_REMOTE; print(DEFAULT_REMOTE.zarr_url)')"
 
 # Output to a specific directory (e.g., a model's data/raw/)
 uv run python scripts/generate_consumer_data.py --output-dir ../views-models/models/purple_alien/data/raw
@@ -252,7 +257,7 @@ Accepts multiple formats:
 |-------|--------|
 | `Path("data/assembled")` | Local npy files (default, fastest) |
 | `"data/assembled/grid.zarr"` | Local zarr store |
-| `"http://204.168.219.108/grid.zarr"` | Remote server (requires `~/.netrc`) |
+| `DEFAULT_REMOTE.zarr_url` | Remote server (requires `~/.netrc`; import from `datafactory_query.defaults`) |
 
 **Feature ordering caveat:** The npy backend returns features in
 `feature_names.json` order (compilation-time order). The zarr backend

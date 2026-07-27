@@ -58,9 +58,10 @@ The parquet file that lands in `data/raw/` has the same schema either way. Your 
 
 ### What you need
 
-1. Install `views-datafactory`:
+1. Install `views-datafactory` (from PyPI — house convention is a release
+   floor pin, never a git branch):
    ```bash
-   pip install "views-datafactory @ git+https://github.com/views-platform/views-datafactory.git@development"
+   pip install "views-datafactory>=1.9.0"
    ```
 
 2. Set up `~/.netrc` for the Hetzner server:
