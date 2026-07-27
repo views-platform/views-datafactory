@@ -1,11 +1,27 @@
 [project]
 name = "views-datafactory"
-version = "1.8.1"
+version = "1.9.0"
 description = "Data factory for the VIEWS conflict forecasting platform — provenance, harvesting, consolidation, viewpoint construction, compilation, and assembly."
+authors = [
+    { name = "Simon Polichinel von der Maase", email = "simmaa@prio.org" },
+]
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
+keywords = ["conflict-forecasting", "priogrid", "ucdp", "acled", "data-pipeline", "provenance", "zarr"]
+# License is declared via the SPDX `license` expression above (PEP 639); the deprecated
+# `License ::` classifier is intentionally omitted to avoid the expression/classifier clash.
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Typing :: Typed",
+]
 dependencies = [
     "numpy>=1.26,<3",
     "requests>=2.28,<3",
@@ -22,6 +38,11 @@ dependencies = [
     "imagecodecs>=2024.1",
     "views-frames>=1.0,<2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/views-platform/views-datafactory"
+Repository = "https://github.com/views-platform/views-datafactory"
+Issues = "https://github.com/views-platform/views-datafactory/issues"
 
 [dependency-groups]
 dev = [

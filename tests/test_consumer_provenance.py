@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 import unittest.mock
 from pathlib import Path
@@ -64,7 +65,15 @@ def _make_synthetic_grid(data_dir: Path) -> Path:
 def _run_main(
     data_dir: Path, output_dir: Path,
 ) -> int:
+    # The cooperating-child env var keeps the in-process main() from
+    # acquiring the REAL /var/lock/views-pipeline.lock: hold_pipeline_lock
+    # holds for process lifetime, so without this the pytest process
+    # itself becomes the lock holder and every later test that spawns a
+    # writer subprocess is refused (C-319 — 42 suite errors, v1.8.1).
     with (
+        unittest.mock.patch.dict(
+            os.environ, {"VIEWS_PIPELINE_LOCK_HELD": "1"},
+        ),
         unittest.mock.patch.object(
             _mod, "generate_partition", side_effect=_fake_partition,
         ),

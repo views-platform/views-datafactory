@@ -9,7 +9,7 @@ For initial setup, see `hetzner_deployment_guide.md`.
 
 | What | Command |
 |------|---------|
-| SSH in | `ssh simmaa_prio@204.168.219.108` |
+| SSH in | `ssh <your-user>@204.168.219.108` |
 | Check current version | `cat /home/views-deploy/.views-deploy-tag` |
 | Set version to deploy | `echo "v1.2.3" \| sudo tee /home/views-deploy/.views-deploy-tag` |
 | Run pipeline | `sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh'` |
@@ -39,9 +39,9 @@ is confined to `/home/views-deploy/` — it cannot break the OS.
 
 ### Why do I need `sudo -u views-deploy`?
 
-You log in as `simmaa_prio`. The data files belong to `views-deploy`.
+You log in as `<your-user>`. The data files belong to `views-deploy`.
 Linux prevents you from reading another user's files. `sudo -u views-deploy`
-says "run this command as the views-deploy user." Your `simmaa_prio`
+says "run this command as the views-deploy user." Your `<your-user>`
 account has `sudo` privileges, so this works.
 
 ### What is a git tag?
@@ -123,7 +123,7 @@ git push origin v1.2.4
 On the server:
 ```bash
 # 2. SSH in
-ssh simmaa_prio@204.168.219.108
+ssh <your-user>@204.168.219.108
 
 # 3. Set the new version
 echo "v1.2.4" | sudo tee /home/views-deploy/.views-deploy-tag

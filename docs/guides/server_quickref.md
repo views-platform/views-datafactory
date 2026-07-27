@@ -3,7 +3,7 @@
 Copy-paste commands for the Hetzner server. For explanations, see `server_operations.md`.
 
 ```
-ssh simmaa_prio@204.168.219.108
+ssh <your-user>@204.168.219.108
 ```
 
 All commands below assume you are on the server.

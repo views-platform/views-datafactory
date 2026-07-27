@@ -93,7 +93,7 @@ Everything below is the full setup guide (one-time, ~1,200 lines).
 
 - Hetzner project: `views-datafactory`
 - Server: `views-datafactory-00` at `204.168.219.108`
-- SSH key registered: `simon@simon-XPS-15-9530`
+- SSH key registered: `<user>@<workstation>`
 - Backups enabled
 
 ### 1.1 SSH into the server
