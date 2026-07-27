@@ -1,11 +1,25 @@
-# Product Development Plan v12 — current through v1.8, 9 Sources, 79 Features
+# Product Development Plan v12 — current through v1.9, 9 Sources, 79 Features, on PyPI
 
-**Date:** 2026-06-29 (v1.7 addendum 2026-07-19)
+**Date:** 2026-06-29 (v1.9 addendum 2026-07-27)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, 9 data sources across conflict, population, built environment, democracy, and human development.
 
 ---
+
+## v1.9 Addendum (2026-07-27)
+
+**v1.9.0 (go-public + PyPI + onboarding):** repo public, first PyPI release
+(`pip install views-datafactory`; Trusted Publishing/OIDC via
+publish_package.yml, TestPyPI-rehearsed); first-time-user guide
+(`docs/guides/model_consumer_quickstart.md`) + guides index; credential guide
+gaps closed (GDL token); house install convention switched to PyPI floor pins
+(`>=X.Y.Z`, never `@development`); docs use `DEFAULT_REMOTE`, never the bare
+IP. Hardening: server SSH now key-only (C-88 addendum); C-318 cleartext-auth
+trade-off recorded. Test-suite integrity restored: C-319 (lock contamination,
+42 errors/run since v1.8.1) + C-320 (deploy gates red in CI) + C-321 (401 →
+raw aiohttp error, found by the TestPyPI rehearsal) — CI green again.
+Gates unchanged; next milestone remains WDI (after #341 Kosovo/GAUL).
 
 ## v1.8 Addendum (2026-07-21)
 
