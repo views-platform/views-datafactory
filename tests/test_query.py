@@ -1803,3 +1803,48 @@ class TestZarrAuthErrorMapping:
             ),
         ):
             _load_grid_from_zarr("http://fake/grid.zarr")
+
+    def test_non_oserror_401_maps_to_permission_error(
+        self,
+    ) -> None:
+        """aiohttp's ClientResponseError is NOT an OSError — a real
+        no-netrc 401 escaped the mapping and consumers saw a raw
+        client error instead of the documented PermissionError.
+        Found by the TestPyPI clean-room rehearsal (C-321)."""
+        from unittest.mock import patch
+
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
+
+        class FakeClientResponseError(Exception):
+            pass
+
+        with (
+            patch(
+                "xarray.open_zarr",
+                side_effect=FakeClientResponseError(
+                    "401, message='Unauthorized', "
+                    "url='http://fake/grid.zarr/.zmetadata'",
+                ),
+            ),
+            pytest.raises(PermissionError, match="netrc"),
+        ):
+            _load_grid_from_zarr("http://fake/grid.zarr")
+
+    def test_non_oserror_without_401_reraises_untouched(
+        self,
+    ) -> None:
+        from unittest.mock import patch
+
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
+
+        class FakeTimeoutError(Exception):
+            pass
+
+        with (
+            patch(
+                "xarray.open_zarr",
+                side_effect=FakeTimeoutError("request timed out"),
+            ),
+            pytest.raises(FakeTimeoutError, match="timed out"),
+        ):
+            _load_grid_from_zarr("http://fake/grid.zarr")
