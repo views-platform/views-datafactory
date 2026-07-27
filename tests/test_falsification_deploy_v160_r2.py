@@ -11,6 +11,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 class TestDF1MergeTopology:
     """ff-only merge requires main to be an ancestor of development."""
@@ -20,6 +22,13 @@ class TestDF1MergeTopology:
             ["git", "merge-base", "--is-ancestor", "main", "development"],
             capture_output=True,
         )
+        # 0 = ancestor, 1 = not; other codes mean refs/history missing
+        # (CI shallow checkout) — local pre-deploy gate, skip there (C-320).
+        if result.returncode not in (0, 1):
+            pytest.skip(
+                "main/development refs unavailable (shallow CI "
+                "checkout) — deploy gate runs locally"
+            )
         assert result.returncode == 0, (
             "main is not an ancestor of development — "
             "run 'git merge main' on development before "
@@ -27,10 +36,17 @@ class TestDF1MergeTopology:
         )
 
     def test_merge_main_into_development_is_conflict_free(self) -> None:
-        merge_base = subprocess.check_output(
-            ["git", "merge-base", "main", "development"],
-            text=True,
-        ).strip()
+        try:
+            merge_base = subprocess.check_output(
+                ["git", "merge-base", "main", "development"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+            ).strip()
+        except subprocess.CalledProcessError:
+            pytest.skip(
+                "main/development refs unavailable (shallow CI "
+                "checkout) — deploy gate runs locally"
+            )
         result = subprocess.run(
             ["git", "merge-tree", merge_base, "development", "main"],
             capture_output=True, text=True,
