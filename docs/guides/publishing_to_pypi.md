@@ -51,6 +51,60 @@ trusted-publisher config — see Prerequisites.
 
 ---
 
+## Branch protection — why a merge can refuse you
+
+Since 2026-07-31 both long-lived branches are protected, and **admins cannot bypass**
+(this is deliberate: see C-320 in the risk register — two merges landed with CI still
+pending because nothing at the platform level said no).
+
+| Branch | Required checks | Other |
+|--------|-----------------|-------|
+| `development` | `lint`, `typecheck`, `test` | PR required (0 approvals), no force-push, no deletion, admins included |
+| `main` | `lint`, `typecheck`, `test`, `import-enforcement` | same |
+
+`import-enforcement` is required on `main` only — its job-level
+`if: github.base_ref == 'main'` in `.github/workflows/ci.yml` means it merely reports
+*skipped* on development PRs.
+
+Consequences for the release ritual: the bump PR into `development` waits on three
+checks, the `development` → `main` PR waits on four, and neither can be forced through.
+Tag pushes (`git push origin vX.Y.Z`) and the Release-triggered publish workflow are
+**not** affected by branch protection.
+
+Merge a PR with `gh pr merge <n> --auto --squash` — repo-level auto-merge is enabled, so
+this arms and GitHub merges the moment the checks go green. Do not babysit CI in a shell
+loop: a watcher that dies on a network hiccup looks exactly like a watcher that saw
+green, which is how C-320 recurred.
+
+**Break-glass** (CI provider outage, or a required check that can never report). Lift,
+act, restore immediately — the API leaves an audit trail:
+
+```bash
+gh api -X DELETE repos/views-platform/views-datafactory/branches/<branch>/protection
+# ... do the thing, then restore from the table above:
+gh api -X PUT repos/views-platform/views-datafactory/branches/<branch>/protection \
+  --input protection.json
+```
+
+```json
+{
+  "required_status_checks": {"strict": false, "contexts": ["lint", "typecheck", "test"]},
+  "enforce_admins": true,
+  "required_pull_request_reviews": {"required_approving_review_count": 0,
+    "dismiss_stale_reviews": false, "require_code_owner_reviews": false},
+  "restrictions": null,
+  "required_linear_history": false,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": false
+}
+```
+
+(For `main`, add `"import-enforcement"` to `contexts`.)
+
+---
+
 ## Prerequisites (one-time setup) — Trusted Publishing
 
 The release workflow authenticates with **Trusted Publishing (OIDC)** — there is **no
