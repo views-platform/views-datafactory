@@ -67,9 +67,15 @@ pending because nothing at the platform level said no).
 *skipped* on development PRs.
 
 Consequences for the release ritual: the bump PR into `development` waits on three
-checks, the `development` → `main` PR waits on four, and neither can be forced through.
-Tag pushes (`git push origin vX.Y.Z`) and the Release-triggered publish workflow are
-**not** affected by branch protection.
+checks, the `development` → `main` PR waits on four (drilled 2026-07-31 — all four do
+report, and `--admin` does not get past them), and neither can be forced through.
+Creating and pushing a tag (`git push origin vX.Y.Z`) and the Release-triggered publish
+workflow still work normally.
+
+Tags carry their own rule: **"Release tags are immutable"** blocks *deletion* and
+*update* of `refs/tags/v*`, with no bypass. Create as many new version tags as you like;
+you cannot move or delete one that has been published. This matches PyPI, where a
+version number can never be reused.
 
 Merge a PR with `gh pr merge <n> --auto --squash` — repo-level auto-merge is enabled, so
 this arms and GitHub merges the moment the checks go green. Do not babysit CI in a shell
