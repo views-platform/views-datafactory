@@ -1848,3 +1848,108 @@ class TestZarrAuthErrorMapping:
             pytest.raises(FakeTimeoutError, match="timed out"),
         ):
             _load_grid_from_zarr("http://fake/grid.zarr")
+
+
+class TestStorageOptionsSeam:
+    """P6 (falsification audit 2026-07-31): a consumer whose
+    credentials are not in ~/.netrc must be able to bring its own.
+
+    Before this seam, `load_dataset` exposed no auth parameter and
+    `_load_grid` called `_resolve_storage_options` unconditionally,
+    so a service authenticating with a bearer token or an API key
+    had two options: synthesise a netrc file, or fork the package.
+    That is a Dependency-Inversion failure in the one function every
+    consumer calls, and it blocks new APIs from being stood up
+    against this store.
+    """
+
+    def test_caller_supplied_options_reach_the_backend(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Caller-supplied options are passed through untouched and
+        netrc resolution is not consulted at all."""
+        from datafactory_query import dataset as ds
+
+        sentinel = {"client_kwargs": {"headers": {"X-Probe": "yes"}}}
+        seen: dict = {}
+
+        def _fake_zarr(path, storage_options=None, **kwargs):  # noqa: ANN001
+            seen["storage_options"] = storage_options
+            raise RuntimeError("stop-after-capture")
+
+        def _must_not_run(path):  # noqa: ANN001
+            msg = "netrc resolution ran despite caller-supplied options"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(ds, "_load_grid_from_zarr", _fake_zarr)
+        monkeypatch.setattr(ds, "_resolve_storage_options", _must_not_run)
+        monkeypatch.setattr(ds, "_use_zarr_loader", lambda _p: True)
+
+        with pytest.raises(RuntimeError, match="stop-after-capture"):
+            ds._load_grid(
+                "https://store.example/grid.zarr",
+                storage_options=sentinel,
+            )
+
+        assert seen["storage_options"] is sentinel, (
+            "caller-supplied storage_options must reach the backend "
+            "unmodified — the whole point of the seam"
+        )
+
+    def test_default_still_resolves_netrc(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Omitting the argument preserves the previous behaviour.
+
+        This is the backward-compatibility half: every existing
+        caller passes nothing, and must keep getting netrc.
+        """
+        from datafactory_query import dataset as ds
+
+        resolved = {"from": "netrc"}
+        seen: dict = {}
+
+        def _fake_zarr(path, storage_options=None, **kwargs):  # noqa: ANN001
+            seen["storage_options"] = storage_options
+            raise RuntimeError("stop-after-capture")
+
+        monkeypatch.setattr(ds, "_load_grid_from_zarr", _fake_zarr)
+        monkeypatch.setattr(
+            ds, "_resolve_storage_options", lambda _p: resolved,
+        )
+        monkeypatch.setattr(ds, "_use_zarr_loader", lambda _p: True)
+
+        with pytest.raises(RuntimeError, match="stop-after-capture"):
+            ds._load_grid("https://store.example/grid.zarr")
+
+        assert seen["storage_options"] is resolved
+
+    def test_local_store_ignores_storage_options(
+        self, tmp_path: Path,
+    ) -> None:
+        """A local store needs no credentials, and fsspec options are
+        meaningless for a path on disk — xarray rejects them outright.
+
+        Honouring caller options for a local path would turn a
+        harmless argument into a FileNotFoundError. This test caught
+        exactly that during implementation, so the seam mirrors
+        `_resolve_storage_options`, which returns None for local
+        paths.
+        """
+        zarr_path = tmp_path / "grid.zarr"
+        gaul_dir = tmp_path / "gaul"
+        _make_assembled_zarr(zarr_path)
+        _make_gaul_parquets(gaul_dir)
+
+        from datafactory_query.dataset import load_dataset
+
+        ff = load_dataset(
+            region="Testland",
+            start="2020-01",
+            end="2020-03",
+            output_format="feature_frame",
+            data_dir=str(zarr_path),
+            gaul_dir=gaul_dir,
+            storage_options={"client_kwargs": {"headers": {}}},
+        )
+        assert ff.n_rows == 18
