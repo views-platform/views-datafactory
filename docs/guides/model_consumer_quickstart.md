@@ -100,8 +100,13 @@ Errors you might see, all self-describing:
 You don't need a model to look at the data:
 
 ```bash
-pip install views-datafactory
+pip install "views-datafactory[pandas]"
 ```
+
+The `[pandas]` part is needed because the example below asks for
+`output_format="dataframe"`. If you work with FeatureFrames instead
+(`output_format="feature_frame"`), plain `pip install views-datafactory`
+is enough — pandas is an optional extra, not a requirement.
 
 ```python
 from datafactory_query import load_dataset
