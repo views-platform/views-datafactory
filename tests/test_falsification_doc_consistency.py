@@ -4,7 +4,7 @@ Claim: governance documentation is internally consistent and covers
 the responsibility-boundary domain completely.
 
 Audit date: 2026-06-13
-Probes: P-1 (interpolation principle), P-3 (CLAUDE.md drift),
+Probes: P-1 (interpolation principle), P-3 (architecture-doc drift),
         P-5 (ADR index), P-6 (temporal.py contract), P-7 (cross-source rule)
 """
 
@@ -15,43 +15,51 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 ADRS = REPO / "docs" / "ADRs"
-CLAUDE_MD = REPO / "CLAUDE.md"
+# CLAUDE.md became operator-local and untracked on 2026-07-31, so it
+# cannot be read in a fresh clone. README.md carries the identical
+# architecture claims (line ~90: "compiled UCDP + ACLED + GHS-POP +
+# GHS-BUILT-S + V-Dem + SHDI + static + admin") and is *published*,
+# so drift there is worse. The guard is retargeted, not dropped.
+ARCH_DOC = REPO / "README.md"
 REFRESH = REPO / "scripts" / "refresh_pipeline.sh"
 
 
 class TestClaudeMdSourceCompleteness:
-    """P-3: CLAUDE.md must list every source in the assembled grid."""
+    """P-3: the architecture doc must list every source in the assembled grid."""
 
     def test_assembly_layer_lists_shdi(self):
-        text = CLAUDE_MD.read_text()
+        text = ARCH_DOC.read_text()
         assembly_match = re.search(
             r"Assembly.*?combines.*?→.*?assembled",
             text,
             re.IGNORECASE | re.DOTALL,
         )
         assert assembly_match is not None, (
-            "Could not find Assembly layer description in CLAUDE.md"
+            "Could not find Assembly layer description in README.md"
         )
         assembly_line = assembly_match.group(0).lower()
         assert "shdi" in assembly_line, (
-            "CLAUDE.md Assembly layer description does not mention SHDI. "
+            "README.md Assembly layer description does not mention SHDI. "
             "refresh_pipeline.sh passes --shdi-grid to assemble_grid.py "
-            "but CLAUDE.md still lists only 7 sources."
+            "but README.md still lists only 7 sources."
         )
 
     def test_harvester_sources_list_shdi(self):
-        text = CLAUDE_MD.read_text()
+        text = ARCH_DOC.read_text()
+        # README enumerates the sources in its "Auditable data
+        # harvesting" capability bullet rather than in the package
+        # table, which only names the package. Anchor on the bullet
+        # that actually carries the list.
         harvester_match = re.search(
-            r"datafactory_harvester.*?pluggable sources:(.*?)(?:\n-|\Z)",
+            r"Auditable data harvesting\*\*[^\n]*",
             text,
-            re.DOTALL,
         )
         assert harvester_match is not None, (
-            "Could not find harvester package description in CLAUDE.md"
+            "Could not find harvester package description in README.md"
         )
-        harvester_line = harvester_match.group(1).lower()
+        harvester_line = harvester_match.group(0).lower()
         assert "shdi" in harvester_line, (
-            "CLAUDE.md harvester package description does not mention SHDI "
+            "README.md harvester package description does not mention SHDI "
             "as a pluggable source."
         )
 
