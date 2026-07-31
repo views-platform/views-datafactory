@@ -27,8 +27,6 @@ dependencies = [
     "requests>=2.28,<3",
     "pyarrow>=14,<20",
     "pyshp>=2.3,<3",
-    "matplotlib>=3.8,<4",
-    "pandas>=2.0,<3",
     "shapely>=2.0,<3",
     "xarray>=2024.1,<2026",
     "zarr>=2.16,<3",
@@ -38,6 +36,31 @@ dependencies = [
     "imagecodecs>=2024.1",
     "views-frames>=1.0,<2",
 ]
+
+# pandas is a LEGACY output format, never a foundational import.
+# Across views_platform pandas is being phased out (views-pipeline-core
+# declares polars and guards its import graph; views-frames is numpy-only),
+# so a library that *requires* pandas forces every consumer to negotiate a
+# version it may not want. Here it gates one thing only: the DataFrame and
+# country-month output formats. The range stays deliberately wide —
+# libraries declare widely or not at all; environments pin.
+# Guarded by tests/test_import_purity.py.
+#
+# Honest caveat (2026-07-31): this extra gates NOTHING today. xarray is a
+# required dependency and xarray requires pandas, so no installable
+# configuration of this package lacks pandas — verified per-package in a
+# clean venv (xarray is the sole carrier; zarr, fsspec, pyarrow, shapely,
+# tifffile, imagecodecs, views-frames, pyshp, requests, aiohttp are clean).
+# The declaration is preparation for #381, which asks whether the remote
+# zarr reader can drop xarray. Until then this makes pandas *not imported*,
+# not *not installed*.
+#
+# Deliberately UNCAPPED. A `<3` bound here would bind only opt-in users
+# while xarray — the actual carrier — is unconstrained, so it would
+# generate conflicts without preventing pandas 3. Backed by evidence, not
+# preference: the full suite is run under pandas 3 (see #378).
+[project.optional-dependencies]
+pandas = ["pandas>=2.0"]
 
 [project.urls]
 Homepage = "https://github.com/views-platform/views-datafactory"
@@ -50,6 +73,11 @@ dev = [
     "ruff>=0.4,<1",
     "mypy>=1.8,<2",
     "types-requests>=2.28,<3",
+    # Used by scripts/ and tests/ only — never by a packaged module.
+    # matplotlib was a declared runtime dependency until 2026-07-31 with
+    # zero imports under src/; pandas backs the [pandas] extra above.
+    "matplotlib>=3.8,<4",
+    "pandas>=2.0,<3",
 ]
 
 [build-system]
