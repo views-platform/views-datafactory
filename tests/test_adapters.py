@@ -306,7 +306,7 @@ class TestMonthIdBeige:
 
     def test_epoch_boundary_jan_1980(self) -> None:
         """Jan 1980 with epoch=1980 should be month_id=1."""
-        from datafactory_adapters.grid_to_dataframe import (
+        from datafactory_adapters._flatten import (
             _compute_month_ids,
         )
 
@@ -316,7 +316,7 @@ class TestMonthIdBeige:
 
     def test_before_epoch(self) -> None:
         """Dec 1979 with epoch=1980 should be month_id=0."""
-        from datafactory_adapters.grid_to_dataframe import (
+        from datafactory_adapters._flatten import (
             _compute_month_ids,
         )
 
@@ -326,7 +326,7 @@ class TestMonthIdBeige:
 
     def test_full_range_1989_2026(self) -> None:
         """Verify month_ids for the full operational range."""
-        from datafactory_adapters.grid_to_dataframe import (
+        from datafactory_adapters._flatten import (
             _compute_month_ids,
         )
 
@@ -341,7 +341,7 @@ class TestMonthIdBeige:
 
     def test_raw_epoch_zero(self) -> None:
         """Raw epoch (0) gives large month_ids."""
-        from datafactory_adapters.grid_to_dataframe import (
+        from datafactory_adapters._flatten import (
             _compute_month_ids,
         )
 
