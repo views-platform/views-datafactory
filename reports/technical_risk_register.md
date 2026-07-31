@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** Epic #376 — pandas becomes an output format, not a dependency (2026-07-31). pandas moved to `[project.optional-dependencies]` and matplotlib to the dev group (zero `src/` imports); imports made lazy so `from datafactory_query.defaults import DEFAULT_REMOTE` — a stdlib-only module and 29 of the 35 datafactory imports across views-models — no longer loads pandas; `tests/test_import_purity.py` guards it, and the guard was **observed red** before being trusted. C-325 registered (Tier 4: CI locks pandas 2.3.3 while fresh installs resolve 3.0.5 — mitigated by running the full suite under 3.0.5: 2301 passed, 0 failed, counts identical to the locked run). C-326 registered (Tier 4: the extra gates nothing today — xarray is the sole pandas carrier, verified per-package in a clean venv — so this makes pandas *not imported*, not *not installed*; the `ImportError` paths are unreachable until #381 resolves; REP/CRP condition recorded — one wheel, two audiences). D-42 registered-and-resolved (relocating the pandas adapters to views-pipeline-core: rejected — breaks the published ADR-050 contract, ADR-040/048 semantics belong beside the registry, no reduction in version votes; end state is deletion, not relocation, which #379's file split made cheap). Header counts: 324→326 IDs, 30→32 open, Tier 4: 16→18, disagreements 41→42. Prior: CI enforcement at the platform (2026-07-31) — C-320's recurrence note corrected: the first diagnosis (`;` vs `&&` in the merge chain) was falsified by PR #372, where `gh pr merge --auto --squash` merged with `test` still pending. Real cause: neither `development` nor `main` had branch protection (404 Branch not protected) and repo auto-merge was disabled, so every PR was mergeable on open and `--auto` degraded to a plain merge. Fixed same day: required checks `lint`/`typecheck`/`test` on development, plus `import-enforcement` on main, `enforce_admins: true` on both, PRs required (0 approvals), force-push/deletion off, auto-merge enabled; documented in `docs/guides/publishing_to_pypi.md`. Rule of record: a client-side gate is advisory; enforcement lives in required status checks. Prior: Credential-hygiene follow-through (2026-07-31) — C-323 registered OPEN (Tier 4: five team passwords sit in cleartext in `~/team_passwords.txt` on the server pending out-of-band distribution and deletion; 0600-bounded, throwaway credentials, but a pending cleanup with no reminder). C-324 registered OPEN (Tier 3: the C-322 code fix removed the *future* leak vector only — the GDL token was never rotated, pre-fix `?token=` lines persist in the server's `logs/refresh.log`, and the fix is unreleased as of v1.9.0 so the deployed harvester can still append new ones; rotate + scrub, fold into the next deploy). Addenda: C-318 trigger partially fired (data server went 1→6 logins for VIEWS colleagues; the domain+TLS line stays drawn at "outside the trusted circle"); C-97 note (flat-file auth now in real multi-user service, add/revoke recipe documented, PR #371); C-88 trigger fired-and-recorded (colleagues already hold shell accounts; IP allowlist still blocked on PRIO IT CIDRs); C-320 recurrence (a CI watcher chained with `;` merged PR #371 before the verdict — a dead watcher and a green watcher are indistinguishable to `;`; use `&&` or `gh pr merge --auto`. That run did come back green). Header counts: 322→324 IDs, 28→30 open, Tier 3: 6→7, Tier 4: 15→16. Prior: þing-01 execution DF1/DF3 (2026-07-28) — C-322 registered-and-resolved (Tier 3: #369 redaction audit found the GDL ?token= query param leaking into crash tracebacks via requests exception messages → refresh.log; fix at the shared HTTP layer: same-type redacted re-raise, response/request preserved, from-None context suppression, 5 real-exception-shape tests; UCDP/ACLED/netrc flows verified clean). PLATFORM-001 cross-links added to credential_setup.md + quickstart (#367); harvest-token sentence contributed to PLATFORM-001's co-resident section (views-appwrite@bb08d44). Header counts: 321→322 IDs, 290→291 resolved. Earlier history in git log
+**Last update:** Five-angle security sweep (2026-07-31, #388) — seven entries, none urgent, all grounded in file:line. C-327: a Caddy basic-auth password was published in git history (3 commits, ancestors of main, public since 2026-07-27) — **tested live and dead (401)**; residual is a password *pattern*, and the process lesson that the pre-public audit searched code and config but not post-mortem *prose*. C-328: HEAD re-publishes the username the go-public redaction removed. C-329 (Tier 3, highest consequence): the PyPI-publishing job runs unpinned actions while holding OIDC rights — a poisoned wheel needs no secret to leak. C-330: `refresh.log` world-readable and unrotated (`logs/` gitignored same day, closing the accidental-commit path). C-331: HEARTBEAT_URL capability URL on the curl command line. C-332 (Tier 3): redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs. C-333: UCDP's custom auth header survives cross-host redirects. Verified clean: no `.env`/`.netrc`/key ever committed, harvest tokens never in git, heartbeat URL never committed, no CI authenticates to the data server, zero `${{ secrets.* }}`, OIDC-only publishing, no `pull_request_target`, ledgers and zarr attrs carry no URLs. Header counts: 326→333 IDs, 32→39 open, Tier 3: 7→9, Tier 4: 18→23. Prior: Epic #376 — pandas becomes an output format, not a dependency (2026-07-31). pandas moved to `[project.optional-dependencies]` and matplotlib to the dev group (zero `src/` imports); imports made lazy so `from datafactory_query.defaults import DEFAULT_REMOTE` — a stdlib-only module and 29 of the 35 datafactory imports across views-models — no longer loads pandas; `tests/test_import_purity.py` guards it, and the guard was **observed red** before being trusted. C-325 registered (Tier 4: CI locks pandas 2.3.3 while fresh installs resolve 3.0.5 — mitigated by running the full suite under 3.0.5: 2301 passed, 0 failed, counts identical to the locked run). C-326 registered (Tier 4: the extra gates nothing today — xarray is the sole pandas carrier, verified per-package in a clean venv — so this makes pandas *not imported*, not *not installed*; the `ImportError` paths are unreachable until #381 resolves; REP/CRP condition recorded — one wheel, two audiences). D-42 registered-and-resolved (relocating the pandas adapters to views-pipeline-core: rejected — breaks the published ADR-050 contract, ADR-040/048 semantics belong beside the registry, no reduction in version votes; end state is deletion, not relocation, which #379's file split made cheap). Header counts: 324→326 IDs, 30→32 open, Tier 4: 16→18, disagreements 41→42. Prior: CI enforcement at the platform (2026-07-31) — C-320's recurrence note corrected: the first diagnosis (`;` vs `&&` in the merge chain) was falsified by PR #372, where `gh pr merge --auto --squash` merged with `test` still pending. Real cause: neither `development` nor `main` had branch protection (404 Branch not protected) and repo auto-merge was disabled, so every PR was mergeable on open and `--auto` degraded to a plain merge. Fixed same day: required checks `lint`/`typecheck`/`test` on development, plus `import-enforcement` on main, `enforce_admins: true` on both, PRs required (0 approvals), force-push/deletion off, auto-merge enabled; documented in `docs/guides/publishing_to_pypi.md`. Rule of record: a client-side gate is advisory; enforcement lives in required status checks. Prior: Credential-hygiene follow-through (2026-07-31) — C-323 registered OPEN (Tier 4: five team passwords sit in cleartext in `~/team_passwords.txt` on the server pending out-of-band distribution and deletion; 0600-bounded, throwaway credentials, but a pending cleanup with no reminder). C-324 registered OPEN (Tier 3: the C-322 code fix removed the *future* leak vector only — the GDL token was never rotated, pre-fix `?token=` lines persist in the server's `logs/refresh.log`, and the fix is unreleased as of v1.9.0 so the deployed harvester can still append new ones; rotate + scrub, fold into the next deploy). Addenda: C-318 trigger partially fired (data server went 1→6 logins for VIEWS colleagues; the domain+TLS line stays drawn at "outside the trusted circle"); C-97 note (flat-file auth now in real multi-user service, add/revoke recipe documented, PR #371); C-88 trigger fired-and-recorded (colleagues already hold shell accounts; IP allowlist still blocked on PRIO IT CIDRs); C-320 recurrence (a CI watcher chained with `;` merged PR #371 before the verdict — a dead watcher and a green watcher are indistinguishable to `;`; use `&&` or `gh pr merge --auto`. That run did come back green). Header counts: 322→324 IDs, 28→30 open, Tier 3: 6→7, Tier 4: 15→16. Earlier history in git log
 **Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10, repo-assimilation v1.3.0 2026-06-16, expert-code-review register-risk 2026-06-18, test-review v1.4.0 2026-06-24
-**Status:** 326 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 291 resolved, 32 open concerns (0 Tier 1, 1 Tier 2, 7 Tier 3, 18 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 107 struck-through in active register (291 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 334 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 291 resolved, 40 open concerns (0 Tier 1, 1 Tier 2, 10 Tier 3, 23 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 107 struck-through in active register (291 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -157,6 +157,14 @@
 | C-324 | 3 | GDL token unrotated after the C-322 leak — pre-fix `refresh.log` lines persist and the deployed (tagged) harvester still leaks | At the next tagged release + redeploy, or before granting anyone new read access to server logs — rotate `GDL_API_TOKEN` and scrub the pre-fix lines | Credential hygiene |
 | C-325 | 4 | CI tests pandas 2.3.3 while a fresh consumer install resolves pandas 3 (cap removed with the extra; suite verified green on 3.0.5) | Before the next release, re-run the suite under the then-current pandas 3.x | Dependency policy |
 | C-326 | 4 | The `[pandas]` extra gates nothing — xarray is the real pandas carrier; the fail-loud `ImportError` paths are unreachable until it leaves | When #381 resolves: go makes the extra real and the error paths live; no-go makes it vestigial | Dependency policy |
+| C-327 | 4 | A Caddy basic-auth password was published in git history — **credential verified dead (401)**, password pattern exposed | Next rotation of the `views` password, or retiring the shared account for per-user logins; also check future post-mortems for quoted credentials | Server hardening |
+| C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
+| C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
+| C-330 | 4 | `refresh.log` is world-readable (644 in a 755 dir), unrotated, unbounded — the container for C-324's leaked token (`logs/` gitignored 2026-07-31) | Next server maintenance window, or when a fifth shell account is created | Server hardening |
+| C-331 | 4 | `HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`, lets a local user silence the dead-man alert | Next edit to `refresh_pipeline.sh` — switch to `curl -K -` from stdin, reclassify as a secret | Operational monitoring |
+| C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | Any change to `backends_zarr.py` or `datafactory_http/retry.py` | Credential hygiene |
+| C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
+| C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -2093,6 +2101,165 @@ Underneath both points sits a REP/CRP condition, recorded here rather than acted
 | Location | `pyproject.toml` `[project.optional-dependencies]`, `src/datafactory_query/backends_zarr.py:121-128`, the two `# pragma: no cover` handlers in `datafactory_adapters` |
 
 Cross-ref: C-325 (the version divergence this change caused), D-42 (the relocation alternative that was rejected), C-321 (untested error contracts).
+---
+
+### C-327: A Caddy basic-auth password was published in git history — credential dead, pattern exposed — [DEFER]
+
+Two plaintext basic-auth passwords for the `views` data-server account were committed on 2026-06-03 in `reports/post_mortems/2026-06-02_deployment_v1226.md` and `reports/technical_risk_register.md`, quoted in prose while explaining an incident. Commit `14a583a8` (2026-06-04, *"security: redact plaintext Caddy password"*) rewrote only the working tree — **3 commits still contain them and are ancestors of `origin/main`**, so both have been world-readable since the repo went public on 2026-07-27. The matching username is unredacted at `docs/guides/hetzner_deployment_log.md:430`.
+
+**Tested directly 2026-07-31: both return HTTP 401 against the live server, while the account itself authenticates.** The credential was rotated at some point after the post-mortem, so this is not an open door. What remains is a **password pattern** — the two published strings are near-identical variants of one another — which is a weak guessing aid if the current password was derived the same way.
+
+History rewrite is explicitly **not** recommended: the credential is dead, the repo already has clones a rewrite cannot reach, and HEAD currently leaks more identity information than the rewrite would remove (C-328). The proportionate response is rotation on a normal schedule, and preferably retiring the shared `views` account in favour of per-user logins — which is C-97's actual fix and now has a documented recipe.
+
+The generalizable lesson, and the reason this is registered rather than just fixed: **a post-mortem is a document that quotes the incident, and incidents contain credentials.** The pre-public audit searched for secrets in code and config, and missed prose.
+
+| Field | Value |
+|-------|-------|
+| ID | C-327 |
+| Tier | 4 — the credential is empirically dead; residual is a pattern hint plus a process lesson about where secrets hide |
+| Source | Five-angle security sweep, git-history forensics over all 2,544 blobs (2026-07-31) |
+| Trigger | Whichever comes first: the next scheduled rotation of the `views` password, or retiring the shared account for per-user logins. Also: before writing any future post-mortem, check it for quoted credentials |
+| Location | Commits `dc543d58`, `425b355b`, `14a583a8`; `docs/guides/hetzner_deployment_log.md:430` (username, current) |
+
+Cross-ref: C-318 (the transport this credential crosses), C-97 (shared-account model — retiring it closes this properly), C-328 (why a history rewrite would be premature).
+---
+
+### C-328: HEAD publishes more identity information than the go-public redaction removed — [DEFER]
+
+On 2026-07-27, commit `f3ee8b80` redacted the admin SSH username and a workstation hostname from the current files ahead of going public, deliberately leaving history alone. Four days later, register edits on 2026-07-31 re-published the username at HEAD: `reports/technical_risk_register.md` quotes `ls /home` output twice (≈ lines 291 and 2101), naming the admin account **plus two colleagues' shell accounts**. C-323 additionally names five data-server users by first name.
+
+The exposure is modest — SSH has been key-only and verified since 2026-07-27 (C-88 addendum), so a username against key-only SSH yields no credential-stuffing surface. It matters because it makes the redaction incoherent: scrubbing history for usernames accomplishes nothing while HEAD re-publishes them, and it means the redaction decision is not actually being enforced by anything.
+
+| Field | Value |
+|-------|-------|
+| ID | C-328 |
+| Tier | 4 — no credential, no access; an identity-hygiene and policy-coherence gap |
+| Source | Five-angle security sweep (2026-07-31) |
+| Trigger | Next edit to `technical_risk_register.md` — replace the quoted `ls /home` output with placeholders, and add a pre-commit or CI guard so the policy is enforced rather than remembered |
+| Location | `reports/technical_risk_register.md` (two `ls /home` quotations), `docs/guides/hetzner_deployment_log.md:430` |
+
+Cross-ref: C-88 (key-only SSH is what makes this tolerable), C-327 (both concern the same incomplete redaction pass).
+---
+
+### C-329: The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights
+
+`.github/workflows/publish_package.yml:30,33` uses mutable tags — `actions/checkout@v4`, `astral-sh/setup-uv@v5` — in the job that carries `id-token: write` (`:22-24`). A compromised upstream tag executes inside a job able to mint a PyPI OIDC token and publish a backdoored `views-datafactory` wheel. **No stored secret needs to leak for the artifact to be poisoned**, which is precisely why Trusted Publishing does not make this safe by itself. `ci.yml:14,16,21` has the same pattern but is unprivileged, so it is a lesser concern.
+
+This is the highest-consequence item the sweep found: the blast radius is every consumer who installs the package, whereas every other finding is bounded by the server or the repo.
+
+| Field | Value |
+|-------|-------|
+| ID | C-329 |
+| Tier | 3 — no known compromise and the attack requires an upstream account takeover, but the consequence is a poisoned published artifact reaching all consumers |
+| Source | Five-angle security sweep, CI/workflow audit (2026-07-31) |
+| Trigger | Before the next release — pin `publish_package.yml` actions to full commit SHAs. That release runs this exact workflow |
+| Location | `.github/workflows/publish_package.yml:30,33` (privileged), `.github/workflows/ci.yml:14,16,21` (unprivileged) |
+
+Cross-ref: C-326 (the same release that would carry this fix), the tag-immutability ruleset (complementary supply-chain control added 2026-07-31).
+---
+
+### C-330: `refresh.log` is world-readable, unrotated, and grows unbounded — [DEFER]
+
+`logs/refresh.log` aggregates every pipeline run's stdout and is the sink that carried the C-322 credential leak. Audit findings: no `chmod` or `umask` in any script, so `mkdir -p logs` (`scripts/refresh_pipeline.sh:77,297`) yields 755 and `tee -a` creates the file at 644; `chmod o+x /home/views-deploy` (`docs/guides/hetzner_deployment_guide.md:1064`) makes the path traversable; **no logrotate configuration exists anywhere in the repo**. Net effect: every local shell account can read the full log, and it grows without bound.
+
+**Partially closed 2026-07-31:** `logs/` and `*.log` were added to `.gitignore`, removing the sharpest edge — a single `git add -A` publishing the log to a public repo. Nothing was tracked under those paths, so nothing was orphaned.
+
+Still open: file mode, directory mode, and rotation. This is the container for C-324's leaked token, so tightening it reduces that concern's exposure even before the token is rotated.
+
+| Field | Value |
+|-------|-------|
+| ID | C-330 |
+| Tier | 4 — no data-path impact; it widens the audience for whatever ends up in the log, and unbounded growth is a slow operational hazard |
+| Source | Five-angle security sweep, scripts/CI audit (2026-07-31) |
+| Trigger | Next server maintenance window, or when a fifth shell account is created — set `umask`/`chmod 640` on log creation and add a logrotate config |
+| Location | `scripts/refresh_pipeline.sh:77,297` (log dir creation), `:50-51` (`tee -a`), `docs/guides/hetzner_deployment_guide.md:377,1064` |
+
+Cross-ref: C-324 (what is currently sitting in this file), C-322 (how it got there), C-88 (who can reach the shell to read it).
+---
+
+### C-331: `HEARTBEAT_URL` is a capability URL passed on the command line — [DEFER]
+
+`scripts/refresh_pipeline.sh:93,163,290` pass `$HEARTBEAT_URL` to `curl` as an argv element. Command lines are world-readable via `/proc/<pid>/cmdline`, and no `hidepid` mount option is configured. The URL is a healthchecks.io bearer capability: anyone who reads it can send forged success pings and **permanently silence the C-131 dead-man alert**, which is the only detector for a silently dead pipeline. It is currently stored and treated as ordinary configuration in `~/.profile`, not as a secret (`docs/ADRs/018_operational_resilience.md:107`).
+
+Exposure window is ≤10s per ping, three times per run, to local users only. The fix is mechanical: `printf 'url=%s\n' "$HEARTBEAT_URL" | curl -fsS --max-time 10 -K -`.
+
+| Field | Value |
+|-------|-------|
+| ID | C-331 |
+| Tier | 4 — requires local shell access and a well-timed read; consequence is loss of alerting rather than data harm |
+| Source | Five-angle security sweep, scripts audit (2026-07-31) |
+| Trigger | Next edit to `refresh_pipeline.sh` — switch the three pings to `curl -K -` from stdin and reclassify the URL as a secret in ADR-018 |
+| Location | `scripts/refresh_pipeline.sh:93,163,290`, `docs/ADRs/018_operational_resilience.md:107` |
+
+Cross-ref: C-131 (the alert this would silence), C-317 (the SIGKILL gap the failure ping closes).
+---
+
+### C-332: Credential redaction is incomplete — userinfo URLs, raw store paths, netrc exceptions, and credential reprs
+
+The C-322 fix redacts credential-bearing **query parameters** in `datafactory_http.retry`. The sweep found four gaps in the same family; none is currently reachable, each is one careless line from becoming a live leak:
+
+1. **`_redact_url` ignores URL userinfo** (`src/datafactory_http/retry.py:31-62`). Verified empirically: `https://user:PASSWORD@host/p?token=SECRET` → the query is masked, `user:PASSWORD@` survives untouched. Worse, the `if "?" in part` guard at `:60` means a userinfo URL with no query string is never parsed at all.
+2. **The zarr store path is interpolated raw into seven messages** (`src/datafactory_query/backends_zarr.py:130,136,141-143,154,166,180,213`) — three `warnings.warn` plus `FileNotFoundError`/`PermissionError`. `load_dataset(data_dir=...)` accepts any URL, so a consumer using `https://user:pass@.../grid.zarr` instead of netrc puts cleartext credentials into a traceback. Nothing on this path calls `_redact_url`.
+3. **A netrc parse error is logged as the exception object** (`src/datafactory_query/backends_zarr.py:80-86`). CPython's parser embeds the offending token in `bad follower token %r`, so an unquoted password containing a space leaks fragments into `logger.warning`. Verified against the project interpreter. `defaults.py:71-72` catches the same exception correctly and passes.
+4. **Default reprs carry cleartext credentials** — `aiohttp.BasicAuth` (a NamedTuple, returned by `_resolve_storage_options`) and `_TokenState` (`src/datafactory_harvester/sources/acled.py:244-249`, a plain dataclass holding the ACLED bearer token, live in the frame of every ACLED HTTP call). Neither is logged today; both are reachable by any locals-printing traceback handler.
+
+Also noted: `_redacted_copy` preserves `response`/`request` by design (callers dispatch on `status_code`), so the exception object handed to callers still holds the full URL and headers — only its `__str__` is clean. And three calls bypass `request_with_retry` entirely (`priogrid_static.py:76,125`, `land_mask.py:51`), unauthenticated today but outside the redaction guarantee.
+
+| Field | Value |
+|-------|-------|
+| ID | C-332 |
+| Tier | 3 — same class as C-322, which was tiered 3; not currently reachable, but the sinks are ordinary log lines and the guarantee is not structural |
+| Source | Five-angle security sweep, credential-carrier audit of `src/` (2026-07-31) |
+| Trigger | Any change to `backends_zarr.py` or `datafactory_http/retry.py` — extend `_redact_url` to strip userinfo, export it, apply it to `zarr_path`, and log the netrc *path* and exception *type* rather than the exception |
+| Location | `src/datafactory_http/retry.py:31-62`, `src/datafactory_query/backends_zarr.py:80-86,130-213`, `src/datafactory_harvester/sources/acled.py:244-249` |
+
+Cross-ref: C-322 (the partial fix this completes), C-324 (the live instance), C-318 (why a userinfo URL is tempting for consumers in the first place).
+
+**Partially resolved 2026-07-31 (pre-release review of `main...development`):** gap 1's *crash* path is fixed and the finding was more serious than first written — `_redact_url` did not merely fail to redact, it **raised**. `urlsplit` throws on an unbalanced `[`/`]` ("Invalid IPv6 URL", reachable from urllib3 pool messages) and on netlocs that change under NFKC. Because the raise happened while building the argument to `_redacted_copy` — inside the `except` block — `from None` never executed and Python printed the chained original, credential included, into `logs/refresh.log`. The sanitiser's failure mode was to emit exactly what it exists to suppress. Second-order: `ValueError` is not a `RequestException`, so every harvester handler missed it, losing the ACLED 401 refresh, the UCDP 400 backoff, and the provenance `"failed"` ledger entry.
+
+Fixed by wrapping `_redact_one` in `try/except ValueError` returning `<unparseable-url-redacted>` — deliberately *not* the input, since returning the input on failure is what made this a leak. Also fixed: the mask rendered as `%2A%2A%2A` because `urlencode` escapes `*`, so an operator grepping `refresh.log` for `token=***` to confirm redaction was running would find nothing; now `urlencode(..., safe="*")`. Four regression tests added, including a parametrized "never raises" table and a positive `token=***` assertion — the pre-existing tests asserted only that the secret was *absent*, which is how the encoded form shipped unnoticed.
+
+**Still open:** gaps 1 (userinfo), the `;`-separator variant, gap 2 (`zarr_path` interpolated raw into seven messages), gap 3 (netrc exception contents), gap 4 (credential reprs). Trigger unchanged.
+---
+
+### C-334: Removing a runtime dependency from a published library breaks dependents that relied on it transitively
+
+Caught in pre-release review, before shipping. `matplotlib` was demoted from `[project] dependencies` to the dev group on the grounds that **nothing under `src/` imports it** — only unpackaged `scripts/` do. That reasoning is correct for an application and wrong for a published library: the invariant a runtime dependency encodes is not *"we import it"* but *"everything that depends on us gets it"*.
+
+The concrete chain: `views-hydranet` imports matplotlib at module level on its model-run path (`views_hydranet/utils/visual_diagnostics.py:10,13,14`, reached from `hydranet_manager.py:37` and three others) and **does not declare it**. Four views-models environments pin `views-hydranet` + `views-datafactory>=1.9.0` uncapped, and none declares matplotlib — so matplotlib reaches those environments through us. Published `views-pipeline-core 2.3.0` masks this via `seaborn`, but hydranet pins pipeline-core `>=3.0.0` and the 3.x line dropped seaborn, so source-built environments would have broken.
+
+The property that makes this class of change dangerous: **`pip install --upgrade` does not reproduce it.** pip never prunes now-orphaned transitive dependencies, so an upgraded local environment stays green while every clean CI build and container image fails with a `ModuleNotFoundError` pointing at a package the developer never touched.
+
+Resolution for now: matplotlib stays a runtime dependency, with a comment in `pyproject.toml` explaining why so it is not re-removed. views-hydranet#215 filed to declare it there; once that lands, the removal is safe.
+
+| Field | Value |
+|-------|-------|
+| ID | C-334 |
+| Tier | 3 — no defect shipped (review caught it), but the reasoning error is repeatable and its failure mode is invisible in the environment where the change is tested |
+| Source | Max-effort code review of `main...development` before v1.10.0 (2026-07-31) |
+| Trigger | **Before removing any runtime dependency**, grep the sibling repos for module-level imports of it and check whether any consumer environment installs us alongside a package that relies on us for it. "Nothing under `src/` imports it" is not sufficient evidence |
+| Location | `pyproject.toml` `[project] dependencies` (matplotlib, with the warning comment); `views-hydranet/views_hydranet/utils/visual_diagnostics.py:10,13,14`; four `views-models/models/*/requirements.txt` |
+
+Cross-ref: C-326 (the pandas half of the same change, which *is* safe — xarray supplies pandas regardless), views-hydranet#215.
+---
+
+### C-333: The UCDP token survives a cross-host redirect — [DEFER]
+
+UCDP authentication uses a custom header, `x-ucdp-access-token` (`src/datafactory_harvester/sources/ucdp_annual.py:263,423`, `ucdp_candidate.py:153`, `ucdp_dot9.py:155`). `requests.Session.rebuild_auth` strips only the literal `Authorization` header when a redirect changes host, so a 30x from the UCDP API to any other host forwards the token to that host. ACLED's `Authorization: Bearer` is protected by that same mechanism; UCDP's custom header is not.
+
+Related: `src/datafactory_query/defaults.py:32-34` defaults the remote scheme to `http`, and `:63-70` attaches `Authorization: Basic` from netrc to that plaintext request; CPython's `HTTPRedirectHandler` copies all headers across hosts on redirect. That is C-318's cleartext exposure with an extra egress path attached.
+
+This is credential *egress*, not log leakage — a different failure mode from C-322/C-332, hence its own entry.
+
+| Field | Value |
+|-------|-------|
+| ID | C-333 |
+| Tier | 4 — requires UCDP to serve a redirect to a host we do not control; no evidence they ever have |
+| Source | Five-angle security sweep, credential-carrier audit of `src/` (2026-07-31) |
+| Trigger | If UCDP changes API hosts or introduces redirects, or at the next harvester auth review — pass `allow_redirects=False` on authenticated UCDP calls, or drop the header on host change |
+| Location | `src/datafactory_harvester/sources/ucdp_annual.py:263,423`, `ucdp_candidate.py:153`, `ucdp_dot9.py:155`, `src/datafactory_query/defaults.py:32-34,63-70` |
+
+Cross-ref: C-318 (plaintext scheme default), C-332 (the logging-side siblings).
 ---
 
 ### C-324: GDL token unrotated after the C-322 leak — pre-fix log lines persist and the deployed harvester still leaks
