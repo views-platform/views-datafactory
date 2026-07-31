@@ -651,6 +651,21 @@ See also C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 | Trigger | **Fired 2026-05-22 (GHS-BUILT-S), 2026-05-26 (V-Dem), 2026-05-29 (SHDI):** 6th pipeline source copied cross-layer patterns without extraction. Acknowledged 2026-06-12 (review-rr strategic): accepted at Tier 3 — WET-before-DRY strategy is intentional, patterns are clear, extraction is safe when WDI arrives. **Rewritten trigger:** Before WDI integration (10th source). |
 | Location | All `src/datafactory_*` packages — see inventory below |
 
+**Addendum 2026-07-31 (falsification audit, P5) — the deferral was uncountable, and the threshold had been moved after it fired.**
+
+Three `xfail` markers in `tests/test_falsification_solid_compliance.py` deferred this work with the reason *"9 sources, threshold 10"*. **No artifact in this repository counts 9.** Measured: pipeline scripts 5, harvester source modules 10, harvest entries in `PIPELINE_SOURCES` 11, total registry entries 25, source flags in `assemble_grid.py` 6, compile steps in `refresh_pipeline.sh` 6. A trigger stated in a unit nobody can count can never be observed to fire, which turns a deliberate deferral into a permanent one by accident — the opposite of what WET-before-DRY is for.
+
+Worse, this entry already says so itself. The Trigger field above records **"Fired 2026-05-22 (GHS-BUILT-S), 2026-05-26 (V-Dem), 2026-05-29 (SHDI): 6th pipeline source copied cross-layer patterns without extraction"**, and the title still carries **[TRIGGER FIRED]** — then the same field rewrites the trigger to *"Before WDI integration (10th source)."* **The threshold was raised from 6 to 10 after it fired**, and the tests then reported a third number that matched neither.
+
+Corrected, without changing the policy — WET-before-DRY is deliberate and stays:
+
+- **The unit is pipeline sources wired end-to-end into `assemble_grid.py` and `refresh_pipeline.sh`.** That is the thing the duplication is proportional to, and it is what this entry's own "6th pipeline source" language already meant.
+- **The count is 6**: UCDP, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI. Threshold remains 10.
+- The three `xfail` reasons now state unit, count and threshold, so the next reader can check the arithmetic rather than trust a number.
+- **Both test lists were stale**: they enumerated 5 hardcoded flags/steps and omitted SHDI, so the guards under-reported the very duplication they exist to measure. SHDI added to both.
+
+What is *not* being changed: the decision to defer. Extraction against 6 near-identical instances is safer than against 3, and the operator's rule is explicit. The defect was that the deferral could not be audited, not that it was wrong.
+
 With 4 sources implemented (UCDP, ACLED, GHS-POP, GHS-BUILT-S), the codebase has accumulated intentional WET patterns across all four layers. The WET-before-DRY strategy (ADR: write 3 times before abstracting) has succeeded — concrete patterns are now clear. The 4th source (GHS-BUILT-S, v1.2.20) copied all patterns again, confirming the abstraction boundaries.
 
 **Inventory status re-audited 2026-07-31 — half of it was already paid down, and this entry never noticed.** The list below was written in May and has been read since as the outstanding debt. Four of the eight items are complete, verified by *adoption* rather than by the existence of a file:
