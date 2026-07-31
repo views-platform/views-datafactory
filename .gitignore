@@ -55,6 +55,13 @@ graphify-out/
 .env.*
 credentials.toml
 
+# Pipeline logs — NEVER commit these.
+# refresh.log aggregates every pipeline run's stdout, which is the sink
+# that carried the C-322 credential leak. The repo is public; a single
+# `git add -A` would publish it. Security audit 2026-07-31.
+logs/
+*.log
+
 # Session
 resume_session.md
 
