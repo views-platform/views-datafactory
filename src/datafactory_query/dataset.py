@@ -28,6 +28,7 @@ from datafactory_adapters import (
 )
 from datafactory_query.backends_npy import _load_grid_from_npy
 from datafactory_query.backends_zarr import (
+    _is_remote,
     _load_grid_from_zarr,
     _resolve_storage_options,
     _use_zarr_loader,
@@ -51,6 +52,7 @@ def _load_grid(
     start: str | int | None = None,
     end: str | int | None = None,
     feature_sel: list[str] | None = None,
+    storage_options: dict | None = None,
 ) -> tuple[
     np.ndarray, np.ndarray, np.ndarray, list[str],
     int | None, dict[str, int],
@@ -68,10 +70,26 @@ def _load_grid(
          feature_agg_types, source_features)
     """
     if _use_zarr_loader(data_dir):
-        storage_options = _resolve_storage_options(str(data_dir))
+        # Caller-supplied credentials win; netrc is the fallback, not
+        # the only option. A consumer authenticating with a bearer
+        # token, an API key or a service account has no netrc entry to
+        # write, and before this seam existed its only routes were to
+        # synthesise a netrc file or fork the package.
+        #
+        # Remote-only, mirroring _resolve_storage_options, which
+        # returns None for local paths: fsspec options are meaningless
+        # for a directory on disk and xarray rejects them outright, so
+        # honouring them there would turn a harmless argument into a
+        # FileNotFoundError. Caught by the local-store test below.
+        if not _is_remote(str(data_dir)):
+            resolved = None
+        elif storage_options is not None:
+            resolved = storage_options
+        else:
+            resolved = _resolve_storage_options(str(data_dir))
         return _load_grid_from_zarr(
             str(data_dir),
-            storage_options,
+            resolved,
             start=start,
             end=end,
             feature_sel=feature_sel,
@@ -107,6 +125,7 @@ def load_dataset(
     data_dir: Path | str = Path("data/assembled"),
     gaul_dir: Path = Path("data/raw/gaul_admin"),
     month_id_epoch: int = 1980,
+    storage_options: dict | None = None,
 ) -> FeatureFrame | pd.DataFrame:
     """Load a subset of the assembled grid.
 
@@ -131,6 +150,28 @@ def load_dataset(
         gaul_dir: Path to GAUL admin Parquet files.
         month_id_epoch: Epoch for month_id encoding (default 1980
             = VIEWS convention).
+        storage_options: fsspec storage options for a remote zarr
+            store — the escape hatch for callers whose credentials
+            do not live in `~/.netrc`. Passed through untouched to
+            the zarr backend. When None (the default), credentials
+            are resolved from `~/.netrc` exactly as before, so
+            existing callers are unaffected. Ignored for local npy
+            directories, which need no credentials.
+
+            A service authenticating with a bearer token rather
+            than HTTP basic auth::
+
+                load_dataset(
+                    data_dir="https://store.example/grid.zarr",
+                    storage_options={"client_kwargs": {
+                        "headers": {"Authorization": f"Bearer {tok}"},
+                    }},
+                )
+
+            Note this is an fsspec/aiohttp dict, not a datafactory
+            type — deliberately, so a new auth mechanism needs no
+            change here (ADR-026 governs how credentials are
+            *resolved*, not how they are *transported*).
 
     Returns:
         FeatureFrame or DataFrame depending on output_format.
@@ -169,6 +210,7 @@ def load_dataset(
         start=start if is_zarr else None,
         end=end if is_zarr else None,
         feature_sel=feature_sel if is_zarr else None,
+        storage_options=storage_options,
     )
 
     # For npy (or zarr with no time args): post-slice

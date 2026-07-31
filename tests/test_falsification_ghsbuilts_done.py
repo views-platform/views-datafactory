@@ -37,13 +37,18 @@ class TestS1CicParity:
 
 
 class TestS2ClaudeMdArchitecture:
-    """P5-soft: CLAUDE.md omits GHS-BUILT-S from architecture."""
+    """P5-soft: the architecture doc omits GHS-BUILT-S.
+
+    Retargeted from CLAUDE.md to README.md 2026-07-31 —
+    CLAUDE.md is now untracked, and README is the published
+    architecture description, so drift there matters more.
+    """
 
     def test_assembly_description_includes_ghsbuilts(self) -> None:
-        claude_md = PROJECT_ROOT / "CLAUDE.md"
-        content = claude_md.read_text()
+        arch_doc = PROJECT_ROOT / "README.md"
+        content = arch_doc.read_text()
         assert "GHS-BUILT-S" in content, (
-            "CLAUDE.md Assembly description lists UCDP + ACLED +"
+            "README.md Assembly description lists UCDP + ACLED +"
             " GHS-POP but omits GHS-BUILT-S"
         )
 
