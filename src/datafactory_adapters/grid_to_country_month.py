@@ -4,8 +4,8 @@ Aggregates the canonical [T, H, W, C] grid to country-month level:
 sums feature values per (month_id, country_id) using a country
 identifier feature (default: gaul0_code) as the grouping key.
 
-Reuses _flatten_grid() from grid_to_dataframe for the initial
-flattening step.
+Reuses _flatten_grid() from the shared _flatten module for the
+initial flattening step.
 
 pandas is an OPTIONAL extra (``views-datafactory[pandas]``) and is
 imported inside the function that builds the frame, so importing
@@ -24,7 +24,7 @@ if TYPE_CHECKING:  # annotations only — never imported at runtime
     import pandas as pd
 
 from datafactory_adapters._conservation import assert_cm_conservation
-from datafactory_adapters.grid_to_dataframe import _flatten_grid
+from datafactory_adapters._flatten import _flatten_grid
 
 logger = logging.getLogger(__name__)
 

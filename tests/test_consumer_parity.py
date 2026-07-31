@@ -262,7 +262,7 @@ class TestZarrConsumer:
 
         import xarray as xr
 
-        from datafactory_adapters.grid_to_dataframe import (
+        from datafactory_adapters._flatten import (
             _compute_month_ids,
         )
         from datafactory_priogrid import from_views_month_id
