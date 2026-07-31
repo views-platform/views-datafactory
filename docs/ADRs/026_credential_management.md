@@ -77,6 +77,45 @@ ACLED's EULA (as of 2025) imposes constraints that shape credential handling:
 - Credential caching in package-distributed files
 - Shared service accounts for sources that prohibit credential sharing (ACLED)
 
+### 7. Every credential has a named owner and a review date
+
+Added 2026-07-31 (#392, þing-02 DF2).
+
+**The problem this addresses.** None of the credentials below expires. Caddy basic auth has no
+expiry in the mechanism; the three harvest tokens carry no expiry date; ACLED's bearer token is
+short-lived but is minted from a username and password that are not. Nothing therefore ever prompts
+a rotation, and the consequence is on the record: the GDL token leaked into `logs/refresh.log`
+(C-322 in code, C-324 open), has been known-leaked for days, and is still in use. Elsewhere on the
+platform an Appwrite key expires on 2026-11-30 and gets attention precisely because a date exists.
+
+**An expiry and a rotation story are different properties.** An expiry is a fact the issuer enforces.
+A review date is an intention we hold. This table records intentions, and says so, because writing
+an intention into the slot where a fact belongs is how ADR-026:97 went wrong in the first place.
+
+| Credential | Where the value lives | Owner (role) | Next review |
+|---|---|---|---|
+| Data-server HTTP basic auth | `~/.netrc` on each consumer machine; Caddy on the server | Pipeline operator | 2026-11-30 |
+| `UCDP_API_TOKEN` | `~/.profile` on the pipeline host | Pipeline operator | 2026-11-30 |
+| `ACLED_USERNAME` / `ACLED_PASSWORD` | `~/.profile` on the pipeline host | Pipeline operator | 2026-11-30 |
+| `GDL_API_TOKEN` | `~/.profile` on the pipeline host | Pipeline operator | 2026-11-30 |
+
+Owner is a **role**, not a person — the role survives whoever currently holds it. At the time of
+writing that is Simon Polichinel von der Maase, who is also the only holder.
+
+**Why 2026-11-30.** It is the date the platform's Appwrite keys expire. Sharing it means one sitting
+covers every credential the platform holds, and it borrows a deadline that already forces attention
+instead of inventing a competing one.
+
+**How this is enforced, and how it deliberately is not.** A test asserts that every row carries an
+owner and a parseable date, so a credential cannot be added without them. **No test fails when a date
+passes.** Two reasons: such a test cannot observe whether a rotation happened — it reads a string a
+human typed, and the quickest way to make it green is to edit the date, which is the neglect it
+would exist to prevent; and with required status checks on `development` and `main` it would block
+every merge, including an unrelated incident fix, reproducing C-320's lesson that a build red for
+reasons unrelated to the code stops carrying information. The currency check belongs in the release
+runbook (`docs/guides/publishing_to_pypi.md`), which is already a deliberate, low-frequency moment
+where a human is paying attention.
+
 ---
 
 ## Alternatives Rejected
@@ -94,7 +133,23 @@ ACLED's EULA (as of 2025) imposes constraints that shape credential handling:
 ## Consequences
 
 - **Package is PyPI-safe.** No credentials in the source tree, no credentials in the built distribution.
-- **Public GitHub is safe.** The repo contains env var *names* (`UCDP_API_TOKEN`), not secrets.
+- **Source code carries env var *names*, not secrets** (`UCDP_API_TOKEN`). No credential value is
+  resolved at import time or written into the tree by any packaged module.
+
+  **This originally read "Public GitHub is safe", and that was false** (#391, þing-02 DF1). It was
+  written on 2026-04-21, before the repository went public on 2026-07-27, and it was true of *code*
+  and false of *prose*: a working Caddy basic-auth password for the data server was committed on
+  2026-06-03 in the narrative of a post-mortem, and again in the risk register. Commit `14a583a8`
+  ("security: redact plaintext Caddy password") rewrote only the working tree — three commits still
+  carry the value and are ancestors of `origin/main`. `gitleaks` over the full history does not flag
+  it: no rule matches a short memorable string inside an English sentence. The value was rotated at
+  some point after the post-mortem and returns HTTP 401 today (C-327).
+
+  The lesson generalises past this instance and is why the sentence is quoted rather than deleted:
+  **a claim about what a repository does not contain is only as wide as the thing you checked.**
+  "No secrets in code" is verifiable. "Public GitHub is safe" is a claim about every byte of history
+  in every file type, including prose, notebook output, and fixtures — which no scanner establishes.
+  State the narrow thing you checked.
 - **New sources follow a pattern.** Implement a `get_<source>_credential()` function with the same arg -> env -> fail precedence.
 - **ACLED integration has a clear architectural home.** OAuth2 token lifecycle lives in the ACLED harvester. Credentials come from env vars (`ACLED_USERNAME`, `ACLED_PASSWORD`).
 - **`.gitignore` must defensively exclude** `.env*` and `credentials.toml` even though these files don't exist yet.

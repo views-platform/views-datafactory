@@ -190,6 +190,23 @@ and delete the over-privileged "entire account" token from your PyPI account set
 
 ## C. Future updates (the repeatable loop — automated)
 
+0. **Credential review check** — is anything in ADR-026 §7 past its review date?
+
+   ```bash
+   date -I    # compare against the "Next review" column
+   grep -A8 "### 7. Every credential" docs/ADRs/026_credential_management.md
+   ```
+
+   If a date has passed: rotate the credential, then move the date. **Moving the date without
+   rotating is the failure this check exists to prevent** — so if you are about to do that, write
+   why in the register instead.
+
+   This lives here, and not in the test suite, on purpose (#392). A test can only read a date
+   someone typed; it cannot see whether a credential was rotated, and its cheapest green path
+   would be editing the date. It would also block every merge on a calendar event, with no admin
+   override — C-320's lesson. A release is a deliberate, low-frequency moment where a human is
+   already paying attention, which is what the check actually needs.
+
 1. **Bump `version`** in `pyproject.toml` via the house release ritual (bump branch →
    PR → development; development → main PR). SemVer; you cannot reuse a published version.
 2. (Optional) rehearse on TestPyPI (§A) with a throwaway `X.Y.Z.dev1`; revert before merge.
