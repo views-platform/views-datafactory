@@ -330,8 +330,16 @@ views-datafactory/
 **As a consumer** (you want `load_dataset()` and the adapters):
 
 ```bash
-pip install views-datafactory
+pip install views-datafactory                # FeatureFrame output
+pip install "views-datafactory[pandas]"      # + DataFrame / country-month output
 ```
+
+pandas is an **optional extra**, because `output_format="dataframe"` and
+`"country_month"` are the only things that need it — importing the package
+never loads pandas (guarded by `tests/test_import_purity.py`). Across
+views_platform pandas is being phased out in favour of views-frames, and a
+library that *requires* it forces every consumer to negotiate a version they
+may not want.
 
 **As a developer** (you want the tests, scripts, and docs):
 

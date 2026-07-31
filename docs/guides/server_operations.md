@@ -292,6 +292,48 @@ sudo -u views-deploy tail -100 /home/views-deploy/views-datafactory/logs/refresh
 sudo -u views-deploy bash -c 'cd ~/views-datafactory && cat logs/pipeline_duration.json'
 ```
 
+### Add a data user (HTTP credential)
+
+Each consumer gets their own line in the Caddy `basicauth` block —
+individually revocable, independent of any SSH account. This is the
+credential that goes in the consumer's `~/.netrc` (see the
+[model consumer quickstart](model_consumer_quickstart.md)).
+
+```bash
+# 1. Generate a bcrypt hash (prompts for the password; nothing echoes)
+caddy hash-password
+
+# 2. Add one line inside the basicauth block (8-space indent,
+#    ASCII login names — avoid å/ø/etc. in HTTP Basic auth):
+sudo nano /etc/caddy/Caddyfile
+#        newuser $2a$14$<hash>
+
+# 3. Validate, then reload (reload never drops live connections)
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+
+# 4. Verify from a laptop (expect 200; prompts for the password)
+curl -u newuser -s -o /dev/null -w "%{http_code}\n" \
+    http://204.168.219.108/grid.zarr/.zmetadata
+```
+
+Hand the password over out-of-band, one-to-one. Per C-318 these
+credentials cross the wire unencrypted (HTTP, no TLS) — issue
+throwaway passwords, never reused personal ones. Onboarding anyone
+outside the trusted circle is C-318's recorded trigger to move to a
+domain + Caddy auto-HTTPS first.
+
+### Revoke a data user
+
+Delete the user's line from the `basicauth` block, then:
+
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
+```
+
+No other user is affected. (This is why every consumer gets their own
+entry rather than sharing `views` — see C-97 in the risk register.)
+
 ---
 
 ## Pipeline Writer Lock (C-316, #353)

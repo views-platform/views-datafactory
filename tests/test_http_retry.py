@@ -362,3 +362,171 @@ class TestRequestWithRetryRed:
             )
 
         assert mock_request.call_count == 2
+
+
+class TestCredentialRedaction:
+    """No credential may reach a log line or exception message
+    (þing-01 / PLATFORM-001 redaction clause; #369 audit).
+
+    GDL/SHDI is the one source that must carry its token as a query
+    param; requests embeds the FULL url in exception text, and crash
+    tracebacks land in refresh.log. These tests use real exception
+    shapes (C-321 rule: fake exception types make error contracts lie).
+    """
+
+    def test_redact_url_masks_sensitive_query_values(self) -> None:
+        from datafactory_http.retry import _redact_url
+
+        out = _redact_url(
+            "https://gdl.test/api/csv?format=csv&token=SECRET123"
+        )
+        assert "SECRET123" not in out
+        assert "format=csv" in out
+
+    def test_redact_url_no_query_unchanged(self) -> None:
+        from datafactory_http.retry import _redact_url
+
+        url = "https://ucdpapi.pcr.uu.se/api/gedevents/25.1"
+        assert _redact_url(url) == url
+
+    def test_redact_url_handles_embedded_message_urls(self) -> None:
+        from datafactory_http.retry import _redact_url
+
+        msg = (
+            "401 Client Error: Unauthorized for url: "
+            "https://gdl.test/api?format=csv&token=SECRET123"
+        )
+        out = _redact_url(msg)
+        assert "SECRET123" not in out
+        assert "401 Client Error" in out
+
+    def test_4xx_raise_is_redacted_and_keeps_response(self) -> None:
+        """The fail-fast 4xx path must not leak the token, and must
+        preserve .response (ACLED 401-refresh dispatches on it)."""
+        from datafactory_http import request_with_retry
+
+        resp = MagicMock()
+        resp.status_code = 401
+        resp.raise_for_status.side_effect = requests.HTTPError(
+            "401 Client Error: Unauthorized for url: "
+            "https://gdl.test/api?format=csv&token=SECRET123",
+            response=resp,
+        )
+
+        with (
+            patch(MOCK_TARGET, return_value=resp),
+            pytest.raises(requests.HTTPError) as ei,
+        ):
+            request_with_retry(
+                "https://gdl.test/api", max_retries=3, timeout=5,
+            )
+
+        assert "SECRET123" not in str(ei.value)
+        assert ei.value.response is resp
+        # Chained context would print the original (token-bearing)
+        # message in tracebacks — must be suppressed.
+        assert ei.value.__suppress_context__
+
+    def test_exhausted_retries_raise_is_redacted(self) -> None:
+        """ConnectionError text embeds 'url: /path?query' fragments —
+        the final raise must redact them and keep the exception type."""
+        from datafactory_http import request_with_retry
+
+        err = requests.ConnectionError(
+            "HTTPSConnectionPool(host='gdl.test', port=443): "
+            "Max retries exceeded with url: "
+            "/api/csv?format=csv&token=SECRET123 (Caused by ...)"
+        )
+
+        with (
+            patch(MOCK_TARGET, side_effect=err),
+            patch("datafactory_http.retry.time.sleep"),
+            pytest.raises(requests.ConnectionError) as ei,
+        ):
+            request_with_retry(
+                "https://gdl.test/api/csv", max_retries=2, timeout=5,
+            )
+
+        assert "SECRET123" not in str(ei.value)
+        assert ei.value.__suppress_context__
+
+    # ---- Red: the redactor must never fail open (code review 2026-07-31) ----
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            # urlsplit raises "Invalid IPv6 URL" on an unbalanced bracket.
+            # urllib3 pool messages carry exactly this shape for v6 hosts.
+            "Max retries exceeded with url: https://[::1/api?token=SECRET123",
+            # urlsplit raises when the netloc changes under NFKC.
+            "http://℀a.test/x?token=SECRET123",
+            # Degenerate inputs that must not blow up either.
+            "",
+            "?",
+            "a?b",
+            "no-scheme.test/x?token=SECRET123",
+        ],
+    )
+    def test_redact_url_never_raises(self, text: str) -> None:
+        """_redact_url is called from inside `except` blocks.
+
+        If it raises there, three things go wrong at once: the new
+        exception is built while handling the old one, so `from None`
+        never runs and Python prints the chained original — credential
+        included — into logs/refresh.log; the ValueError is not a
+        RequestException, so every harvester's `except` misses it and no
+        provenance "failed" entry is written; and the operator sees
+        "Invalid IPv6 URL" instead of the real network fault.
+        """
+        from datafactory_http.retry import _redact_url
+
+        out = _redact_url(text)
+        assert "SECRET123" not in out
+
+    def test_redact_url_drops_unparseable_rather_than_echoing(self) -> None:
+        """Failing open would emit exactly what this function suppresses."""
+        from datafactory_http.retry import _redact_url
+
+        out = _redact_url("https://[::1/api?token=SECRET123")
+        assert out == "<unparseable-url-redacted>"
+
+    def test_unparseable_url_does_not_break_the_exception_contract(
+        self,
+    ) -> None:
+        """A malformed URL in the message must still surface as a
+        RequestException, not a ValueError from the redactor."""
+        from datafactory_http import request_with_retry
+
+        err = requests.ConnectionError(
+            "HTTPSConnectionPool(host='::1', port=443): "
+            "Max retries exceeded with url: "
+            "https://[::1/api?format=csv&token=SECRET123 (Caused by X)"
+        )
+
+        with (
+            patch(MOCK_TARGET, side_effect=err),
+            patch("datafactory_http.retry.time.sleep"),
+            pytest.raises(requests.ConnectionError) as ei,
+        ):
+            request_with_retry(
+                "https://gdl.test/api/csv", max_retries=2, timeout=5,
+            )
+
+        assert "SECRET123" not in str(ei.value)
+        assert ei.value.__suppress_context__
+
+    def test_mask_renders_literally_not_percent_encoded(self) -> None:
+        """The placeholder must read `***`, not `%2A%2A%2A`.
+
+        Operators grep refresh.log for `token=***` to confirm redaction
+        is running; percent-encoded, that check silently finds nothing.
+        Every other test here asserts only that the secret is *absent*,
+        which is how the encoded form shipped unnoticed.
+        """
+        from datafactory_http.retry import _redact_url
+
+        out = _redact_url("https://gdl.test/api?format=csv&token=SECRET123")
+        assert "token=***" in out
+        assert "%2A" not in out
+        # Non-sensitive parameters must survive unmangled.
+        assert "format=csv" in out

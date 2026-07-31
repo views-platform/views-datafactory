@@ -51,6 +51,66 @@ trusted-publisher config — see Prerequisites.
 
 ---
 
+## Branch protection — why a merge can refuse you
+
+Since 2026-07-31 both long-lived branches are protected, and **admins cannot bypass**
+(this is deliberate: see C-320 in the risk register — two merges landed with CI still
+pending because nothing at the platform level said no).
+
+| Branch | Required checks | Other |
+|--------|-----------------|-------|
+| `development` | `lint`, `typecheck`, `test` | PR required (0 approvals), no force-push, no deletion, admins included |
+| `main` | `lint`, `typecheck`, `test`, `import-enforcement` | same |
+
+`import-enforcement` is required on `main` only — its job-level
+`if: github.base_ref == 'main'` in `.github/workflows/ci.yml` means it merely reports
+*skipped* on development PRs.
+
+Consequences for the release ritual: the bump PR into `development` waits on three
+checks, the `development` → `main` PR waits on four (drilled 2026-07-31 — all four do
+report, and `--admin` does not get past them), and neither can be forced through.
+Creating and pushing a tag (`git push origin vX.Y.Z`) and the Release-triggered publish
+workflow still work normally.
+
+Tags carry their own rule: **"Release tags are immutable"** blocks *deletion* and
+*update* of `refs/tags/v*`, with no bypass. Create as many new version tags as you like;
+you cannot move or delete one that has been published. This matches PyPI, where a
+version number can never be reused.
+
+Merge a PR with `gh pr merge <n> --auto --squash` — repo-level auto-merge is enabled, so
+this arms and GitHub merges the moment the checks go green. Do not babysit CI in a shell
+loop: a watcher that dies on a network hiccup looks exactly like a watcher that saw
+green, which is how C-320 recurred.
+
+**Break-glass** (CI provider outage, or a required check that can never report). Lift,
+act, restore immediately — the API leaves an audit trail:
+
+```bash
+gh api -X DELETE repos/views-platform/views-datafactory/branches/<branch>/protection
+# ... do the thing, then restore from the table above:
+gh api -X PUT repos/views-platform/views-datafactory/branches/<branch>/protection \
+  --input protection.json
+```
+
+```json
+{
+  "required_status_checks": {"strict": false, "contexts": ["lint", "typecheck", "test"]},
+  "enforce_admins": true,
+  "required_pull_request_reviews": {"required_approving_review_count": 0,
+    "dismiss_stale_reviews": false, "require_code_owner_reviews": false},
+  "restrictions": null,
+  "required_linear_history": false,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": false
+}
+```
+
+(For `main`, add `"import-enforcement"` to `contexts`.)
+
+---
+
 ## Prerequisites (one-time setup) — Trusted Publishing
 
 The release workflow authenticates with **Trusted Publishing (OIDC)** — there is **no
@@ -129,6 +189,23 @@ and delete the over-privileged "entire account" token from your PyPI account set
 ---
 
 ## C. Future updates (the repeatable loop — automated)
+
+0. **Credential review check** — is anything in ADR-026 §7 past its review date?
+
+   ```bash
+   date -I    # compare against the "Next review" column
+   grep -A8 "### 7. Every credential" docs/ADRs/026_credential_management.md
+   ```
+
+   If a date has passed: rotate the credential, then move the date. **Moving the date without
+   rotating is the failure this check exists to prevent** — so if you are about to do that, write
+   why in the register instead.
+
+   This lives here, and not in the test suite, on purpose (#392). A test can only read a date
+   someone typed; it cannot see whether a credential was rotated, and its cheapest green path
+   would be editing the date. It would also block every merge on a calendar event, with no admin
+   override — C-320's lesson. A release is a deliberate, low-frequency moment where a human is
+   already paying attention, which is what the check actually needs.
 
 1. **Bump `version`** in `pyproject.toml` via the house release ritual (bump branch →
    PR → development; development → main PR). SemVer; you cannot reuse a published version.

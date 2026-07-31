@@ -9,6 +9,17 @@ governs how credentials work in this project. The key rules:
 credentials live in environment variables or `~/.netrc`, never in
 source code or config files distributed with the package.
 
+**The platform's other seam:** this guide governs the **datafactory
+seam** (features served over HTTP). Forecast storage and delivery run
+over the **Appwrite seam**, governed by
+[PLATFORM-001 — Identity, Secrets & Configuration Contract](https://github.com/views-platform/views-appwrite/blob/main/docs/ADRs/platform/PLATFORM-001_identity_secrets_configuration_contract.md)
+(homed in views-appwrite; reciprocally cross-linked per þing-01). A
+full modeling/delivery runtime needs **both** seams' credentials in
+one environment — from this seam, the `~/.netrc` entry is the sole
+co-resident secret. The harvest tokens below are needed **only where
+harvests run**; no model, postprocessing, or serving runtime ever
+needs them.
+
 ---
 
 ## Overview
@@ -204,6 +215,10 @@ two or more sources share identical auth flows.
 - `python-dotenv` as a dependency
 - Silent fallback to anonymous access
 - Shared service accounts for sources that prohibit credential sharing
+- Credentials in any carrier — env var, netrc entry, header, or URL
+  query value — reaching a log line or exception message; endpoints may
+  be logged (PLATFORM-001 redaction clause, enforced for query-param
+  tokens at the shared HTTP layer in `datafactory_http.retry`)
 
 ---
 

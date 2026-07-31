@@ -28,8 +28,12 @@ class TestP2OcpAssemblyHardcoded:
 
     @pytest.mark.xfail(
         reason=(
-            "C-44: WET-before-DRY — 9 sources, threshold 10. "
-            "Assembly registry deferred until 10th source."
+            "C-164/C-44: WET-before-DRY. Unit = pipeline sources "
+            "wired into assemble_grid.py; currently 6 (UCDP, ACLED, "
+            "GHS-POP, GHS-BUILT-S, V-Dem, SHDI). Threshold 10. "
+            "NB the earlier reason said '9 sources', which matched "
+            "no artifact in the repo — see C-164's 2026-07-31 "
+            "addendum. Deferral stands; it is now countable."
         ),
         strict=True,
     )
@@ -45,6 +49,7 @@ class TestP2OcpAssemblyHardcoded:
                 "--ghspop-grid",
                 "--ghsbuilts-grid",
                 "--vdem-grid",
+                "--shdi-grid",
             ]
             if flag in text
         ]
@@ -58,8 +63,11 @@ class TestP2OcpAssemblyHardcoded:
 
     @pytest.mark.xfail(
         reason=(
-            "C-44: WET-before-DRY — 9 sources, threshold 10. "
-            "Pipeline script registry deferred until 10th source."
+            "C-164/C-44: WET-before-DRY. Unit = compile steps in "
+            "refresh_pipeline.sh; currently 6 (UCDP, ACLED, GHS-POP, "
+            "GHS-BUILT-S, V-Dem, SHDI). Threshold 10. NB the earlier "
+            "reason said '9 sources', which matched no artifact — "
+            "see C-164's 2026-07-31 addendum."
         ),
         strict=True,
     )
@@ -75,6 +83,7 @@ class TestP2OcpAssemblyHardcoded:
                 "Compile GHS-POP",
                 "Compile GHS-BUILT-S",
                 "Compile V-Dem",
+                "Compile SHDI",
             ]
             if label in text
         ]
@@ -91,9 +100,12 @@ class TestP5SrpHarvesterFunctions:
 
     @pytest.mark.xfail(
         reason=(
-            "C-44: WET-before-DRY — fetch functions are "
-            "monolithic by design until 10th source triggers "
-            "extraction of shared helpers."
+            "C-164/C-44: WET-before-DRY. Unit = harvester source "
+            "modules under src/datafactory_harvester/sources/; "
+            "currently 10 by module count, 8 by distinct upstream "
+            "(UCDP is three modules, one provider). The threshold "
+            "is stated in pipeline sources (6), not modules — see "
+            "C-164's 2026-07-31 addendum. Extraction still deferred."
         ),
         strict=True,
     )

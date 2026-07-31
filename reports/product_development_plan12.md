@@ -1,11 +1,49 @@
-# Product Development Plan v12 — current through v1.9, 9 Sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.10, 11 registry sources, 79 Features, on PyPI
 
-**Date:** 2026-06-29 (v1.9 addendum 2026-07-27)
+**Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
-**Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, 9 data sources across conflict, population, built environment, democracy, and human development.
+**Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
 
 ---
+
+## v1.10 Addendum (2026-07-31)
+
+**v1.10.0 (dependency hygiene + governance repair).** Minor, not patch: the
+dependency set changed for consumers.
+
+*Packaging.* `pandas` moved from a required dependency to a `[pandas]` extra
+(#378) — with the honest caveat recorded in `pyproject.toml` that the extra
+gates **nothing** today, because xarray requires pandas and no installable
+configuration of this package lacks it. The declaration makes pandas *not
+imported*, not *not installed*; #381 asks whether the remote zarr reader can
+drop xarray, which is what would make it real. Verified per-package in a clean
+venv (xarray is the sole carrier). Import purity is now enforced by subprocess
+probes (`tests/test_import_purity.py`) — in-process assertions are worthless
+once pytest has loaded the module. `matplotlib` was demoted and then
+**restored**: views-hydranet imports it at module level without declaring it,
+and four views-models environments receive it through us (C-334,
+views-hydranet#215). Adapters split so legacy and frame-native outputs stop
+sharing a file (#379).
+
+*Consumer surface.* `load_dataset` gained a `storage_options` seam, so a new
+API can bring its own auth instead of waiting on a netrc entry on our server
+(P6). Local paths are unaffected — xarray rejects storage options for local
+zarr, which a test caught before the code shipped.
+
+*Governance.* Branch protection enabled on both long-lived branches with
+`enforce_admins: true` (C-320) — it caught two real errors of mine within
+hours. All GitHub Actions pinned to commit SHAs (C-329). ADR-026 gained a
+credential ownership table with named roles and review dates (#392), and its
+false "Public GitHub is safe" sentence was corrected (#391) — a working Caddy
+password had been committed in post-mortem prose. C-330 was **retracted**: it
+claimed no log rotation exists, but the archive records logrotate configured on
+the server 2026-03-31; the entry inferred world state from repo contents. The
+WET-before-DRY deferral was re-audited (C-164): half its inventory was already
+done, and its "9 sources" unit counted nothing.
+
+*Not in this release.* GDL token rotation (C-324) and the server tag bump are
+operator actions. #381, #387, #341, #363, #368 remain deferred.
 
 ## v1.9 Addendum (2026-07-27)
 
@@ -83,7 +121,7 @@ map (C-287).
 | 4 | Grid compilation — UCDP (columnar placement, feature disaggregation, configurable dtype/fill) | Done | 39 |
 | 4 | Grid compilation — ACLED (8 features, column projection, OOM-safe) | Done (server-proven) | 11 |
 | 4 | Grid compilation — GHS-POP, GHS-BUILT-S, V-Dem, SHDI (pregridded, skip-consolidation) | Done (server-proven) | 24 |
-| — | Assembly (9 sources → 79 features, temporal anchor ADR-047, content-addressed skip ADR-041) | Done (server-proven) | 30 |
+| — | Assembly (6 compiled sources + static + admin → 79 features, temporal anchor ADR-047, content-addressed skip ADR-041) | Done (server-proven) | 30 |
 | — | Adapters (FeatureFrame via views-frames, grid-to-DataFrame, conservation ADR-040) | Done | 42 |
 | — | Query (regions, temporal parsing, unified load_dataset, zarr support, pre-coverage warning) | Done | 38 |
 | — | Consumer parity (DataFrame, FeatureFrame, zarr vs VIEWSER gold set) | Done | 3 (marker-gated) |
@@ -105,7 +143,7 @@ map (C-287).
 ### Architecture
 
 - **9 packages** under `src/datafactory_*`: provenance, http, priogrid, harvester, consolidation, viewpoint, compilation, adapters, query
-- **9 data sources**: UCDP (annual + candidate + .9), ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI, PRIO-GRID static + GAUL admin
+- **8 upstream providers** (11 registry entries; UCDP is three): UCDP (annual + candidate + .9), ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI, PRIO-GRID static, GAUL admin — this list has always had 8 items, which is likely where the phantom "9" came from
 - **79 assembled features** across conflict, population, built environment, democracy, human development, static geography, and admin codes
 - **50 ADRs** (10 constitutional + 40 project-specific)
 - **32 CICs** (class intent contracts)
@@ -121,7 +159,7 @@ Nine data source pipelines exist. They share structural patterns but have real d
 - **Viewpoints:** UCDP has survivorship strategies, spatial distribution (ADR-049), and filtering. ACLED has event type filters. GHS-POP/GHS-BUILT-S use bounded-memory raster processing. V-Dem uses country-year broadcast. SHDI uses GDL region mapping with NaN preservation (ADR-042).
 - **Compilers:** UCDP/ACLED use `FeatureSpec` (ADR-024); GHS-POP, GHS-BUILT-S, V-Dem, SHDI use `PregriddedCompilationConfig` (direct cell assignment).
 
-**Rule (C-44/C-164):** WET-before-DRY — 9 sources, threshold 10. Abstract types (Protocol/ABC for provenance), assembly registry, and provenance sub-packaging deferred until 10th source forces interface extraction.
+**Rule (C-44/C-164):** WET-before-DRY. The unit is **pipeline sources wired into `assemble_grid.py`** — 6 today (UCDP, ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI), threshold 10. Abstract types (Protocol/ABC for provenance) and the assembly registry stay deferred until the 10th forces interface extraction. Provenance sub-packaging is **not** on this clock: its trigger is a consumer needing a strict subset of the 21 exports, and no source count produces that. Earlier text here said "9 sources", a number matching no artifact in the repo (C-164 addendum, 2026-07-31).
 
 ---
 
@@ -197,8 +235,8 @@ Key ADRs: ADR-047 (temporal anchor), ADR-048 (declared aggregation types), ADR-0
 | Criterion | How to verify |
 |-----------|--------------|
 | All v1.6 criteria | — |
-| 10th data source integrated (WDI) | WDI compiled + assembled + served |
-| WET-before-DRY abstractions extracted | Protocol/ABC for provenance, assembly registry (C-44/C-164 threshold met) |
+| WDI integrated | WDI compiled + assembled + served. NB this is the **7th** pipeline source, not the 10th — the old "10th source" phrasing assumed the uncountable 9 (C-164 addendum). |
+| WET-before-DRY abstractions extracted | Protocol/ABC for provenance, assembly registry — gated on **10 pipeline sources**, which WDI alone does not reach. This criterion and the WDI criterion are now independent; previously they were assumed to fall together. |
 | OAuth2 / institutional SSO | Caddy `forward_auth` + oauth2-proxy |
 | Per-user audit trail | Access logs with authenticated username |
 | Circuit breaker on APIs | `datafactory_http` circuit breaker module |

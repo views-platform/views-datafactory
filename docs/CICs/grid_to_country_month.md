@@ -33,7 +33,7 @@ This is the bridge between grid-native data (one row per cell per month) and cou
 - Guarantees that aggregation is summation (groupby sum) — no averaging, no counting
 - Guarantees `ValueError` if the specified country feature is not in `feature_names`
 - Guarantees count conservation for extensive features (ADR-040): `sum(country totals) + sum(excluded cell values) = sum(all grid cells)`. Excluded cells are quantified and logged, never silently dropped.
-- Reuses `_flatten_grid()` from `grid_to_dataframe` for the initial flattening step
+- Reuses `_flatten_grid()` from `datafactory_adapters._flatten` for the initial flattening step
 
 ---
 
@@ -75,7 +75,9 @@ All failures are immediate and loud. No silent fallbacks.
 
 ## 7. Boundaries and Interactions
 
-- Imports `_flatten_grid` from `datafactory_adapters.grid_to_dataframe` (same package)
+- Imports `_flatten_grid` from `datafactory_adapters._flatten` (same package). It moved
+  there in #379 so the shared numpy primitive has a home of its own instead of squatting
+  in the pandas module, and so the pandas tier can eventually be deleted as whole files
 - Imports `assert_cm_conservation` from `datafactory_adapters._conservation` (same package) for count conservation checks (ADR-040)
 - No `datafactory_*` imports outside `datafactory_adapters`
 - Sits alongside the graph (adapters layer), not inside it

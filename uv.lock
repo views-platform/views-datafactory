@@ -1380,7 +1380,7 @@ wheels = [
 
 [[package]]
 name = "views-datafactory"
-version = "1.6.0"
+version = "1.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -1388,7 +1388,6 @@ dependencies = [
     { name = "imagecodecs" },
     { name = "matplotlib" },
     { name = "numpy" },
-    { name = "pandas" },
     { name = "pyarrow" },
     { name = "pyshp" },
     { name = "requests" },
@@ -1399,9 +1398,15 @@ dependencies = [
     { name = "zarr" },
 ]
 
+[package.optional-dependencies]
+pandas = [
+    { name = "pandas" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "mypy" },
+    { name = "pandas" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "types-requests" },
@@ -1414,7 +1419,7 @@ requires-dist = [
     { name = "imagecodecs", specifier = ">=2024.1" },
     { name = "matplotlib", specifier = ">=3.8,<4" },
     { name = "numpy", specifier = ">=1.26,<3" },
-    { name = "pandas", specifier = ">=2.0,<3" },
+    { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.0" },
     { name = "pyarrow", specifier = ">=14,<20" },
     { name = "pyshp", specifier = ">=2.3,<3" },
     { name = "requests", specifier = ">=2.28,<3" },
@@ -1424,10 +1429,12 @@ requires-dist = [
     { name = "xarray", specifier = ">=2024.1,<2026" },
     { name = "zarr", specifier = ">=2.16,<3" },
 ]
+provides-extras = ["pandas"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "mypy", specifier = ">=1.8,<2" },
+    { name = "pandas", specifier = ">=2.0,<3" },
     { name = "pytest", specifier = ">=8,<10" },
     { name = "ruff", specifier = ">=0.4,<1" },
     { name = "types-requests", specifier = ">=2.28,<3" },
