@@ -27,6 +27,15 @@ dependencies = [
     "requests>=2.28,<3",
     "pyarrow>=14,<20",
     "pyshp>=2.3,<3",
+    # DO NOT REMOVE without checking views-hydranet#215 first. Nothing under
+    # src/ imports matplotlib — only unpackaged scripts/ do — so demoting it
+    # looks free. It is not: views-hydranet imports matplotlib at module level
+    # on its model-run path and does not declare it, and four views-models
+    # environments pin hydranet + this package together, so matplotlib reaches
+    # them through us. Removing it breaks clean builds while leaving upgraded
+    # local envs green (pip never prunes orphaned transitive deps). Drop this
+    # line only once hydranet declares matplotlib itself. See C-334.
+    "matplotlib>=3.8,<4",
     "shapely>=2.0,<3",
     "xarray>=2024.1,<2026",
     "zarr>=2.16,<3",
@@ -73,10 +82,8 @@ dev = [
     "ruff>=0.4,<1",
     "mypy>=1.8,<2",
     "types-requests>=2.28,<3",
-    # Used by scripts/ and tests/ only — never by a packaged module.
-    # matplotlib was a declared runtime dependency until 2026-07-31 with
-    # zero imports under src/; pandas backs the [pandas] extra above.
-    "matplotlib>=3.8,<4",
+    # pandas backs the [pandas] extra above, but scripts/ and tests/ need it
+    # unconditionally, so it is a dev dependency too.
     "pandas>=2.0,<3",
 ]
 

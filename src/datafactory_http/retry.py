@@ -27,6 +27,11 @@ _SENSITIVE_QUERY_KEYS: frozenset[str] = frozenset({
     "password", "secret",
 })
 
+# Substituted for any URL fragment we cannot parse. Deliberately not the
+# original text: a redactor that returns its input on failure emits exactly
+# what it exists to suppress.
+_UNPARSEABLE_URL = "<unparseable-url-redacted>"
+
 
 def _redact_url(text: str) -> str:
     """Redact credential-bearing query values in any URL inside text.
@@ -36,21 +41,42 @@ def _redact_url(text: str) -> str:
     """
 
     def _redact_one(url: str) -> str:
-        parsed = urllib.parse.urlsplit(url)
-        if not parsed.query:
-            return url
-        pairs = urllib.parse.parse_qsl(
-            parsed.query, keep_blank_values=True,
-        )
-        redacted = [
-            (k, "***" if k.lower() in _SENSITIVE_QUERY_KEYS else v)
-            for k, v in pairs
-        ]
-        return urllib.parse.urlunsplit(
-            parsed._replace(
-                query=urllib.parse.urlencode(redacted),
-            ),
-        )
+        try:
+            parsed = urllib.parse.urlsplit(url)
+            if not parsed.query:
+                return url
+            pairs = urllib.parse.parse_qsl(
+                parsed.query, keep_blank_values=True,
+            )
+            redacted = [
+                (k, "***" if k.lower() in _SENSITIVE_QUERY_KEYS else v)
+                for k, v in pairs
+            ]
+            return urllib.parse.urlunsplit(
+                parsed._replace(
+                    # safe="*" keeps the mask literal. Without it urlencode
+                    # emits %2A%2A%2A, and an operator grepping refresh.log
+                    # for "token=***" to confirm redaction ran finds nothing.
+                    query=urllib.parse.urlencode(redacted, safe="*"),
+                ),
+            )
+        except ValueError:
+            # urlsplit raises on malformed authorities — an unbalanced
+            # "[" or "]" ("Invalid IPv6 URL"), or a netloc that changes
+            # under NFKC normalization. Both are reachable from urllib3
+            # connection-pool messages.
+            #
+            # Failing open here would be worse than not redacting at all:
+            # the raise happens while building the argument to
+            # _redacted_copy, i.e. INSIDE the except block, so `from None`
+            # never executes and Python prints the chained original —
+            # credential included — into logs/refresh.log. It would also
+            # replace a retryable RequestException with a ValueError that
+            # bypasses every harvester's error handling, losing the
+            # provenance "failed" ledger entry.
+            #
+            # So: drop the whole part rather than risk emitting it.
+            return _UNPARSEABLE_URL
 
     # Redact query strings wherever they appear, including bare
     # "path?query" fragments in pool-error messages ("Max retries

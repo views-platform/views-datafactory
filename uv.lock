@@ -1386,6 +1386,7 @@ dependencies = [
     { name = "aiohttp" },
     { name = "fsspec" },
     { name = "imagecodecs" },
+    { name = "matplotlib" },
     { name = "numpy" },
     { name = "pyarrow" },
     { name = "pyshp" },
@@ -1404,7 +1405,6 @@ pandas = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "matplotlib" },
     { name = "mypy" },
     { name = "pandas" },
     { name = "pytest" },
@@ -1417,6 +1417,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.9,<4" },
     { name = "fsspec", specifier = ">=2023.9,<2025" },
     { name = "imagecodecs", specifier = ">=2024.1" },
+    { name = "matplotlib", specifier = ">=3.8,<4" },
     { name = "numpy", specifier = ">=1.26,<3" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.0" },
     { name = "pyarrow", specifier = ">=14,<20" },
@@ -1432,7 +1433,6 @@ provides-extras = ["pandas"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "matplotlib", specifier = ">=3.8,<4" },
     { name = "mypy", specifier = ">=1.8,<2" },
     { name = "pandas", specifier = ">=2.0,<3" },
     { name = "pytest", specifier = ">=8,<10" },
