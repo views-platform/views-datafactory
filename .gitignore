@@ -67,3 +67,9 @@ resume_session.md
 
 # Claude Code
 .claude/
+
+# Operator-local agent instructions. Untracked from 2026-07-31 — it carries
+# working conventions and authority boundaries that belong to whoever is
+# running the session, not to the published package. Existing history is
+# left alone deliberately; nothing in it is sensitive.
+CLAUDE.md
