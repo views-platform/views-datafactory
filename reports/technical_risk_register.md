@@ -653,7 +653,24 @@ See also C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 
 With 4 sources implemented (UCDP, ACLED, GHS-POP, GHS-BUILT-S), the codebase has accumulated intentional WET patterns across all four layers. The WET-before-DRY strategy (ADR: write 3 times before abstracting) has succeeded — concrete patterns are now clear. The 4th source (GHS-BUILT-S, v1.2.20) copied all patterns again, confirming the abstraction boundaries.
 
-**Inventory of cross-layer WET patterns:**
+**Inventory status re-audited 2026-07-31 — half of it was already paid down, and this entry never noticed.** The list below was written in May and has been read since as the outstanding debt. Four of the eight items are complete, verified by *adoption* rather than by the existence of a file:
+
+| # | Item | Status | Evidence |
+|---|---|---|---|
+| 1 | Harvester config validation | **DONE** | `src/datafactory_harvester/validation.py` holds `validate_positive_int`, `validate_positive_float`, `validate_nonempty_string`, `validate_string_tuple`; **10 source modules import it** |
+| 2 | Consolidation helpers | open | `_build_harvest_index` still duplicated in `consolidators/ucdp.py` and `consolidators/acled.py`; no shared home |
+| 3 | Viewpoint builder scaffolding | open | no shared scaffold module in `datafactory_viewpoint/`; **0 builders** import one |
+| 4 | Compilation output writing | open | no `_write_grid_output` anywhere in `src/` |
+| 5 | `_VIEWS_EPOCH_YEAR` duplication | **DONE** | zero occurrences in `src/` — the constant is gone |
+| 6 | Provenance ledger dict building | open | no ledger-entry builder in `src/` |
+| 7 | Pipeline runner scripts | **DONE** | `pipeline_runner.py` exists and **5 of 5** `run_*_pipeline.py` use it |
+| 8 | Harvest script wrappers | **DONE** | `harvest_runner.py` exists and **9 of 9** `harvest_*.py` use it |
+
+These correspond to the completed PR-1, PR-3, PR-5 and PR-6 work. The lesson is the same one this register keeps relearning: **a debt entry that is never re-audited overstates the debt**, and an inventory written once reads as current forever. The four open items are ordinary backlog with honest status, not a deferral hiding behind a threshold.
+
+**Threshold correction.** The trigger above was rewritten to "10th source" after firing at the 6th. The repo's own rule — quoted in this entry's own text — is *write 3 times before abstracting*. **The threshold is 3.** At 6 wired pipeline sources the remaining four items are therefore **overdue, not deferred**, and should be scheduled as normal work rather than waiting on a number that was raised to avoid them. Nothing about WET-before-DRY changes; 3 is what it always said.
+
+**Original inventory of cross-layer WET patterns (May 2026), retained for the record:**
 
 1. **Harvester config validation** (5 files): `timeout >= 1`, `page_size >= 1`, `max_retries >= 1`, year range validation — all follow identical `if val < 1: raise ValueError` patterns. Files: `ucdp_annual.py`, `ucdp_candidate.py`, `ucdp_dot9.py`, `acled.py`, `ghspop.py`. Abstraction: trivial (shared validators or base config).
 
