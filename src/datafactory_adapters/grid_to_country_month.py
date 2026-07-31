@@ -6,15 +6,22 @@ identifier feature (default: gaul0_code) as the grouping key.
 
 Reuses _flatten_grid() from grid_to_dataframe for the initial
 flattening step.
+
+pandas is an OPTIONAL extra (``views-datafactory[pandas]``) and is
+imported inside the function that builds the frame, so importing
+this module — or anything else in the package — stays pandas-free.
 """
 
 from __future__ import annotations
 
 import logging
 import warnings
+from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
+
+if TYPE_CHECKING:  # annotations only — never imported at runtime
+    import pandas as pd
 
 from datafactory_adapters._conservation import assert_cm_conservation
 from datafactory_adapters.grid_to_dataframe import _flatten_grid
@@ -67,6 +74,16 @@ def grid_to_country_month(
             or if intensive features are present when
             feature_agg_types is provided.
     """
+    try:
+        import pandas as pd
+    except ImportError as exc:  # pragma: no cover - env-dependent
+        msg_pd = (
+            "Country-month output requires pandas, which is an "
+            "optional extra of views-datafactory. Install it with: "
+            'pip install "views-datafactory[pandas]"'
+        )
+        raise ImportError(msg_pd) from exc
+
     if country_feature not in feature_names:
         msg = (
             f"Country feature {country_feature!r} not in "

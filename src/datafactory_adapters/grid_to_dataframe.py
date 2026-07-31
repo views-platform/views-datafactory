@@ -5,14 +5,20 @@ DataFrame with (month_id, priogrid_id) MultiIndex. Supports
 land filtering and configurable month_id encoding.
 
 Designed to be extractable: depends only on numpy + pandas.
+pandas is an OPTIONAL extra (``views-datafactory[pandas]``) and is
+imported inside the function that builds the frame, so importing
+this module — or anything else in the package — stays pandas-free.
 """
 
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
+
+if TYPE_CHECKING:  # annotations only — never imported at runtime
+    import pandas as pd
 
 from datafactory_adapters.feature_frame import (
     FeatureFrame,
@@ -115,6 +121,16 @@ def grid_to_dataframe(
         DataFrame with (month_id, priogrid_id) MultiIndex
         and one column per feature.
     """
+    try:
+        import pandas as pd
+    except ImportError as exc:  # pragma: no cover - env-dependent
+        msg = (
+            "DataFrame output requires pandas, which is an optional "
+            "extra of views-datafactory. Install it with: "
+            'pip install "views-datafactory[pandas]"'
+        )
+        raise ImportError(msg) from exc
+
     flat_data, all_month_ids, all_pgids = _flatten_grid(
         grid, pgids, time_steps, month_id_epoch, land_pgids
     )
