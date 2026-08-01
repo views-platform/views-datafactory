@@ -109,6 +109,8 @@ As of v1.2.29, the monitoring is fully configured:
 
 This resolves C-131 (no external monitoring for cron job failure). The monitoring detects: cron daemon crashes, server reboots without re-enabling cron, `views-deploy` user deletion, and pipeline failures that prevent the success ping.
 
+**What it does NOT detect (added 2026-08-01, see ADR-051 and C-335).** Everything above is about the *pipeline*. None of it says anything about whether a consumer can actually **read** the data. The pipeline writes on the host; Caddy serves over HTTP; they fail independently. If Caddy stops serving while the host stays up, the pipeline still runs, still succeeds, and still pings — the check stays **green while every consumer gets nothing**, and nothing automated ever notices. Host-death is caught, but only after period + grace (≈32 days worst case). ADR-051 adds an external poll of the public `status.html` to close this. Until that poll exists, **a green heartbeat is evidence the pipeline ran, never evidence the data is reachable** — do not let the two be conflated in a status report or a handover.
+
 ### Per-source SLO (implemented v1.2.7)
 
 The "default: 7 days" staleness threshold above is a global fallback. In practice, different sources have different release cadences. `SOURCE_SLO` in `datafactory_provenance.health` maps each source to an appropriate threshold:

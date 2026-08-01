@@ -177,6 +177,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-050** -- Consumer Contract Export
   The `output_format` vocabulary becomes a public contract (`OutputFormat` StrEnum + `CONTRACT_VERSION` + language-neutral `contract.json`); the FeatureFrame layout spec is executable (committed real-`save()` fixture + digest + regeneration-identity drift alarm). Ownership split: views-frames owns byte layout, datafactory owns query vocabulary and hosts the fixture. Implemented by epic #342.
 
+- **ADR-051** -- Two Monitoring Mechanisms, Because There Are Two Failure Modes
+  The push heartbeat (healthchecks.io) answers "did the pipeline run?"; an external poll of the public `status.html` answers "can a consumer read anything?" They are not substitutes — a poller cannot see a cron that never fired, and a heartbeat cannot see a web server that died between runs. Keeps the heartbeat where it is because Better Stack heartbeats have no `/start` signal, which C-317's OOM-kill mitigation depends on. Records C-335 and an explicit revisit path; the two-vendor split is a compromise, not an end state.
+
 These must comply with the constitutional ADRs above.
 
 ---
