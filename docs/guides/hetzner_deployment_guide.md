@@ -10,24 +10,27 @@ what all of this means.
 
 ## Quick Deploy (updating an existing server)
 
-If the server is already set up and you're just deploying a new tag:
+If the server is already set up and you're just deploying a tag that **already exists**:
+
+> **Cutting the release is not described here any more.** This section used to open with a
+> local `git merge development --ff-only` on `main` followed by `git push origin development`.
+> **Branch protection has made both of those impossible** since 2026-07-31: `development` and
+> `main` require a pull request, admins are not exempt, and force-pushes are refused. The
+> commands would fail at the push.
+>
+> The release ritual — bump, promote, tag, publish, back-merge — lives in
+> [`publishing_to_pypi.md`](publishing_to_pypi.md) and **only** there. Do not reinstate a git
+> sequence here: two guides describing the same procedure is how they came to contradict each
+> other (see #402). This guide owns the **server**, from the deploy tag onwards.
 
 ```bash
-# 1. On your laptop — ensure main is ancestor of development, then merge to main
-git checkout development && git pull
-git checkout main && git pull
-git checkout development && git merge main --no-edit && git push origin development
-git checkout main && git merge development --ff-only
-git tag vX.Y.Z
-git push origin main --tags
-
-# 2. SSH into the server (replace <your-user> with your username)
+# 1. SSH into the server (replace <your-user> with your username)
 ssh <your-user>@204.168.219.108
 
-# 3. Start tmux (pipeline runs 3-4 hours; SSH will drop without a multiplexer)
+# 2. Start tmux (pipeline runs 3-4 hours; SSH will drop without a multiplexer)
 tmux new -s deploy
 
-# 4. Deploy and run
+# 3. Deploy and run
 sudo -u views-deploy bash -c '
   source ~/.profile
   echo "vX.Y.Z" > ~/.views-deploy-tag
@@ -795,51 +798,45 @@ fixed order:
    merge to `development`. It happens during development, well before
    deployment.
 
-2. **Merge** = fast-forward `development` into `main`. This is the
-   release ceremony. `main` only moves forward at deploy time.
+2. **Promote** = a pull request from `development` into `main`, merged
+   as a **merge commit**. This is the release ceremony; `main` only
+   moves forward at release time. It used to be a local fast-forward,
+   which is why older text here said "fast-forward" — branch protection
+   ended that in 2026-07-31 (see the note under Quick Deploy).
 
 3. **Tag** = `git tag vX.Y.Z` on the merge commit on `main`. This
    is a git label, not a code change. The version in `pyproject.toml`
    and the tag name must agree (`version = "1.4.0"` → `v1.4.0`).
 
-4. **Deploy** = update `~/.views-deploy-tag` on the server to the
+4. **Back-merge** = a pull request from `main` back into `development`,
+   also a merge commit. The promotion in step 2 leaves one commit on
+   `main` that is not on `development`; without this step the branches
+   diverge a little further after **every** release, and
+   `git log main..development` starts counting work that already shipped.
+
+5. **Deploy** = update `~/.views-deploy-tag` on the server to the
    new tag. The pipeline checks out whatever tag that file contains.
 
 **Why this order:** If you tag before bumping, the tag points at code
 with the old version string — wrong. If you tag on `development`
 instead of `main`, the canonical release branch falls behind. Bump
-first, merge second, tag third.
+first, promote second, tag third, back-merge fourth.
 
 ### How to deploy a new version
 
-**On your laptop** (where you develop):
+**On your laptop:** follow the release ritual in
+[`publishing_to_pypi.md`](publishing_to_pypi.md) — bump, promote, tag, publish, back-merge.
 
-```bash
-# 1. Ensure main is an ancestor of development
-#    GitHub PR merge commits can put commits on main that don't exist
-#    on development. If so, ff-only will fail. Fix: merge main into
-#    development first (this is always conflict-free).
-git checkout development && git pull
-git checkout main && git pull
-git checkout development
-git merge main --no-edit          # no-op if main is already ancestor
-git push origin development
-
-# 2. Merge development into main (fast-forward only)
-git checkout main
-git merge development --ff-only
-
-# 3. Create a tag on main (must match pyproject.toml version)
-git tag vX.Y.Z
-
-# 4. Push main and the tag to GitHub
-git push origin main --tags
-```
+> The git sequence that used to sit here (`git merge development --ff-only`,
+> `git push origin development`) **cannot be executed any more.** Both branches require a
+> pull request, admins included, and force-pushes are refused. It is deleted rather than
+> corrected, because a second copy of the procedure is what let the two guides drift apart
+> in the first place (#402). One procedure, one home.
 
 **On the server** (SSH in):
 
 ```bash
-# 5. Update the deploy tag file
+# Update the deploy tag file
 echo 'vX.Y.Z' > ~/.views-deploy-tag
 ```
 

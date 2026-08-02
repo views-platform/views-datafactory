@@ -43,6 +43,10 @@ gh release create vX.Y.Z --target main --title "views-datafactory X.Y.Z" --notes
 
 # 4. confirm: Actions tab shows "Publish Package" green, then
 #    https://pypi.org/project/views-datafactory/
+
+# 5. BACK-MERGE main into development — do not skip, see below
+gh pr create --base development --head main --title "chore: sync main back into development after vX.Y.Z"
+# merge it as a MERGE COMMIT, never squash
 ```
 
 The workflow guards the version (must beat PyPI), `uv build`s, and `uv publish`es via
@@ -215,11 +219,46 @@ and delete the over-privileged "entire account" token from your PyPI account set
    gh release create vX.Y.Z --target main --title "views-datafactory X.Y.Z" --notes "what changed"
    ```
 4. **Verify:** Actions → *Publish Package* green, then https://pypi.org/project/views-datafactory/.
+   Verify by **installing the published artifact into a clean venv**, not by reading a green tick.
+5. **Back-merge `main` into `development`** — the step that is easiest to skip and was skipped
+   after every release before v1.10.0:
+   ```bash
+   gh pr create --base development --head main \
+     --title "chore: sync main back into development after vX.Y.Z"
+   # merge as a MERGE COMMIT — never squash
+   ```
+
+### Why step 5 exists (do not delete it again)
+
+Promoting `development` → `main` through a PR creates a **merge commit on `main` that does not
+exist on `development`**. A protected branch offers merge-commit, squash, or rebase; squash and
+rebase rewrite the release SHAs, so merge-commit is the only acceptable option — and it always
+diverges by exactly one commit.
+
+Left unhealed, the divergence accumulates: `git log main..development` counts work that already
+shipped, and the next release's diff starts from a base that no longer reflects reality.
+`tests/test_falsification_deploy_v160_r2.py::TestDF1MergeTopology` asserts the invariant.
+
+**Squashing step 5 defeats it entirely** — a squash creates yet another commit that is not `main`,
+so `main` still is not an ancestor.
+
+Detection is automated by `.github/workflows/release-topology.yml`: it runs on every published
+release and daily, with full git history, and opens a single tracking issue if the branches have
+diverged. It deliberately does **not** run in the PR test job — that would make every PR red
+between a release and its back-merge, which is C-320's permanently-red CI all over again.
+
+Merged branches now delete themselves (`delete_branch_on_merge`), so no cleanup step is needed;
+eleven stale branches had accumulated before that was switched on.
 
 > Under the hood: `release: published` → `permissions: id-token: write` mints an OIDC
 > token → PyPI checks the GitHub claim against the trusted publisher → upload. The version
 > guard fails the run if `[project].version` isn't higher than what's on PyPI, so "forgot
 > to bump" is a loud error, not a wasted version.
+
+> **This guide is the only home for the release ritual.** `hetzner_deployment_guide.md` used to
+> carry a second copy that prescribed `git merge development --ff-only` and
+> `git push origin development`; branch protection made both impossible in 2026-07-31 and nobody
+> noticed, because the two copies had drifted apart. That guide now owns the server only (#402).
 
 ---
 

@@ -1,0 +1,147 @@
+name: Release topology
+
+# Detects main/development divergence and reports it out-of-band.
+#
+# WHY THIS EXISTS
+# Promoting development -> main goes through a pull request (branch protection
+# allows nothing else), and a PR merge cannot fast-forward. Merge-commit is the
+# only method that preserves the release SHAs, so every release leaves exactly
+# one commit on main that development has not seen. The back-merge
+# (publishing_to_pypi.md §C.5) heals it. Skipping it lets the branches drift
+# further after each release, until `git log main..development` counts work
+# that already shipped.
+#
+# The deploy-gate tests have always asserted this, but they could only run
+# locally: the default CI checkout is shallow, so `git merge-base` cannot
+# answer and they skip (C-320). Detection therefore depended on a human running
+# the full suite at the right moment. After v1.10.0 that happened four hours
+# late, by accident, and it had been silently true after every prior release.
+#
+# WHY IT IS NOT IN THE PR TEST JOB
+# Deliberate. Between a release and its back-merge the branches ARE diverged —
+# correctly so. Gating pull requests on it would make every PR red during that
+# window for reasons unrelated to the change under review. That is exactly
+# C-320: a permanently-red CI stops carrying information. Same reasoning as
+# ADR-051, which chose out-of-band alerting over a merge-blocking tripwire.
+#
+# WHY IT OPENS AN ISSUE RATHER THAN A PR
+# Actions cannot create pull requests in this repo
+# (`can_approve_pull_request_reviews: false`). The alternative — a stored PAT —
+# was rejected: it adds a credential with a rotation burden, days after a
+# sprint spent removing exactly that (ADR-026, C-324). `issues: write` needs no
+# settings change and no secret.
+
+on:
+  release:
+    types: [published]
+  schedule:
+    # 06:00 UTC daily. Divergence is not urgent — it is a bookkeeping error,
+    # not an outage — but it should not survive a working day unnoticed.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: release-topology
+  cancel-in-progress: false
+
+jobs:
+  topology:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          # The whole point. With the default depth-1 checkout `git merge-base`
+          # cannot answer and the gate skips itself into uselessness.
+          fetch-depth: 0
+
+      - name: Fetch both long-lived branches
+        run: |
+          git fetch --quiet origin main development
+
+      - name: Check main is an ancestor of development
+        id: check
+        run: |
+          if git merge-base --is-ancestor origin/main origin/development; then
+            echo "diverged=false" >> "$GITHUB_OUTPUT"
+            echo "main is an ancestor of development — topology is clean."
+          else
+            echo "diverged=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "commits=$(git rev-list --count origin/development..origin/main)"
+              echo "shas<<EOF"
+              git log --oneline origin/development..origin/main
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+            echo "main is NOT an ancestor of development."
+          fi
+
+      - name: Open or update the tracking issue
+        if: steps.check.outputs.diverged == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMITS: ${{ steps.check.outputs.commits }}
+          SHAS: ${{ steps.check.outputs.shas }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="main and development have diverged — back-merge needed"
+          BODY=$(cat <<EOF
+          \`main\` is not an ancestor of \`development\`: **${COMMITS} commit(s)** on \`main\` are
+          missing from \`development\`.
+
+          \`\`\`
+          ${SHAS}
+          \`\`\`
+
+          ## Fix
+
+          \`\`\`bash
+          gh pr create --base development --head main --title "chore: sync main back into development"
+          \`\`\`
+
+          Merge it as a **merge commit**. Never squash — a squash creates another commit that is
+          not \`main\`, so \`main\` still would not be an ancestor and this issue would reopen.
+
+          ## Why
+
+          Every release promotion leaves one merge commit on \`main\` that \`development\` has not
+          seen. Expected immediately after a release; a problem if it persists. See
+          \`docs/guides/publishing_to_pypi.md\` §C.5 and #402.
+
+          Detected by [release-topology](${RUN_URL}). This issue is reused rather than duplicated,
+          and closes itself once the branches converge.
+          EOF
+          )
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" \
+                       --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "Still diverged as of $(date -u +%Y-%m-%dT%H:%MZ) — ${COMMITS} commit(s). [run](${RUN_URL})"
+            echo "Updated existing issue #${EXISTING}"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Close the tracking issue if the branches have converged
+        if: steps.check.outputs.diverged == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TITLE="main and development have diverged — back-merge needed"
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" \
+                       --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" \
+              --comment "Converged — \`main\` is an ancestor of \`development\` again. Closed automatically."
+            echo "Closed #${EXISTING}"
+          fi
+
+      - name: Fail the run so the divergence is visible in the Actions tab
+        if: steps.check.outputs.diverged == 'true'
+        run: |
+          echo "::error::main is not an ancestor of development — see the tracking issue."
+          exit 1

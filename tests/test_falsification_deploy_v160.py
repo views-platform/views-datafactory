@@ -4,8 +4,14 @@ Claim: "We are ready to bump the version, merge to main, tag, and deploy."
 
 Hard falsification F1: version not bumped — pyproject.toml still says 1.5.0,
     but tag v1.5.0 already exists on main.
-Hard falsification F2: deploy guide prescribes ``git merge development --ff-only``
-    but main has merge commits not in development, so fast-forward is impossible.
+Hard falsification F2: main has merge commits not in development.
+    Originally phrased as "the deploy guide prescribes ``git merge development
+    --ff-only`` and fast-forward is impossible". Both halves of that framing are
+    now obsolete: branch protection removed the fast-forward procedure entirely
+    (a PR merge cannot fast-forward), and the guide that prescribed it no longer
+    does. The divergence itself is still real and still worth asserting — it now
+    happens by design, once per release, and is healed by the back-merge.
+    Reframed 2026-08-02, #402.
 Soft falsification F6: 43+ GitHub issues from completed sprints still open.
 Soft falsification F7: product plan and roadmap stale by 3 major versions.
 Soft falsification F8: stale branches not cleaned up.
@@ -50,15 +56,23 @@ class TestF1VersionBumped:
         )
 
 
-class TestF2FastForwardMerge:
-    """F2: deploy guide merge procedure must be executable."""
+class TestF2ReleaseTopology:
+    """F2: main must stay an ancestor of development.
+
+    Renamed from ``TestF2FastForwardMerge`` on 2026-08-02 (#402). The
+    old name described a procedure that no longer exists — a class name
+    is documentation too, and this one was actively misleading.
+    """
 
     def test_main_is_ancestor_of_development(self) -> None:
-        """Quick Deploy says ``git merge development --ff-only``.
+        """Every release leaves main one merge commit ahead.
 
-        This requires main's HEAD to be an ancestor of development's
-        HEAD. If not, the documented procedure fails with
-        ``fatal: Not possible to fast-forward, aborting.``
+        Promotion goes through a PR (branch protection allows nothing
+        else), and a PR merge cannot fast-forward. Merge-commit is the
+        only method that preserves the release SHAs, and it always
+        diverges by one. The back-merge restores the property; skipping
+        it means ``git log main..development`` counts shipped work and
+        the next release diffs against a base that never existed.
         """
         result = subprocess.run(
             ["git", "merge-base", "--is-ancestor", "main", "development"],
@@ -73,9 +87,12 @@ class TestF2FastForwardMerge:
                 "checkout) — deploy gate runs locally"
             )
         assert result.returncode == 0, (
-            "main is not an ancestor of development — "
-            "the deploy guide's --ff-only merge will fail. "
-            "Merge main into development first."
+            "main is not an ancestor of development. Normal right after "
+            "a release, and healed by the back-merge: "
+            "gh pr create --base development --head main, merged as a "
+            "MERGE COMMIT (a squash recreates the divergence). "
+            "See publishing_to_pypi.md §C.5. Detection also runs daily "
+            "via .github/workflows/release-topology.yml."
         )
 
 
