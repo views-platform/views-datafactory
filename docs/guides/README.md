@@ -24,6 +24,7 @@ Task-oriented how-to guides. Pick by what you're trying to do.
 |-------|----------|----------|
 | [server_quickref.md](server_quickref.md) | One-page cheat sheet for the production server | Operators |
 | [server_operations.md](server_operations.md) | Runbook: pipeline, locks, heartbeat, incident response | Operators |
+- [`monitoring.md`](monitoring.md) — what watches this system and what each thing does **not** watch: the heartbeat (did the pipeline run?), the Better Stack monitor (is the data reachable?), and the freshness workflow (is what we serve current?). Setup of record for ADR-051, including what to configure if the plan is ever upgraded.
 | [data_serving_guide.md](data_serving_guide.md) | How the zarr/parquet endpoints are served (Caddy, auth) | Operators |
 | [hetzner_deployment_guide.md](hetzner_deployment_guide.md) | Provisioning the server from scratch | Operators |
 | [hetzner_deployment_log.md](hetzner_deployment_log.md) | Historical log of the actual deployment | Operators (reference) |

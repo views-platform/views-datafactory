@@ -17,6 +17,25 @@ entry could.
 
 ---
 
+## C-335 resolved, C-338 registered (2026-08-03)
+
+The serving-path monitor is live: Better Stack on the public `status.html`, 3-minute interval,
+verified **Up** at ~27 ms with a test alert delivered and read. The unbounded case C-335 was about —
+Caddy stops, pipeline keeps succeeding and pinging, nothing ever notices — is closed.
+
+Two qualifications kept in the closure rather than smoothed away: detection is by e-mail, not phone;
+and the **freshness half is not in the vendor at all**, because Better Stack gates keyword matching
+behind a paid plan. That half became `.github/workflows/serving-freshness.yml` — daily, on GitHub, so
+genuinely external. Registered as C-338 (Tier 4: late notice of stale data, not wrong data).
+
+**ADR-051's specification of the content check was itself wrong, and paying would not have fixed it.**
+It said to alert when the body "does not contain the healthy marker". The page carries a legend —
+`● OK ● Stale ● Missing` — so those words appear on *every healthy page*; the first implementation
+reported one of each against a perfectly healthy server and would have opened an issue every day
+until someone muted it. Caught by drilling the check against the live page before shipping. The
+workflow parses per-cell `title="<status>"` attributes instead. Counts: 337→338 IDs, 43 open
+unchanged (one closed, one opened), Tier 2: 3→2, Tier 4: 24→25.
+
 ## C-337 registered (2026-08-02)
 
 A loose dependency floor **froze** an estimator version. `views-frames>=1.0` let `uv.lock` pin
