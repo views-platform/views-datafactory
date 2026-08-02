@@ -120,7 +120,9 @@ df.loc[(500, 12345)]  # 12345 is a pgid, not a country_id
 - **Beige:** Missing country feature raises ValueError, all-ocean grid produces empty DataFrame; without `feature_agg_types`, all features are summed (backward compat)
 - **Red:** Aggregation correctness: manual sum of known cells matches grouped output; count conservation equation verified per ADR-040 (`grid_total = cm_total + excluded_total` for all extensive features); NaN in extensive features raises RuntimeError before summation; NaN in intensive features does not raise; float64 regression guard proves partition-sum precision at 500K cells
 
-Tests in `tests/test_grid_to_country_month.py` (if present).
+Tests in `tests/test_country_month.py`.
+
+> Corrected 2026-08-02 (base-docs audit). This line previously named a test file matching the CIC's own title rather than the real one, and hedged it with "(if present)". That hedge is why it survived: a citation which excuses its own absence can never be wrong, and so never gets fixed. Now guarded by `tests/test_docs_citations.py`.
 
 ---
 

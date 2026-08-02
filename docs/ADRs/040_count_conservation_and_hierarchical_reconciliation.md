@@ -281,8 +281,8 @@ Count conservation permits exclusions as long as they are accounted for. This cr
 
 - `reports/postmortem_cm_unmapped_gaul_cells.md` — the C-149 incident that motivates this ADR
 - `reports/technical_risk_register.md` — C-149 entry (Tier 2, resolved)
-- `src/datafactory_compilation/grid_compilation.py:103–151` — existing skip-count variables
-- `src/datafactory_adapters/grid_to_country_month.py:73–99` — existing exclusion logic and warning
+- `_place_events()` in `src/datafactory_compilation/grid_compilation.py` — existing skip-count variables
+- `grid_to_country_month()` in `src/datafactory_adapters/grid_to_country_month.py` — existing exclusion logic and warning
 - `tests/test_pipeline_consistency.py` — existing cross-layer consistency tests
 - ADR-013 (Consolidation Principles) — lossless guarantee within Layer 2; this ADR extends it cross-layer
 - ADR-014 (Viewpoints as Derived Views) — viewpoint filtering is permitted but must be accounted for

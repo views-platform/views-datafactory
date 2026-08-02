@@ -10,7 +10,7 @@
 
 ## Context
 
-The datafactory assigns PRIO-GRID cells to GAUL administrative regions using a spatial join in `gaul_admin.py:183-260`. The current method tests whether each cell's centroid (center point of the 0.5-degree square) falls inside a GAUL polygon. This is a point-in-polygon operation.
+The datafactory assigns PRIO-GRID cells to GAUL administrative regions using the `_spatial_join()` helper in `gaul_admin.py`. The current method tests whether each cell's centroid (center point of the 0.5-degree square) falls inside a GAUL polygon. This is a point-in-polygon operation.
 
 For 149 coastal cells in Africa+ME (9,481 globally), the centroid falls in water — outside any GAUL polygon. These cells are assigned `gaul0_code = -1` (unassigned) and excluded from country-level aggregations. This drops 409,743 fatalities (~3.9% of the state-based total) silently from country-month output. No error is emitted. The gap was identified in `postmortem_cm_unmapped_gaul_cells.md` and registered as C-149 (Tier 2 — silent data gap).
 

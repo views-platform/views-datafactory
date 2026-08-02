@@ -163,5 +163,5 @@ where a human is paying attention.
 - ADR-009: Boundary Contracts and Configuration Validation -- credentials are explicitly excluded from the config validation pattern
 - 12-Factor App, Factor III: Config -- store config in the environment
 - ACLED EULA (2025): credential sharing prohibition, redistribution restrictions, AI/ML clause
-- `get_ucdp_token()` in `src/datafactory_harvester/sources/ucdp_annual.py:132-142` -- reference implementation
-- `_resolve_storage_options()` in `src/datafactory_query/backends_zarr.py:45` -- netrc implementation (moved from dataset.py in the v1.8.0 query split)
+- `get_ucdp_token()` in `src/datafactory_harvester/sources/ucdp_annual.py` -- reference implementation
+- `_resolve_storage_options()` in `src/datafactory_query/backends_zarr.py` -- netrc implementation (moved from dataset.py in the v1.8.0 query split)

@@ -17,6 +17,22 @@ entry could.
 
 ---
 
+## C-336 registered (2026-08-02)
+
+Full base-docs audit — all 54 ADRs and 34 CICs checked against the code as it exists. Three
+drift mechanisms, all fixed: (1) ten `file.py:NNN` citations, three already pointing at blank
+lines, all replaced by symbol names; (2) ADR-006/ADR-010 cite `lab_grid/`, a package
+**views-metric-lab deleted** in their commit `6e1a34d` — ADR-010 even asserts it "remains as-is
+for the lab's own use", a claim about another repo that stopped being true without anything here
+failing; (3) a CIC cited a test file that has never existed, hedged with "(if present)" — a claim
+qualified into unfalsifiability, which is why nobody ever corrected it. Also written:
+`docs/CICs/load_dataset.md`, the public contract per ADR-050, absent while 32 config dataclasses
+had contracts — the CICs had been written where writing was cheap, not where dependency was heavy.
+**Near-miss recorded:** `audit_data_parity.py` was on the stale list until checked — it exists in
+views-models. Deleting it would have been C-330's error committed inside the audit written to catch
+it, so the new guard deliberately does not assert that every referenced path exists. Counts:
+335→336 IDs, 41→42 open, Tier 4: 23→24.
+
 ## C-335 registered (2026-08-01)
 
 **nothing watches the serving path.** The heartbeat answers "did the pipeline run?"; nothing answers "can a consumer read anything?" If Caddy stops serving while the host stays up, the pipeline still succeeds and still pings, so the check stays green while every consumer gets nothing — detected never. Host-death is bounded (~32d: 30d period + 48h grace); Caddy-death is not. Tier 2 because it reports healthy while broken, the shape of views-faoapi's C-50/C-170. ADR-051: keep the push heartbeat (Better Stack has **no `/start`** — verified — so migrating would discard C-317's OOM mitigation) and add an external poll. Counts: 334→335 IDs, 40→41 open, Tier 2: 1→2.

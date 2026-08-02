@@ -58,4 +58,4 @@ Both functions check available disk space before allocating the memmap file, rai
 
 - C-223: Compilation pipeline allocates full grid in RAM
 - ADR-024: Grid invariants ([T, H, W, C] dimension order)
-- `assemble_grid.py:491`: Precedent for `open_memmap()` in this codebase
+- `main()` in `scripts/assemble_grid.py`: precedent for `open_memmap()` in this codebase

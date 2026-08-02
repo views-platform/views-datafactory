@@ -67,9 +67,17 @@ When in doubt, treat the class as non-trivial.
 
 The following classes should receive intent contracts as they are implemented:
 
-1. **GridConfig** -- defines spatial coordinate system (from `lab_grid/config.py`)
-2. **TemporalConfig** -- defines temporal coordinate system (from `lab_grid/temporal_config.py`)
-3. **SpatioTemporalGrid** -- composes spatial + temporal backbones (from `lab_grid/spatiotemporal.py`)
+1. **GridConfig** -- defines spatial coordinate system
+2. **TemporalConfig** -- defines temporal coordinate system
+3. **SpatioTemporalGrid** -- composes spatial + temporal backbones
+
+   > *Provenance note (2026-08-02).* These three originated in the metric lab's
+   > `src/lab_grid/` package. That package **no longer exists** — views-metric-lab
+   > deleted it in commit `6e1a34d` ("remove redundant data modules, add FeatureFrame
+   > consumer bridge"). The classes now live in `src/datafactory_priogrid/`
+   > (`grid_config.py`, `temporal_config.py`, `spatiotemporal.py`) and this repo is
+   > their only home. The original paths are recorded because the lineage matters,
+   > not because they resolve.
 4. **HarvesterConfig** -- governs API interaction parameters
 5. **ValidationResult** -- determines data acceptance/rejection
 6. **CompilationConfig** -- governs compilation behavior (new, no metric lab source)
