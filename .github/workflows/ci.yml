@@ -62,6 +62,25 @@ jobs:
       - name: Test
         run: uv run pytest
 
+  docs:
+    # Documentation consistency. The script has existed since the base-docs
+    # set was created and ran NOWHERE — not CI, not pytest — so it only ever
+    # executed when somebody happened to type it. views-frames hit the
+    # identical defect and wired theirs in (their C-74).
+    #
+    # Safe to make blocking, in a way the credential review-date check was
+    # not (#392): this only inspects internal consistency of the docs —
+    # dangling cross-references, unfilled template placeholders — all of
+    # which the author of a PR can fix inside that same PR. It cannot turn
+    # red because a date passed, so it cannot become the permanently-red CI
+    # that C-320 warns about. No Python or uv needed; the script is bash.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - name: Validate documentation set
+        run: bash docs/validate_docs.sh
+
   import-enforcement:
     # Production gate — only on main branch
     if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
