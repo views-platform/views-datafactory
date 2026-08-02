@@ -17,6 +17,20 @@ entry could.
 
 ---
 
+## C-337 registered (2026-08-02)
+
+A loose dependency floor **froze** an estimator version. `views-frames>=1.0` let `uv.lock` pin
+**1.0.0**, and `uv lock` keeps an existing pin while it still satisfies the constraint — so every
+CI run and local test since June executed against pre-amendment MAP/HDI semantics (`tip_mass` 0.5,
+pre-1.2.0 HDI tower, pre-1.3.0 zeroing). views-frames changed the statistics three times in 1.2.0,
+1.3.0 and 1.9.0, all shipped MINOR, so nothing looked breaking. **The audit that checked this floor
+got it wrong**: it asked "what does this package import?" (four symbols, no estimators), verified
+they work at 1.0.0, and stopped. A floor constrains the resolver, not the import list — and the
+audit never opened `uv.lock`, which is where the damage was. Same failure class as C-336, committed
+inside the audit written about it, one day later; caught by the operator, who knew the estimator
+history. Floor raised to `>=1.10.2`, lock moved, guard added. Counts: 336→337 IDs, 42→43 open,
+Tier 2: 2→3.
+
 ## C-336 registered (2026-08-02)
 
 Full base-docs audit — all 54 ADRs and 34 CICs checked against the code as it exists. Three

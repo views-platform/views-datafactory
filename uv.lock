@@ -1425,7 +1425,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.28,<3" },
     { name = "shapely", specifier = ">=2.0,<3" },
     { name = "tifffile", specifier = ">=2024.1" },
-    { name = "views-frames", specifier = ">=1.0,<2" },
+    { name = "views-frames", specifier = ">=1.10.2,<2" },
     { name = "xarray", specifier = ">=2024.1,<2026" },
     { name = "zarr", specifier = ">=2.16,<3" },
 ]
@@ -1442,14 +1442,14 @@ dev = [
 
 [[package]]
 name = "views-frames"
-version = "1.0.0"
+version = "1.10.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/8e/c4cfe9b96ae40dbe7a3f261f3b0247b200ec224172692eee51f96bfdee52/views_frames-1.0.0.tar.gz", hash = "sha256:e439d25bce267754b1b1e1cff3731ad19fb31e0d8012c67f95dd1accebfa059e", size = 46332, upload-time = "2026-06-22T08:02:50.87Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/db/3259eaa9259183ed5a6ceb4f0755a846c36f223d83b07cd6d58d521a3992/views_frames-1.10.2.tar.gz", hash = "sha256:96b4916afe9b64389045043ec1cf05fa2ea9b872ac0d12cb57f0d629ffd88106", size = 77287, upload-time = "2026-07-31T03:32:26.806Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/e3/05b1584644fe74550389937a9e4f18a8cdcdee91fb40213051a3788011dd/views_frames-1.0.0-py3-none-any.whl", hash = "sha256:4f37fcb37c7859477e36a615280cd032b6d5c803cfcc845e9711f46600df236d", size = 46332, upload-time = "2026-06-22T08:02:49.194Z" },
+    { url = "https://files.pythonhosted.org/packages/36/1c/3c583631e532ba7a94ac2f621dfd2a2f407739a65eb48267e898d9201bb5/views_frames-1.10.2-py3-none-any.whl", hash = "sha256:ace7f6a09bdb743edbb39e7e95139a0c647ef7c6100ef4c612a3ce5975078ef0", size = 85682, upload-time = "2026-07-31T03:32:25.795Z" },
 ]
 
 [[package]]
