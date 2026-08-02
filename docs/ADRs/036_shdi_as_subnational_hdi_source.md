@@ -66,7 +66,7 @@ V-Dem provides country-level institutional indicators. SHDI provides subnational
 
 No official GDL→GAUL or GDL→GADM mapping exists. Building a GDL→GAUL mapping would itself require a spatial join between GDL and GAUL polygons — at which point we might as well join GDL directly to PRIO-GRID centroids and skip the intermediary. Direct join also avoids boundary misalignment between GAUL and GDL administrative definitions.
 
-The pattern is proven: `gaul_admin.py:187-264` uses the identical STRtree centroid-in-polygon approach for GAUL admin boundaries.
+The pattern is proven: `_spatial_join()` in `gaul_admin.py` uses the identical STRtree centroid-in-polygon approach for GAUL admin boundaries.
 
 ### Consolidation: skipped
 
@@ -123,7 +123,7 @@ SHDI's 4 indices (composite + 3 sub-indices) are the core product. GDL's other i
 - **Harvester:** `src/datafactory_harvester/sources/shdi.py` — downloads SHDI CSV from GDL Data API (`GDL_API_TOKEN` env var, ADR-026), GDL shapefiles from PRIO CDN (no auth), produces `shdi_v10.2.parquet` + `gdl_to_pgid.parquet`
 - **Data API:** `https://globaldatalab.org/shdi/download/{indicator}/?format=csv&token={token}` — one request per indicator (combined URL returns only latest year; discovered during live smoke test)
 - **Shapefile CDN:** `https://cdn.cloud.prio.org/files/604a306f-80de-49af-8610-948af8e2e474/GDL%20Shapefiles%20V64.zip` — cached locally after first download
-- **Spatial join:** Reuse STRtree pattern from `gaul_admin.py:187-264`. Load PRIO-GRID centroids, build STRtree index of GDL polygons, join centroid → polygon.
+- **Spatial join:** Reuse the STRtree pattern from `_spatial_join()` in `gaul_admin.py`. Load PRIO-GRID centroids, build STRtree index of GDL polygons, join centroid → polygon.
 - **Crosswalk output:** `data/raw/shdi/gdl_to_pgid.parquet` with schema `(gid: int32, gdl_code: string)`
 - **Feature naming:** `shdi_shdi`, `shdi_healthindex`, `shdi_edindex`, `shdi_incindex`
 - **Viewpoint (Sprint 2):** Same pattern as `vdem_v1.py` — read crosswalk, expand annual → 12 monthly rows, broadcast to pgids
@@ -154,6 +154,6 @@ SHDI's 4 indices (composite + 3 sub-indices) are the core product. GDL's other i
 - GDL R package (API reference implementation): https://github.com/GlobalDataLab/R-package
 - PRIO CDN shapefile mirror: https://cdn.cloud.prio.org/files/604a306f-80de-49af-8610-948af8e2e474/GDL%20Shapefiles%20V64.zip
 - ADR-026: Credential Management Strategy (token resolution pattern)
-- GAUL spatial join pattern: `src/datafactory_harvester/sources/gaul_admin.py:187-264`
+- GAUL spatial join pattern: `_spatial_join()` in `src/datafactory_harvester/sources/gaul_admin.py`
 - V-Dem harvester (pattern source): `src/datafactory_harvester/sources/vdem.py`
 - Sprint plan: `reports/sprint_plan_admin1_crosswalk.md`

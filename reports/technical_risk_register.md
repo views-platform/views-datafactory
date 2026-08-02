@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-02 — C-335 registered (nothing watches the serving path; ADR-051). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-02 — C-336 registered (governance docs drift against a world that changed in another repository; full base-docs audit). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 335 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 291 resolved, 41 open concerns (0 Tier 1, 2 Tier 2, 10 Tier 3, 23 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 107 struck-through in active register (291 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 336 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 291 resolved, 42 open concerns (0 Tier 1, 2 Tier 2, 10 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 107 struck-through in active register (291 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -165,6 +165,7 @@
 | C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | Any change to `backends_zarr.py` or `datafactory_http/retry.py` | Credential hygiene |
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
 | C-335 | 2 | Nothing watches the data-serving path — if Caddy stops serving while the host stays up, the pipeline keeps pinging success and monitoring stays **green while every consumer gets nothing**, indefinitely | Set up the external poll (ADR-051); until then, treat a green heartbeat as evidence the *pipeline* ran, never as evidence the *data is reachable* | Operational monitoring |
+| C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -2638,6 +2639,32 @@ Cross-ref: ADR-050, #116, epic #342, views-frames#200. Part of work package: **C
 | Resolution | Rejected 2026-07-31. The adapters stay. The correct end state for the pandas tier is **deletion, not relocation** — when the frame-native migration completes and nobody requests `dataframe`, the two modules and the extra are removed together. Story #379 made that cheap by splitting the frame-native converter out of the legacy file, so deletion is `rm` rather than surgery. **Revisit condition:** the consumer contract breaks for unrelated reasons (a `CONTRACT_VERSION` major bump would be the natural moment), or pipeline-core becomes the sole consumer of both formats *and* the frame-native path has left `datafactory_adapters`. |
 
 Cross-ref: C-326 (why the extra exists), ADR-050 (the contract this would break), ADR-040/ADR-048 (the semantics that belong beside the registry), epic #376.
+
+---
+
+### C-336: Governance docs drift against a world that changed in another repository
+
+**Source:** Full base-docs audit (2026-08-02, #402 item 5) — all 54 ADRs and 34 CICs checked against the code as it exists.
+
+**Trigger:** **Before citing code in any ADR or CIC.** Cite the symbol (`get_ucdp_token()` in `ucdp_annual.py`), never the line (`ucdp_annual.py:132-142`). And before deleting a cross-repo reference as stale, open the sibling repo — one that looked dead was not.
+
+**Location:** `docs/ADRs/006_intent_contracts_for_non_trivial_classes.md`, `docs/ADRs/010_gridconfig_spatial_only.md`, `docs/CICs/grid_to_country_month.md`, and eight other ADRs. Guarded by `tests/test_docs_citations.py`.
+
+The audit found three distinct drift mechanisms, all fixed here.
+
+**1. Line-number citations rot silently.** Ten `file.py:NNN` references across the ADRs. Three were already wrong: ADR-026 cited `ucdp_annual.py:132-142` for `get_ucdp_token()` and line 132 had become blank; ADR-040 cited a line in `grid_compilation.py` that is now empty. Nothing detects this, because a line number is still syntactically valid when it points at whitespace. All ten replaced with symbol names — views-frames reached the same conclusion independently (their #212).
+
+**2. A sibling repository deleted a package we cite.** ADR-006 and ADR-010 describe `GridConfig`, `TemporalConfig` and `SpatioTemporalGrid` as coming "from `lab_grid/config.py`". That package lived at `views-metric-lab/src/lab_grid/` and **was deleted** in their commit `6e1a34d` ("remove redundant data modules, add FeatureFrame consumer bridge"). ADR-010 even asserts "the metric lab's `lab_grid/config.py` is not modified (it remains as-is for the lab's own use)" — a sentence about another repo's state that stopped being true without anything here failing. Kept and annotated rather than deleted: an ADR that quietly drops its own premise stops being a record of a decision.
+
+**3. A citation that excuses its own absence never gets fixed.** `grid_to_country_month.md` read "Tests in `tests/test_grid_to_country_month.py` (if present)." That file has never existed; the tests are in `test_country_month.py`. The hedge is why it survived — a claim qualified into unfalsifiability cannot be wrong, so nobody corrects it.
+
+**The near-miss worth recording.** `audit_data_parity.py` and `config_queryset.py` were on the stale list until checked: both exist, in `views-models/models/bright_starship/`. Deleting them would have been the C-330 error — *absence in this repo read as absence in the world* — committed inside the audit written to catch that class of error. The new guard therefore does **not** assert that every referenced path exists; a guard that cannot distinguish "gone" from "elsewhere" teaches people to delete true references.
+
+**Also fixed:** `load_dataset` had no CIC. Thirty-two contracts existed, all for config dataclasses — the classes that are easy to describe — while the one surface ADR-050 declares a *public contract*, and that every downstream model calls, had none. Written, including the `storage_options` seam added in v1.10.0.
+
+Tier 4: no correctness or reliability impact; the cost is a reader trusting a citation that no longer resolves. Not lower, because this is the **fourth** instance in a week of the same failure — the phantom "9 sources" (C-164), the logrotate path pointing at a directory the pipeline left (C-330), ADR-026's "Public GitHub is safe" (#391), and now this. The pattern is durable enough to deserve a standing entry.
+
+Cross-ref: C-164 (uncountable unit), C-330 (inference from repo contents), C-335 (ADR-051), ADR-006, ADR-050. GitHub: #402.
 
 ---
 

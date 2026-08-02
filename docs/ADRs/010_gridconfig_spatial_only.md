@@ -8,7 +8,9 @@
 
 ## Context
 
-The metric lab's `GridConfig` (`lab_grid/config.py`) mixes three concerns:
+The metric lab's `GridConfig` (then at `src/lab_grid/config.py` in views-metric-lab;
+that package was deleted in their commit `6e1a34d` — see the note at the end of this
+ADR) mixes three concerns:
 
 1. **Spatial parameters:** resolution, bounding box, CRS -- the grid's identity
 2. **Storage paths:** `data_dir`, `provenance_dir` -- where files live on disk
@@ -74,7 +76,9 @@ fetch_shapefile(url=..., data_dir=..., ledger_path=...)
 
 ### Negative
 - Metric lab consumers migrating to datafactory_priogrid must update call sites to pass paths explicitly
-- The default paths (`data/priogrid`, `provenance/priogrid`) now live as constants in `harvester.py`, not in a shared config
+- The default paths (`data/priogrid`, `provenance/priogrid`) now live as constants in
+  `src/datafactory_priogrid/shapefile_harvester.py`, not in a shared config. (Written as
+  `harvester.py` originally — the lab's filename; ours is `shapefile_harvester.py`.)
 
 These costs are accepted intentionally.
 
@@ -85,7 +89,14 @@ These costs are accepted intentionally.
 - `datafactory_priogrid/grid_config.py` contains the slimmed GridConfig
 - `datafactory_priogrid/shapefile_harvester.py` accepts `url`, `data_dir`, `ledger_path` as function arguments with sensible defaults
 - `datafactory_priogrid/parity_validation.py:record_parity_result` accepts `ledger_path` as argument
-- The metric lab's `lab_grid/config.py` is not modified (it remains as-is for the lab's own use)
+- The metric lab's `lab_grid/config.py` was not modified by this decision.
+
+> **Stale-by-the-world note (2026-08-02).** That last line was true when written and is
+> no longer: views-metric-lab **deleted `src/lab_grid/` entirely** in commit `6e1a34d`.
+> Nothing in this repo broke, because the split this ADR describes is exactly what made
+> us independent of it. Recorded rather than silently deleted — an ADR that quietly drops
+> its own premise stops being a record of a decision. Found by the base-docs audit; the
+> same class of drift as the phantom "9 sources" and the logrotate path (#402, C-164).
 
 ---
 
