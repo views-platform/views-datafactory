@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-02 — C-337 registered (a loose floor froze views-frames at 1.0.0 in the lockfile; six weeks of CI against pre-amendment MAP/HDI). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-03 — C-335 RESOLVED (serving-path monitor live and verified); C-338 registered (freshness lives in a scheduled workflow, not the vendor). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 337 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 291 resolved, 43 open concerns (0 Tier 1, 3 Tier 2, 10 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 107 struck-through in active register (291 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 338 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 292 resolved, 43 open concerns (0 Tier 1, 2 Tier 2, 10 Tier 3, 25 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 108 struck-through in active register (292 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -164,9 +164,10 @@
 | C-331 | 4 | `HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`, lets a local user silence the dead-man alert | Next edit to `refresh_pipeline.sh` — switch to `curl -K -` from stdin, reclassify as a secret | Operational monitoring |
 | C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | Any change to `backends_zarr.py` or `datafactory_http/retry.py` | Credential hygiene |
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
-| C-335 | 2 | Nothing watches the data-serving path — if Caddy stops serving while the host stays up, the pipeline keeps pinging success and monitoring stays **green while every consumer gets nothing**, indefinitely | Set up the external poll (ADR-051); until then, treat a green heartbeat as evidence the *pipeline* ran, never as evidence the *data is reachable* | Operational monitoring |
+| ~~C-335~~ | ~~2~~ | ~~Nothing watches the data-serving path — green while every consumer gets nothing~~ | Resolved 2026-08-03: Better Stack monitor live and verified (Up, ~27ms, test alert delivered) + serving-freshness.yml for the content half | Operational monitoring |
 | C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
 | C-337 | 2 | A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics (tip_mass 0.5, pre-1.2.0 HDI tower) | **Before declaring or keeping any floor**: ask what the floor *permits* and what the lock has *chosen* — not only whether our imports resolve. Check `uv.lock`, not just `pyproject.toml` | Dependency policy |
+| C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -497,7 +498,7 @@ Cross-ref: ~~C-236~~ (resolved — registry↔status pair tested), C-146 (assemb
 
 ---
 
-### C-335: Nothing watches the serving path — Caddy can stop serving behind a green heartbeat
+### ~~C-335: Nothing watches the serving path — Caddy can stop serving behind a green heartbeat~~ — RESOLVED
 
 **Source:** Monitoring options review (2026-08-01), prompted by the operator asking whether views-faoapi's Better Stack setup generalises to this repo.
 
@@ -521,6 +522,15 @@ Caddy is `systemctl enable`d (`hetzner_deployment_log.md:432`), so a bare proces
 **Why an on-host check is not the answer.** A cron on the same box would catch the Caddy-down case (the host is fine, by definition) but shares fate with the host for everything else, and monitoring that dies with the thing it monitors is a known anti-pattern. It also cannot see the parts that live outside the box — DNS, the network path, and eventually TLS.
 
 **To resolve:** an external poll of the public `status.html` (ADR-051). `status.html` is deliberately unauthenticated (ADR-038), so unlike views-faoapi — which must store an `X-API-Key` in its monitoring vendor — we can do this with **no credential handed to a third party**. Requires no code change, no release, and no server access; it is browser-only operator setup.
+
+**RESOLVED 2026-08-03.** Better Stack monitor live on `http://204.168.219.108/status.html`, 3-minute interval, e-mail alerting. Verified rather than assumed: reached **Up** at ~27 ms from Europe, and a test alert was delivered and read. The unbounded case — Caddy stops while the host stays up, pipeline keeps succeeding, nothing ever notices — is closed.
+
+Two honest qualifications on the closure, because the resolution is narrower than the entry's ambition:
+
+- **Detection is 3-minute-and-by-e-mail, not by phone.** The free tier alerts by e-mail only. For reachability of research data that is proportionate; §5 of `docs/guides/monitoring.md` records phone escalation as the second thing to buy if we ever upgrade.
+- **The freshness half is not in the vendor.** ADR-051 specified a content check too; Better Stack gates keyword matching behind a paid plan. That half is `.github/workflows/serving-freshness.yml`, running daily on GitHub — genuinely external, since it does not share fate with the monitored host. Residual registered as C-338.
+
+**Worth keeping:** ADR-051's specification of the content check was *itself wrong*, and buying the paid feature would not have helped. It said to alert when the body "does not contain the healthy marker". The page carries a legend — `● OK ● Stale ● Missing` — explaining the dot colours, so those words appear on every healthy page; the first implementation reported one of each against a perfectly healthy server and would have opened an issue daily until muted. Caught by drilling the check against the live page before shipping. The workflow parses per-cell `title="<status>"` attributes instead.
 
 Cross-ref: ~~C-131~~ (external monitoring for cron — resolved; this is the sibling gap it did not cover), C-317 (SIGKILL bypasses the traps — same "the job cannot always report its own death" theme), C-318 (the serving path is also the cleartext-auth path), ADR-018, ADR-038, ADR-051. GitHub: #401. Part of work package: **Operational monitoring**.
 
@@ -2698,6 +2708,32 @@ The audit found three distinct drift mechanisms, all fixed here.
 Tier 4: no correctness or reliability impact; the cost is a reader trusting a citation that no longer resolves. Not lower, because this is the **fourth** instance in a week of the same failure — the phantom "9 sources" (C-164), the logrotate path pointing at a directory the pipeline left (C-330), ADR-026's "Public GitHub is safe" (#391), and now this. The pattern is durable enough to deserve a standing entry.
 
 Cross-ref: C-164 (uncountable unit), C-330 (inference from repo contents), C-335 (ADR-051), ADR-006, ADR-050. GitHub: #402.
+
+---
+
+### C-338: Freshness detection lives in a scheduled workflow, not the monitoring vendor
+
+**Source:** Monitoring follow-through (2026-08-03), residual of ~~C-335~~.
+
+**Trigger:** **If notice of stale data ever needs to be prompt**, or if the Better Stack plan is upgraded. Then move the content check into a keyword monitor and retire the workflow — matching the per-cell status attributes, **not** page text, for the reason in C-335's resolution.
+
+**Location:** `.github/workflows/serving-freshness.yml`, `docs/guides/monitoring.md` §5, ADR-051 (2026-08-03 amendment).
+
+ADR-051 specified two external checks. Availability is a Better Stack monitor. Freshness could not be: keyword matching is a paid feature on that vendor, and paying was declined in favour of a scheduled GitHub Action.
+
+That is a real difference in guarantee, not just a difference in implementation:
+
+| | Availability | Freshness |
+|---|---|---|
+| Runs on | Better Stack probes | GitHub Actions |
+| Interval | 3 minutes | daily, and GitHub may delay `schedule` under load |
+| Reaches you by | e-mail | a GitHub issue |
+
+So notice of stale data can slip a day or more, and arrives somewhere you have to look rather than somewhere that interrupts you. Tier 4 because the consequence is **late notice of stale data, not wrong data** — consumers still receive whatever the last good run produced, and ADR-047's coverage warnings still fire in `load_dataset`.
+
+The upgrade path is written down in `docs/guides/monitoring.md` §5 so the decision is ready-made rather than re-derived: keyword monitor first, then phone escalation, then multi-region.
+
+Cross-ref: ~~C-335~~ (the gap this is the residual of), C-320 (why none of this blocks a merge), ADR-051, ADR-038. GitHub: #401.
 
 ---
 

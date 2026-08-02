@@ -89,6 +89,51 @@ Two checks on one target:
 The content check is the direct analogue of views-faoapi's freshness monitor, and it closes a second
 gap: today, *staleness* is visible only to someone who opens the page and looks at the dots.
 
+---
+
+> ### Amendment, 2026-08-03 — what was actually built
+>
+> The table above specifies two checks. **One of them was built as described; the other could not
+> be, and is now somewhere else.** Recorded rather than rewritten: the gap between what was decided
+> and what was buildable is the useful part.
+>
+> **Availability — built.** Better Stack monitor on `http://204.168.219.108/status.html`, 3-minute
+> interval, alert type `URL becomes unavailable`, e-mail to the primary responder. Verified live:
+> **Up**, ~27 ms from Europe, and a test alert was delivered and read. This closes the unbounded
+> failure C-335 was about.
+>
+> **Content — not built here.** Better Stack gates keyword matching behind a paid plan; the
+> create-monitor form says *"We recommend the keyword matching method. Upgrade your account to
+> enable more options."* Rather than pay, that half moved to
+> `.github/workflows/serving-freshness.yml` — a daily scheduled workflow that fetches the page,
+> checks its `Generated` timestamp against a 40-day limit, and inspects the per-cell status
+> attributes. It runs on GitHub, not on the monitored host, so it satisfies this ADR's own
+> requirement that the poller not share fate with what it watches.
+>
+> **The specification in the table above was itself wrong**, and would have been wrong on the paid
+> tier too. It says the content check should alert when *"the body does not contain the healthy
+> marker"*. The page carries a **legend** — `● OK ● Stale ● Missing` — explaining the dot colours,
+> so the words `Stale` and `Missing` appear on every healthy page. A body-text check reported one
+> of each against a perfectly healthy server during the drill and would have opened an issue every
+> day until somebody muted it. The workflow parses the per-cell `title="<status>"` attributes
+> instead. Not buying the feature cost us nothing; specifying the check without testing it nearly
+> cost us a monitor nobody trusts.
+>
+> **Division of labour, now three-way:**
+>
+> | Mechanism | Question | Cadence |
+> |---|---|---|
+> | healthchecks.io heartbeat | did the monthly pipeline run? | push, 30 d + 48 h grace |
+> | Better Stack monitor | is the data reachable right now? | 3 min, can phone |
+> | `serving-freshness.yml` | is what it serves still current? | daily, opens an issue |
+>
+> None alerts on another's failure. If the page is unreachable the workflow logs and exits without
+> opening an issue, because Better Stack has already alerted — duplicate alarms for one event are
+> how people learn to ignore both.
+>
+> Setup of record: `docs/guides/monitoring.md`, which also lists what we would configure if the
+> account is ever upgraded. C-335 closed; the residual is registered.
+
 ### 3. Vendor choice is deliberately not the decision here
 
 What matters is that **something outside the host polls the serving path**. Better Stack is the
