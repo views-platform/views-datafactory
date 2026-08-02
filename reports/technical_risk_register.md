@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-02 — C-336 registered (governance docs drift against a world that changed in another repository; full base-docs audit). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-02 — C-337 registered (a loose floor froze views-frames at 1.0.0 in the lockfile; six weeks of CI against pre-amendment MAP/HDI). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 336 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 291 resolved, 42 open concerns (0 Tier 1, 2 Tier 2, 10 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 107 struck-through in active register (291 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 337 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 291 resolved, 43 open concerns (0 Tier 1, 3 Tier 2, 10 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 107 struck-through in active register (291 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -166,6 +166,7 @@
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
 | C-335 | 2 | Nothing watches the data-serving path — if Caddy stops serving while the host stays up, the pipeline keeps pinging success and monitoring stays **green while every consumer gets nothing**, indefinitely | Set up the external poll (ADR-051); until then, treat a green heartbeat as evidence the *pipeline* ran, never as evidence the *data is reachable* | Operational monitoring |
 | C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
+| C-337 | 2 | A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics (tip_mass 0.5, pre-1.2.0 HDI tower) | **Before declaring or keeping any floor**: ask what the floor *permits* and what the lock has *chosen* — not only whether our imports resolve. Check `uv.lock`, not just `pyproject.toml` | Dependency policy |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -522,6 +523,38 @@ Caddy is `systemctl enable`d (`hetzner_deployment_log.md:432`), so a bare proces
 **To resolve:** an external poll of the public `status.html` (ADR-051). `status.html` is deliberately unauthenticated (ADR-038), so unlike views-faoapi — which must store an `X-API-Key` in its monitoring vendor — we can do this with **no credential handed to a third party**. Requires no code change, no release, and no server access; it is browser-only operator setup.
 
 Cross-ref: ~~C-131~~ (external monitoring for cron — resolved; this is the sibling gap it did not cover), C-317 (SIGKILL bypasses the traps — same "the job cannot always report its own death" theme), C-318 (the serving path is also the cleartext-auth path), ADR-018, ADR-038, ADR-051. GitHub: #401. Part of work package: **Operational monitoring**.
+
+---
+
+### C-337: A loose floor froze an estimator version — and the audit that checked it asked the wrong question
+
+**Source:** views-frames floor audit (2026-08-02), corrected after operator pushback.
+
+**Trigger:** **Before declaring or keeping any dependency floor.** Ask two questions, not one: what does this floor *permit*, and what has the lockfile actually *chosen*? "Our imports resolve at the floor" answers neither.
+
+**Location:** `pyproject.toml` (`views-frames` floor), `uv.lock`. Guarded by `tests/test_views_frames_floor.py`.
+
+**What was wrong.** `views-frames>=1.0,<2` was too loose, and `uv.lock` had pinned **1.0.0** since June. `uv lock` keeps an existing pin while it still satisfies the constraint, and `>=1.0` satisfies 1.0.0 forever — so nothing ever pulled it forward. The loose floor did not merely *permit* stale semantics, it **froze** them: every CI run and every local test for roughly six weeks executed against views-frames 1.0.0.
+
+**Why that matters.** views-frames changed how the summary statistics are computed, three times, none of it labelled breaking because it shipped MINOR:
+
+| Version | Change |
+|---|---|
+| 1.2.0 | outside-in HDI tower + mass-aware tip — "fixes a silent" error |
+| 1.3.0 | no magnitude-based zeroing by default (`tower_point`/`hdi_tower`/`summarize_tower`) |
+| 1.9.0 | tower-tip MAP: `tip_mass` 0.5 → 0.25. Their words: *"Behavior change to `tower_point`/`summarize_tower` outputs, shipped MINOR"* |
+
+`views_frames_summarize` ships in the same wheel as `views_frames`. Two systems on different versions produce **different numbers from the same posterior**, with no error.
+
+**How the audit missed it.** The first pass asked *"what does this package import?"* — four symbols, none of them estimators — verified they all work at 1.0.0 by installing it in a clean venv, and concluded the floor could stay. Every step was true and the conclusion was wrong, for two reasons. A floor constrains **the resolver**, not our import list; and we are a widely-installed package, so if we are the loosest constraint we are the one admitting old semantics. The audit also never looked at `uv.lock`, which is where the actual damage was.
+
+This is the same failure the base-docs audit (C-336) was written about — reading the artifact in front of you and inferring the world from it — committed *inside* that audit, one day later. Caught by the operator, who knew the estimator history. Recorded because the recurrence is the finding: the error survived a deliberate, evidence-gathering audit by an agent that had just spent a day cataloguing this exact mistake.
+
+**Resolution.** Floor raised to `>=1.10.2` (1.9.0 is the strict minimum; 1.10.2 is current and the intervening releases are docs/tests). `uv.lock` moved 1.0.0 → 1.10.2. `tests/test_views_frames_floor.py` fails if the floor drops below the audited value, with a message naming what a lower floor re-admits, and separately if any estimator symbol is imported — because that reopens the question.
+
+**Still open, which is why this is Tier 2 and not resolved:** nothing checks the *other* dependency floors against what their locks chose. `numpy>=1.26,<3`, `pyarrow>=14,<20`, `zarr>=2.16,<3` and the rest have the same structure, and the same "the lock froze at the floor" failure is available to all of them.
+
+Cross-ref: C-336 (same failure class, one day earlier), C-334 (dependency policy — removing a runtime dep), C-325/C-326 (pandas floor evidence). GitHub: **views-frames#237** — filed upstream, not as "your floor value is wrong" (it is correct by their governance rule: the floor bumps only on *breaking* changes to the conformance surface, and the 1.9.0 MAP-containment law was additive) but as the accurate defect: `CONFORMANCE_FLOOR` reads as a safe dependency floor and is not one, with this incident as the evidence.
 
 ---
 
