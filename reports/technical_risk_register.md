@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-03 — C-335 RESOLVED (serving-path monitor live and verified); C-338 registered (freshness lives in a scheduled workflow, not the vendor). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-03 — C-330 RESOLVED (logrotate pointed at a path the pipeline left; four months of silent no-ops) and C-339 registered (a pasted heredoc destroyed refresh.log). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 338 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 292 resolved, 43 open concerns (0 Tier 1, 2 Tier 2, 10 Tier 3, 25 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 108 struck-through in active register (292 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 339 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 293 resolved, 43 open concerns (0 Tier 1, 2 Tier 2, 11 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 109 struck-through in active register (293 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -160,7 +160,7 @@
 | C-327 | 4 | A Caddy basic-auth password was published in git history — **credential verified dead (401)**, password pattern exposed | Next rotation of the `views` password, or retiring the shared account for per-user logins; also check future post-mortems for quoted credentials | Server hardening |
 | C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
 | C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
-| C-330 | 4 | **Corrected same day** — rotation *is* configured (archive: done 2026-03-31); what remains is that it is undocumented in the operator guides and the file mode is inferred, not observed | Next time the server is touched: `stat` the log, and document the existing logrotate config where an operator will look | Server hardening |
+| ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
 | C-331 | 4 | `HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`, lets a local user silence the dead-man alert | Next edit to `refresh_pipeline.sh` — switch to `curl -K -` from stdin, reclassify as a secret | Operational monitoring |
 | C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | Any change to `backends_zarr.py` or `datafactory_http/retry.py` | Credential hygiene |
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
@@ -168,6 +168,7 @@
 | C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
 | C-337 | 2 | A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics (tip_mass 0.5, pre-1.2.0 HDI tower) | **Before declaring or keeping any floor**: ask what the floor *permits* and what the lock has *chosen* — not only whether our imports resolve. Check `uv.lock`, not just `pyproject.toml` | Dependency policy |
 | C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
+| C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Never hand a multi-line heredoc to a human to paste.** Terminals join lines. Use one command per line, or an editor. And never construct a `sudo` command whose failure mode is writing to an unintended path | Operational safety |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -1122,6 +1123,40 @@ Before epic #290 (ADR-048), `_EXTENSIVE_PREFIXES = ("ged_", "acled_")` provided 
 | Location | `src/datafactory_adapters/_conservation.py:_extensive_indices` (returns `[]` when `feature_agg_types=None`), `src/datafactory_adapters/grid_to_country_month.py` (passes `None` through to conservation) |
 
 Cross-ref: ~~C-241~~ (resolved — intensive feature gap, same function, different invariant), ~~C-291~~ (resolved — NaN pre-check in conservation), ADR-040, ADR-048.
+
+---
+
+### C-339: A pasted heredoc destroyed the pipeline log — the command was assistant-authored
+
+**Source:** Incident during the C-330 logrotate fix, 2026-08-03.
+
+**Trigger:** **Before giving a human any command to paste.** If it spans more than one line, it is unsafe: terminals join wrapped lines, and the joined form is often still valid shell. Use one command per line, or open an editor.
+
+**Location:** operator procedure, not code. Consequence at `/home/views-deploy/views-datafactory/logs/refresh.log`.
+
+**What happened.** Fixing C-330 required rewriting `/etc/logrotate.d/views-datafactory`. I gave the operator a `sudo tee ... <<'EOF'` heredoc to paste. Their terminal joined the first two lines, so the shell saw:
+
+```
+sudo tee /etc/logrotate.d/views-datafactory > /dev/null <<'EOF' /home/views-deploy/views-datafactory/logs/refresh.log {
+```
+
+`tee` writes to **every** file it is given. Running as root it therefore wrote the config text into the logrotate file, into `refresh.log`, and into a file literally named `{`. The log went from **528 KB to 150 bytes**.
+
+**Unrecoverable.** There was no backup and no rotated copy — because the rotation this work was fixing had never run. The fix for the missing rotation destroyed the thing the rotation would have preserved.
+
+**What was lost:** four months of pipeline run output — start/finish lines, per-source counts, recorded errors. **Not lost:** the provenance ledgers under `data/`, the status page, healthchecks.io ping history, git history. Nothing reads `refresh.log`; the pipeline appends to it. The loss is diagnostic history, not function or data. It also destroyed the last copy of the leaked GDL token, revoked 2026-08-01 and worthless.
+
+**Why this is Tier 3 and not Tier 4.** The consequence here was mild. The mechanism was not: a root-privileged command whose failure mode is *writing to an unintended path*, handed to someone to paste blind. The same slip against a data directory, a config under `/etc`, or a zarr store is a different day. The register should carry the mechanism, not the luck.
+
+**Three failures, in order:**
+
+1. **Format.** Single-line commands had been used with this operator all session, precisely because pasting was already causing trouble. Switching to a heredoc for the one root-privileged write was the error.
+2. **No dry run.** The command wrote first. It could have printed to stdout for inspection, then been re-run with `| sudo tee` once the content was confirmed.
+3. **No backup of the target.** The command backed up the *config* it was replacing and not the *log* it could reach. The backup protected the thing I was thinking about.
+
+**Standing rule adopted:** commands given to a human to paste are one line. If content is multi-line, use an editor (`sudo nano <file>`) and describe the edit — which is what actually worked afterwards.
+
+Cross-ref: ~~C-330~~ (the work being done when this happened), C-323/C-324 (the log's contents mattered because of what had leaked into it). No GitHub issue: the fix is a rule, not a change.
 
 ---
 
@@ -2264,7 +2299,7 @@ This is the highest-consequence item the sweep found: the blast radius is every 
 Cross-ref: C-326 (the same release that would carry this fix), the tag-immutability ruleset (complementary supply-chain control added 2026-07-31).
 ---
 
-### C-330: `refresh.log`'s rotation is undocumented and its permissions are unverified — [DEFER]
+### ~~C-330: `refresh.log`'s rotation is undocumented and its permissions are unverified~~ — RESOLVED
 
 **⚠ CORRECTED 2026-07-31, same day it was registered. The original entry was wrong.** It read:
 *"`refresh.log` is world-readable, unrotated, and grows unbounded … no logrotate configuration exists
@@ -2306,6 +2341,33 @@ when the server is next touched — but the unbounded-growth hazard was never re
 
 | Field | Value |
 |-------|-------|
+**RESOLVED 2026-08-03, and the original claim was right after all.**
+
+Observed on the server, which is the only way this entry could ever have been settled:
+
+- **The rotation config was pointing at a path the pipeline left behind.** It rotated
+  `/root/views-datafactory/logs/refresh.log`; the log has been at
+  `/home/views-deploy/views-datafactory/logs/refresh.log` since the pipeline moved to the service
+  account. Because the config carries `missingok`, logrotate found nothing at that path and **exited
+  successfully every night for four months.** A silent no-op that reported success.
+- **The file mode was `644` — world-readable**, as originally claimed and later downgraded to
+  "inferred, not observed". Four accounts have shells on that box. Now `640`.
+
+So this entry was **correct, then corrected into being wrong, then confirmed correct**. The 2026-07-31
+retraction found an archived plan saying "logrotate configured on server — Done 2026-03-31", which was
+true when written, and concluded the rotation half was a false alarm. Existence was never the question;
+**efficacy** was. Checking that the config existed is not checking that it worked.
+
+**Fixed:** path corrected; `size 100M` → `monthly` (a size trigger on a 130 KB/month log bounds nothing,
+and the point is bounding *time*, not disk); `create 0640 views-deploy views-deploy`; `su views-deploy
+views-deploy`, without which logrotate refuses to touch a file in a non-root directory and we would have
+swapped one silent failure for another; and **`missingok` removed**, since that option is what hid the
+bug. Verified by `logrotate --debug`, which reported `Handling 1 logs` against the real path.
+
+Recorded in `docs/guides/monitoring.md`? No — deliberately in the deployment guide's server section,
+where an operator looks. The absence of any mention in `docs/guides/` was the surviving half of this
+entry and is now closed too.
+
 | ID | C-330 |
 | Tier | 4 — narrowed on correction; no data-path impact, no growth hazard, and the remaining exposure (who can read the log) is inferred rather than observed |
 | Source | Five-angle security sweep, scripts/CI audit (2026-07-31); **corrected same day** by falsification audit against `reports/archive/product_development_plan03.md` |

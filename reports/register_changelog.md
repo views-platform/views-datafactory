@@ -17,6 +17,27 @@ entry could.
 
 ---
 
+## C-330 resolved, C-339 registered (2026-08-03)
+
+**C-330 was right, then corrected into being wrong, then confirmed right.** Observed on the server:
+the logrotate config rotated `/root/views-datafactory/logs/refresh.log`, a path the pipeline left when
+it moved to the service account, and `missingok` made it exit successfully every night for four
+months. The file mode was `644` — world-readable, exactly as originally claimed and later downgraded
+to "inferred, not observed". The 2026-07-31 retraction found an archived plan saying rotation was
+configured, which was true, and concluded the alarm was false. **Existence was never the question;
+efficacy was.** Fixed: correct path, `monthly`, `create 0640`, `su views-deploy`, and `missingok`
+removed so a wrong path is loud. Verified by dry run.
+
+**C-339 — I destroyed the log while fixing its rotation.** I handed the operator a multi-line
+`sudo tee ... <<'EOF'` heredoc to paste; their terminal joined the first two lines, so `tee` took the
+log path as a second output file and, running as root, overwrote it. 528 KB → 150 bytes,
+unrecoverable — there was no rotated copy, because the rotation being fixed had never run. Lost:
+four months of run output. Not lost: provenance ledgers, status page, ping history, git. Tier 3 for
+the *mechanism*, not the damage: a root-privileged command whose failure mode is writing to an
+unintended path, handed over to be pasted blind. Standing rule adopted — commands given to a human
+are one line; multi-line content goes in an editor. Counts: 338→339 IDs, 43 open unchanged,
+Tier 3: 10→11, Tier 4: 25→24.
+
 ## C-335 resolved, C-338 registered (2026-08-03)
 
 The serving-path monitor is live: Better Stack on the public `status.html`, 3-minute interval,
