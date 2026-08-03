@@ -877,6 +877,28 @@ git describe --tags --exact-match 2>/dev/null || git log --oneline -1
 tail -5 logs/refresh.log
 ```
 
+### Log rotation
+
+`/etc/logrotate.d/views-datafactory` rotates `logs/refresh.log` **monthly**, keeps 12, compresses,
+and re-creates the file `0640 views-deploy:views-deploy`.
+
+Two lines in it are load-bearing and should not be "tidied away":
+
+- **`su views-deploy views-deploy`** — logrotate refuses to touch files in a directory it does not
+  own. Without this it fails rather than rotates.
+- **No `missingok`** — deliberately absent. That option is why the previous config, which pointed at
+  `/root/views-datafactory/logs/refresh.log` after the pipeline had moved to the service account,
+  exited successfully every night for four months while rotating nothing (C-330). A wrong path
+  should be loud.
+
+Check it without changing anything:
+
+```bash
+sudo logrotate --debug /etc/logrotate.d/views-datafactory
+```
+
+`Handling 1 logs` and the correct path in the `rotating pattern:` line mean it is working.
+
 ### What happens if the pipeline fails
 
 The script has an error trap. If any step fails:
