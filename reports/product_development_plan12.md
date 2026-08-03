@@ -1,4 +1,4 @@
-# Product Development Plan v12 — current through v1.10, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.11, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
@@ -6,6 +6,43 @@
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
 
 ---
+
+## v1.11 Addendum (2026-08-03)
+
+**v1.11.0 (governance repair; no change to shipped code).** `src/` is untouched — the wheel is
+byte-identical to v1.10.0 apart from metadata. Minor rather than patch for exactly one reason: the
+`views-frames` floor moved.
+
+*The dependency floor, and why it is a release at all.* `views-frames>=1.0` was too loose, and worse,
+`uv.lock` had **pinned 1.0.0 since June** — `uv lock` keeps an existing pin while it still satisfies
+the constraint, so nothing ever pulled it forward. Six weeks of CI ran against pre-amendment MAP/HDI
+semantics. views-frames changed how the summary statistics are computed three times (1.2.0 outside-in
+HDI tower; 1.3.0 no magnitude-based zeroing; 1.9.0 tower-tip MAP `tip_mass` 0.5→0.25), all shipped
+MINOR. Floor now `>=1.10.2`; the server's environment inherits it on redeploy. C-337, and
+views-frames#237 filed upstream about `CONFORMANCE_FLOOR` reading as a safe dependency floor when it
+is not.
+
+*Release procedure.* Two guides described contradictory rituals and the more detailed one prescribed
+commands branch protection forbids. Consolidated into `publishing_to_pypi.md` as the single home, with
+the post-release back-merge that had been skipped after **every** release before v1.10.0.
+`release-topology.yml` now detects the divergence daily instead of relying on someone running the
+suite at the right moment (#402).
+
+*Monitoring.* C-335 closed: a Better Stack monitor watches the serving path, verified live. The
+freshness half moved to `serving-freshness.yml` because keyword matching is a paid feature — and the
+drill found ADR-051's specification of that check was itself wrong, so buying it would not have
+helped. Setup of record in `docs/guides/monitoring.md`.
+
+*Documentation.* `validate_docs.sh` now runs in CI as a required check, having previously run nowhere.
+Full base-docs audit of 54 ADRs and 34 CICs: ten line-number citations replaced with symbol names,
+`lab_grid` references annotated (views-metric-lab deleted that package), and a CIC written for
+`load_dataset` — the public contract, which had none while 32 config dataclasses did.
+
+*Operational.* C-330 resolved on the server: logrotate had been pointing at a path the pipeline left
+months earlier, exiting successfully every night. C-339 registered — I destroyed `refresh.log` while
+fixing it, with a pasted multi-line command.
+
+*Not in this release.* GDL token rotation (done 2026-08-01, operator) and the server deploy tag.
 
 ## v1.10 Addendum (2026-07-31)
 

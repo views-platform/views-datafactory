@@ -72,7 +72,7 @@ PRIO-GRID cell IDs (`pgid`) are 1-indexed. This convention applies to all grid o
 
 The 1-indexed convention means `pgid` ranges from 1 to 259,200. Grid arrays use 0-indexed `[row, col]`. The `- 1` in the inverse formula accounts for this offset. Omitting it shifts all spatial data one cell east and wraps the last column.
 
-**Authoritative source:** `src/datafactory_priogrid/cell_generator.py:30`.
+**Authoritative source:** `generate_grid()` in `src/datafactory_priogrid/cell_generator.py`.
 
 ---
 

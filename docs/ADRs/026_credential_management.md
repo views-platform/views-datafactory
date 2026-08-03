@@ -85,7 +85,7 @@ Added 2026-07-31 (#392, þing-02 DF2).
 expiry in the mechanism; the three harvest tokens carry no expiry date; ACLED's bearer token is
 short-lived but is minted from a username and password that are not. Nothing therefore ever prompts
 a rotation, and the consequence is on the record: the GDL token leaked into `logs/refresh.log`
-(C-322 in code, C-324 open), has been known-leaked for days, and is still in use. Elsewhere on the
+(C-322 in code, C-324 open), was known-leaked for days, and **was rotated and revoked on 2026-08-01** — the replacement verified with a live request. The leaked value is dead; this paragraph is left standing because the *mechanism* it describes, a credential with no expiry that nothing prompts anyone to rotate, is unchanged. Elsewhere on the
 platform an Appwrite key expires on 2026-11-30 and gets attention precisely because a date exists.
 
 **An expiry and a rotation story are different properties.** An expiry is a fact the issuer enforces.
@@ -163,5 +163,5 @@ where a human is paying attention.
 - ADR-009: Boundary Contracts and Configuration Validation -- credentials are explicitly excluded from the config validation pattern
 - 12-Factor App, Factor III: Config -- store config in the environment
 - ACLED EULA (2025): credential sharing prohibition, redistribution restrictions, AI/ML clause
-- `get_ucdp_token()` in `src/datafactory_harvester/sources/ucdp_annual.py:132-142` -- reference implementation
-- `_resolve_storage_options()` in `src/datafactory_query/backends_zarr.py:45` -- netrc implementation (moved from dataset.py in the v1.8.0 query split)
+- `get_ucdp_token()` in `src/datafactory_harvester/sources/ucdp_annual.py` -- reference implementation
+- `_resolve_storage_options()` in `src/datafactory_query/backends_zarr.py` -- netrc implementation (moved from dataset.py in the v1.8.0 query split)

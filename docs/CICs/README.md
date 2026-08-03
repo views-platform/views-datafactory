@@ -82,6 +82,7 @@ Contracts must be clear enough that:
 - `PregriddedCompilationConfig.md` -- immutable pre-gridded compilation configuration (GHS-POP, GHS-BUILT-S)
 - `SourceEntry.md` -- immutable source registry entry (name, features, provenance paths)
 - `grid_to_country_month.md` -- grid-to-country-month aggregation function contract
+- `load_dataset.md` -- **the public consumer entry point** (ADR-050): region/time/feature subsetting, the three declared output formats, the `storage_options` seam, and which failures are loud
 
 ---
 

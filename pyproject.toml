@@ -1,6 +1,6 @@
 [project]
 name = "views-datafactory"
-version = "1.10.0"
+version = "1.11.0"
 description = "Data factory for the VIEWS conflict forecasting platform — provenance, harvesting, consolidation, viewpoint construction, compilation, and assembly."
 authors = [
     { name = "Simon Polichinel von der Maase", email = "simmaa@prio.org" },
@@ -43,7 +43,35 @@ dependencies = [
     "aiohttp>=3.9,<4",
     "tifffile>=2024.1",
     "imagecodecs>=2024.1",
-    "views-frames>=1.0,<2",
+    # Floor RAISED to 1.10.2 on 2026-08-02, and the reason is not our own
+    # imports — it is which version we permit into a shared environment.
+    #
+    # views-frames changed how the summary statistics are COMPUTED, three
+    # times, none of it labelled breaking because it shipped MINOR:
+    #   1.2.0  outside-in HDI tower + mass-aware tip ("fixes a silent" error)
+    #   1.3.0  no magnitude-based zeroing by default (tower_point/hdi_tower/
+    #          summarize_tower)
+    #   1.9.0  tower-tip MAP: tip_mass 0.5 -> 0.25. Their words: "Behavior
+    #          change to tower_point/summarize_tower outputs, shipped MINOR."
+    #
+    # A floor of >=1.0 therefore permits three different MAP/HDI semantics.
+    # views_frames_summarize ships in the same wheel as views_frames, so any
+    # environment resolving against our floor can get old estimator
+    # behaviour, and two systems on different versions produce different
+    # numbers from the same posterior — silently.
+    #
+    # The first audit of this floor got it wrong by asking only "what does
+    # this package import?" By that test 1.0.0 passes, because we import
+    # four symbols and none of them are estimators. But a floor constrains
+    # the resolver, not our import list, and we are a widely-installed
+    # package: if we are the loosest constraint we are the one letting the
+    # old semantics in. Recorded as C-337.
+    #
+    # 1.9.0 is the strict minimum. 1.10.2 is chosen because 1.10.1/1.10.2 are
+    # documentation and test releases that cost consumers nothing, and a
+    # floor meaning "current" stays honest more easily than one meaning "the
+    # oldest version that happens to work".
+    "views-frames>=1.10.2,<2",
 ]
 
 # pandas is a LEGACY output format, never a foundational import.

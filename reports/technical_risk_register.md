@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** C-330 corrected (2026-07-31, hours after registering it) — the falsification audit caught my own error: the sweep grepped the repo for logrotate config, found none, and concluded the log was unrotated and growing without bound. `reports/archive/product_development_plan03.md:97,136,177` says rotation was configured on the server on 2026-03-31. **Absence in the repo was read as absence in the world** — the third instance of that failure mode in this repo inside a week (with the "zero secrets in git" audit behind þing-02's Á-1, and ADR-026:97 behind #391). The entry is retitled and narrowed: what survives is that the rotation is documented *only* in an archived March product plan and nowhere in `docs/guides/`, which is why the sweep missed it and the next reader will too; and that the file-mode claim was inferred from the absence of `chmod`/`umask` in scripts, never observed. Counts unchanged. Prior: Five-angle security sweep (2026-07-31, #388) — seven entries, none urgent, all grounded in file:line. C-327: a Caddy basic-auth password was published in git history (3 commits, ancestors of main, public since 2026-07-27) — **tested live and dead (401)**; residual is a password *pattern*, and the process lesson that the pre-public audit searched code and config but not post-mortem *prose*. C-328: HEAD re-publishes the username the go-public redaction removed. C-329 (Tier 3, highest consequence): the PyPI-publishing job runs unpinned actions while holding OIDC rights — a poisoned wheel needs no secret to leak. C-330: `refresh.log` world-readable and unrotated (`logs/` gitignored same day, closing the accidental-commit path). C-331: HEARTBEAT_URL capability URL on the curl command line. C-332 (Tier 3): redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs. C-333: UCDP's custom auth header survives cross-host redirects. Verified clean: no `.env`/`.netrc`/key ever committed, harvest tokens never in git, heartbeat URL never committed, no CI authenticates to the data server, zero `${{ secrets.* }}`, OIDC-only publishing, no `pull_request_target`, ledgers and zarr attrs carry no URLs. Header counts: 326→333 IDs, 32→39 open, Tier 3: 7→9, Tier 4: 18→23. Prior: Epic #376 — pandas becomes an output format, not a dependency (2026-07-31). pandas moved to `[project.optional-dependencies]` and matplotlib to the dev group (zero `src/` imports); imports made lazy so `from datafactory_query.defaults import DEFAULT_REMOTE` — a stdlib-only module and 29 of the 35 datafactory imports across views-models — no longer loads pandas; `tests/test_import_purity.py` guards it, and the guard was **observed red** before being trusted. C-325 registered (Tier 4: CI locks pandas 2.3.3 while fresh installs resolve 3.0.5 — mitigated by running the full suite under 3.0.5: 2301 passed, 0 failed, counts identical to the locked run). C-326 registered (Tier 4: the extra gates nothing today — xarray is the sole pandas carrier, verified per-package in a clean venv — so this makes pandas *not imported*, not *not installed*; the `ImportError` paths are unreachable until #381 resolves; REP/CRP condition recorded — one wheel, two audiences). D-42 registered-and-resolved (relocating the pandas adapters to views-pipeline-core: rejected — breaks the published ADR-050 contract, ADR-040/048 semantics belong beside the registry, no reduction in version votes; end state is deletion, not relocation, which #379's file split made cheap). Header counts: 324→326 IDs, 30→32 open, Tier 4: 16→18, disagreements 41→42. Prior: CI enforcement at the platform (2026-07-31) — C-320's recurrence note corrected: the first diagnosis (`;` vs `&&` in the merge chain) was falsified by PR #372, where `gh pr merge --auto --squash` merged with `test` still pending. Real cause: neither `development` nor `main` had branch protection (404 Branch not protected) and repo auto-merge was disabled, so every PR was mergeable on open and `--auto` degraded to a plain merge. Fixed same day: required checks `lint`/`typecheck`/`test` on development, plus `import-enforcement` on main, `enforce_admins: true` on both, PRs required (0 approvals), force-push/deletion off, auto-merge enabled; documented in `docs/guides/publishing_to_pypi.md`. Rule of record: a client-side gate is advisory; enforcement lives in required status checks. Earlier history in git log
-**Source:** Multi-expert engineering review, repo assimilation, falsification audits, expert code review (Martin, GoF, Feathers, Nygard, Kleppmann, Ousterhout, Hickey, Beck), magic-values compliance audit, stale-zarr incident 2026-04-24, pipeline verification audit 2026-04-30, ACLED integration test review 2026-05-02, ACLED test review 2026-05-03, ACLED compilation test review 2026-05-05, base documentation review 2026-05-07, ACLED harvester test review 2026-05-07, GHS-POP harvester test review 2026-05-18, GHS-POP viewpoint test review 2026-05-19, PR #53 review 2026-05-20, GHS-POP memory falsification + expert code review 2026-05-20, repo-assimilation 2026-05-20, ADR-031 compliance review 2026-05-21, harvest caching expert code review 2026-05-21, PR #59 falsification audit round 2 2026-05-21, provenance/shapefile expert code review 2026-05-21, GHS-BUILT-S review-rr triage 2026-05-22, GHS-BUILT-S coverage parity falsification 2026-05-22, GHS-BUILT-S visual audit falsification 2026-05-22, GHS-BUILT-S visual audit run 2026-05-22, C-190 resolution 2026-05-23, GHS-BUILT-S merge-readiness falsification 2026-05-23, pre-merge sprint (C-191/C-192/C-168/C-174) 2026-05-23, GHS-BUILT-S merge-readiness falsification round 2 2026-05-23, repo-assimilation v1.2.20 2026-05-24, tech-debt-cleanup investigation 2026-05-24, review-rr strategic + prioritize 2026-05-24, review-base-docs 2026-05-25, V-Dem test coverage parity falsification 2026-05-26, V-Dem ADR/guide compliance falsification 2026-05-26, V-Dem SOLID/package/file-org falsification 2026-05-26, review-rr strategic curation 2026-05-26, review-base-docs 2026-05-26, V-Dem visual audit falsification 2026-05-26, V-Dem visual audit documentation falsification 2026-05-26, sprint S4 standalone fixes (C-175/C-129/C-149) 2026-05-27, merge-readiness falsification (C-222) 2026-05-27, review-rr strategic curation 2026-05-28, SHDI review-diff 2026-05-29, expert code review C-164 2026-05-30, digest verification expert code review + 3 falsification audits 2026-06-02, preflight netrc falsification 2026-06-02, status page understanding falsification 2026-06-04, status page fix plan falsification 2026-06-04, ADR-040 scoping 2026-06-05, test-review area-majority effort 2026-06-05, review-base-docs area-majority effort 2026-06-05, review-rr strategic curation 2026-06-06, pre-deployment audit 2026-06-07, derived-artifact drift expert-code-review 2026-06-08, data soundness expert-method-review 2026-06-08, content-addressed skip investigation 2026-06-09, pipeline gap audit 2026-06-10, tech-debt-cleanup pre-deploy 2026-06-10, test-review deep coverage audit 2026-06-10, review-rr strategic curation 2026-06-10, repo-assimilation v1.3.0 2026-06-16, expert-code-review register-risk 2026-06-18, test-review v1.4.0 2026-06-24
-**Status:** 334 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 291 resolved, 40 open concerns (0 Tier 1, 1 Tier 2, 10 Tier 3, 23 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 107 struck-through in active register (291 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Last update:** 2026-08-03 — C-330 RESOLVED (logrotate pointed at a path the pipeline left; four months of silent no-ops) and C-339 registered (a pasted heredoc destroyed refresh.log). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
+**Status:** 339 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 293 resolved, 43 open concerns (0 Tier 1, 2 Tier 2, 11 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 109 struck-through in active register (293 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -160,10 +160,15 @@
 | C-327 | 4 | A Caddy basic-auth password was published in git history — **credential verified dead (401)**, password pattern exposed | Next rotation of the `views` password, or retiring the shared account for per-user logins; also check future post-mortems for quoted credentials | Server hardening |
 | C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
 | C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
-| C-330 | 4 | **Corrected same day** — rotation *is* configured (archive: done 2026-03-31); what remains is that it is undocumented in the operator guides and the file mode is inferred, not observed | Next time the server is touched: `stat` the log, and document the existing logrotate config where an operator will look | Server hardening |
+| ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
 | C-331 | 4 | `HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`, lets a local user silence the dead-man alert | Next edit to `refresh_pipeline.sh` — switch to `curl -K -` from stdin, reclassify as a secret | Operational monitoring |
 | C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | Any change to `backends_zarr.py` or `datafactory_http/retry.py` | Credential hygiene |
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
+| ~~C-335~~ | ~~2~~ | ~~Nothing watches the data-serving path — green while every consumer gets nothing~~ | Resolved 2026-08-03: Better Stack monitor live and verified (Up, ~27ms, test alert delivered) + serving-freshness.yml for the content half | Operational monitoring |
+| C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
+| C-337 | 2 | A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics (tip_mass 0.5, pre-1.2.0 HDI tower) | **Before declaring or keeping any floor**: ask what the floor *permits* and what the lock has *chosen* — not only whether our imports resolve. Check `uv.lock`, not just `pyproject.toml` | Dependency policy |
+| C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
+| C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Never hand a multi-line heredoc to a human to paste.** Terminals join lines. Use one command per line, or an editor. And never construct a `sudo` command whose failure mode is writing to an unintended path | Operational safety |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -491,6 +496,76 @@ Feature names appear in three places that must stay synchronized: (1) `source_re
 **To resolve:** Add a test in `tests/test_grid.py` or a new test file that loads `assemble_grid.py`'s source ordering and compares it against `source_registry.py`'s `get_all_features()` — verifying that every registry feature appears in assembly and the channel count matches.
 
 Cross-ref: ~~C-236~~ (resolved — registry↔status pair tested), C-146 (assembly logic in script not importable package). Part of work package: **Source registry**.
+
+---
+
+### ~~C-335: Nothing watches the serving path — Caddy can stop serving behind a green heartbeat~~ — RESOLVED
+
+**Source:** Monitoring options review (2026-08-01), prompted by the operator asking whether views-faoapi's Better Stack setup generalises to this repo.
+
+**Trigger:** Set up the external poll described in ADR-051. Until that exists, a green heartbeat is evidence the *pipeline ran*, never evidence the *data is reachable* — do not let the two be conflated in any status report, runbook, or handover.
+
+**Location:** `scripts/refresh_pipeline.sh:92,163,290` (the three heartbeat pings); ADR-018 §"External monitoring"; ADR-038 (the public `status.html` that a poller could target); Caddy on the Hetzner host.
+
+The monitoring we have is a **dead-man switch on the batch job**: `refresh_pipeline.sh` pings healthchecks.io on `/start`, on success, and on `/fail`. It answers exactly one question — *did the monthly pipeline run?* It is drilled and it works (C-131, live drill 2026-07-19).
+
+It answers nothing about whether consumers can actually *read* anything. Those are two different systems: the pipeline writes on the host, Caddy serves over HTTP. They fail independently, and only one of them is watched.
+
+Two failure classes, and they are not equally bad:
+
+- **Host down.** The pipeline cannot run, no success ping arrives, healthchecks fires after period (30d) + grace (48h). Worst case ≈ **32 days** if the host dies the day after a good run. Slow, but bounded, and it does alert.
+- **Caddy down, host up.** The pipeline runs, succeeds, and pings. **The check stays green.** Every consumer gets nothing. Detection: **never**, by any automated means — only a human noticing and complaining.
+
+The second is why this is Tier 2 rather than Tier 3. It is not "unmonitored", which would merely be a gap; the system *actively reports healthy while broken*, which is worse than no signal at all, because a green light is used as evidence. That is the same failure views-faoapi hit (C-50/C-170: a 139-day-old artifact served behind green health), and the reason their ADR-032 added a second, content-checking monitor on top of liveness.
+
+Caddy is `systemctl enable`d (`hetzner_deployment_log.md:432`), so a bare process crash self-heals. What does not self-heal: a bad config after an edit, a full disk, a port conflict, a firewall change. Each leaves a healthy host serving nothing.
+
+**Why an on-host check is not the answer.** A cron on the same box would catch the Caddy-down case (the host is fine, by definition) but shares fate with the host for everything else, and monitoring that dies with the thing it monitors is a known anti-pattern. It also cannot see the parts that live outside the box — DNS, the network path, and eventually TLS.
+
+**To resolve:** an external poll of the public `status.html` (ADR-051). `status.html` is deliberately unauthenticated (ADR-038), so unlike views-faoapi — which must store an `X-API-Key` in its monitoring vendor — we can do this with **no credential handed to a third party**. Requires no code change, no release, and no server access; it is browser-only operator setup.
+
+**RESOLVED 2026-08-03.** Better Stack monitor live on `http://204.168.219.108/status.html`, 3-minute interval, e-mail alerting. Verified rather than assumed: reached **Up** at ~27 ms from Europe, and a test alert was delivered and read. The unbounded case — Caddy stops while the host stays up, pipeline keeps succeeding, nothing ever notices — is closed.
+
+Two honest qualifications on the closure, because the resolution is narrower than the entry's ambition:
+
+- **Detection is 3-minute-and-by-e-mail, not by phone.** The free tier alerts by e-mail only. For reachability of research data that is proportionate; §5 of `docs/guides/monitoring.md` records phone escalation as the second thing to buy if we ever upgrade.
+- **The freshness half is not in the vendor.** ADR-051 specified a content check too; Better Stack gates keyword matching behind a paid plan. That half is `.github/workflows/serving-freshness.yml`, running daily on GitHub — genuinely external, since it does not share fate with the monitored host. Residual registered as C-338.
+
+**Worth keeping:** ADR-051's specification of the content check was *itself wrong*, and buying the paid feature would not have helped. It said to alert when the body "does not contain the healthy marker". The page carries a legend — `● OK ● Stale ● Missing` — explaining the dot colours, so those words appear on every healthy page; the first implementation reported one of each against a perfectly healthy server and would have opened an issue daily until muted. Caught by drilling the check against the live page before shipping. The workflow parses per-cell `title="<status>"` attributes instead.
+
+Cross-ref: ~~C-131~~ (external monitoring for cron — resolved; this is the sibling gap it did not cover), C-317 (SIGKILL bypasses the traps — same "the job cannot always report its own death" theme), C-318 (the serving path is also the cleartext-auth path), ADR-018, ADR-038, ADR-051. GitHub: #401. Part of work package: **Operational monitoring**.
+
+---
+
+### C-337: A loose floor froze an estimator version — and the audit that checked it asked the wrong question
+
+**Source:** views-frames floor audit (2026-08-02), corrected after operator pushback.
+
+**Trigger:** **Before declaring or keeping any dependency floor.** Ask two questions, not one: what does this floor *permit*, and what has the lockfile actually *chosen*? "Our imports resolve at the floor" answers neither.
+
+**Location:** `pyproject.toml` (`views-frames` floor), `uv.lock`. Guarded by `tests/test_views_frames_floor.py`.
+
+**What was wrong.** `views-frames>=1.0,<2` was too loose, and `uv.lock` had pinned **1.0.0** since June. `uv lock` keeps an existing pin while it still satisfies the constraint, and `>=1.0` satisfies 1.0.0 forever — so nothing ever pulled it forward. The loose floor did not merely *permit* stale semantics, it **froze** them: every CI run and every local test for roughly six weeks executed against views-frames 1.0.0.
+
+**Why that matters.** views-frames changed how the summary statistics are computed, three times, none of it labelled breaking because it shipped MINOR:
+
+| Version | Change |
+|---|---|
+| 1.2.0 | outside-in HDI tower + mass-aware tip — "fixes a silent" error |
+| 1.3.0 | no magnitude-based zeroing by default (`tower_point`/`hdi_tower`/`summarize_tower`) |
+| 1.9.0 | tower-tip MAP: `tip_mass` 0.5 → 0.25. Their words: *"Behavior change to `tower_point`/`summarize_tower` outputs, shipped MINOR"* |
+
+`views_frames_summarize` ships in the same wheel as `views_frames`. Two systems on different versions produce **different numbers from the same posterior**, with no error.
+
+**How the audit missed it.** The first pass asked *"what does this package import?"* — four symbols, none of them estimators — verified they all work at 1.0.0 by installing it in a clean venv, and concluded the floor could stay. Every step was true and the conclusion was wrong, for two reasons. A floor constrains **the resolver**, not our import list; and we are a widely-installed package, so if we are the loosest constraint we are the one admitting old semantics. The audit also never looked at `uv.lock`, which is where the actual damage was.
+
+This is the same failure the base-docs audit (C-336) was written about — reading the artifact in front of you and inferring the world from it — committed *inside* that audit, one day later. Caught by the operator, who knew the estimator history. Recorded because the recurrence is the finding: the error survived a deliberate, evidence-gathering audit by an agent that had just spent a day cataloguing this exact mistake.
+
+**Resolution.** Floor raised to `>=1.10.2` (1.9.0 is the strict minimum; 1.10.2 is current and the intervening releases are docs/tests). `uv.lock` moved 1.0.0 → 1.10.2. `tests/test_views_frames_floor.py` fails if the floor drops below the audited value, with a message naming what a lower floor re-admits, and separately if any estimator symbol is imported — because that reopens the question.
+
+**Still open, which is why this is Tier 2 and not resolved:** nothing checks the *other* dependency floors against what their locks chose. `numpy>=1.26,<3`, `pyarrow>=14,<20`, `zarr>=2.16,<3` and the rest have the same structure, and the same "the lock froze at the floor" failure is available to all of them.
+
+Cross-ref: C-336 (same failure class, one day earlier), C-334 (dependency policy — removing a runtime dep), C-325/C-326 (pandas floor evidence). GitHub: **views-frames#237** — filed upstream, not as "your floor value is wrong" (it is correct by their governance rule: the floor bumps only on *breaking* changes to the conformance surface, and the 1.9.0 MAP-containment law was additive) but as the accurate defect: `CONFORMANCE_FLOOR` reads as a safe dependency floor and is not one, with this incident as the evidence.
 
 ---
 
@@ -1048,6 +1123,40 @@ Before epic #290 (ADR-048), `_EXTENSIVE_PREFIXES = ("ged_", "acled_")` provided 
 | Location | `src/datafactory_adapters/_conservation.py:_extensive_indices` (returns `[]` when `feature_agg_types=None`), `src/datafactory_adapters/grid_to_country_month.py` (passes `None` through to conservation) |
 
 Cross-ref: ~~C-241~~ (resolved — intensive feature gap, same function, different invariant), ~~C-291~~ (resolved — NaN pre-check in conservation), ADR-040, ADR-048.
+
+---
+
+### C-339: A pasted heredoc destroyed the pipeline log — the command was assistant-authored
+
+**Source:** Incident during the C-330 logrotate fix, 2026-08-03.
+
+**Trigger:** **Before giving a human any command to paste.** If it spans more than one line, it is unsafe: terminals join wrapped lines, and the joined form is often still valid shell. Use one command per line, or open an editor.
+
+**Location:** operator procedure, not code. Consequence at `/home/views-deploy/views-datafactory/logs/refresh.log`.
+
+**What happened.** Fixing C-330 required rewriting `/etc/logrotate.d/views-datafactory`. I gave the operator a `sudo tee ... <<'EOF'` heredoc to paste. Their terminal joined the first two lines, so the shell saw:
+
+```
+sudo tee /etc/logrotate.d/views-datafactory > /dev/null <<'EOF' /home/views-deploy/views-datafactory/logs/refresh.log {
+```
+
+`tee` writes to **every** file it is given. Running as root it therefore wrote the config text into the logrotate file, into `refresh.log`, and into a file literally named `{`. The log went from **528 KB to 150 bytes**.
+
+**Unrecoverable.** There was no backup and no rotated copy — because the rotation this work was fixing had never run. The fix for the missing rotation destroyed the thing the rotation would have preserved.
+
+**What was lost:** four months of pipeline run output — start/finish lines, per-source counts, recorded errors. **Not lost:** the provenance ledgers under `data/`, the status page, healthchecks.io ping history, git history. Nothing reads `refresh.log`; the pipeline appends to it. The loss is diagnostic history, not function or data. It also destroyed the last copy of the leaked GDL token, revoked 2026-08-01 and worthless.
+
+**Why this is Tier 3 and not Tier 4.** The consequence here was mild. The mechanism was not: a root-privileged command whose failure mode is *writing to an unintended path*, handed to someone to paste blind. The same slip against a data directory, a config under `/etc`, or a zarr store is a different day. The register should carry the mechanism, not the luck.
+
+**Three failures, in order:**
+
+1. **Format.** Single-line commands had been used with this operator all session, precisely because pasting was already causing trouble. Switching to a heredoc for the one root-privileged write was the error.
+2. **No dry run.** The command wrote first. It could have printed to stdout for inspection, then been re-run with `| sudo tee` once the content was confirmed.
+3. **No backup of the target.** The command backed up the *config* it was replacing and not the *log* it could reach. The backup protected the thing I was thinking about.
+
+**Standing rule adopted:** commands given to a human to paste are one line. If content is multi-line, use an editor (`sudo nano <file>`) and describe the edit — which is what actually worked afterwards.
+
+Cross-ref: ~~C-330~~ (the work being done when this happened), C-323/C-324 (the log's contents mattered because of what had leaked into it). No GitHub issue: the fix is a rule, not a change.
 
 ---
 
@@ -2190,7 +2299,7 @@ This is the highest-consequence item the sweep found: the blast radius is every 
 Cross-ref: C-326 (the same release that would carry this fix), the tag-immutability ruleset (complementary supply-chain control added 2026-07-31).
 ---
 
-### C-330: `refresh.log`'s rotation is undocumented and its permissions are unverified — [DEFER]
+### ~~C-330: `refresh.log`'s rotation is undocumented and its permissions are unverified~~ — RESOLVED
 
 **⚠ CORRECTED 2026-07-31, same day it was registered. The original entry was wrong.** It read:
 *"`refresh.log` is world-readable, unrotated, and grows unbounded … no logrotate configuration exists
@@ -2232,6 +2341,33 @@ when the server is next touched — but the unbounded-growth hazard was never re
 
 | Field | Value |
 |-------|-------|
+**RESOLVED 2026-08-03, and the original claim was right after all.**
+
+Observed on the server, which is the only way this entry could ever have been settled:
+
+- **The rotation config was pointing at a path the pipeline left behind.** It rotated
+  `/root/views-datafactory/logs/refresh.log`; the log has been at
+  `/home/views-deploy/views-datafactory/logs/refresh.log` since the pipeline moved to the service
+  account. Because the config carries `missingok`, logrotate found nothing at that path and **exited
+  successfully every night for four months.** A silent no-op that reported success.
+- **The file mode was `644` — world-readable**, as originally claimed and later downgraded to
+  "inferred, not observed". Four accounts have shells on that box. Now `640`.
+
+So this entry was **correct, then corrected into being wrong, then confirmed correct**. The 2026-07-31
+retraction found an archived plan saying "logrotate configured on server — Done 2026-03-31", which was
+true when written, and concluded the rotation half was a false alarm. Existence was never the question;
+**efficacy** was. Checking that the config existed is not checking that it worked.
+
+**Fixed:** path corrected; `size 100M` → `monthly` (a size trigger on a 130 KB/month log bounds nothing,
+and the point is bounding *time*, not disk); `create 0640 views-deploy views-deploy`; `su views-deploy
+views-deploy`, without which logrotate refuses to touch a file in a non-root directory and we would have
+swapped one silent failure for another; and **`missingok` removed**, since that option is what hid the
+bug. Verified by `logrotate --debug`, which reported `Handling 1 logs` against the real path.
+
+Recorded in `docs/guides/monitoring.md`? No — deliberately in the deployment guide's server section,
+where an operator looks. The absence of any mention in `docs/guides/` was the surviving half of this
+entry and is now closed too.
+
 | ID | C-330 |
 | Tier | 4 — narrowed on correction; no data-path impact, no growth hazard, and the remaining exposure (who can read the log) is inferred rather than observed |
 | Source | Five-angle security sweep, scripts/CI audit (2026-07-31); **corrected same day** by falsification audit against `reports/archive/product_development_plan03.md` |
@@ -2608,6 +2744,58 @@ Cross-ref: ADR-050, #116, epic #342, views-frames#200. Part of work package: **C
 | Resolution | Rejected 2026-07-31. The adapters stay. The correct end state for the pandas tier is **deletion, not relocation** — when the frame-native migration completes and nobody requests `dataframe`, the two modules and the extra are removed together. Story #379 made that cheap by splitting the frame-native converter out of the legacy file, so deletion is `rm` rather than surgery. **Revisit condition:** the consumer contract breaks for unrelated reasons (a `CONTRACT_VERSION` major bump would be the natural moment), or pipeline-core becomes the sole consumer of both formats *and* the frame-native path has left `datafactory_adapters`. |
 
 Cross-ref: C-326 (why the extra exists), ADR-050 (the contract this would break), ADR-040/ADR-048 (the semantics that belong beside the registry), epic #376.
+
+---
+
+### C-336: Governance docs drift against a world that changed in another repository
+
+**Source:** Full base-docs audit (2026-08-02, #402 item 5) — all 54 ADRs and 34 CICs checked against the code as it exists.
+
+**Trigger:** **Before citing code in any ADR or CIC.** Cite the symbol (`get_ucdp_token()` in `ucdp_annual.py`), never the line (`ucdp_annual.py:132-142`). And before deleting a cross-repo reference as stale, open the sibling repo — one that looked dead was not.
+
+**Location:** `docs/ADRs/006_intent_contracts_for_non_trivial_classes.md`, `docs/ADRs/010_gridconfig_spatial_only.md`, `docs/CICs/grid_to_country_month.md`, and eight other ADRs. Guarded by `tests/test_docs_citations.py`.
+
+The audit found three distinct drift mechanisms, all fixed here.
+
+**1. Line-number citations rot silently.** Ten `file.py:NNN` references across the ADRs. Three were already wrong: ADR-026 cited `ucdp_annual.py:132-142` for `get_ucdp_token()` and line 132 had become blank; ADR-040 cited a line in `grid_compilation.py` that is now empty. Nothing detects this, because a line number is still syntactically valid when it points at whitespace. All ten replaced with symbol names — views-frames reached the same conclusion independently (their #212).
+
+**2. A sibling repository deleted a package we cite.** ADR-006 and ADR-010 describe `GridConfig`, `TemporalConfig` and `SpatioTemporalGrid` as coming "from `lab_grid/config.py`". That package lived at `views-metric-lab/src/lab_grid/` and **was deleted** in their commit `6e1a34d` ("remove redundant data modules, add FeatureFrame consumer bridge"). ADR-010 even asserts "the metric lab's `lab_grid/config.py` is not modified (it remains as-is for the lab's own use)" — a sentence about another repo's state that stopped being true without anything here failing. Kept and annotated rather than deleted: an ADR that quietly drops its own premise stops being a record of a decision.
+
+**3. A citation that excuses its own absence never gets fixed.** `grid_to_country_month.md` read "Tests in `tests/test_grid_to_country_month.py` (if present)." That file has never existed; the tests are in `test_country_month.py`. The hedge is why it survived — a claim qualified into unfalsifiability cannot be wrong, so nobody corrects it.
+
+**The near-miss worth recording.** `audit_data_parity.py` and `config_queryset.py` were on the stale list until checked: both exist, in `views-models/models/bright_starship/`. Deleting them would have been the C-330 error — *absence in this repo read as absence in the world* — committed inside the audit written to catch that class of error. The new guard therefore does **not** assert that every referenced path exists; a guard that cannot distinguish "gone" from "elsewhere" teaches people to delete true references.
+
+**Also fixed:** `load_dataset` had no CIC. Thirty-two contracts existed, all for config dataclasses — the classes that are easy to describe — while the one surface ADR-050 declares a *public contract*, and that every downstream model calls, had none. Written, including the `storage_options` seam added in v1.10.0.
+
+Tier 4: no correctness or reliability impact; the cost is a reader trusting a citation that no longer resolves. Not lower, because this is the **fourth** instance in a week of the same failure — the phantom "9 sources" (C-164), the logrotate path pointing at a directory the pipeline left (C-330), ADR-026's "Public GitHub is safe" (#391), and now this. The pattern is durable enough to deserve a standing entry.
+
+Cross-ref: C-164 (uncountable unit), C-330 (inference from repo contents), C-335 (ADR-051), ADR-006, ADR-050. GitHub: #402.
+
+---
+
+### C-338: Freshness detection lives in a scheduled workflow, not the monitoring vendor
+
+**Source:** Monitoring follow-through (2026-08-03), residual of ~~C-335~~.
+
+**Trigger:** **If notice of stale data ever needs to be prompt**, or if the Better Stack plan is upgraded. Then move the content check into a keyword monitor and retire the workflow — matching the per-cell status attributes, **not** page text, for the reason in C-335's resolution.
+
+**Location:** `.github/workflows/serving-freshness.yml`, `docs/guides/monitoring.md` §5, ADR-051 (2026-08-03 amendment).
+
+ADR-051 specified two external checks. Availability is a Better Stack monitor. Freshness could not be: keyword matching is a paid feature on that vendor, and paying was declined in favour of a scheduled GitHub Action.
+
+That is a real difference in guarantee, not just a difference in implementation:
+
+| | Availability | Freshness |
+|---|---|---|
+| Runs on | Better Stack probes | GitHub Actions |
+| Interval | 3 minutes | daily, and GitHub may delay `schedule` under load |
+| Reaches you by | e-mail | a GitHub issue |
+
+So notice of stale data can slip a day or more, and arrives somewhere you have to look rather than somewhere that interrupts you. Tier 4 because the consequence is **late notice of stale data, not wrong data** — consumers still receive whatever the last good run produced, and ADR-047's coverage warnings still fire in `load_dataset`.
+
+The upgrade path is written down in `docs/guides/monitoring.md` §5 so the decision is ready-made rather than re-derived: keyword monitor first, then phone escalation, then multi-region.
+
+Cross-ref: ~~C-335~~ (the gap this is the residual of), C-320 (why none of this blocks a merge), ADR-051, ADR-038. GitHub: #401.
 
 ---
 
