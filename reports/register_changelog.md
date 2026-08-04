@@ -17,6 +17,42 @@ entry could.
 
 ---
 
+## `/review-rr strategic` — curation (2026-08-04)
+
+**C-324 resolved as stale.** It described a live credential in a server log; the token was revoked
+2026-08-01 (GDL allows one per account, so issuing the replacement forced it), the leaking harvester
+was superseded when the server moved to v1.11.0, and the log itself no longer exists — destroyed by
+C-339. Every remediation the entry prescribed had happened. **The register had gone stale in exactly
+the way it keeps warning about**, and a reader would have acted on exposure that ended three days
+earlier.
+
+**The "fails green" cluster named** — eight open entries (C-317, C-331, C-336, C-337, C-338, C-339,
+C-340, C-341) that are symptoms of one root cause: mechanisms that report success while not doing
+the thing. Individually small; together they say this project's characteristic failure is *silence,
+not error*. The cluster carries a design rule rather than eight separate fixes: absence of an error
+is not evidence of success, so any new mechanism needs an answer to "how would I know if this
+silently did nothing?" before it ships.
+
+**Five triggers rewritten** — C-332 (was perpetual, "any change to these files"; now names the act
+that creates the exposure), C-70, C-72, C-333, and C-339 (which had stated a *rule* where a trigger
+belongs).
+
+**Five demoted to tech-debt backlog** following the C-136 precedent: C-46, C-116, C-117, C-147,
+C-155 — mechanical, single-file, never fired, and loud rather than silent if they ever do. C-70 and
+C-72 were on the demotion list and were kept, because their triggers had just been made concrete;
+demoting an entry immediately after making it actionable is incoherent.
+
+**Not registered, per skill rules** — blind spots go in the report, not the register: bus factor (one
+person holds every credential, all server access, and the operational knowledge; unnamed across 341
+entries), upstream source discontinuation, and whether a past release's grid can still be rebuilt.
+
+Counts: 45 → 39 open, Tier 3 12→11, Tier 4 25→20, struck-through 110→115.
+
+**Method note.** The cluster table first used `| C-317 |` as its leading column, which collides with
+the summary-row format, and the repair used `replace(..., 1)` — which hit the *first* match and
+silently bolded eight real summary rows. Two edits, both plausible, both wrong, neither raising an
+error. The guards caught it. The cluster demonstrated itself during its own authoring.
+
 ## C-340 and C-341 registered (2026-08-04)
 
 Two findings from the v1.11.0 close-out that had been acted on but never tracked. Both share the

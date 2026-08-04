@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-04 — C-340 and C-341 registered: auto-merge fails green two ways, and deploy gates run only where someone types pytest. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-04 — `/review-rr strategic`: C-324 resolved (stale — every remediation it prescribed had happened), five triggers rewritten, and the eight-entry "fails green" cluster named. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 341 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 293 resolved, 45 open concerns (0 Tier 1, 2 Tier 2, 12 Tier 3, 25 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 109 struck-through in active register (293 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 341 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 299 resolved-or-demoted, 39 open concerns (0 Tier 1, 2 Tier 2, 11 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 115 struck-through in active register (294 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -22,17 +22,17 @@
 | ~~C-36~~ | ~~4~~ | ~~UCDP API contract has no schema versioning~~ | Resolved 2026-06-19 (ADR-046 documents schema defense strategy, #209) | UCDP schema |
 | ~~C-37~~ | ~~4~~ | ~~`date_prec=5` semantics hardcoded~~ | Resolved 2026-06-19 (DGP validation fail-loud on unknown date_prec, #212) | UCDP schema |
 | ~~C-45~~ | ~~4~~ | ~~No Parquet schema evolution strategy~~ | Resolved 2026-06-19 (ADR-046 documents promote_options + fingerprint approach, #209) | UCDP schema |
-| C-46 | 4 | No ledger write idempotency | Before monitoring dashboard or external audit tool reads provenance JSONL directly | — |
+| ~~C-46~~ | ~~4~~ | ~~No ledger write idempotency~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): mechanical (idempotency guard on one writer), single-file scope, never fired in ~4 months; ledger corruption would be loud, not silent. Re-register if the trigger becomes concrete. | — |
 | C-32 | — | Source registry returns `Any` | Accepted by design | — |
 | C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Before WDI integration (10th source) or multi-target deployment | Test infra |
-| C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment | UCDP resilience |
-| C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
+| C-70 | 4 | No circuit breaker for UCDP API | Before a second operator runs harvests concurrently, or before harvest concurrency is raised above 1 | UCDP resilience |
+| C-72 | 4 | HTTP 429 not distinguished from 500 | The first time a harvest fails with HTTP 429, or before raising harvest concurrency | UCDP resilience |
 | ~~C-74~~ | ~~4~~ | ~~CompilationConfig leaks strategy vocabulary~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-78~~ | ~~4~~ | ~~`_place_events` hard to test in isolation~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-79~~ | ~~4~~ | ~~Compilation/consolidation require real Parquet I/O~~ | Demoted to tech-debt backlog 2026-06-14 (trigger permanently fired — suite at 6m38s, functioning normally) | — |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
-| C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
-| C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
+| ~~C-116~~ | ~~4~~ | ~~No retry on remote zarr network failures~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): mechanical (wrap one read in the existing retry helper), never fired; a network failure here raises, it does not corrupt. Re-register if the trigger becomes concrete. | Query resilience |
+| ~~C-117~~ | ~~4~~ | ~~Remote zarr downloads all spatial cells before region filter~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): a performance observation, not a risk — remote reads are already time/feature-subset before materialising (v1.8.0); the residual is spatial only and nobody has hit it. Re-register if the trigger becomes concrete. | Query performance |
 | ~~C-131~~ | ~~2~~ | ~~No external monitoring for cron job failure on Hetzner~~ | Resolved 2026-06-24 (heartbeat hook) — 2026-07-19 correction: HEARTBEAT_URL WAS configured and success pings were arriving (e.g. 2026-07-06 run). The real gap: success-only pings make failure = silence, detectable only after the 30-day schedule + grace lapses — so the 2026-07-02 mid-run failures alerted nobody for weeks by design. Failure-side /fail ping shipped (PR #330) closes this; live drill 2026-07-19: /fail flipped the check red in seconds | Operational monitoring |
 | ~~C-136~~ | ~~4~~ | ~~`read_last_entries()` crashes on non-UTF8 ledger files~~ | Demoted to tech-debt backlog 2026-06-16 (mechanical fix, single-file, perpetual trigger, loud failure) | — |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
@@ -94,11 +94,11 @@
 | ~~C-144~~ | ~~3~~ | ~~Compilation `to_pydict()` materializes millions of Python objects~~ | Resolved 2026-06-26 (columnar `.to_numpy()` extraction + row-index bins, #275) | Scaling headroom |
 | ~~C-145~~ | ~~3~~ | ~~Viewpoint builder loads full consolidated store into memory~~ | Resolved 2026-06-26 (column-selective `pq.read_table()` in UCDP + ACLED builders, #276) | Scaling headroom |
 | C-146 | 4 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
-| C-147 | 4 | No pipeline orchestrator in repository | Operator runs scripts out of order or skips a step | Operations |
+| ~~C-147~~ | ~~4~~ | ~~No pipeline orchestrator in repository~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): wants a tool this project does not need at one monthly cron; carried since v1.2.x with a perpetual trigger and no incident. Re-register if the trigger becomes concrete. | Operations |
 | ~~C-148~~ | ~~4~~ | ~~Hardcoded Hetzner server IP in `defaults.py`~~ | Demoted to tech-debt backlog 2026-06-16 (mechanical fix, single-file, perpetual, Tier 4) | — |
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
-| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Before 6th pipeline source (WDI) requires a verify script | Visual audit |
+| ~~C-155~~ | ~~4~~ | ~~No shared visual audit framework — per-source scripts are idiosyncratic~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): a nice-to-have framework for per-source audit scripts; five sources shipped without it and none of them needed it. Re-register if the trigger becomes concrete. | Visual audit |
 | ~~C-195~~ | ~~4~~ | ~~37 falsification test files accumulated without curation (3,129 lines)~~ | Demoted to tech-debt backlog 2026-06-19 (no correctness risk, single-developer scope) | — |
 | C-173 | 4 | Hetzner server memory headroom (CPX42 + swap) | CPX42 RSS usage during full pipeline run exceeds 80% of available RAM (observed during WDI pilot) | Server hardening |
 | C-164 | 3 | Cross-layer WET debt: 6 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI integration or next data source | WET-before-DRY |
@@ -154,7 +154,7 @@
 | ~~C-321~~ | ~~4~~ | ~~Remote-zarr 401 escapes as raw aiohttp ClientResponseError — documented PermissionError contract broken (ClientResponseError is not an OSError)~~ | Resolved 2026-07-27 (non-OSError 401s mapped to PermissionError + netrc hint; found by TestPyPI clean-room rehearsal) | Query resilience |
 | ~~C-322~~ | ~~3~~ | ~~GDL token leaks into crash tracebacks — requests embeds the full ?token= URL in exception messages, which land in refresh.log~~ | Resolved 2026-07-28 (#369 audit: credential-redaction at the shared HTTP layer; UCDP/ACLED/netrc flows verified clean) | Credential hygiene |
 | C-323 | 4 | Five team passwords in cleartext at rest on the server (`~/team_passwords.txt`) pending out-of-band distribution | Before the next server snapshot/backup or any new shell account — confirm the file was distributed and deleted | Server hardening |
-| C-324 | 3 | GDL token unrotated after the C-322 leak — pre-fix `refresh.log` lines persist and the deployed (tagged) harvester still leaks | At the next tagged release + redeploy, or before granting anyone new read access to server logs — rotate `GDL_API_TOKEN` and scrub the pre-fix lines | Credential hygiene |
+| ~~C-324~~ | ~~3~~ | ~~GDL token unrotated after the C-322 leak~~ | Resolved 2026-08-01: token rotated and the leaked one **revoked** at GDL (one-token-per-account forced it), replacement verified live; server on v1.11.0 so the leaking harvester is gone; the log itself was destroyed by C-339 | Credential hygiene |
 | C-325 | 4 | CI tests pandas 2.3.3 while a fresh consumer install resolves pandas 3 (cap removed with the extra; suite verified green on 3.0.5) | Before the next release, re-run the suite under the then-current pandas 3.x | Dependency policy |
 | C-326 | 4 | The `[pandas]` extra gates nothing — xarray is the real pandas carrier; the fail-loud `ImportError` paths are unreachable until it leaves | When #381 resolves: go makes the extra real and the error paths live; no-go makes it vestigial | Dependency policy |
 | C-327 | 4 | A Caddy basic-auth password was published in git history — **credential verified dead (401)**, password pattern exposed | Next rotation of the `views` password, or retiring the shared account for per-user logins; also check future post-mortems for quoted credentials | Server hardening |
@@ -162,16 +162,16 @@
 | C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
 | ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
 | C-331 | 4 | `HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`, lets a local user silence the dead-man alert | Next edit to `refresh_pipeline.sh` — switch to `curl -K -` from stdin, reclassify as a secret | Operational monitoring |
-| C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | Any change to `backends_zarr.py` or `datafactory_http/retry.py` | Credential hygiene |
+| C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | **Before interpolating any URL, path, or credential-bearing value into a log line or exception message** — that is the act that creates the exposure, not editing these files | Credential hygiene |
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
 | ~~C-335~~ | ~~2~~ | ~~Nothing watches the data-serving path — green while every consumer gets nothing~~ | Resolved 2026-08-03: Better Stack monitor live and verified (Up, ~27ms, test alert delivered) + serving-freshness.yml for the content half | Operational monitoring |
 | C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
 | C-337 | 2 | A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics (tip_mass 0.5, pre-1.2.0 HDI tower) | **Before declaring or keeping any floor**: ask what the floor *permits* and what the lock has *chosen* — not only whether our imports resolve. Check `uv.lock`, not just `pyproject.toml` | Dependency policy |
 | C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
-| C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Never hand a multi-line heredoc to a human to paste.** Terminals join lines. Use one command per line, or an editor. And never construct a `sudo` command whose failure mode is writing to an unintended path | Operational safety |
+| C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Before giving any human a command to paste** — if it spans more than one line it is unsafe (terminals join wrapped lines, and the joined form is often still valid shell); if it runs as root, ask what it writes to when mis-parsed | Operational safety |
 | C-340 | 3 | Auto-merge fails silently two ways: `gh pr merge --auto --<method>` refuses to change the method on an already-armed PR (nearly put a squash on `main`), and pushing to a branch whose PR already merged orphans the commit with no error | **Before arming a non-default merge method**, read `auto_merge.merge_method` back; **before any follow-up push to a PR branch**, check `merged` first or use a new branch | Operational safety |
 | C-341 | 4 | Deploy gates only run where someone types pytest — C-320's fix made them skip-with-reason in CI, so they assure only whoever runs the suite at the right moment | **When adding a deploy gate, or relying on one for release assurance:** ask whether it can answer in CI; if not, say so in the skip message and give it an out-of-band runner | Test infra |
-| C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
+| C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -184,6 +184,41 @@
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
 | C-06 | — | Provenance composability | Deferred by design | — |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design | — |
+
+## Causal cluster: mechanisms that fail green
+
+*Added by `/review-rr strategic`, 2026-08-04.*
+
+Eight open entries are symptoms of one root cause, and read very differently together than apart.
+Individually each is small. Together they say that **this project's characteristic failure is
+silence, not error** — a thing reports success while not doing what it claims.
+
+| ID | What reported success while being wrong |
+|---|---|
+| **C-317** | `SIGKILL` bypasses the `ERR`/`EXIT` traps, so a killed run sends no failure ping |
+| **C-331** | `HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice |
+| **C-336** | Governance docs true when written, false later, nothing failing in between |
+| **C-337** | `views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever |
+| **C-338** | Freshness detection that runs daily-and-by-issue rather than alerting |
+| **C-339** | `tee` wrote to an unintended path as root and exited 0 |
+| **C-340** | `git push` succeeds onto a merged branch; `gh pr merge` exits 0 without changing the method |
+| **C-341** | A skipped test is not a red test — gates that assure only whoever ran them |
+
+**Why this belongs in the register rather than a post-mortem.** The individual fixes are already
+made or tracked. What the cluster adds is a *design rule*: in this system, **absence of an error is
+not evidence of success**, so any new mechanism needs an answer to "how would I know if this
+silently did nothing?" before it ships. Three of the eight were caught by the operator rather than
+by any check; two were caught only by reading a value back and finding it disagreed with what had
+just been commanded.
+
+**Cluster-level action, cheaper than eight separate ones:** when adding any guard, workflow, or
+operational step, drill it by breaking it. Every guard drilled in the 2026-08 window found a real
+defect — including one in its own author's work, one day after writing it.
+
+Cross-ref: ~~C-320~~ and ~~C-330~~ are resolved members of the same family; the v1.9.0 → v1.11.0
+post-mortem documents six instances end to end.
+
+---
 
 ## Work Packages
 
@@ -1219,7 +1254,10 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 **Source:** Kleppmann (expert review 6). DDIA Ch.4 pp.112-127, 131.
 **Update (2026-06-10):** Test review found UCDP consolidation has no schema drift test and no corrupted Parquet test — ACLED has both (`test_acled_consolidation.py::TestSchemaEvolution`, `TestCorruptedParquet`). This is a specific instance of C-45: when UCDP does change schema, no test detects the regression. Location: `src/datafactory_consolidation/ucdp.py`, missing test in `tests/test_consolidation.py`.
 
-### C-46: No ledger write idempotency — [DEFER]
+### ~~C-46: No ledger write idempotency~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). Mechanical (idempotency guard on one writer), single-file scope, never fired in ~4 months; ledger corruption would be loud, not silent. Re-register if the trigger becomes concrete.
+
 `append_ledger_entry()` has no dedup key. Process crash after append but before caller return causes duplicate on retry. Ledger readers tolerate duplicates. Kleppmann (Ch.12 pp.516-518) argues exactly-once semantics require idempotence via operation identifiers — each write carries a unique ID; consumers deduplicate on read. Ch.7 p.231 warns that retrying a successful-but-unacknowledged write without dedup causes silent duplication. Recommended approach: add an `operation_id` field (e.g., content digest of the entry) to each ledger record. **Trigger: Before monitoring dashboard or external audit tool reads provenance JSONL directly (trigger rewritten during review-rr 2026-06-19).**
 **Source:** Kleppmann (expert review 6). DDIA Ch.7 p.231, Ch.12 pp.516-518.
 
@@ -1256,12 +1294,18 @@ Demoted to tech-debt backlog 2026-06-06 (review-rr strategic curation). Test erg
 Demoted to tech-debt backlog 2026-05-28 (review-rr strategic curation). Threshold is documented in ADR-023 and matches VIEWSER. No evidence of UCDP or VIEWSER changing this. Re-register if threshold changes.
 **Source:** Parity investigation 2026-04-08, notebook archaeology (GED_loader{0,1,2}.ipynb).
 
-### C-116: No retry on remote zarr network failures — [DEFER]
+### ~~C-116: No retry on remote zarr network failures~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). Mechanical (wrap one read in the existing retry helper), never fired; a network failure here raises, it does not corrupt. Re-register if the trigger becomes concrete.
+
 `_load_grid_from_zarr` in `dataset.py` opens a remote zarr store via xarray/fsspec/aiohttp. Transient network errors (DNS timeout, TCP reset, server restart) fail immediately — no retry, no backoff. `datafactory_http.retry.request_with_retry()` exists but is designed for `requests`-based harvester calls, not the xarray/fsspec path. For consumers, a transient failure at 2am during automated training means a full pipeline retry. **Trigger: consumer reports intermittent failures loading remote data.** Cross-ref: C-70 (circuit breaker, harvester path).
 **Source:** Expert review #5 (M12 investigation), Nygard perspective, 2026-04-08.
 **Update (2026-06-14, repo-assimilation):** The entire remote zarr code path has zero test coverage — `test_query.py` (18 tests) exercises only the npy backend. Not just edge cases; the happy path through `_load_grid_from_zarr` is also untested.
 
-### C-117: Remote zarr downloads all spatial cells before region filter — [DEFER]
+### ~~C-117: Remote zarr downloads all spatial cells before region filter~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). A performance observation, not a risk — remote reads are already time/feature-subset before materialising (v1.8.0); the residual is spatial only and nobody has hit it. Re-register if the trigger becomes concrete.
+
 `_load_grid_from_zarr` applies temporal and feature subsetting lazily (xarray isel/variable selection), but spatial subsetting (region → pgid set) happens AFTER full grid materialization in `load_dataset`. For remote stores, this means downloading all 259,200 cells even when only ~13,000 are needed (e.g., Africa). The spatial dimension is 360x720 per time step per feature — less impactful than temporal (which IS subsetted), but still ~20x more data than needed for typical region queries. xarray does not support efficient irregular spatial selection on chunked stores without rechunking. **Trigger: consumer queries a single country over a slow connection and complains about latency.**
 **Source:** Expert review #5 (M12 investigation), Kleppmann perspective, 2026-04-08.
 
@@ -1278,7 +1322,10 @@ Demoted to tech-debt backlog 2026-05-28 (review-rr strategic curation). Only ris
 Demoted to tech-debt backlog 2026-06-16 (review-rr strategic curation). Mechanical fix (add encoding guard), single-file scope, perpetual trigger, loud failure (crash, not silent corruption). Re-register if ledger files are exposed to external writers.
 **Source:** Test review gap implementation (2026-04-22). Cross-ref: C-131, C-132 (operational monitoring).
 
-### C-147: No pipeline orchestrator in repository — [DEFER]
+### ~~C-147: No pipeline orchestrator in repository~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). Wants a tool this project does not need at one monthly cron; carried since v1.2.x with a perpetual trigger and no incident. Re-register if the trigger becomes concrete.
+
 
 | Field | Value |
 |-------|-------|
@@ -1310,7 +1357,10 @@ The `ACLED_FEATURES` tuple in `tests/test_acled_compilation.py` is a copy-paste 
 
 See also C-29 (no integration test), C-74 (strategy vocabulary).
 
-### C-155: No shared visual audit framework — per-source scripts are idiosyncratic — [DEFER]
+### ~~C-155: No shared visual audit framework — per-source scripts are idiosyncratic~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). A nice-to-have framework for per-source audit scripts; five sources shipped without it and none of them needed it. Re-register if the trigger becomes concrete.
+
 
 | Field | Value |
 |-------|-------|
@@ -2492,7 +2542,18 @@ This is credential *egress*, not log leakage — a different failure mode from C
 Cross-ref: C-318 (plaintext scheme default), C-332 (the logging-side siblings).
 ---
 
-### C-324: GDL token unrotated after the C-322 leak — pre-fix log lines persist and the deployed harvester still leaks
+### ~~C-324: GDL token unrotated after the C-322 leak — pre-fix log lines persist and the deployed harvester still leaks~~ — RESOLVED
+
+**RESOLVED 2026-08-01/03.** Every remediation this entry prescribed has happened, and the entry had gone stale in exactly the way it warned about — a record describing a world that changed. Found by `/review-rr strategic` on 2026-08-04.
+
+| What the entry says | What is true |
+|---|---|
+| "carrying a **still-valid** credential" | Revoked 2026-08-01. GDL allows one token per account, so issuing the replacement *forced* revocation; the new token was verified with a live request (HTTP 200) |
+| "rotate the token at globaldatalab.org" | Done, by the operator |
+| "the deployed harvester is still the leaking version… newest tag v1.9.0" | Server runs **v1.11.0**; the redaction fix shipped in v1.10.0 |
+| "scrub the pre-fix lines from `logs/refresh.log`" | Moot — the log was destroyed on 2026-08-03 (C-339). Rotation had already made the logged value inert, which the entry itself notes is the sufficient step |
+
+**Residual: none.** Both residues named in the entry are closed by different means, one of them accidental.
 
 C-322 closed the leak *in code*. Two residues remain on the production server, and neither is fixed by that merge:
 
