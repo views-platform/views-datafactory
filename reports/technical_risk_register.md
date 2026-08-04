@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-03 — C-330 RESOLVED (logrotate pointed at a path the pipeline left; four months of silent no-ops) and C-339 registered (a pasted heredoc destroyed refresh.log). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-04 — C-340 and C-341 registered: auto-merge fails green two ways, and deploy gates run only where someone types pytest. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 339 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 293 resolved, 43 open concerns (0 Tier 1, 2 Tier 2, 11 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 109 struck-through in active register (293 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 341 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 293 resolved, 45 open concerns (0 Tier 1, 2 Tier 2, 12 Tier 3, 25 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 109 struck-through in active register (293 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -169,6 +169,8 @@
 | C-337 | 2 | A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics (tip_mass 0.5, pre-1.2.0 HDI tower) | **Before declaring or keeping any floor**: ask what the floor *permits* and what the lock has *chosen* — not only whether our imports resolve. Check `uv.lock`, not just `pyproject.toml` | Dependency policy |
 | C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
 | C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Never hand a multi-line heredoc to a human to paste.** Terminals join lines. Use one command per line, or an editor. And never construct a `sudo` command whose failure mode is writing to an unintended path | Operational safety |
+| C-340 | 3 | Auto-merge fails silently two ways: `gh pr merge --auto --<method>` refuses to change the method on an already-armed PR (nearly put a squash on `main`), and pushing to a branch whose PR already merged orphans the commit with no error | **Before arming a non-default merge method**, read `auto_merge.merge_method` back; **before any follow-up push to a PR branch**, check `merged` first or use a new branch | Operational safety |
+| C-341 | 4 | Deploy gates only run where someone types pytest — C-320's fix made them skip-with-reason in CI, so they assure only whoever runs the suite at the right moment | **When adding a deploy gate, or relying on one for release assurance:** ask whether it can answer in CI; if not, say so in the skip message and give it an out-of-band runner | Test infra |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -1157,6 +1159,26 @@ sudo tee /etc/logrotate.d/views-datafactory > /dev/null <<'EOF' /home/views-depl
 **Standing rule adopted:** commands given to a human to paste are one line. If content is multi-line, use an editor (`sudo nano <file>`) and describe the edit — which is what actually worked afterwards.
 
 Cross-ref: ~~C-330~~ (the work being done when this happened), C-323/C-324 (the log's contents mattered because of what had leaked into it). No GitHub issue: the fix is a rule, not a change.
+
+---
+
+### C-340: Auto-merge fails silently, in two different ways
+
+**Source:** v1.11.0 release close-out (2026-08-03/04). Both observed; neither raised an error.
+
+**Trigger:** **Before arming auto-merge with a non-default merge method** — read `auto_merge.merge_method` back rather than trusting the command. **Before pushing any follow-up commit to a PR branch** — check `merged` first, or put the work on a new branch.
+
+**Location:** operational procedure. Affects every PR in this repo, since all of them are auto-merge armed.
+
+**Mechanism 1 — the method silently does not change.** During v1.10.0 a `development` → `main` PR was armed `squash`, then re-armed with `gh pr merge --auto --merge`. The command printed nothing and left `squash` in place. Caught only by reading `auto_merge.merge_method` back and seeing it still said `squash`. A squash onto `main` rewrites the release SHAs and permanently breaks the ancestry the back-merge exists to maintain — the damage would not have been noticed until a later release diffed against a base that never existed. Worked around with the GraphQL `disablePullRequestAutoMerge` / `enablePullRequestAutoMerge` pair, which does change it.
+
+**Mechanism 2 — pushing to an already-merged branch orphans the work.** #416 merged the moment CI went green. A follow-up commit was then pushed to that branch, which by then had no open PR. Two pieces of work — the C-320 addendum and the post-mortem's fourth finding — were simply not on `development`. `git push` reported success. The only signal was `commits=1` on a PR that had been pushed to twice.
+
+**Why Tier 3.** No data or model-output impact, and both are recoverable — mechanism 2 by cherry-pick, mechanism 1 by re-arming before the merge lands. Not Tier 4, because auto-merge is armed on every PR here so both are live on every change, and mechanism 1's damage to `main` would be permanent rather than recoverable.
+
+**The shared property, which is the reason this is registered at all:** both fail *green*. `git push` succeeds; `gh pr merge` exits 0. Neither has a failure mode that announces itself, so neither can be caught by anything except deliberately reading state back. That is the same class as C-330 (a nightly no-op reporting success) and C-337 (a lockfile frozen with no error).
+
+Cross-ref: ~~C-320~~ (auto-merge silently degrading to a plain merge when branch protection was absent — same family, different mechanism, resolved), C-339 (the other silent-failure incident of this session). Part of work package: **Operational safety**.
 
 ---
 
@@ -2804,6 +2826,28 @@ So notice of stale data can slip a day or more, and arrives somewhere you have t
 The upgrade path is written down in `docs/guides/monitoring.md` §5 so the decision is ready-made rather than re-derived: keyword monitor first, then phone escalation, then multi-region.
 
 Cross-ref: ~~C-335~~ (the gap this is the residual of), C-320 (why none of this blocks a merge), ADR-051, ADR-038. GitHub: #401.
+
+---
+
+### C-341: Deploy gates only run where someone types pytest
+
+**Source:** v1.9.0 → v1.11.0 post-mortem (2026-08-03), as the residual of ~~C-320~~'s fix.
+
+**Trigger:** **When adding a new deploy gate, or when relying on one for release assurance.** Ask whether it can answer in CI. If it cannot, say so in its skip message and give it an out-of-band runner — otherwise it assures only the person who happens to run the suite.
+
+**Location:** `tests/test_falsification_deploy_v160.py`, `tests/test_falsification_deploy_v160_r2.py`; `.github/workflows/release-topology.yml` (the one gate that now has a runner).
+
+C-320 was that these gates failed in CI — shallow checkout cannot answer `git merge-base`, and there is no `gh` auth — leaving CI red on every branch. The fix was right: skip with a reason where the environment cannot answer, rather than fail. The consequence was not examined at the time. **They now run nowhere except a local suite.**
+
+The cost is measurable. After v1.10.0 the `main`/`development` divergence went undetected for four hours, and was found by accident when the full suite happened to be run. It had been silently true after **every** prior release.
+
+Partially mitigated 2026-08-03: `release-topology.yml` runs the topology gate daily with `fetch-depth: 0`, and opens one reusable issue. The others — stale release branches, version-not-already-tagged, issue hygiene — remain local-only.
+
+**Tier 4:** no correctness impact. What is lost is timeliness of bookkeeping errors, and those are recoverable whenever they are found.
+
+**Note the shape rather than just the instance.** A guard that cannot run in the environment where it matters is a guard that reports on the runner's discipline, not on the repository. C-337's floor-versus-lock check has the same property today: it is a rule nobody executes.
+
+Cross-ref: ~~C-320~~ (the fix whose residual this is), C-337 (same "nobody runs it" property), C-340. GitHub: #402 item 4. Part of work package: **Test infra**.
 
 ---
 

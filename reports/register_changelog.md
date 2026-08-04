@@ -17,6 +17,30 @@ entry could.
 
 ---
 
+## C-340 and C-341 registered (2026-08-04)
+
+Two findings from the v1.11.0 close-out that had been acted on but never tracked. Both share the
+property that made this whole week's work necessary: **they fail green.**
+
+**C-340 — auto-merge fails silently, two ways.** `gh pr merge --auto --<method>` refuses to change
+the method on an already-armed PR and reports nothing; during v1.10.0 that left `squash` armed on a
+`development` → `main` promotion, which would have rewritten the release SHAs permanently. Caught
+only by reading `auto_merge.merge_method` back. Separately, pushing a follow-up commit to a branch
+whose PR has already auto-merged orphans the work — #416 merged the instant CI went green, and two
+files were simply not on `development`, with `git push` reporting success. The only signal was
+`commits=1` contradicting a remembered second push. Tier 3: recoverable, but live on every PR here.
+
+**C-341 — deploy gates run only where someone types pytest.** The unexamined residual of C-320's own
+fix: gates that could not answer in CI were made to skip with a reason, which was right, and the
+consequence was that they now assure only whoever runs the suite at the right moment. After v1.10.0
+the branch divergence went undetected for four hours and had been silently true after every prior
+release. Partially mitigated by `release-topology.yml`; the rest remain local-only. Tier 4.
+
+Skipped as duplicates or out of scope: the unchecked `numpy`/`pyarrow`/`zarr` floors (already inside
+C-337 as its open residual), the views-faoapi monitor observations (different repo), and the
+four-year-old `gh` (resolved; the residual is the operator's machine). Counts: 339→341 IDs, 43→45
+open, Tier 3: 11→12, Tier 4: 24→25.
+
 ## C-330 resolved, C-339 registered (2026-08-03)
 
 **C-330 was right, then corrected into being wrong, then confirmed right.** Observed on the server:
