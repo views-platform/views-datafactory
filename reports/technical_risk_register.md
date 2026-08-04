@@ -2126,6 +2126,14 @@ Cross-ref: C-316 (the lock this contaminates on), C-320 (why CI didn't catch the
 
 ### ~~C-320: Deploy-gate falsification tests fail in CI — CI red on every branch, releases merged unnoticed~~ — RESOLVED
 
+**Addendum 2026-08-04 — the same defect, in the gate that catches it.** `TestF8StaleBranches` read `git branch -a`, which folds in **remote-tracking refs** — a local cache that goes stale the moment anyone deletes a branch, and that only `git fetch --prune` refreshes. So the gate failed against a repository that was genuinely clean.
+
+Observed while closing out v1.11.0: `delete_branch_on_merge` had removed every merged branch from the remote, yet the gate went red because the local clone had been fetched without `--prune` all session. Nine local branches were deleted chasing a problem that did not exist, and the actual cause was a stale view.
+
+Demonstrated rather than argued: fabricating **only** a `refs/remotes/origin/release/v1.11.0` ref — with no branch on the remote and none locally — was enough to fail it.
+
+This is C-320's own failure mode: *a gate that reddens for reasons unrelated to what it asserts stops being read.* Split into two checks — local branches from `git branch`, remote branches from `git ls-remote` (authoritative, and skipped when offline per this file's existing idiom). Drilled all three ways: clean passes, the stale-ref case now passes, a real local leftover still fails.
+
 **Resolved 2026-07-27:** the four gates now `pytest.skip` with an explicit reason when the environment cannot answer the question, and still enforce locally: merge-topology tests skip when `git merge-base` cannot resolve `main`/`development` (CI shallow single-branch checkout returns exit 128; only 0/1 are verdicts); the issue-hygiene test skips when `gh` is unauthenticated (no `GH_TOKEN` in CI).
 
 `test_falsification_deploy_v160.py` (TestF2, TestF6) and `test_falsification_deploy_v160_r2.py` (TestDF1 ×2) are **local pre-deploy gates** that assumed a full clone with both branches and an authenticated `gh`. In GitHub Actions neither holds, so the `test` job failed on every push — including the entire v1.8.1 release chain — and the failures were old enough that nobody was watching. Lesson (extends the no-preexisting-failures rule): **a release ritual step must include confirming CI is green on the release commits**; a permanently-red CI is indistinguishable from a broken build.
