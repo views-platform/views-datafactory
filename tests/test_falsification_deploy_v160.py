@@ -161,25 +161,73 @@ class TestF7ProductPlanCurrency:
 
 
 class TestF8StaleBranches:
-    """F8: merged branches should be deleted before next release."""
+    """F8: merged branches should be deleted before next release.
 
-    def test_no_stale_release_branches(self) -> None:
-        """No release/* branches should exist for already-tagged versions."""
+    Local branches and remote branches are checked from different
+    sources, deliberately. The original version used ``git branch -a``,
+    which folds in **remote-tracking refs** — a local cache that goes
+    stale the moment someone else deletes a branch, and that only
+    ``git fetch --prune`` refreshes.
+
+    That made the gate fail against a repository which was actually
+    clean. Observed 2026-08-03: `delete_branch_on_merge` had removed
+    every merged branch on the remote, yet this test failed because the
+    local clone had been fetched without ``--prune`` all session. Nine
+    local branches were deleted chasing a problem that did not exist.
+
+    A gate that reddens for reasons unrelated to what it asserts stops
+    being read — that is C-320. So remote state is now taken from the
+    remote (``git ls-remote``), which is authoritative, and the test
+    skips rather than guesses when the network cannot answer.
+    """
+
+    @staticmethod
+    def _stale(names: list[str]) -> list[str]:
+        return [
+            n for n in names
+            if "release/" in n and _tag_exists(n.split("release/")[-1])
+        ]
+
+    def test_no_stale_local_release_branches(self) -> None:
+        """Local ``release/*`` branches for tagged versions are leftovers."""
         result = subprocess.run(
-            ["git", "branch", "-a"],
+            ["git", "branch", "--format=%(refname:short)"],
             capture_output=True,
             text=True,
         )
-        release_branches = [
-            line.strip()
-            for line in result.stdout.splitlines()
-            if "release/" in line
-        ]
-        stale = []
-        for branch in release_branches:
-            version_part = branch.split("release/")[-1]
-            if _tag_exists(version_part):
-                stale.append(branch)
+        stale = self._stale(
+            [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
+        )
         assert not stale, (
-            f"Stale release branches for already-tagged versions: {stale}"
+            f"Stale LOCAL release branches for already-tagged versions: "
+            f"{stale}. Delete with `git branch -D <name>`. These are your "
+            f"own leftovers — the remote is checked separately."
+        )
+
+    def test_no_stale_remote_release_branches(self) -> None:
+        """Asks the remote, not the local cache of it."""
+        probe = subprocess.run(
+            ["git", "ls-remote", "--heads", "origin", "refs/heads/release/*"],
+            capture_output=True,
+            text=True,
+        )
+        if probe.returncode != 0:
+            pytest.skip(
+                "cannot reach origin — remote branch state is not "
+                "answerable offline; local gate above still applies "
+                "(C-320: skip where the environment cannot answer)"
+            )
+        names = [
+            ln.split("refs/heads/", 1)[1]
+            for ln in probe.stdout.splitlines()
+            if "refs/heads/" in ln
+        ]
+        stale = self._stale(names)
+        assert not stale, (
+            f"Stale release branches ON THE REMOTE for already-tagged "
+            f"versions: {stale}. `delete_branch_on_merge` should have "
+            f"removed these; if it did not, the repo setting may have been "
+            f"turned off. Note this reads the remote directly, so a stale "
+            f"local `remotes/origin/...` ref cannot cause this failure — "
+            f"run `git fetch --prune` to tidy your own view."
         )
