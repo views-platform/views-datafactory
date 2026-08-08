@@ -17,6 +17,53 @@ entry could.
 
 ---
 
+## C-342 — the lockfile nobody can catch being stale (2026-08-08)
+
+`/register-risk` after `/code-review medium` on **#430**, the first story of epic #421.
+
+**One entry registered.** C-342, Tier 3: `uv sync` rewrites `uv.lock` in place whenever
+`pyproject.toml` has moved, and `.github/workflows/ci.yml` runs it before every job — so a pull
+request whose committed lock disagrees with its committed `pyproject.toml` passes CI, because CI
+repairs the lock in its own checkout, tests the repaired version, and discards it. The stale lock
+stays in git. Verified by doing it: `uv lock --check` says *"The lockfile at `uv.lock` needs to be
+updated"* where `uv sync` silently fixes and proceeds. Added to the **mechanisms that fail green**
+cluster, which is now nine.
+
+**Where it came from is the point.** It was not found by looking for it. It surfaced while
+drilling the guard for C-337 — the cluster's own rule (*drill every guard by breaking it*) turning
+up a defect adjacent to the one being guarded, for the second time in a week.
+
+**It also weakens the guard that found it,** and the entry says so: `test_dependency_floors.py`
+reads the committed lock, and only the way the suite happens to be invoked (`uv run` / `uv sync`
+refresh first) makes that a real resolution rather than a stale one.
+
+**Deliberately not fixed in #430.** The instrument is `uv lock --check` in CI, and a pytest cannot
+substitute — by the time pytest runs, the lock has already been repaired. Proposed for **#424**
+(Story 3, gates that run somewhere other than one laptop). Fixing it inside a story scoped to one
+test file would have been the scope creep the epic's own conventions forbid.
+
+**C-342 was wrong when first written, and `/review-diff` caught it the same hour.** The entry said
+*"CI runs `uv sync` before every job … passes all four jobs."* `ci.yml` has **five** jobs. `docs` runs
+bash only and needs no `uv`; `import-enforcement` is gated to `main`. A pull request to
+`development` runs `uv sync` in **three**. The claim was not observed — it was inferred from four
+`grep` hits, which is the exact move C-336 is about, committed inside an entry describing a
+different flavour of the same thing. Corrected, and the `ci.yml:24,42,60,99` citation replaced with
+the job names, since C-336's own lesson is that line citations rot. Recorded here rather than
+buried, because an entry that was wrong on the day it was written says more about how this project
+reasons than a clean one does.
+
+**Six findings from the same review were not registered.** Two were fixed in place in #430 as
+defects in its own docstring — a claim that `packaging` is guaranteed by matplotlib, which
+`pyproject.toml` itself marks for removal (C-334); and `test_allow_list_has_not_rotted` passing
+unconditionally once its allow-list empties, which is the "test that cannot fail" standard the same
+file invokes to justify deleting two other guards. Two were documentation-rot observations below
+the register's bar after the 2026-08-04 curation cut it from 45 open to 39. Two were refuted on
+inspection: a dict-collision path that this project's single `requires-python` and marker-free
+dependencies cannot reach, and a `SpecifierSet` ordering claim that is simply wrong — `packaging`
+canonicalises to a sorted tuple.
+
+---
+
 ## `/review-rr strategic` — curation (2026-08-04)
 
 **C-324 resolved as stale.** It described a live credential in a server log; the token was revoked
