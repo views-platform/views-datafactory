@@ -29,10 +29,14 @@ extra cannot (``pandas>=2.0`` is uncapped and unfrozen). Both were checked
 by hand on 2026-08-08 and neither is at its floor. Widen this if that
 stops being true.
 
-``packaging`` is imported for version comparison. It is not declared here
-— it arrives via matplotlib, which *is* a hard dependency (see the C-334
-note in pyproject) — so it is always installed. Hand-rolling the
-comparison would get ``2.3`` vs ``2.3.0`` wrong.
+``packaging`` is imported for version comparison; hand-rolling it would
+get ``2.3`` vs ``2.3.0`` wrong. It is not declared anywhere in this
+project, so what guarantees it? **pytest requires it**, and nothing runs
+this file except pytest — that is the whole argument, and it cannot
+lapse. ``xarray`` also carries it on the runtime path. Do *not* justify
+it by matplotlib: matplotlib carries ``packaging`` too, but pyproject's
+own C-334 note says to drop matplotlib once views-hydranet declares it
+itself, so it is the one carrier here with a scheduled end.
 
 **Two guards were written for this file and then deleted, deliberately.**
 "every declared dependency appears in the lock" and "no locked version
@@ -53,8 +57,14 @@ exact defect this file was added to guard against, so it does not ship.
 What ``uv`` does *not* enforce is that the **committed** lock matches the
 committed ``pyproject.toml``: ``uv sync`` silently rewrites the lock, so
 CI goes green on a stale one. That is real, and the instrument is
-``uv lock --check`` in CI — not a test reading ``tomllib``. Recorded in
-the PR for #422; out of scope here.
+``uv lock --check`` in CI — not a test reading ``tomllib``, because by
+the time pytest runs the lock has already been repaired. Registered as
+**C-342**, proposed for #424; out of scope here.
+
+C-342 also bounds what *this* file can claim. The tests below read the
+committed lock, and only the way the suite is invoked (``uv run`` and
+``uv sync`` both refresh first) makes that a real resolution rather than
+a stale one — a property of the caller, not of this file.
 """
 
 from __future__ import annotations
@@ -75,6 +85,17 @@ REPO = Path(__file__).resolve().parents[1]
 # class this file exists to catch. ``test_allow_list_has_not_rotted``
 # fails when an entry no longer applies, so the list cannot quietly grow
 # stale.
+#
+# Emptying this dict makes that test pass unconditionally, and that is
+# **correct, not a hole** — worth stating because the docstring above
+# deletes two guards for exactly the "cannot fail" property. The
+# difference: those two asserted things about the world that could never
+# be false. This one asserts a property OF THIS DICT, and an empty dict
+# has no stale entries to find. An empty allow-list is also the
+# strongest possible state, because then
+# ``test_no_dependency_is_pinned_at_its_floor`` — which does the real
+# work — runs with no exemptions at all. Do not "fix" this by inventing
+# an assertion that fires on emptiness.
 ALLOWED_AT_FLOOR = {
     "views-frames": (
         "The floor IS the latest release. C-337's fix raised it to 1.10.2 "
@@ -108,7 +129,7 @@ def _locked_versions() -> dict[str, str]:
     }
 
 
-_FIX = (
+_FIX_HINT = (
     "Run `uv lock --upgrade-package {name}`, then read what it picked and "
     "confirm the new version is intended before committing the lock."
 )
@@ -135,7 +156,7 @@ class TestFloorsAreNotPins:
             "of merely permitting it, and no routine action moves it. "
             "Six weeks of views-frames 1.0.0 looked exactly like this "
             "(C-337). "
-            + " ".join(_FIX.format(name=n) for n in sorted(stuck))
+            + " ".join(_FIX_HINT.format(name=n) for n in sorted(stuck))
             + " If the pin is correct — typically because the floor is the "
             "latest release — add the package to ALLOWED_AT_FLOOR in this "
             "file WITH THE REASON, not just the name."
