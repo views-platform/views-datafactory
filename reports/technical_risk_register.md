@@ -196,7 +196,9 @@ Individually each is small. Together they say that **this project's characterist
 silence, not error** — a thing reports success while not doing what it claims.
 
 *C-342 was added to the cluster 2026-08-08, found while building the guard for C-337 — which is the
-cluster's own rule working: the drill found a defect adjacent to the one it was aimed at.*
+cluster's own rule working: the drill found a defect adjacent to the one it was aimed at. C-343 was
+added 2026-08-08 from the production host, and C-317 was **closed by drill** 2026-08-10 — struck in
+the table below rather than removed, so the table has ten rows and nine open members.*
 
 | ID | What reported success while being wrong |
 |---|---|
@@ -214,11 +216,14 @@ cluster's own rule working: the drill found a defect adjacent to the one it was 
 **Why this belongs in the register rather than a post-mortem.** The individual fixes are already
 made or tracked. What the cluster adds is a *design rule*: in this system, **absence of an error is
 not evidence of success**, so any new mechanism needs an answer to "how would I know if this
-silently did nothing?" before it ships. Three of the eight were caught by the operator rather than
-by any check; two were caught only by reading a value back and finding it disagreed with what had
-just been commanded.
+silently did nothing?" before it ships. Several were caught by the operator rather than by any
+check, twice by contradicting an assistant's stated conclusion; two were caught only by reading a
+value back and finding it disagreed with what had just been commanded; and C-343 was caught only by
+looking at the production host. **The counts in this paragraph used to be exact and went stale
+twice** — they said "eight" while the table held nine and then ten. That is C-336 happening inside
+the cluster section about it, so the tally is now qualitative on purpose.
 
-**Cluster-level action, cheaper than eight separate ones:** when adding any guard, workflow, or
+**Cluster-level action, cheaper than nine separate ones:** when adding any guard, workflow, or
 operational step, drill it by breaking it. Every guard drilled in the 2026-08 window found a real
 defect — including one in its own author's work, one day after writing it.
 
@@ -2873,6 +2878,8 @@ Cross-ref: C-326 (why the extra exists), ADR-050 (the contract this would break)
 
 **Location:** `docs/ADRs/006_intent_contracts_for_non_trivial_classes.md`, `docs/ADRs/010_gridconfig_spatial_only.md`, `docs/CICs/grid_to_country_month.md`, and eight other ADRs. Guarded by `tests/test_docs_citations.py`.
 
+**Addendum 2026-08-10 — it happened in this file.** The "mechanisms that fail green" cluster's prose said *"three of the eight"* and *"cheaper than eight separate ones"* while the table below it held nine entries, and then ten. Nothing failed: the header count and the per-tier sums are guarded, the **prose** is not. Found by `/code-review medium` on #431 — an agent counting rows, not a test. The counts there are now deliberately qualitative, because a tally no guard protects is a claim that will go stale again. Registered here rather than as a new concern: same mechanism, new location.
+
 The audit found three distinct drift mechanisms, all fixed here.
 
 **1. Line-number citations rot silently.** Ten `file.py:NNN` references across the ADRs. Three were already wrong: ADR-026 cited `ucdp_annual.py:132-142` for `get_ucdp_token()` and line 132 had become blank; ADR-040 cited a line in `grid_compilation.py` that is now empty. Nothing detects this, because a line number is still syntactically valid when it points at whitespace. All ten replaced with symbol names — views-frames reached the same conclusion independently (their #212).
@@ -3000,7 +3007,7 @@ Three sources of truth, all disagreeing, no error anywhere. v1.11.0 shipped on 2
 
 The wrong one is the one a person reads while inside the file they are editing. Corrected in the same PR as this entry.
 
-**Why the in-script checkout does not rescue it — tested, not reasoned.** `refresh_pipeline.sh` runs `git checkout "$DEPLOY_TAG"` while bash is executing that same file. A throwaway repository was built to see what bash actually does, at 31 KB — nearly triple the real script's 11,592 bytes:
+**Why the in-script checkout does not rescue it — tested, not reasoned.** `refresh_pipeline.sh` runs `git checkout "$DEPLOY_TAG"` while bash is executing that same file. A throwaway repository was built to see what bash actually does, at 31 KB — nearly triple the real script's 11,592 bytes at v1.11.0 (this PR's own comment fix grows it to 12,385 — the anchor is the tag, not "current", precisely so the number cannot rot):
 
 ```
 start: I am V1
@@ -3014,7 +3021,7 @@ Bash buffers the script and does not re-read it; git writes in place (inode unch
 
 **Tier 2, and the justification is required.** Not Tier 3: this is not a maintainability cost, it is the server running code nobody believes it is running, with no error at any point — the status page is green, the heartbeat pings, the tag file reads correctly. Not Tier 1: it does not itself corrupt data. What it does is **silently prevent fixes from landing**, which converts every future correctness fix into a fix that may or may not be in effect. The trigger is not hypothetical — it fires at the next release, and epic #421's own Story 2 (#423) ships a `refresh_pipeline.sh` change, precisely the class that lags.
 
-**Blast radius on this occasion was small, and saying so matters.** `git diff v1.10.0..v1.11.0` touches no `src/` file and no pipeline script — only `pyproject.toml`, `uv.lock` and three GitHub workflows. Production imports four non-estimator symbols from views_frames and no estimator, so no number was wrong. Consumers were never exposed: the published PyPI wheel carried the correct floor throughout. The damage was to what we could *claim*, not to what we produced.
+**Blast radius on this occasion was small, and saying so matters.** `git diff v1.10.0..v1.11.0` spans 31 files, but **no `src/` file and no pipeline script**; outside `docs/`, `reports/` and `tests/` it is only `pyproject.toml`, `uv.lock` and three GitHub workflows that never run on the host. Production imports four non-estimator symbols from views_frames and no estimator, so no number was wrong. Consumers were never exposed: the published PyPI wheel carried the correct floor throughout. The damage was to what we could *claim*, not to what we produced.
 
 **Remediated 2026-08-08** by running the three documented steps; `uv sync` moved views-frames 1.0.0 → 1.10.2 and views-datafactory 1.10.0 → 1.11.0, and `FeatureFrame` was imported on the host afterwards to confirm the ten-minor-version jump is clean. The entry stays **open** because nothing prevents recurrence.
 

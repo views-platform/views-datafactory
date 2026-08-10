@@ -75,8 +75,9 @@ pipeline was green. Nothing anywhere had a failure mode that said otherwise.
 
 **A retraction inside the same hour.** On seeing views-frames 1.0.0 the first framing was *"the
 first fails-green instance with production consequences."* That was wrong, and checking the diff
-before believing it showed why: `git diff v1.10.0..v1.11.0` touches no `src/` file and no pipeline
-script — only `pyproject.toml`, `uv.lock`, and three GitHub workflows that never run on the host.
+before believing it showed why: `git diff v1.10.0..v1.11.0` spans 31 files but touches no `src/` file
+and no pipeline script; outside `docs/`, `reports/` and `tests/` it is only `pyproject.toml`,
+`uv.lock`, and three GitHub workflows that never run on the host.
 Production imports four non-estimator symbols from views_frames. No number was ever wrong, and PyPI
 consumers were never exposed, because the published wheel carried the correct floor throughout. The
 damage was to what could be *claimed*, not to what was produced. The corrected framing is in the

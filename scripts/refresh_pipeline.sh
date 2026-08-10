@@ -28,8 +28,11 @@
 # Deployment gate:
 #   Before running any steps, the script reads ~/.views-deploy-tag
 #   to find which tagged release to run (e.g., "v1.1.0"). It then
-#   checks out that exact tag. This means the server always runs a
+#   checks out that exact tag, so the PYTHON the pipeline invokes is a
 #   specific, tested version — not whatever happens to be on a branch.
+#   It does NOT make that true of this shell script or of the installed
+#   dependencies; see "DEPLOYING IS NOT ONE STEP" below before relying
+#   on it.
 #   If the file is missing, empty, or the tag doesn't exist, the script
 #   stops immediately (fail-loud, ADR-011). See ADR-022 for rationale.
 #
@@ -45,11 +48,13 @@
 #     2. `uv sync` never runs, so a dependency change never lands at
 #        all, no matter how many times the pipeline runs.
 #
-#   Deploy with all three steps in docs/guides/server_quickref.md
-#   §"Deploy a new version": write the tag file, `git fetch --tags &&
-#   git checkout -- uv.lock && git checkout <tag>`, then `uv sync`.
-#   To roll back: the same three steps with the old tag.
-#   See docs/guides/hetzner_deployment_guide.md for full details.
+#   Deploy — and roll back — with ALL THREE steps in
+#   docs/guides/server_quickref.md §"Deploy a new version": the tag
+#   file, then the git fetch/checkout, then `uv sync`. Deliberately not
+#   repeated here: two copies of a procedure drifting apart is what
+#   C-343 IS, and a fix that adds a third copy would be the same bug.
+#   **If this comment and the quickref ever disagree, the quickref
+#   wins.** See docs/guides/hetzner_deployment_guide.md for full detail.
 #
 # Requires:
 #   - ~/.views-deploy-tag file containing a valid git tag
