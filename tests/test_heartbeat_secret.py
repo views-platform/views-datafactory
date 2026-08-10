@@ -42,6 +42,7 @@ and obvious to fix.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -57,22 +58,83 @@ def _code_lines() -> list[tuple[int, str]]:
     ]
 
 
+# Shell variable assignment: NAME=value, at the start of a statement.
+# NOTE the leading `\s*`. Without it this anchors at column 0 and misses
+# every indented assignment — which is all of them in this script. The
+# first version of this regex had that bug and the drill caught it: the
+# indirection case passed when it had to fail.
+_ASSIGNMENT = re.compile(
+    r"(?:^\s*|[;&|]\s*|\bthen\s+|\bdo\s+)([A-Za-z_][A-Za-z0-9_]*)="
+)
+
+
+def _tainted_names() -> set[str]:
+    """``HEARTBEAT_URL`` plus every name that has been assigned from it.
+
+    Checking only for the literal ``HEARTBEAT_URL`` after ``curl`` is a
+    **false negative**, and a realistic one — a future refactor that
+    collapses the three WET ping lines into a helper would naturally
+    write::
+
+        FAIL_URL="$HEARTBEAT_URL/fail"
+        curl -fsS "$FAIL_URL"
+
+    which puts the secret straight back on argv with this guard still
+    green. That is the exact defect the guard exists to prevent,
+    reappearing inside it. Found by review, not by the author.
+
+    One assignment per pass, iterated to a fixpoint, so indirection
+    through several names is still caught. Deliberately syntactic rather
+    than a real taint analysis: shell cannot be parsed properly here, and
+    a guard that over-reports is safe (a name gets flagged, someone
+    reads the message) while one that under-reports fails green.
+    """
+    tainted = {"HEARTBEAT_URL"}
+    for _ in range(10):  # fixpoint; 10 is far more indirection than sane
+        grown = False
+        for _n, line in _code_lines():
+            if not any(name in line for name in tainted):
+                continue
+            for match in _ASSIGNMENT.finditer(line):
+                name = match.group(1)
+                # Only taint if the value side mentions something tainted.
+                value = line[match.end() :]
+                if any(t in value for t in tainted) and name not in tainted:
+                    tainted.add(name)
+                    grown = True
+        if not grown:
+            break
+    return tainted
+
+
 class TestHeartbeatUrlIsNotOnTheCommandLine:
     def test_heartbeat_url_is_never_a_curl_argument(self) -> None:
         """The property C-331 is about, stated as an assertion.
 
-        The check is "``HEARTBEAT_URL`` appears **after** the ``curl``
-        token", not "the line contains both". The first version of this
-        test asserted the latter and failed against the *fixed* script,
-        because ``printf … "$HEARTBEAT_URL" | curl …`` legitimately puts
-        both on one line. Drilling the guard is what found that; a guard
-        only ever run against the state it was written for proves
-        nothing.
+        The check is "**anything carrying the secret** appears after the
+        ``curl`` token" — see ``_tainted_names``. Not "the line contains
+        both": the first version asserted that and failed against the
+        *fixed* script, because ``printf … "$HEARTBEAT_URL" | curl …``
+        legitimately puts both on one line. And not "the literal
+        ``HEARTBEAT_URL`` appears after ``curl``" either: that misses one
+        assignment of indirection, which is the shape a future refactor
+        would most naturally take.
+
+        Both narrower versions were written, drilled, and found wanting —
+        the second by review rather than by the author. A guard only ever
+        run against the state it was written for proves nothing.
         """
+        tainted = _tainted_names()
+        # Word boundaries, not bare substring: a short tainted name (the
+        # two-level drill produces `A`) would otherwise match inside an
+        # unrelated flag. Costs nothing and removes a false-positive
+        # vector without weakening what is caught.
+        alternation = "|".join(re.escape(name) for name in sorted(tainted))
+        wanted = re.compile(rf"\b(?:{alternation})\b")
         offenders = []
         for n, line in _code_lines():
             _head, sep, tail = line.partition("curl")
-            if sep and "HEARTBEAT_URL" in tail:
+            if sep and wanted.search(tail):
                 offenders.append((n, line.strip()))
         assert not offenders, (
             f"These lines put HEARTBEAT_URL on curl's command line: "
