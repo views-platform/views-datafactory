@@ -17,6 +17,82 @@ entry could.
 
 ---
 
+## C-331 RESOLVED — and the entry's own prescribed fix was the bug (2026-08-10)
+
+Epic #421 Story 2 (#423). The heartbeat URL now reaches `curl` on stdin via `-K -` at all three
+ping sites, never as an argv element.
+
+**The correction is the valuable part, again.** C-331 did not merely describe the problem — it
+prescribed the fix, in its own body: `printf 'url=%s\n' "$HEARTBEAT_URL" | curl -K -`. Unquoted.
+Measured against curl 7.81.0 before shipping it, with a value carrying a stray space:
+
+| form | result |
+|---|---|
+| `url=%s` | parses `http://h/uuid`, **drops the `/fail`, and sends it anyway** |
+| `url = "%s"` | exit 3, nothing sent |
+
+A trailing space or CR — a CRLF-edited `.profile`, a copy-paste — would have turned the **failure**
+ping into a **success** ping. Silently. The register's own remedy for a fails-green concern
+contained a fails-green defect, and it had sat there unexamined since 2026-07-31 because a
+prescribed fix reads like a settled thing. The shipped form is quoted, and the reason is in the
+script's comment rather than only here, so it survives the next rewrite.
+
+**The `/proc` claim was drilled with a negative control**, because the issue insisted on it and
+because a clean scan otherwise proves only that the scanner is broken. Canary against an unrouted
+RFC1918 address, so the request hangs and stays in flight while `/proc` is walked. Control leaked
+`curl -fsS --max-time 20 http://.../CANARY-.../fail`; the fix showed `curl -fsS --max-time 20 -K -`
+in flight with nothing anywhere carrying the canary, three times, once per ping. A local listener
+then confirmed all three paths arrive byte-exact — the server log is the evidence, not curl's exit
+code.
+
+**The guard was wrong first, and drilling it is what found that.** `tests/test_heartbeat_secret.py`
+initially asserted "no line contains both `curl` and `HEARTBEAT_URL`" — which fails against the
+*fixed* script, because `printf … "$HEARTBEAT_URL" | curl …` legitimately puts both on one line.
+The property is "`HEARTBEAT_URL` never appears **after** the `curl` token". A guard only ever run
+against the state it was written for proves nothing.
+
+**Two stale line citations fixed, and the hole that hid them closed.** ADR-018 cited a line range in
+`refresh_pipeline.sh` that had drifted ~55 lines; ADR-051 cited three line numbers of which one had
+never been right; C-331's own Location field read `93,163,290` against real lines 112/182/309 — in
+an entry whose trigger was *"next edit to this file"*. `tests/test_docs_citations.py` could not see
+any of them: its pattern was `\.py:\d+`, **`.py` only**. Widened to `\.(?:py|sh):\d+` and drilled;
+those three were the only offenders, so it starts green.
+
+**Also corrected:** `server_operations.md` described "two signals" while listing three, and stated a
+24-hour grace where the live check is 48 hours. Its two operator verification commands used the argv
+form — running, on the box, the exact exposure this story removes. Replaced with the stdin form,
+quoting verified against a local listener before being written down.
+
+**Not live on the server.** #423's note said no server change was required. Per C-343 that is false:
+the change lands one run after a deploy, so worst case it is in production two months from merge.
+Recorded rather than quietly assumed, and the issue has been corrected.
+
+**The residual was checked, and it was worse than the concern.** C-331's entry flagged that
+`HEARTBEAT_URL` also lives in `~/.profile`. Rather than note it and move on, the operator ran three
+commands. `/home/views-deploy/.profile` was mode **644** inside a **751** home, and `test -r` from
+`simmaa_prio` returned **readable** — so `UCDP_API_TOKEN`, `ACLED_USERNAME`, `ACLED_PASSWORD`,
+`GDL_API_TOKEN` and `HEARTBEAT_URL` had all been readable by three other accounts continuously since
+deployment. Not a window. A standing condition. Registered as **C-344**, Tier 2, and fixed the same
+session with verification in both directions.
+
+The shape is worth keeping: a Tier 4 story about a ≤10 s exposure surfaced a Tier 2 one about a
+permanent exposure, and only because the residual paragraph was treated as a question to answer
+rather than a caveat to write down. One hypothesis raised in the same sweep — group-writable
+`.local` on the pipeline's `PATH`, which would have been code execution rather than disclosure —
+was tested and **killed**: the group has no other members.
+
+**Rotation was raised, and declined.** The question was put to the operator rather than answered
+for them: they were readable by more parties than intended for months, and C-322's GDL token was
+rotated on weaker evidence. The answer was no — the three accounts belong to known colleagues and
+there is no indication any of them read the file.
+
+Recorded with its basis, because the basis is the part that can expire: this rests on *who holds the
+accounts*, not on evidence of non-access. No audit record exists that could establish the latter,
+and none was consulted. Reasonable on a single-team research host; it would not survive the accounts
+being held outside the team. Revisit if a new shell account appears (C-88).
+
+---
+
 ## C-317 RESOLVED — the drill that had been pending for weeks (2026-08-10)
 
 Epic #421 Story 6 (#427). **The first entry in the "fails green" cluster closed by observation

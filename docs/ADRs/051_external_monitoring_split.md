@@ -200,7 +200,10 @@ limitation, not a law. **Revisit when any of these becomes true:**
   "External monitoring" section
 - **ADR-038** — why `status.html` is public, which is what makes a credential-free poll possible
 - **ADR-011** — fail-loud
-- `scripts/refresh_pipeline.sh:92,163,290` — the three heartbeat signals
+- `scripts/refresh_pipeline.sh` — the three heartbeat signals: the `/fail` ping in
+  `on_failure()`, the `/start` ping after the `flock`, and the bare success ping before the
+  duration record. Cited by symbol, not line: the line numbers here were `92,163,290` and had
+  drifted to 112/182/309 without anything noticing (C-336)
 - views-faoapi **ADR-032** and `reports/ops/betterstack_{deployment,monitoring}.md` — the sibling
   decision this was weighed against; their C-50/C-170 is the incident we are learning from
 - Better Stack heartbeat documentation, checked 2026-08-01 — grace periods and `/fail` supported, no
