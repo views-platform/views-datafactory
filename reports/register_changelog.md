@@ -81,10 +81,15 @@ rather than a caveat to write down. One hypothesis raised in the same sweep — 
 `.local` on the pipeline's `PATH`, which would have been code execution rather than disclosure —
 was tested and **killed**: the group has no other members.
 
-**Left open on purpose:** whether the four credentials now need rotating. They were readable by more
-parties than intended for months; the readers are trusted colleagues, so it is a policy judgement,
-not a breach. C-322's GDL token was rotated on weaker evidence. The operator's call, deliberately
-unmade here.
+**Rotation was raised, and declined.** The question was put to the operator rather than answered
+for them: they were readable by more parties than intended for months, and C-322's GDL token was
+rotated on weaker evidence. The answer was no — the three accounts belong to known colleagues and
+there is no indication any of them read the file.
+
+Recorded with its basis, because the basis is the part that can expire: this rests on *who holds the
+accounts*, not on evidence of non-access. No audit record exists that could establish the latter,
+and none was consulted. Reasonable on a single-team research host; it would not survive the accounts
+being held outside the team. Revisit if a new shell account appears (C-88).
 
 ---
 
