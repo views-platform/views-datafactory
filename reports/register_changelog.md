@@ -17,6 +17,42 @@ entry could.
 
 ---
 
+## C-345 — the instrument that detects this cluster is a member of it (2026-08-11)
+
+`/register-risk` after #432. Tier 2, and the only entry so far found by watching **my own
+verification** rather than the system.
+
+**Twice in one session a failing suite was reported as passing.** First
+`uv run pytest -q | tail -2; echo "EXIT=$?"` — a pipeline's status is its *last* element's, so `tail`
+returned 0 while pytest had exited 1. Then a backgrounded run's task notification said *"exit code
+0"* for the same reason: the command ended in an `echo`. The second was caught only by reading the
+output file, and by then the user had already been told the suite was running and would be folded
+in. One step from reporting green on red.
+
+**Why it is registered rather than remembered.** This project has two recorded false-readiness
+incidents that each cost a full day. The suite is the gate on every story in this epic; a false green
+means a defect merges, and C-343 means it can then sit in production for two months. The precedent
+for registering a workflow hazard rather than a code one is C-339 — an assistant-authored command
+that destroyed a production log.
+
+**The shape is the cluster's own, which is the uncomfortable part.** C-330 was a nightly no-op
+exiting 0. C-337 was a lockfile frozen with no error. C-343 was a deploy that deployed nothing. This
+is the same defect in the instrument used to find all three. An epic about mechanisms that report
+success while doing nothing spent a week using one.
+
+**Mitigation adopted, and explicitly not a control:** redirect to a file, capture `$?` unpiped, grep
+`^FAILED` as a second independent reader. A habit is not machinery — nothing stops the next pipeline
+masking a status the same way. The instrument would refuse to report a result it did not obtain
+unpiped; proposed for #424.
+
+**Two findings from the same session deliberately not registered.** The guard-narrower-than-the-
+property pattern (three versions of `test_heartbeat_secret.py`, each failing green) went to C-336 as
+a second addendum — same mechanism, new location. And an unbounded `until … sleep 30` poll that died
+on a transient DNS failure was fixed by bounding the loop; a one-line workflow correction with no
+consequence, below the register's bar.
+
+---
+
 ## C-331 RESOLVED — and the entry's own prescribed fix was the bug (2026-08-10)
 
 Epic #421 Story 2 (#423). The heartbeat URL now reaches `curl` on stdin via `-K -` at all three

@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-10 — C-331 RESOLVED (#423, heartbeat URL now on stdin, drilled with a negative control) and C-344 registered-and-resolved: chasing C-331's residual found `views-deploy`'s `~/.profile` at mode 644, i.e. every harvest credential readable by all four accounts continuously — fixed, with the rotation question left open for the operator. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-11 — C-345 registered (Tier 2): the verification tooling reported a green suite that was red, twice in one session, so the instrument used to detect this whole cluster is itself a member of it. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 344 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 302 resolved-or-demoted, 39 open concerns (0 Tier 1, 3 Tier 2, 11 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 118 struck-through in active register (297 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 345 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 302 resolved-or-demoted, 40 open concerns (0 Tier 1, 4 Tier 2, 11 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 118 struck-through in active register (297 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -161,6 +161,7 @@
 | C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
 | C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
 | ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
+| C-345 | 2 | Verification tooling reported a green suite that was red, twice in one session — a piped `pytest \| tail; echo $?` yields the pipe's status, and a task notification reported "exit code 0" for a run that exited 1 | **When capturing a long-running check's result** — piping it, backgrounding it, or reading a notification instead of an unpiped `$?`. Redirect to a file, capture `$?` unpiped, and grep `^FAILED` as a second reader | Test infra |
 | ~~C-344~~ | ~~2~~ | ~~`views-deploy`'s `~/.profile` was mode 644 inside a 751 home — every harvest credential (`UCDP_API_TOKEN`, `ACLED_*`, `GDL_API_TOKEN`, `HEARTBEAT_URL`) readable by all four accounts, continuously~~ | Registered and resolved 2026-08-10 (#432): `chmod 600`, verified unreadable from a second account and still readable by the owner. Rotation considered and **declined** by the operator 2026-08-10 — a judgement about who holds the three accounts, not evidence of non-access; revisit if a new shell account appears (C-88) | Credential hygiene |
 | ~~C-331~~ | ~~4~~ | ~~`HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`~~ | Resolved 2026-08-10 (#423): all three pings take the URL on stdin via `-K -`; drilled with a canary and a negative control. The entry's own suggested unquoted form was superseded — it truncates at whitespace and sends anyway | Operational monitoring |
 | C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | **Before interpolating any URL, path, or credential-bearing value into a log line or exception message** — that is the act that creates the exposure, not editing these files | Credential hygiene |
@@ -192,18 +193,19 @@
 
 *Added by `/review-rr strategic`, 2026-08-04.*
 
-Eight open entries are symptoms of one root cause, and read very differently together than apart.
+Nine open entries are symptoms of one root cause, and read very differently together than apart.
 Individually each is small. Together they say that **this project's characteristic failure is
 silence, not error** — a thing reports success while not doing what it claims.
 
 *C-342 was added to the cluster 2026-08-08, found while building the guard for C-337 — which is the
 cluster's own rule working: the drill found a defect adjacent to the one it was aimed at. C-343 was
 added 2026-08-08 from the production host, and C-317 was **closed by drill** 2026-08-10 — struck in
-the table below rather than removed, so the table has ten rows. C-331 was closed 2026-08-10, leaving eight open members.*
+the table below rather than removed, so the table has ten rows. C-331 was closed 2026-08-10 and C-345 added 2026-08-11, leaving nine open members of eleven rows.*
 
 | ID | What reported success while being wrong |
 |---|---|
 | ~~**C-317**~~ | ~~`SIGKILL` bypasses the `ERR`/`EXIT` traps, so a killed run sends no failure ping~~ — **closed by drill 2026-08-10, the first member closed by observation** |
+| **C-345** | A piped exit status and a task notification each reported a failing suite as passing |
 | ~~**C-331**~~ | ~~`HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice~~ — **closed 2026-08-10, drilled with a negative control** |
 | **C-336** | Governance docs true when written, false later, nothing failing in between |
 | **C-337** | `views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever |
@@ -224,7 +226,7 @@ looking at the production host. **The counts in this paragraph used to be exact 
 twice** — they said "eight" while the table held nine and then ten. That is C-336 happening inside
 the cluster section about it, so the tally is now qualitative on purpose.
 
-**Cluster-level action, cheaper than eight separate ones:** when adding any guard, workflow, or
+**Cluster-level action, cheaper than nine separate ones:** when adding any guard, workflow, or
 operational step, drill it by breaking it. Every guard drilled in the 2026-08 window found a real
 defect — including one in its own author's work, one day after writing it.
 
@@ -3121,6 +3123,40 @@ $ test -r /home/views-deploy/.profile && echo ... READABLE BY simmaa_prio
 **The docs that caused it are fixed in the same PR.** Both setup guides showed `echo 'export ...' >> ~/.profile` with no `chmod`, so the mode was whatever `umask` gave it. A guide that creates a secret without securing it will keep producing this.
 
 Cross-ref: ~~C-331~~ (the residual this was found chasing), C-322/~~C-324~~ (GDL token exposure and rotation — the precedent for the open question above), C-318 (cleartext auth on the same host), C-88 (who has shells here at all). GitHub: #423/#432.
+
+---
+
+### C-345: The verification tooling reported a green suite that was red — twice in one session
+
+**Source:** observed while executing epic #421 Story 2 (2026-08-10/11). Not analysis — it happened, twice, and was caught by accident the second time.
+
+**Trigger:** **When capturing the result of a long-running check** — piping it, backgrounding it, or reading its outcome from a task notification rather than its exit status. Concretely: any `pytest`/`ruff`/`mypy` invocation whose status is read from anything other than an unpiped `$?`.
+
+**Location:** the verification step of every story in this epic. Not a repo file — a workflow defect, registered on the precedent of C-339.
+
+**What happened.** Twice, a full-suite run was reported as passing when it had failed.
+
+1. `uv run pytest -q | tail -2; echo "EXIT=$?"` — a pipeline's exit status is that of its **last** element. `tail` succeeds whatever pytest did, so `EXIT` was `0` while pytest had exited `1`.
+2. A backgrounded run's harness task-notification reported *"exit code 0"* for a command whose pytest had exited `1`, because the command ended in an `echo`.
+
+The second was caught only by reading the output file instead of the notification — and by then the user had already been told the suite was running and would be folded in. **One step from reporting a green suite that was red.**
+
+**Tier 2, and the justification is required rather than assumed.** Not Tier 3: this is not a maintainability cost. The suite is the primary gate on every story in this epic, and a false green on it means a defect merges. Given C-343 — a shell change lands one cron run after a deploy — that defect can then sit in production for up to two months. Not Tier 1: no data was corrupted and no model output was wrong; the failure is in *knowing whether* work is sound, not in the work itself. The trigger is not hypothetical: it fired twice in one session, and this project has recorded two prior false-readiness incidents that each cost a full day.
+
+**The shape is the cluster's, exactly.** A mechanism that reports success while establishing nothing. It is the same defect as C-330 (a nightly no-op exiting 0), C-337 (a lockfile frozen with no error) and C-343 (a deploy that deployed nothing) — this time in the instrument used to detect all of them, which is why it belongs registered rather than remembered.
+
+**Mitigation adopted mid-session, not yet enforced by anything:** redirect to a file, capture `$?` on the **unpiped** command, then grep the output for `^FAILED` as a second independent reader:
+
+```bash
+uv run pytest -q > out.txt 2>&1; echo "PYTEST_EXIT=$?"
+grep -cE '^FAILED' out.txt
+```
+
+Two readers, because one reader that can be wrong is what this entry is about.
+
+**Open, because a habit is not a control.** Nothing prevents the next pipeline from masking a status the same way. The instrument would be a wrapper that refuses to report a result it did not obtain unpiped — proposed for **#424**, which is the story about giving checks somewhere to run other than one operator's discretion.
+
+Cross-ref: C-339 (the other assistant-workflow hazard, and the precedent for registering one), C-330/C-337/C-343 (same shape, different mechanisms), C-341 (gates that assure only whoever ran them — this is the failure mode *of* running them). Part of the **mechanisms that fail green** cluster. GitHub: #432.
 
 ---
 
