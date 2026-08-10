@@ -446,7 +446,13 @@ See ADR-018 for the rationale.
 # Run as a named admin user, not as views-deploy directly
 sudo -u views-deploy bash -c 'source ~/.profile && \
   echo "export HEARTBEAT_URL=https://hc-ping.com/<uuid>" >> ~/.profile'
+sudo chmod 600 /home/views-deploy/.profile
 ```
+
+**Always follow a write to `~/.profile` with that `chmod`.** Appending
+leaves the mode to the umask; on 2026-08-10 the file was found at 644
+inside a 751 home, so every credential it holds had been readable by all
+four shell accounts since deployment (C-344). One line prevents it.
 
 Verify:
 

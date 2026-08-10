@@ -67,9 +67,24 @@ quoting verified against a local listener before being written down.
 the change lands one run after a deploy, so worst case it is in production two months from merge.
 Recorded rather than quietly assumed, and the issue has been corrected.
 
-**Residual, deliberately left open:** `HEARTBEAT_URL` still lives in `~/.profile`. If that file is
-not mode 600 it is readable by all four accounts permanently, which dominates the ≤10 s × 3 window
-closed here.
+**The residual was checked, and it was worse than the concern.** C-331's entry flagged that
+`HEARTBEAT_URL` also lives in `~/.profile`. Rather than note it and move on, the operator ran three
+commands. `/home/views-deploy/.profile` was mode **644** inside a **751** home, and `test -r` from
+`simmaa_prio` returned **readable** — so `UCDP_API_TOKEN`, `ACLED_USERNAME`, `ACLED_PASSWORD`,
+`GDL_API_TOKEN` and `HEARTBEAT_URL` had all been readable by three other accounts continuously since
+deployment. Not a window. A standing condition. Registered as **C-344**, Tier 2, and fixed the same
+session with verification in both directions.
+
+The shape is worth keeping: a Tier 4 story about a ≤10 s exposure surfaced a Tier 2 one about a
+permanent exposure, and only because the residual paragraph was treated as a question to answer
+rather than a caveat to write down. One hypothesis raised in the same sweep — group-writable
+`.local` on the pipeline's `PATH`, which would have been code execution rather than disclosure —
+was tested and **killed**: the group has no other members.
+
+**Left open on purpose:** whether the four credentials now need rotating. They were readable by more
+parties than intended for months; the readers are trusted colleagues, so it is a policy judgement,
+not a breach. C-322's GDL token was rotated on weaker evidence. The operator's call, deliberately
+unmade here.
 
 ---
 

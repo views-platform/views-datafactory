@@ -404,6 +404,20 @@ here. See C-331 and `docs/guides/monitoring.md` §7.
    ```bash
    echo 'export HEARTBEAT_URL="https://hc-ping.com/<uuid>"' | \
      sudo tee -a /home/views-deploy/.profile
+   sudo chmod 600 /home/views-deploy/.profile
+   ```
+
+   **The `chmod` is not optional.** Without it the file inherits the
+   umask, and on 2026-08-10 it was found at mode **644** inside a
+   **751** home — meaning every credential in it (`UCDP_API_TOKEN`,
+   `ACLED_USERNAME`, `ACLED_PASSWORD`, `GDL_API_TOKEN`,
+   `HEARTBEAT_URL`) had been readable by all four shell accounts
+   continuously. Confirmed by `test -r` from a second account, not
+   inferred from the bits. That is C-344, and this missing line is what
+   caused it. Verify with:
+
+   ```bash
+   test -r /home/views-deploy/.profile && echo "STILL EXPOSED" || echo ok
    ```
 
 3. Verify both directions:

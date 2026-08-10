@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-10 — C-331 RESOLVED (#423): the heartbeat URL now reaches curl on stdin, drilled with a canary and a negative control, and the entry's own suggested unquoted form was superseded because it truncates at whitespace and sends anyway; cluster now eight open. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-10 — C-331 RESOLVED (#423, heartbeat URL now on stdin, drilled with a negative control) and C-344 registered-and-resolved: chasing C-331's residual found `views-deploy`'s `~/.profile` at mode 644, i.e. every harvest credential readable by all four accounts continuously — fixed, with the rotation question left open for the operator. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 343 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 301 resolved-or-demoted, 39 open concerns (0 Tier 1, 3 Tier 2, 11 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 117 struck-through in active register (296 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 344 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 302 resolved-or-demoted, 39 open concerns (0 Tier 1, 3 Tier 2, 11 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 118 struck-through in active register (297 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -161,6 +161,7 @@
 | C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
 | C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
 | ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
+| ~~C-344~~ | ~~2~~ | ~~`views-deploy`'s `~/.profile` was mode 644 inside a 751 home — every harvest credential (`UCDP_API_TOKEN`, `ACLED_*`, `GDL_API_TOKEN`, `HEARTBEAT_URL`) readable by all four accounts, continuously~~ | Registered and resolved 2026-08-10 (#432): `chmod 600`, verified unreadable from a second account and still readable by the owner. **Open question, operator's call: whether the four credentials now need rotating** | Credential hygiene |
 | ~~C-331~~ | ~~4~~ | ~~`HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`~~ | Resolved 2026-08-10 (#423): all three pings take the URL on stdin via `-K -`; drilled with a canary and a negative control. The entry's own suggested unquoted form was superseded — it truncates at whitespace and sends anyway | Operational monitoring |
 | C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | **Before interpolating any URL, path, or credential-bearing value into a log line or exception message** — that is the act that creates the exposure, not editing these files | Credential hygiene |
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
@@ -2535,10 +2536,14 @@ A trailing space or CR is the realistic contamination for a hex-UUID URL. The un
 is in the script's own comment so it survives the next rewrite.
 
 **What this does not close.** The URL remains in the process environment (`/proc/<pid>/environ`,
-mode `-r--------`, owner and root only) and in `~/.profile` on the host. If that file is not mode
-600 it is readable by all four accounts *permanently*, which would dominate the ≤10 s × 3 window
-closed here. Observed mode: **[pending operator `stat -c %a /home/views-deploy/.profile`]**. Root is
-out of scope by any mechanism available here.
+mode `-r--------`, owner and root only). Root is out of scope by any mechanism available here.
+
+**The `~/.profile` residual was checked, and it was real — see C-344.** Observed 2026-08-10:
+`/home/views-deploy/.profile` was mode **644** inside a **751** home, and `test -r` from
+`simmaa_prio` returned **readable**. So the URL — and every harvest credential beside it — had been
+readable by three other accounts continuously, which dwarfed the ≤10 s × 3 window this entry is
+about. Fixed the same session; registered separately because it is a different concern with a
+different blast radius.
 
 **Not live on the server yet**, and the issue said otherwise. #423 stated "no server change is
 required — the script is deployed by tag." C-343 established that bash buffers the script, so a
@@ -3074,6 +3079,42 @@ Bash buffers the script and does not re-read it; git writes in place (inode unch
 **The instrument, not yet built.** A pre-flight check in `refresh_pipeline.sh` comparing `$DEPLOY_TAG` against the HEAD the script *started* from, and refusing to run when they disagree — fail-loud per ADR-011, rather than silently self-correcting one run late. Proposed for #424; deliberately not built here, because this PR is a register entry and a comment fix.
 
 Cross-ref: C-337 (the fix this failed to deliver), C-342 (the other lockfile-versus-reality entry from the same day), C-341 (gates that run nowhere), C-98/ADR-022 (the deployment gate this undermines). Part of the **mechanisms that fail green** cluster. GitHub: #421.
+
+---
+
+### ~~C-344: `views-deploy`'s `~/.profile` was world-readable — every harvest credential, to every account, permanently~~ — RESOLVED
+
+**Source:** residual check while resolving ~~C-331~~ (2026-08-10). Found by asking a question the C-331 work implied but did not require, then measuring instead of reasoning.
+
+**Trigger:** **Before adding any secret to a dotfile on the host, and at the next server touch** — check the mode of the file *and* the traversability of its directory, then confirm with `test -r` from another account. Permission arithmetic is not evidence; `test -r` is.
+
+**Location:** `/home/views-deploy/.profile` (host, not in this repo). Documented by `docs/guides/hetzner_deployment_guide.md` §4.6 and `docs/guides/server_operations.md` §Dead-Man Heartbeat, both of which show `>> ~/.profile` without a `chmod`.
+
+**Observed.**
+
+```
+$ stat -c '%a %n' /home/views-deploy/.profile     644 /home/views-deploy/.profile
+$ stat -c '%a %n' /home/views-deploy              751 /home/views-deploy
+$ test -r /home/views-deploy/.profile && echo ... READABLE BY simmaa_prio
+```
+
+`751` on the home lets any account traverse in by name; `644` on the file then lets it read. Confirmed by direct test from a second account, not inferred from the bits.
+
+**What was exposed.** Everything the pipeline exports: `UCDP_API_TOKEN`, `ACLED_USERNAME`, `ACLED_PASSWORD`, `GDL_API_TOKEN`, `HEARTBEAT_URL`. To `dylpin`, `simmaa_prio` and `sonja_prio`, continuously, from deployment until 2026-08-10 — not a window, a standing condition.
+
+**Tier 2.** Broader than any single credential concern registered so far: C-331 was one capability URL for ≤10 s three times a month; C-322 was one token in one log. This was **every** credential, always. Not Tier 1 — no data was corrupted and no model output was wrong — and the readers are named colleagues on a research host rather than adversaries, which is why this is an exposure to close rather than an incident to declare.
+
+**Resolved 2026-08-10:** `chmod 600`, then verified from the account that could read it a moment earlier (`no longer readable by simmaa_prio`), then verified the owner still can (`views-deploy reads its own profile fine — pipeline path intact`). Both directions, because a permission fix that also breaks the pipeline is not a fix.
+
+**Swept the rest of the home rather than assuming this was the only one.** `.netrc` was already `600` — the data-server credentials were never exposed. `.ssh` `700`; `.bash_history`, `.python_history`, `.lesshst` all `600`. `.views-deploy-tag` is `644` and contains `v1.11.0`, not a secret.
+
+**One hypothesis raised and killed.** `.local`, `.config`, `.cache` are `775` and `.zshrc` is `664` — group-writable — and `refresh_pipeline.sh` prepends `$HOME/.local/bin` to `PATH`. Had another account shared the group, it could have dropped a binary there and had the monthly pipeline execute it as `views-deploy` with every credential: strictly worse than reading them. `getent group views-deploy` returns `views-deploy:x:1000:` — **no other members**. Not a finding. Recorded because the next person to see `775` on that path deserves the answer rather than the alarm.
+
+**Open, and not ours to decide: do the credentials need rotating?** They were readable by more parties than intended for months. The readers are trusted colleagues, so this is a policy judgement rather than a breach — but C-322's GDL token was rotated on weaker evidence, and the conservative position is that a credential with a wider audience than designed should be replaced. Rotating four credentials across three providers is real work; it is the operator's call and is deliberately left unmade here.
+
+**The docs that caused it are fixed in the same PR.** Both setup guides showed `echo 'export ...' >> ~/.profile` with no `chmod`, so the mode was whatever `umask` gave it. A guide that creates a secret without securing it will keep producing this.
+
+Cross-ref: ~~C-331~~ (the residual this was found chasing), C-322/~~C-324~~ (GDL token exposure and rotation — the precedent for the open question above), C-318 (cleartext auth on the same host), C-88 (who has shells here at all). GitHub: #423/#432.
 
 ---
 

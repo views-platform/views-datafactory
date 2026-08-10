@@ -146,10 +146,16 @@ canary against an unrouted address. The old form leaked
 control ran first — without it, a clean scan proves only that the scanner is broken.
 
 **What this does not close.** The URL is still in the process *environment*
-(`/proc/<pid>/environ`, mode `-r--------`, so owner and root only), and it is still written in
-`~/.profile` on the host. **If that file is not mode 600 it is readable by all four accounts
-permanently**, which would dominate the ≤10 s × 3 window this closes. Check with
-`stat -c %a /home/views-deploy/.profile`, and never `echo` the value to a terminal.
+(`/proc/<pid>/environ`, mode `-r--------`, so owner and root only). Never `echo` the value to a
+terminal — it lands in scrollback and in any pasted transcript.
+
+**The `~/.profile` question was asked, and the answer was bad.** Checked 2026-08-10 rather than
+assumed: the file was mode **644** inside a **751** home, and `test -r` from a second account
+returned readable. Every credential in it — not just this URL — had been readable by all four shell
+accounts continuously. Fixed with `chmod 600`, verified from both directions (unreadable by the
+other account, still readable by the owner, pipeline path intact). That is **C-344**, and it was a
+strictly larger exposure than the one this section is about. The setup guides now carry the `chmod`
+that would have prevented it.
 
 Guarded by `tests/test_heartbeat_secret.py`. See ~~C-331~~.
 
