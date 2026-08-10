@@ -451,9 +451,14 @@ sudo -u views-deploy bash -c 'source ~/.profile && \
 Verify:
 
 ```bash
-sudo -u views-deploy bash -c 'source ~/.profile && echo $HEARTBEAT_URL'
-# Expected: https://hc-ping.com/<uuid>
+sudo -u views-deploy bash -c 'source ~/.profile && [ -n "$HEARTBEAT_URL" ] && echo "HEARTBEAT_URL is set"'
+# Expected: HEARTBEAT_URL is set
 ```
+
+Deliberately does **not** echo the value: it is a capability URL (C-331),
+and printing it puts it in the terminal, the scrollback, and any pasted
+transcript. Also `chmod 600 ~/.profile` — the variable lives there, and
+four accounts have shells on this box.
 
 The variable must be in `~/.profile`, not `~/.bashrc` — same reason as
 `UCDP_API_TOKEN` (cron runs non-interactive shells where `.bashrc` exits
@@ -465,7 +470,7 @@ After a successful pipeline run, `refresh_pipeline.sh` does:
 
 ```bash
 if [ -n "${HEARTBEAT_URL:-}" ]; then
-    curl -fsS --max-time 10 "$HEARTBEAT_URL" >/dev/null 2>&1 || true
+    printf 'url = "%s"\n' "$HEARTBEAT_URL" | curl -fsS --max-time 10 -K - >/dev/null 2>&1 || true
 fi
 ```
 
@@ -473,6 +478,11 @@ fi
 - If the curl fails: the pipeline still succeeds (`|| true`).
 - healthchecks.io expects a ping every 30 days. If no ping arrives
   within 30 days + 48 hours grace, it sends an alert.
+- **The URL is on stdin, not argv** (C-331). `/proc/<pid>/cmdline` is
+  world-readable; whoever reads it can forge a success ping and silence
+  the alert for good. The quotes in `url = "%s"` are load-bearing —
+  unquoted, curl truncates the value at the first whitespace and sends
+  the truncated URL anyway, which would turn a `/fail` into a success.
 
 #### What to do when healthchecks.io alerts
 

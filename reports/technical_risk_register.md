@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-10 — C-343 registered (Tier 2: writing the deploy tag is not deploying) and C-317 RESOLVED by live drill (a dangling `/start` does flip the check red — observed, not argued), the first "fails green" cluster member closed by observation; cluster now nine. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-10 — C-331 RESOLVED (#423): the heartbeat URL now reaches curl on stdin, drilled with a canary and a negative control, and the entry's own suggested unquoted form was superseded because it truncates at whitespace and sends anyway; cluster now eight open. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 343 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 300 resolved-or-demoted, 40 open concerns (0 Tier 1, 3 Tier 2, 11 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 116 struck-through in active register (295 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 343 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 301 resolved-or-demoted, 39 open concerns (0 Tier 1, 3 Tier 2, 11 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 117 struck-through in active register (296 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -161,7 +161,7 @@
 | C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
 | C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
 | ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
-| C-331 | 4 | `HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`, lets a local user silence the dead-man alert | Next edit to `refresh_pipeline.sh` — switch to `curl -K -` from stdin, reclassify as a secret | Operational monitoring |
+| ~~C-331~~ | ~~4~~ | ~~`HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`~~ | Resolved 2026-08-10 (#423): all three pings take the URL on stdin via `-K -`; drilled with a canary and a negative control. The entry's own suggested unquoted form was superseded — it truncates at whitespace and sends anyway | Operational monitoring |
 | C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | **Before interpolating any URL, path, or credential-bearing value into a log line or exception message** — that is the act that creates the exposure, not editing these files | Credential hygiene |
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
 | ~~C-335~~ | ~~2~~ | ~~Nothing watches the data-serving path — green while every consumer gets nothing~~ | Resolved 2026-08-03: Better Stack monitor live and verified (Up, ~27ms, test alert delivered) + serving-freshness.yml for the content half | Operational monitoring |
@@ -191,19 +191,19 @@
 
 *Added by `/review-rr strategic`, 2026-08-04.*
 
-Nine open entries are symptoms of one root cause, and read very differently together than apart.
+Eight open entries are symptoms of one root cause, and read very differently together than apart.
 Individually each is small. Together they say that **this project's characteristic failure is
 silence, not error** — a thing reports success while not doing what it claims.
 
 *C-342 was added to the cluster 2026-08-08, found while building the guard for C-337 — which is the
 cluster's own rule working: the drill found a defect adjacent to the one it was aimed at. C-343 was
 added 2026-08-08 from the production host, and C-317 was **closed by drill** 2026-08-10 — struck in
-the table below rather than removed, so the table has ten rows and nine open members.*
+the table below rather than removed, so the table has ten rows. C-331 was closed 2026-08-10, leaving eight open members.*
 
 | ID | What reported success while being wrong |
 |---|---|
 | ~~**C-317**~~ | ~~`SIGKILL` bypasses the `ERR`/`EXIT` traps, so a killed run sends no failure ping~~ — **closed by drill 2026-08-10, the first member closed by observation** |
-| **C-331** | `HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice |
+| ~~**C-331**~~ | ~~`HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice~~ — **closed 2026-08-10, drilled with a negative control** |
 | **C-336** | Governance docs true when written, false later, nothing failing in between |
 | **C-337** | `views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever |
 | **C-338** | Freshness detection that runs daily-and-by-issue rather than alerting |
@@ -223,7 +223,7 @@ looking at the production host. **The counts in this paragraph used to be exact 
 twice** — they said "eight" while the table held nine and then ten. That is C-336 happening inside
 the cluster section about it, so the tally is now qualitative on purpose.
 
-**Cluster-level action, cheaper than nine separate ones:** when adding any guard, workflow, or
+**Cluster-level action, cheaper than eight separate ones:** when adding any guard, workflow, or
 operational step, drill it by breaking it. Every guard drilled in the 2026-08 window found a real
 defect — including one in its own author's work, one day after writing it.
 
@@ -2489,7 +2489,7 @@ entry and is now closed too.
 Cross-ref: C-324 (what is currently sitting in this file), C-322 (how it got there), C-88 (who can reach the shell to read it), #391 (the same overreach in ADR-026:97), C-327 (the same failure mode in a security audit).
 ---
 
-### C-331: `HEARTBEAT_URL` is a capability URL passed on the command line — [DEFER]
+### ~~C-331: `HEARTBEAT_URL` is a capability URL passed on the command line~~ — RESOLVED
 
 `scripts/refresh_pipeline.sh:93,163,290` pass `$HEARTBEAT_URL` to `curl` as an argv element. Command lines are world-readable via `/proc/<pid>/cmdline`, and no `hidepid` mount option is configured. The URL is a healthchecks.io bearer capability: anyone who reads it can send forged success pings and **permanently silence the C-131 dead-man alert**, which is the only detector for a silently dead pipeline. It is currently stored and treated as ordinary configuration in `~/.profile`, not as a secret (`docs/ADRs/018_operational_resilience.md:107`).
 
@@ -2501,9 +2501,55 @@ Exposure window is ≤10s per ping, three times per run, to local users only. Th
 | Tier | 4 — requires local shell access and a well-timed read; consequence is loss of alerting rather than data harm |
 | Source | Five-angle security sweep, scripts audit (2026-07-31) |
 | Trigger | Next edit to `refresh_pipeline.sh` — switch the three pings to `curl -K -` from stdin and reclassify the URL as a secret in ADR-018 |
-| Location | `scripts/refresh_pipeline.sh:93,163,290`, `docs/ADRs/018_operational_resilience.md:107` |
+| Location | `scripts/refresh_pipeline.sh` — the `/fail` ping in `on_failure()`, the `/start` ping after the `flock`, the bare success ping before the duration record; `docs/ADRs/018_operational_resilience.md` §monitoring. **Cited by symbol**: the line numbers here read `93,163,290` and had drifted to 112/182/309, in an entry whose own trigger was "next edit to this file" (C-336) |
 
-Cross-ref: C-131 (the alert this would silence), C-317 (the SIGKILL gap the failure ping closes).
+**RESOLVED 2026-08-10 (#423).** All three pings pass the URL to `curl` on stdin as a config file
+(`printf 'url = "%s"\n' "$HEARTBEAT_URL..." | curl -fsS --max-time 10 -K -`), never as an argv
+element. Guarded by `tests/test_heartbeat_secret.py`.
+
+**Drilled with a negative control, because a clean scan otherwise proves only that the scanner is
+broken.** Canary string against an unrouted RFC1918 address, so the request hangs until `--max-time`
+and stays in flight while `/proc` is walked:
+
+```
+DRILL A — control:  LEAK /proc/1037255 :: curl -fsS --max-time 20 http://10.255.255.1:8099/CANARY-.../fail
+DRILL B — the fix:  in flight: 1038214 curl -fsS --max-time 20 -K -
+                    (clean — no process carries the canary in argv)   [x3, one per ping]
+DRILL C — delivery: GET /CANARY-.../fail   GET /CANARY-.../start   GET /CANARY-...
+```
+
+`printf` is a bash **builtin**, so no helper process carries the URL in its own argv either — which
+is what Drill B actually establishes, rather than the weaker "stdin implies safety".
+
+**This entry's own prescribed fix was wrong, and wrong in this cluster's signature way.** The text
+above suggested `printf 'url=%s\n'` — unquoted. Measured against curl 7.81.0 with a value carrying
+a stray space:
+
+| form | result |
+|---|---|
+| `url=%s` | parses `http://h/uuid`, **drops the `/fail`, and sends it** — the failure ping becomes a success ping |
+| `url = "%s"` | exit 3, nothing sent |
+
+A trailing space or CR is the realistic contamination for a hex-UUID URL. The unquoted form fails
+*green*; the quoted form fails *safe*. **Superseded** — the shipped form is quoted, and the reason
+is in the script's own comment so it survives the next rewrite.
+
+**What this does not close.** The URL remains in the process environment (`/proc/<pid>/environ`,
+mode `-r--------`, owner and root only) and in `~/.profile` on the host. If that file is not mode
+600 it is readable by all four accounts *permanently*, which would dominate the ≤10 s × 3 window
+closed here. Observed mode: **[pending operator `stat -c %a /home/views-deploy/.profile`]**. Root is
+out of scope by any mechanism available here.
+
+**Not live on the server yet**, and the issue said otherwise. #423 stated "no server change is
+required — the script is deployed by tag." C-343 established that bash buffers the script, so a
+change to `refresh_pipeline.sh` lands one run *after* a deploy — a month on a monthly cron — and
+deploying is three steps, not one. Worst case this fix is in production two months from merge, and
+the argv exposure continues until then.
+
+Cross-ref: C-131 (the alert this would silence), ~~C-317~~ (the SIGKILL gap the failure ping closes,
+resolved by drill the same week), C-343 (why this is not yet live), C-336 (why this entry's own
+Location was stale). Part of the **mechanisms that fail green** cluster. GitHub: #423.
+
 ---
 
 ### C-332: Credential redaction is incomplete — userinfo URLs, raw store paths, netrc exceptions, and credential reprs

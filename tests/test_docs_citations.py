@@ -52,8 +52,16 @@ SEARCH_ROOTS = (
     "src/datafactory_http/",
 )
 
-# file.py:123 or file.py:123-456
-LINE_CITATION = re.compile(r"[A-Za-z0-9_/]+\.py:\d+(?:[-–]\d+)?")
+# file.py:123 or file.py:123-456 — and file.sh:123 since 2026-08-10.
+#
+# `.sh` was added because two shell citations rotted unseen for exactly
+# as long as this pattern said ".py" only: ADR-018 cited a line range in
+# refresh_pipeline.sh that had drifted ~55 lines, and ADR-051 cited
+# three line numbers of which one had never been right. A guard whose
+# scope is narrower than the drift it is meant to catch reports success
+# while checking nothing (C-336). Both were fixed in the same PR that
+# widened this, so it starts green.
+LINE_CITATION = re.compile(r"[A-Za-z0-9_/]+\.(?:py|sh):\d+(?:[-–]\d+)?")
 
 
 def _markdown_files() -> list[Path]:

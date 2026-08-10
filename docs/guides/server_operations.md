@@ -363,31 +363,42 @@ heuristic misfired on slow runs and was removed — C-267).
 ## Dead-Man Heartbeat Monitoring (C-131, #324)
 
 The pipeline pings an external monitoring service so that failures
-alert a human even when nobody is watching a terminal. Two signals:
+alert a human even when nobody is watching a terminal. **Three** signals
+(this list said "two" while listing three until 2026-08-10):
 
-- **Success ping** — end of `refresh_pipeline.sh`: `curl "$HEARTBEAT_URL"`.
+- **Success ping** — end of `refresh_pipeline.sh`, bare URL.
   If the ping does not arrive on schedule (cron missed, server down,
   pipeline hung), the service alerts after its grace period. This is
   the dead-man switch: silence itself is the alarm.
-- **Failure ping** — `on_failure()` trap: `curl "$HEARTBEAT_URL/fail"`.
+- **Failure ping** — `on_failure()` trap, `/fail` suffix.
   Flips the check to failing immediately instead of waiting for the
   missed schedule.
-- **Start ping** — after lock acquisition: `curl "$HEARTBEAT_URL/start"`.
+- **Start ping** — after lock acquisition, `/start` suffix.
   Covers the SIGKILL blind spot (C-317): the OOM killer bypasses
   bash traps entirely, so a killed run sends neither success nor
   failure — but a dangling "started" state alerts at the grace
-  timeout (~24h) instead of the next monthly schedule (~31d).
+  window instead of the next monthly schedule (~31d). **Drilled and
+  confirmed 2026-08-10** on a throwaway check: a `/start` followed by
+  silence flips the check DOWN with *Last Ping Type: Started*.
 
-Both are no-ops when `HEARTBEAT_URL` is unset, and both are guarded
-with `|| true` — an unreachable monitoring service must never mask
-the pipeline's own exit code.
+All three are no-ops when `HEARTBEAT_URL` is unset, and all three are
+guarded with `|| true` — an unreachable monitoring service must never
+mask the pipeline's own exit code.
+
+**The URL never appears on a command line.** It goes to `curl` on stdin
+as a config file (`printf 'url = "%s"\n' ... | curl -K -`), because
+`HEARTBEAT_URL` is a *capability*: holding it is enough to forge a
+success ping and silence the dead-man alert permanently, and
+`/proc/<pid>/cmdline` is world-readable while four accounts have shells
+here. See C-331 and `docs/guides/monitoring.md` §7.
 
 ### Setup (one-time, operator)
 
 1. Create a check at [healthchecks.io](https://healthchecks.io)
-   (free tier, one check). Schedule: match the cron cadence
-   (currently monthly, 21st at 00:00). Grace period: 24 hours —
-   the full run can take ~8 hours.
+   (free tier). Schedule: match the cron cadence (currently monthly,
+   21st at 00:00). **As configured 2026-08-10: 30-day period, 48-hour
+   grace** — verified against the live check, not inferred. The full
+   run takes ~4.5 h (last observed run: 4 h 31 m).
 2. Add the ping URL to the deploy user's profile:
 
    ```bash
@@ -397,11 +408,16 @@ the pipeline's own exit code.
 
 3. Verify both directions:
 
+   The URL goes on stdin, never argv — these commands run on the box
+   where four accounts have shells, so the old `curl "$HEARTBEAT_URL"`
+   form recreated exactly the exposure C-331 removed. Quoting verified
+   against a local listener before being written here.
+
    ```bash
    # Failure signal → check goes red, email arrives
-   sudo -u views-deploy bash -c 'source ~/.profile && curl -fsS "$HEARTBEAT_URL/fail"'
+   sudo -u views-deploy bash -c 'source ~/.profile && printf "url = \"%s\"\n" "$HEARTBEAT_URL/fail" | curl -fsS -K -'
    # Success signal → check returns to healthy
-   sudo -u views-deploy bash -c 'source ~/.profile && curl -fsS "$HEARTBEAT_URL"'
+   sudo -u views-deploy bash -c 'source ~/.profile && printf "url = \"%s\"\n" "$HEARTBEAT_URL" | curl -fsS -K -'
    ```
 
 ### What an alert means

@@ -4,7 +4,9 @@
 logging into anyone's dashboard. Decision of record: **ADR-051**. Live since 2026-08-03.*
 
 **No secrets in this file.** Everything here is either public (the status page is unauthenticated
-by ADR-038) or a setting, not a credential. That is deliberate — see §6.
+by ADR-038) or a setting, not a credential. That is deliberate — see §6. §7 *discusses* the one
+genuine secret in this system without containing it, which is the distinction to preserve if you
+edit this page.
 
 ---
 
@@ -111,7 +113,47 @@ Recorded so the decision is ready-made rather than re-derived. In rough order of
 - **No merge-blocking checks for any of this.** Monitoring failures must never redden a pull
   request; that is C-320's lesson.
 
-## 7. Silence lies
+## 7. The ping URL is a secret
+
+`HEARTBEAT_URL` is a **capability URL**. There is no account behind it and no credential to
+present: whoever holds the string can send a success ping, mark the monthly pipeline healthy, and
+silence the dead-man alert permanently. Treat it exactly as you would a password.
+
+**It is never passed on a command line.** `/proc/<pid>/cmdline` is world-readable (`-r--r--r--`),
+and four accounts have shells on the box, so a `curl "$HEARTBEAT_URL"` is readable by any of them
+for the life of the request. All three pings hand the URL to curl on **stdin** instead:
+
+```bash
+printf 'url = "%s"\n' "$HEARTBEAT_URL/fail" | curl -fsS --max-time 10 -K -
+```
+
+**The quotes are load-bearing, and this is not a style preference.** Measured against curl 7.81.0
+with a value carrying a stray space:
+
+| form | result |
+|---|---|
+| `url=%s` (unquoted) | truncates at the whitespace and **sends the truncated URL** — a `/fail` ping silently becomes a *success* ping |
+| `url = "%s"` (quoted) | exit 3, nothing sent |
+
+A trailing space or CR is the realistic contamination for a hex-UUID URL: a CRLF-edited `.profile`,
+a copy-paste. The unquoted form is what C-331's own register entry originally prescribed; it was
+superseded once this was drilled, because it fails *green* and the quoted form fails *safe*.
+
+**Verified, with a control.** The `/proc` claim was drilled before the change shipped, using a
+canary against an unrouted address. The old form leaked
+`curl -fsS --max-time 20 http://.../CANARY-.../fail` into `/proc/<pid>/cmdline`; the new form showed
+`curl -fsS --max-time 20 -K -` in flight with no process anywhere carrying the canary. The negative
+control ran first — without it, a clean scan proves only that the scanner is broken.
+
+**What this does not close.** The URL is still in the process *environment*
+(`/proc/<pid>/environ`, mode `-r--------`, so owner and root only), and it is still written in
+`~/.profile` on the host. **If that file is not mode 600 it is readable by all four accounts
+permanently**, which would dominate the ≤10 s × 3 window this closes. Check with
+`stat -c %a /home/views-deploy/.profile`, and never `echo` the value to a terminal.
+
+Guarded by `tests/test_heartbeat_secret.py`. See ~~C-331~~.
+
+## 8. Silence lies
 
 **Silence = healthy only while something is actually checking.** A paused, deleted, or expired
 monitor is also quiet, and quiet is what you have been trained to read as fine.
@@ -121,18 +163,19 @@ as *Up* and actively checking — not *Paused* — and that the freshness workfl
 the Actions tab. This warning is lifted from views-faoapi's runbook, where it was learned the hard
 way.
 
-## 8. How to leave
+## 9. How to leave
 
 Nothing here is locked in. The availability monitor is one URL and one alert rule — reproducible on
 any uptime provider in five minutes from §3. The freshness workflow is a file in this repo and
-depends on nothing but `curl`, `python3` and `gh`. The heartbeat is three `curl` calls in
-`scripts/refresh_pipeline.sh`. Losing the Better Stack account costs §3 and nothing else.
+depends on nothing but `curl`, `python3` and `gh`. The heartbeat is three `printf | curl -K -` pings in
+`scripts/refresh_pipeline.sh` (§7 explains why the URL goes on stdin). Losing the Better Stack account costs §3 and nothing else.
 
-## 9. References
+## 10. References
 
 - **ADR-051** — the decision, including the 2026-08-03 amendment recording what was actually built
 - **ADR-018** — bounded staleness, per-source SLO, and what the heartbeat does *not* detect
 - **ADR-038** — why `status.html` is public, which is what makes credential-free polling possible
 - ~~**C-335**~~ — the serving-path gap this closes
-- `scripts/refresh_pipeline.sh` — the three heartbeat signals (`/start`, success, `/fail`)
+- `scripts/refresh_pipeline.sh` — the three heartbeat signals (`/start`, success, `/fail`), each a
+  `printf | curl -K -` so the URL never reaches a command line (§7)
 - views-faoapi `reports/ops/betterstack_{deployment,monitoring}.md` — the sibling setup this mirrors
