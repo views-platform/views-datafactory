@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-08 — C-343 registered (Tier 2: writing the deploy tag is not deploying — the production host ran v1.10.0 for five days while every signal said v1.11.0), alongside C-342; the "fails green" cluster is now ten. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-10 — C-343 registered (Tier 2: writing the deploy tag is not deploying) and C-317 RESOLVED by live drill (a dangling `/start` does flip the check red — observed, not argued), the first "fails green" cluster member closed by observation; cluster now nine. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 343 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 299 resolved-or-demoted, 41 open concerns (0 Tier 1, 3 Tier 2, 12 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 115 struck-through in active register (294 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 343 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 300 resolved-or-demoted, 40 open concerns (0 Tier 1, 3 Tier 2, 11 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 116 struck-through in active register (295 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -147,7 +147,7 @@
 | ~~C-314~~ | ~~2~~ | ~~ACLED January 2026 fatality sum 3-4x typical — unverified anomaly served to consumers~~ | Resolved 2026-07-15 (#320: verdict REAL — Jan 8-9 Iran crackdown; falsification audit SURVIVED 5/5; UCDP corroborates) | Data soundness |
 | ~~C-315~~ | ~~3~~ | ~~source_features readers scan top-level provenance but real assembly nests under "sources" — pre-coverage warnings never fired on real data~~ | Resolved 2026-07-19 (both readers scan both levels + real-shape regression test; caught by verify_consumer_contract's first server run) | Data soundness |
 | ~~C-316~~ | ~~3~~ | ~~Standalone writer scripts bypass the pipeline flock — manual export collided with cron assembly~~ | Resolved 2026-07-22 (#353/PR #359: hold_pipeline_lock in 9 writers, refuse-fast + --force-no-lock; live drill named holder PID) | Pipeline safety |
-| C-317 | 3 | SIGKILL bypasses ERR+EXIT traps — no failure ping, no status page on OOM kill | /start ping shipped (PR #359); OPEN pending live grace-timeout drill on server after v1.8.1 deploy | Operational monitoring |
+| ~~C-317~~ | ~~3~~ | ~~SIGKILL bypasses ERR+EXIT traps — no failure ping on OOM kill~~ | Resolved 2026-08-10 by live drill: throwaway check (5 min period / 1 min grace), `/start` then silence — flipped DOWN with *Last Ping Type: Started*, e-mail delivered. Detection latency ~32 days → the grace window. Status page on SIGKILL is a separate matter (C-338) | Operational monitoring |
 | C-318 | 4 | Data server basic-auth password crosses the wire in cleartext (HTTP, no TLS) — **partially fired** (6 logins as of 2026-07-31, all trusted circle) | Before adding external consumers or serving anything beyond courtesy-protected research data | Server hardening |
 | ~~C-319~~ | ~~2~~ | ~~In-process writer main() in tests holds the production pipeline lock for pytest lifetime — 42 suite errors on every full run since v1.8.1~~ | Resolved 2026-07-27 (test_consumer_provenance sets VIEWS_PIPELINE_LOCK_HELD=1 around in-process main(); full suite green) | Test infra |
 | ~~C-320~~ | ~~3~~ | ~~Deploy-gate falsification tests fail in CI (shallow checkout breaks merge-base; no GH_TOKEN breaks gh) — CI red on every branch, releases merged unnoticed~~ | Resolved 2026-07-27 (gates skip with reason where the environment cannot answer; still enforce locally) | Test infra |
@@ -191,7 +191,7 @@
 
 *Added by `/review-rr strategic`, 2026-08-04.*
 
-Ten open entries are symptoms of one root cause, and read very differently together than apart.
+Nine open entries are symptoms of one root cause, and read very differently together than apart.
 Individually each is small. Together they say that **this project's characteristic failure is
 silence, not error** — a thing reports success while not doing what it claims.
 
@@ -200,7 +200,7 @@ cluster's own rule working: the drill found a defect adjacent to the one it was 
 
 | ID | What reported success while being wrong |
 |---|---|
-| **C-317** | `SIGKILL` bypasses the `ERR`/`EXIT` traps, so a killed run sends no failure ping |
+| ~~**C-317**~~ | ~~`SIGKILL` bypasses the `ERR`/`EXIT` traps, so a killed run sends no failure ping~~ — **closed by drill 2026-08-10, the first member closed by observation** |
 | **C-331** | `HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice |
 | **C-336** | Governance docs true when written, false later, nothing failing in between |
 | **C-337** | `views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever |
@@ -2154,7 +2154,7 @@ Cross-ref: ~~C-285~~ (the pipeline-vs-pipeline half, resolved — this is the un
 
 ---
 
-### C-317: SIGKILL bypasses ERR and EXIT traps — no failure ping, no status page on OOM kill
+### ~~C-317: SIGKILL bypasses ERR and EXIT traps — no failure ping on OOM kill~~ — RESOLVED
 
 The failure alerting shipped in #324 (heartbeat `/fail` ping in the ERR trap) and the status page (EXIT trap) both depend on bash trap execution. SIGKILL — which is what the kernel OOM killer sends — bypasses both: an OOM-killed pipeline dies with no alert, no status page regeneration, and the dead-man detection only fires at the next missed monthly schedule (up to ~31 days). Near-miss 2026-07-21: the cron export ran for 9+ hours at 95.9% RSS (15.3 of 16 GB) in swap — one allocation away from an invisible death. Mitigation options for the follow-up issue: (a) healthchecks.io start-ping (`$HEARTBEAT_URL/start`) at pipeline start, so a kill leaves a visible dangling "started" state that alerts at the check's grace timeout instead of the schedule period; (b) memory headroom (C-173, RAM upgrade); (c) an external watchdog comparing pipeline PID liveness to lock state.
 
@@ -2166,7 +2166,27 @@ The failure alerting shipped in #324 (heartbeat `/fail` ping in the ERR trap) an
 | Trigger | Pipeline process OOM-killed during assembly/export — near-miss observed 2026-07-21 |
 | Location | `scripts/refresh_pipeline.sh` (on_failure ERR trap, generate_status_on_exit EXIT trap), healthchecks.io check configuration |
 
-Cross-ref: ~~C-131~~ (heartbeat — closed for the trap-reachable case; this is the trap-unreachable case), C-173 (memory headroom — the underlying pressure), C-316 (same incident).
+**RESOLVED 2026-08-10 — the drill ran, and the mitigation works.**
+
+The `/start` ping shipped in PR #359 on the theory that healthchecks.io would flag a run that began and never finished. That theory sat unverified for weeks, and this entry said so: *"OPEN pending live grace-timeout drill."* An untested mitigation for a silent-failure concern is itself a silent failure, which is why it was never closed on the strength of the ping being sent.
+
+**Method.** A throwaway check was created on healthchecks.io — period 5 minutes, grace 1 minute — so the timeout was observable in about a minute instead of the production check's 30 days + 48 hours. Production `HEARTBEAT_URL` and the production check were not touched. A single `/start` was sent and then **nothing**: no success, no `/fail`. That is the OOM kill, reproduced exactly — the traps never run, so neither ping ever fires.
+
+**Prediction, recorded before the ping** (per this repo's falsification discipline): the check flips red roughly one minute later and an e-mail arrives.
+
+**Observed.** It did. The alert:
+
+> *"THROWAWAY - C-317 drill - delete me" is DOWN (success signal did not arrive on time, grace time passed).*
+> **Last Ping Type: Started** · Status Changed to Down at Mon, 10 Aug 2026 03:35:56 +0200
+
+`Last Ping Type: Started` is the whole finding: healthchecks.io alerted on the *dangling start*, with no failure signal ever sent. Detection latency drops from up to ~32 days to the grace window. Throwaway check deleted afterwards; dashboard confirmed back to one check, green.
+
+**Two things learned that were not being looked for.** healthchecks.io's own schedule dialog documents the mechanism — *"Grace Time — when a check is late, **or has received a 'start' signal**, how long to wait to send an alert"* — so this was documented by the vendor all along and simply never read. And the sample check repurposed for the drill had sat at **grey, never red**, for two months while permanently overdue: **a check that has never been pinged does not alert.** A monitor someone creates and never wires up stays silent forever, and silence is what we are trained to read as healthy — see the "Silence lies" section of `docs/guides/monitoring.md`.
+
+**What this does not close.** The status page is still not regenerated on a SIGKILL (the EXIT trap does not run), so after an OOM kill the served `status.html` is stale until the next run. That is the serving-path question, covered by ~~C-335~~/C-338, not here. And detection is not prevention: C-173 (memory headroom) is what stops the kill happening.
+
+Cross-ref: ~~C-131~~ (heartbeat — closed for the trap-reachable case; this was the trap-unreachable case), C-173 (memory headroom — the underlying pressure, still open), C-316 (same incident), C-338. Part of the **mechanisms that fail green** cluster — the first member closed by observation rather than by argument. GitHub: #427.
+
 ---
 
 ### C-318: Data server basic-auth password crosses the wire in cleartext — [DEFER]

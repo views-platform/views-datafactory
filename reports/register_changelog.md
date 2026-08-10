@@ -17,6 +17,45 @@ entry could.
 
 ---
 
+## C-317 RESOLVED — the drill that had been pending for weeks (2026-08-10)
+
+Epic #421 Story 6 (#427). **The first entry in the "fails green" cluster closed by observation
+rather than by argument**, which is the only way a cluster about untested mechanisms should ever
+lose a member.
+
+**What was unverified.** PR #359 added a `/start` ping to `refresh_pipeline.sh` on the theory that
+healthchecks.io would flag a run that began and never finished — the OOM-kill case, where `SIGKILL`
+bypasses both the `ERR` and `EXIT` traps so neither the success nor the `/fail` ping ever fires.
+Nobody had watched that happen. The entry had read *"OPEN pending live grace-timeout drill"* since
+July. Closing it on the strength of *the ping is sent* would have been the cluster's own mistake:
+the ping firing was never in doubt; what healthchecks.io **does** with a dangling start was.
+
+**Method.** Throwaway check, period 5 minutes and grace 1 minute, so the timeout was observable in
+about a minute rather than the production check's 30 days + 48 hours. Production `HEARTBEAT_URL` and
+the production check untouched. One `/start`, then nothing.
+
+**Prediction recorded before the ping:** red within ~1 minute, e-mail arrives.
+
+**Observed:** *"…is DOWN (success signal did not arrive on time, grace time passed)"*, **Last Ping
+Type: Started**, 03:35:56 +0200. Detection latency for an OOM kill drops from ~32 days to the grace
+window. Throwaway deleted.
+
+**Two things found that nobody was looking for.** healthchecks.io's own schedule dialog states the
+mechanism outright — *"Grace Time — when a check is late, **or has received a 'start' signal**, how
+long to wait to send an alert"* — so the behaviour was documented by the vendor the whole time and
+simply never read. Worth sitting with: a week of uncertainty was resolvable by reading a tooltip.
+
+And the sample check repurposed for the drill had sat **grey, never red**, for two months while
+permanently overdue, because it had never been pinged. **A check that has never received a ping does
+not alert.** A monitor created and never wired up is indistinguishable, from the dashboard, from one
+that is fine — which is `monitoring.md` §7 "Silence lies", found by accident rather than by looking.
+
+**Not closed by this.** The status page is still not regenerated on `SIGKILL`, so `status.html`
+stays stale after an OOM kill until the next run — that is the serving path, C-338's territory. And
+detection is not prevention: C-173 (memory headroom) is what stops the kill.
+
+---
+
 ## C-343 — the deploy that wasn't (2026-08-08)
 
 Registered Tier 2 — the first Tier 2 added since C-337, and the only entry in the fails-green
