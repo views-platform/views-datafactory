@@ -28,14 +28,33 @@
 # Deployment gate:
 #   Before running any steps, the script reads ~/.views-deploy-tag
 #   to find which tagged release to run (e.g., "v1.1.0"). It then
-#   checks out that exact tag. This means the server always runs a
+#   checks out that exact tag, so the PYTHON the pipeline invokes is a
 #   specific, tested version — not whatever happens to be on a branch.
+#   It does NOT make that true of this shell script or of the installed
+#   dependencies; see "DEPLOYING IS NOT ONE STEP" below before relying
+#   on it.
 #   If the file is missing, empty, or the tag doesn't exist, the script
 #   stops immediately (fail-loud, ADR-011). See ADR-022 for rationale.
 #
-#   To deploy a new version: update ~/.views-deploy-tag on the server.
-#   To roll back: write the old tag name to ~/.views-deploy-tag.
-#   See docs/guides/hetzner_deployment_guide.md for full details.
+#   DEPLOYING IS NOT ONE STEP. This comment used to say "to deploy a
+#   new version: update ~/.views-deploy-tag" and that is WRONG — it is
+#   what left the server on v1.10.0 for five days while the tag file
+#   said v1.11.0 and views-frames stayed at the frozen 1.0.0 (C-343,
+#   observed 2026-08-08). Two reasons the checkout below does not save
+#   you:
+#     1. bash has already buffered THIS FILE, so a change to
+#        refresh_pipeline.sh itself takes effect only on the NEXT run
+#        — one month away on a monthly cron.
+#     2. `uv sync` never runs, so a dependency change never lands at
+#        all, no matter how many times the pipeline runs.
+#
+#   Deploy — and roll back — with ALL THREE steps in
+#   docs/guides/server_quickref.md §"Deploy a new version": the tag
+#   file, then the git fetch/checkout, then `uv sync`. Deliberately not
+#   repeated here: two copies of a procedure drifting apart is what
+#   C-343 IS, and a fix that adds a third copy would be the same bug.
+#   **If this comment and the quickref ever disagree, the quickref
+#   wins.** See docs/guides/hetzner_deployment_guide.md for full detail.
 #
 # Requires:
 #   - ~/.views-deploy-tag file containing a valid git tag

@@ -17,6 +17,85 @@ entry could.
 
 ---
 
+## C-317 RESOLVED — the drill that had been pending for weeks (2026-08-10)
+
+Epic #421 Story 6 (#427). **The first entry in the "fails green" cluster closed by observation
+rather than by argument**, which is the only way a cluster about untested mechanisms should ever
+lose a member.
+
+**What was unverified.** PR #359 added a `/start` ping to `refresh_pipeline.sh` on the theory that
+healthchecks.io would flag a run that began and never finished — the OOM-kill case, where `SIGKILL`
+bypasses both the `ERR` and `EXIT` traps so neither the success nor the `/fail` ping ever fires.
+Nobody had watched that happen. The entry had read *"OPEN pending live grace-timeout drill"* since
+July. Closing it on the strength of *the ping is sent* would have been the cluster's own mistake:
+the ping firing was never in doubt; what healthchecks.io **does** with a dangling start was.
+
+**Method.** Throwaway check, period 5 minutes and grace 1 minute, so the timeout was observable in
+about a minute rather than the production check's 30 days + 48 hours. Production `HEARTBEAT_URL` and
+the production check untouched. One `/start`, then nothing.
+
+**Prediction recorded before the ping:** red within ~1 minute, e-mail arrives.
+
+**Observed:** *"…is DOWN (success signal did not arrive on time, grace time passed)"*, **Last Ping
+Type: Started**, 03:35:56 +0200. Detection latency for an OOM kill drops from ~32 days to the grace
+window. Throwaway deleted.
+
+**Two things found that nobody was looking for.** healthchecks.io's own schedule dialog states the
+mechanism outright — *"Grace Time — when a check is late, **or has received a 'start' signal**, how
+long to wait to send an alert"* — so the behaviour was documented by the vendor the whole time and
+simply never read. Worth sitting with: a week of uncertainty was resolvable by reading a tooltip.
+
+And the sample check repurposed for the drill had sat **grey, never red**, for two months while
+permanently overdue, because it had never been pinged. **A check that has never received a ping does
+not alert.** A monitor created and never wired up is indistinguishable, from the dashboard, from one
+that is fine — which is `monitoring.md` §7 "Silence lies", found by accident rather than by looking.
+
+**Not closed by this.** The status page is still not regenerated on `SIGKILL`, so `status.html`
+stays stale after an OOM kill until the next run — that is the serving path, C-338's territory. And
+detection is not prevention: C-173 (memory headroom) is what stops the kill.
+
+---
+
+## C-343 — the deploy that wasn't (2026-08-08)
+
+Registered Tier 2 — the first Tier 2 added since C-337, and the only entry in the fails-green
+cluster found by **looking at production** rather than by reading the repository.
+
+**How it surfaced.** While sizing the blast radius of a Story 2 (#423) change, the question came up
+of when an edit to `refresh_pipeline.sh` actually reaches the server. Reasoning about it produced a
+hypothesis; a throwaway git repository tested it; the test said bash buffers the script and never
+re-reads it, so shell changes lag one run. That prediction implied the deploy procedure might be
+ambiguous, so the operator was asked to run one command on the host. It came back `v1.11.0` — the
+tag file. The next command came back `v1.10.0` — the working tree. The third came back
+`views_frames-1.0.0.dist-info`.
+
+**The release cut specifically to fix C-337 had been inert on the server for five days,** and the
+floor it raised was still the frozen 1.0.0 that C-337 is about. The tag file read correctly. The
+pipeline was green. Nothing anywhere had a failure mode that said otherwise.
+
+**A retraction inside the same hour.** On seeing views-frames 1.0.0 the first framing was *"the
+first fails-green instance with production consequences."* That was wrong, and checking the diff
+before believing it showed why: `git diff v1.10.0..v1.11.0` spans 31 files but touches no `src/` file
+and no pipeline script; outside `docs/`, `reports/` and `tests/` it is only `pyproject.toml`,
+`uv.lock`, and three GitHub workflows that never run on the host.
+Production imports four non-estimator symbols from views_frames. No number was ever wrong, and PyPI
+consumers were never exposed, because the published wheel carried the correct floor throughout. The
+damage was to what could be *claimed*, not to what was produced. The corrected framing is in the
+entry.
+
+**Remediated the same session**, with the operator at the keyboard: the three documented steps ran,
+`uv sync` moved views-frames 1.0.0 → 1.10.2 and views-datafactory 1.10.0 → 1.11.0, and
+`FeatureFrame` was imported on the host afterwards — because a ten-minor-version jump that nobody
+has watched import is a belief, not an observation. The entry stays **open**: nothing prevents
+recurrence.
+
+**One method note.** The `uv sync` command was first given as `sudo -u views-deploy sh -c …`, which
+does not source `~/.profile`, so `uv` was not on the PATH and it failed. That mistake is already a
+recorded lesson in this project. It failed loudly and cost thirty seconds — which is the whole
+difference between it and everything else in this cluster.
+
+---
+
 ## C-342 — the lockfile nobody can catch being stale (2026-08-08)
 
 `/register-risk` after `/code-review medium` on **#430**, the first story of epic #421.
