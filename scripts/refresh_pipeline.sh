@@ -33,8 +33,22 @@
 #   If the file is missing, empty, or the tag doesn't exist, the script
 #   stops immediately (fail-loud, ADR-011). See ADR-022 for rationale.
 #
-#   To deploy a new version: update ~/.views-deploy-tag on the server.
-#   To roll back: write the old tag name to ~/.views-deploy-tag.
+#   DEPLOYING IS NOT ONE STEP. This comment used to say "to deploy a
+#   new version: update ~/.views-deploy-tag" and that is WRONG — it is
+#   what left the server on v1.10.0 for five days while the tag file
+#   said v1.11.0 and views-frames stayed at the frozen 1.0.0 (C-343,
+#   observed 2026-08-08). Two reasons the checkout below does not save
+#   you:
+#     1. bash has already buffered THIS FILE, so a change to
+#        refresh_pipeline.sh itself takes effect only on the NEXT run
+#        — one month away on a monthly cron.
+#     2. `uv sync` never runs, so a dependency change never lands at
+#        all, no matter how many times the pipeline runs.
+#
+#   Deploy with all three steps in docs/guides/server_quickref.md
+#   §"Deploy a new version": write the tag file, `git fetch --tags &&
+#   git checkout -- uv.lock && git checkout <tag>`, then `uv sync`.
+#   To roll back: the same three steps with the old tag.
 #   See docs/guides/hetzner_deployment_guide.md for full details.
 #
 # Requires:

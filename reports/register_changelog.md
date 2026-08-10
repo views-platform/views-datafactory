@@ -17,6 +17,45 @@ entry could.
 
 ---
 
+## C-343 — the deploy that wasn't (2026-08-08)
+
+Registered Tier 2 — the first Tier 2 added since C-337, and the only entry in the fails-green
+cluster found by **looking at production** rather than by reading the repository.
+
+**How it surfaced.** While sizing the blast radius of a Story 2 (#423) change, the question came up
+of when an edit to `refresh_pipeline.sh` actually reaches the server. Reasoning about it produced a
+hypothesis; a throwaway git repository tested it; the test said bash buffers the script and never
+re-reads it, so shell changes lag one run. That prediction implied the deploy procedure might be
+ambiguous, so the operator was asked to run one command on the host. It came back `v1.11.0` — the
+tag file. The next command came back `v1.10.0` — the working tree. The third came back
+`views_frames-1.0.0.dist-info`.
+
+**The release cut specifically to fix C-337 had been inert on the server for five days,** and the
+floor it raised was still the frozen 1.0.0 that C-337 is about. The tag file read correctly. The
+pipeline was green. Nothing anywhere had a failure mode that said otherwise.
+
+**A retraction inside the same hour.** On seeing views-frames 1.0.0 the first framing was *"the
+first fails-green instance with production consequences."* That was wrong, and checking the diff
+before believing it showed why: `git diff v1.10.0..v1.11.0` touches no `src/` file and no pipeline
+script — only `pyproject.toml`, `uv.lock`, and three GitHub workflows that never run on the host.
+Production imports four non-estimator symbols from views_frames. No number was ever wrong, and PyPI
+consumers were never exposed, because the published wheel carried the correct floor throughout. The
+damage was to what could be *claimed*, not to what was produced. The corrected framing is in the
+entry.
+
+**Remediated the same session**, with the operator at the keyboard: the three documented steps ran,
+`uv sync` moved views-frames 1.0.0 → 1.10.2 and views-datafactory 1.10.0 → 1.11.0, and
+`FeatureFrame` was imported on the host afterwards — because a ten-minor-version jump that nobody
+has watched import is a belief, not an observation. The entry stays **open**: nothing prevents
+recurrence.
+
+**One method note.** The `uv sync` command was first given as `sudo -u views-deploy sh -c …`, which
+does not source `~/.profile`, so `uv` was not on the PATH and it failed. That mistake is already a
+recorded lesson in this project. It failed loudly and cost thirty seconds — which is the whole
+difference between it and everything else in this cluster.
+
+---
+
 ## C-342 — the lockfile nobody can catch being stale (2026-08-08)
 
 `/register-risk` after `/code-review medium` on **#430**, the first story of epic #421.
