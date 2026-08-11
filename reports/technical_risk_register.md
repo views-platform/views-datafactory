@@ -3012,6 +3012,11 @@ Partially mitigated 2026-08-03: `release-topology.yml` runs the topology gate da
 | local-clone branch hygiene | local only | **skips on CI, by design** |
 | version-not-already-tagged | local only | **still nowhere** |
 
+Two classes are deliberately absent from that table rather than forgotten:
+`TestF7ProductPlanCurrency` and `TestDF2ReleaseGuideCompleteness` read only files, so they already
+run in the ordinary PR suite and never needed a scheduled runner. The table covers gates that
+require a *deploy environment* — git history, a token, or a real clone.
+
 **Two things had to be measured rather than assumed**, and both would have produced a silent non-check:
 
 1. `actions/checkout` leaves exactly **one** local branch, so the gates' bare `git merge-base --is-ancestor main development` exits **128** and they skip themselves — *even at `fetch-depth: 0`*. Verified in a simulated runner checkout. Two `git branch -f` lines fix it, and `tests/test_ci_gates.py` asserts they precede the gate step.

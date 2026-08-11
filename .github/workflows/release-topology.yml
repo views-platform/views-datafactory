@@ -112,6 +112,8 @@ jobs:
           # Tells TestF8StaleBranches' LOCAL half to skip rather than pass
           # trivially — a fresh runner has one local branch, so it would
           # otherwise claim coverage it does not have.
+          # Redundant — Actions already exports CI=true — but explicit so
+          # the dependency is visible: TestF8StaleBranches reads it.
           CI: "true"
         run: |
           set -o pipefail
@@ -130,12 +132,21 @@ jobs:
       - name: Summarise the gate result
         id: gateresult
         run: |
+          # `outcome`, NOT `conclusion`. With continue-on-error: true,
+          # `conclusion` is forced to 'success' whatever pytest did, so a
+          # failing suite would report clean — the exact defect C-345 is
+          # about, one field name away.
           if [ "${{ steps.gates.outcome }}" = "failure" ]; then
             echo "failed=true" >> "$GITHUB_OUTPUT"
+            # Random delimiter: a fixed one can be forged by any content
+            # containing that word on a line of its own, which would break
+            # out of the output block. pytest output carries no structural
+            # guarantee against it, unlike `git log --oneline` below.
+            DELIM="GATELOG_$(openssl rand -hex 8)"
             {
-              echo "log<<GATELOG"
+              echo "log<<${DELIM}"
               tail -40 gates.log || true
-              echo "GATELOG"
+              echo "${DELIM}"
             } >> "$GITHUB_OUTPUT"
           else
             echo "failed=false" >> "$GITHUB_OUTPUT"
