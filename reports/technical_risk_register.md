@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-11 — C-342 RESOLVED and C-341 NARROWED (#424): the deploy gates now run on a schedule with a token and full history, `uv lock --check` blocks a stale lockfile at PR time, and the one gate that still runs nowhere is named rather than counted as covered. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-11 — C-341 RESOLVED and C-346 registered (#425): the version gate that could never fail was deleted rather than given a runner, replaced by a tag-vs-version test that does fail and an unskippable publish-time guard; four circular sibling copies are recorded rather than swept up. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 345 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 303 resolved-or-demoted, 39 open concerns (0 Tier 1, 4 Tier 2, 10 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 119 struck-through in active register (298 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 346 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 39 open concerns (0 Tier 1, 4 Tier 2, 10 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -161,6 +161,7 @@
 | C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
 | C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
 | ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
+| C-346 | 4 | Four copies of `test_version_not_already_tagged` use a conditional `xfail` that reads as rigorous and is circular — the test runs only when the version is untagged, then asserts it is untagged. Measured green in every reachable state | **Before trusting any `xfail`-marked test as a gate**: name the state that makes it fail. If none does, it is decoration | Test infra |
 | C-345 | 2 | Verification tooling reported a green suite that was red, twice in one session — a piped `pytest \| tail; echo $?` yields the pipe's status, and a task notification reported "exit code 0" for a run that exited 1 | **When capturing a long-running check's result** — piping it, backgrounding it, or reading a notification instead of an unpiped `$?`. Redirect to a file, capture `$?` unpiped, and grep `^FAILED` as a second reader | Test infra |
 | ~~C-344~~ | ~~2~~ | ~~`views-deploy`'s `~/.profile` was mode 644 inside a 751 home — every harvest credential (`UCDP_API_TOKEN`, `ACLED_*`, `GDL_API_TOKEN`, `HEARTBEAT_URL`) readable by all four accounts, continuously~~ | Registered and resolved 2026-08-10 (#432): `chmod 600`, verified unreadable from a second account and still readable by the owner. Rotation considered and **declined** by the operator 2026-08-10 — a judgement about who holds the three accounts, not evidence of non-access; revisit if a new shell account appears (C-88) | Credential hygiene |
 | ~~C-331~~ | ~~4~~ | ~~`HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`~~ | Resolved 2026-08-10 (#423): all three pings take the URL on stdin via `-K -`; drilled with a canary and a negative control. The entry's own suggested unquoted form was superseded — it truncates at whitespace and sends anyway | Operational monitoring |
@@ -172,7 +173,7 @@
 | C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
 | C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Before giving any human a command to paste** — if it spans more than one line it is unsafe (terminals join wrapped lines, and the joined form is often still valid shell); if it runs as root, ask what it writes to when mis-parsed | Operational safety |
 | C-340 | 3 | Auto-merge fails silently two ways: `gh pr merge --auto --<method>` refuses to change the method on an already-armed PR (nearly put a squash on `main`), and pushing to a branch whose PR already merged orphans the commit with no error | **Before arming a non-default merge method**, read `auto_merge.merge_method` back; **before any follow-up push to a PR branch**, check `merged` first or use a new branch | Operational safety |
-| C-341 | 4 | Deploy gates only run where someone types pytest — C-320's fix made them skip-with-reason in CI, so they assure only whoever runs the suite at the right moment | **When adding a deploy gate, or relying on one for release assurance:** ask whether it can answer in CI; if not, say so in the skip message and give it an out-of-band runner | Test infra |
+| ~~C-341~~ | ~~4~~ | ~~Deploy gates only run where someone types pytest — C-320's fix made them skip-with-reason in CI, so they assure only whoever runs the suite at the right moment | **When adding a deploy gate, or relying on one for release assurance:** ~~ | Resolved 2026-08-11 (#424 gave the answerable gates a scheduled runner; #425 deleted the one that could never answer and replaced it with a publish-time guard) | Test infra |
 | ~~C-342~~ | ~~3~~ | ~~A stale committed `uv.lock` is invisible — `uv sync` (ci.yml:24,42,60,99) rewrites it in place, so CI goes green on a lock that does not match the committed `pyproject.toml` and the stale one stays in git~~ | Resolved 2026-08-11 (#424): `uv lock --check` in the `test` job, before `uv sync`; drilled both directions and the ordering is itself guarded by `tests/test_ci_gates.py` | Dependency policy |
 | C-343 | 2 | Writing `~/.views-deploy-tag` is not deploying — the server ran v1.10.0 for five days while the tag file said v1.11.0 and views-frames stayed at the frozen 1.0.0. The in-script `git checkout` cannot fix the running script (bash has buffered it) and never runs `uv sync` | **At the next release** — deploy with all three `server_quickref.md` steps, then verify tag file, `git describe --tags` and installed version all agree | Deployment |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
@@ -200,19 +201,20 @@ silence, not error** — a thing reports success while not doing what it claims.
 *C-342 was added to the cluster 2026-08-08, found while building the guard for C-337 — which is the
 cluster's own rule working: the drill found a defect adjacent to the one it was aimed at. C-343 was
 added 2026-08-08 from the production host, and C-317 was **closed by drill** 2026-08-10 — struck in
-the table below rather than removed, so the table has ten rows. C-331 was closed 2026-08-10, C-345 added and C-342 closed 2026-08-11, leaving eight open members of eleven rows.*
+the table below rather than removed, so the table has ten rows. C-331 closed 2026-08-10; C-345 and C-346 added and C-342 and C-341 closed 2026-08-11, leaving eight open members of twelve rows.*
 
 | ID | What reported success while being wrong |
 |---|---|
 | ~~**C-317**~~ | ~~`SIGKILL` bypasses the `ERR`/`EXIT` traps, so a killed run sends no failure ping~~ — **closed by drill 2026-08-10, the first member closed by observation** |
 | **C-345** | A piped exit status and a task notification each reported a failing suite as passing |
+| **C-346** | A conditional `xfail` that asserts the very condition selecting it — green in every state |
 | ~~**C-331**~~ | ~~`HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice~~ — **closed 2026-08-10, drilled with a negative control** |
 | **C-336** | Governance docs true when written, false later, nothing failing in between |
 | **C-337** | `views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever |
 | **C-338** | Freshness detection that runs daily-and-by-issue rather than alerting |
 | **C-339** | `tee` wrote to an unintended path as root and exited 0 |
 | **C-340** | `git push` succeeds onto a merged branch; `gh pr merge` exits 0 without changing the method |
-| **C-341** | A skipped test is not a red test — gates that assure only whoever ran them |
+| ~~**C-341**~~ | ~~A skipped test is not a red test — gates that assure only whoever ran them~~ — **closed 2026-08-11** |
 | ~~**C-342**~~ | ~~`uv sync` repairs a stale lockfile in CI's checkout, so CI is green and the stale lock stays committed~~ — **closed 2026-08-11** |
 | **C-343** | The deploy tag file read correctly, the pipeline was green, and the server ran the previous release |
 
@@ -2981,7 +2983,7 @@ Cross-ref: ~~C-335~~ (the gap this is the residual of), C-320 (why none of this 
 
 ---
 
-### C-341: Deploy gates only run where someone types pytest
+### ~~C-341: Deploy gates only run where someone types pytest~~ — RESOLVED
 
 **Source:** v1.9.0 → v1.11.0 post-mortem (2026-08-03), as the residual of ~~C-320~~'s fix.
 
@@ -3022,7 +3024,13 @@ require a *deploy environment* — git history, a token, or a real clone.
 1. `actions/checkout` leaves exactly **one** local branch, so the gates' bare `git merge-base --is-ancestor main development` exits **128** and they skip themselves — *even at `fetch-depth: 0`*. Verified in a simulated runner checkout. Two `git branch -f` lines fix it, and `tests/test_ci_gates.py` asserts they precede the gate step.
 2. The local-clone branch gate would have **passed trivially** on a runner rather than skipped — claiming coverage it did not have. It now skips with a reason, per this file's C-320 idiom.
 
-**The residue, precisely.** `TestF1VersionBumped::test_version_not_already_tagged` is `@pytest.mark.xfail`, so it cannot fail a suite *anywhere* — running it on a schedule would add a green tick and no information. That is **#425**'s subject, and this entry stays **open** until it lands. Closing it now would claim a coverage the xfail denies.
+**RESOLVED 2026-08-11 (#425) — the residue is gone, by deletion rather than by a runner.**
+
+The residue was `TestF1VersionBumped::test_version_not_already_tagged`, unconditionally `xfail`. #425 established *why* it could not simply be un-xfailed: version is bumped only at release time, so between releases the version is always a tag that exists, and the assertion is false for the entire inter-release period. Measured in both states — XFAIL when tagged, XPASS when not, **exit 0 either way**.
+
+It was asking a question repo state cannot answer. Deleted, and replaced by the two halves that *are* answerable: `TestVersionMatchesItsTag` (if HEAD is on a tag, the version must equal it — drilled to a real failure) and an **unskippable** guard in `publish_package.yml` comparing `github.ref_name` to the version before the build.
+
+**Four sibling copies of the deleted assertion survive** in three other deploy suites, using a conditional `xfail` that is circular rather than merely inert. Registered as **C-346** rather than swept up here — they are cleanup, not a gap, because the replacement now exists.
 
 Cross-ref: ~~C-320~~ (the fix whose residual this is), C-337 (same "nobody runs it" property), C-340, ~~C-342~~ (resolved by the same PR). GitHub: #402 item 4, #424. Part of work package: **Test infra**.
 
@@ -3194,6 +3202,45 @@ Two readers, because one reader that can be wrong is what this entry is about.
 **Open, because a habit is not a control.** Nothing prevents the next pipeline from masking a status the same way. The instrument would be a wrapper that refuses to report a result it did not obtain unpiped — proposed for **#424**, which is the story about giving checks somewhere to run other than one operator's discretion.
 
 Cross-ref: C-339 (the other assistant-workflow hazard, and the precedent for registering one), C-330/C-337/C-343 (same shape, different mechanisms), C-341 (gates that assure only whoever ran them — this is the failure mode *of* running them). Part of the **mechanisms that fail green** cluster. GitHub: #432.
+
+---
+
+### C-346: Four surviving copies of a version gate that cannot fail — the conditional form looks rigorous and is circular
+
+**Source:** #425, while removing the fifth copy (2026-08-11). Found by grepping for the one being deleted and discovering it was not alone.
+
+**Trigger:** **Before trusting any `xfail`-marked test as a gate**, and specifically before the next release: ask which state makes it *fail*. If no state does, it is decoration. Also whenever the release flow changes — these become answerable only if version stops being bumped at release time.
+
+**Location:** `tests/test_falsification_deploy_v130.py`, `tests/test_falsification_ghspop_deploy_v2.py`, `tests/test_falsification_ghsbuilts_deploy_v2.py`, `tests/test_falsification_vdem_deploy.py` — each a `test_version_not_already_tagged`. Plus the meta-test in `test_falsification_deploy_v130.py` that *enforces* the marker.
+
+**The construction.** Four of the five copies use a conditional marker:
+
+```python
+@pytest.mark.xfail(condition=_version_already_tagged(), reason="version already tagged")
+def test_version_not_already_tagged(self):
+    assert not _tag_exists(f"v{version}")
+```
+
+It reads as rigorous — xfail only when expected. It is **circular**: the test runs only when the version is *not* tagged, and then asserts the version is *not* tagged. It asserts the condition that selected it.
+
+**Measured in both states rather than argued** (the fifth copy, since deleted, behaved identically):
+
+| state | result | suite exit |
+|---|---|---|
+| version tagged (steady state, all but release day) | XFAIL | 0 |
+| version untagged (just bumped) | XPASS / pass | 0 |
+
+**Green in every reachable state.** None of the four can report a failure.
+
+**Why the question is unanswerable here at all.** They ask *"have you bumped yet?"*, which repo state cannot answer, because *"about to release"* is not knowable from the repo. Version is bumped only at release time, so between releases the version is always a tag that exists — the whole inter-release period. The question is answerable exactly one place: the release workflow, where `github.ref_name` is the tag that triggered the run. #425 put it there, unskippably, before the build.
+
+**Tier 4.** No correctness impact and no data exposure; the cost is four tests that read as coverage and are not, plus a meta-test that actively *requires* the marker keeping them that way. Not Tier 3: they mislead a reader, they do not increase the cost of change.
+
+**Deliberately not fixed here.** #425's scope was the fifth copy, and removing four more classes across three unrelated deploy suites — plus reworking the meta-test that enforces the marker — is its own change. The replacement already exists (`TestVersionMatchesItsTag` plus the publish-time guard), so this is cleanup, not a gap.
+
+**One thing to preserve if they are ever removed:** the meta-test exists because of the v1.2.29 post-mortem, which asked that these be xfailed *or restructured to check "tag exists AND tag commit matches HEAD"*. The second option is what #425 finally built. Whoever removes them should close that post-mortem item rather than silently drop it.
+
+Cross-ref: ~~C-341~~ (this was its last residue; resolved by the same PR), C-336 (a claim narrower than the property it names), C-345 (a check reporting success while establishing nothing). Part of the **mechanisms that fail green** cluster. GitHub: #425, #363.
 
 ---
 
