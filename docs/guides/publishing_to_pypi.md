@@ -242,10 +242,25 @@ shipped, and the next release's diff starts from a base that no longer reflects 
 **Squashing step 5 defeats it entirely** — a squash creates yet another commit that is not `main`,
 so `main` still is not an ancestor.
 
-Detection is automated by `.github/workflows/release-topology.yml`: it runs on every published
-release and daily, with full git history, and opens a single tracking issue if the branches have
-diverged. It deliberately does **not** run in the PR test job — that would make every PR red
-between a release and its back-merge, which is C-320's permanently-red CI all over again.
+Detection is automated by `.github/workflows/release-topology.yml` (display name **Release
+hygiene** since 2026-08-11 — the filename is kept so run history and existing citations stay
+valid). It runs on every published release and daily, with full git history, and opens **one**
+tracking issue covering everything it finds.
+
+It checks more than topology now (#424): the deploy gates that used to run only where someone typed
+`pytest` — remote stale release branches, issue hygiene, and the conflict-free back-merge — run
+there too, with `GH_TOKEN` so the `gh`-dependent one can answer instead of skipping.
+
+Two gates deliberately do **not** run there, and the reasons matter more than the coverage number:
+
+- **Local-clone branch hygiene** skips on CI. A fresh runner has one local branch, so it would pass
+  without inspecting anything — a green tick claiming coverage it does not have.
+- **version-not-already-tagged** is `xfail`, so it cannot fail a suite anywhere. #425 owns that.
+
+None of it runs in the PR test job — that would make every PR red between a release and its
+back-merge, which is C-320's permanently-red CI all over again. The one merge-blocking check added
+alongside is `uv lock --check` in `ci.yml`, and it is different in kind: it reddens only when the
+pull request itself left `uv.lock` stale, which is that PR's own fault and fixable inside it.
 
 Merged branches now delete themselves (`delete_branch_on_merge`), so no cleanup step is needed;
 eleven stale branches had accumulated before that was switched on.

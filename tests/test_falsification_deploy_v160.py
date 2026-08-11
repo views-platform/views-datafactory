@@ -189,7 +189,25 @@ class TestF8StaleBranches:
         ]
 
     def test_no_stale_local_release_branches(self) -> None:
-        """Local ``release/*`` branches for tagged versions are leftovers."""
+        """Local ``release/*`` branches for tagged versions are leftovers.
+
+        Skipped on CI, deliberately. This asserts a property of *an
+        operator's clone*, and a fresh runner is not one: ``actions/
+        checkout`` leaves exactly one local branch, so the assertion is
+        trivially true there. A gate that passes because there is
+        nothing to look at is worse than one that skips — it reports
+        coverage it does not have. Same idiom as the remote check below
+        and as C-320: skip where the environment cannot answer.
+        """
+        import os
+
+        if os.environ.get("CI"):
+            pytest.skip(
+                "local-clone hygiene is not answerable on a fresh CI "
+                "runner — actions/checkout leaves one local branch, so "
+                "this would pass without inspecting anything. The remote "
+                "half of this class DOES run in CI."
+            )
         result = subprocess.run(
             ["git", "branch", "--format=%(refname:short)"],
             capture_output=True,

@@ -56,6 +56,23 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4 — pinned, NOT upgraded
 
+      - name: Lockfile matches pyproject
+        # C-342. `uv sync` REWRITES uv.lock when pyproject.toml has moved, so
+        # without this a PR that edits dependencies without re-locking goes
+        # green: CI repairs the lock in its own checkout, tests the repaired
+        # version, and discards it. The stale lock stays in git.
+        #
+        # Must run BEFORE `uv sync`, which would otherwise repair the very
+        # thing being checked.
+        #
+        # This IS a merge-blocking check, unlike the deploy gates in
+        # release-topology.yml, and the distinction is the point. Those redden
+        # for reasons unrelated to the change under review — a diverged `main`
+        # is CORRECT between a release and its back-merge — which is C-320.
+        # This one reddens only when this PR itself left the lock stale: the
+        # PR's own fault, and fixable inside it with `uv lock`.
+        run: uv lock --check
+
       - name: Install dependencies
         run: uv sync
 

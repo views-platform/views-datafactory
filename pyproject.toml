@@ -113,6 +113,11 @@ dev = [
     # pandas backs the [pandas] extra above, but scripts/ and tests/ need it
     # unconditionally, so it is a dev dependency too.
     "pandas>=2.0,<3",
+    # tests/test_ci_gates.py asserts the STRUCTURE of the GitHub workflows —
+    # that `uv lock --check` precedes `uv sync`, and that the local-ref step
+    # precedes the deploy gates. Both orderings fail GREEN when wrong, so they
+    # are asserted rather than trusted. Dev-only: nothing under src/ imports it.
+    "pyyaml>=6,<7",
 ]
 
 [build-system]
