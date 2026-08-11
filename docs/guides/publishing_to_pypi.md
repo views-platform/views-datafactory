@@ -115,6 +115,39 @@ gh api -X PUT repos/views-platform/views-datafactory/branches/<branch>/protectio
 
 ---
 
+## One-time setup — the pre-push hook
+
+```bash
+git config core.hooksPath scripts/git-hooks
+```
+
+Run this once per clone. `core.hooksPath` is per-clone config that git does **not** version, so a
+fresh clone has no hooks until you set it.
+
+`scripts/git-hooks/pre-push` **refuses a push to a branch whose pull request has already merged.**
+That is C-340 mechanism 2, and it happened: #416 merged the instant CI went green, a follow-up
+commit was pushed to that branch, and two pieces of work were simply not on `development`.
+`git push` reported success. The only signal was a PR showing one commit when two had been pushed.
+
+It **allows** the push whenever it cannot answer — `gh` absent, unauthenticated, or offline — and
+says why. A hook that blocks work when it does not know gets uninstalled within a day, and then it
+guards nothing. Bypass with `git push --no-verify`.
+
+## Arming auto-merge — use the script, not `gh pr merge`
+
+```bash
+scripts/arm_automerge.sh <pr-number> <merge|squash|rebase>
+```
+
+`gh pr merge --auto --<method>` on an **already-armed** PR silently refuses to change the method. It
+prints nothing and exits 0. During v1.10.0 a `development` → `main` promotion was armed `squash`,
+re-armed with `--merge`, and stayed `squash` — caught only by reading the value back. **A squash onto
+`main` rewrites the release SHAs** and permanently breaks the ancestry the back-merge maintains; it
+would not have surfaced until a later release diffed against a base that never existed.
+
+The script uses the GraphQL disable/enable pair, which does honour the method, then **reads the
+method back and exits non-zero if it disagrees**. Reading back is the point; arming is the easy part.
+
 ## Prerequisites (one-time setup) — Trusted Publishing
 
 The release workflow authenticates with **Trusted Publishing (OIDC)** — there is **no
