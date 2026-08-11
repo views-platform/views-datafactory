@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Refuse a push to a branch whose pull request has already merged (C-340).
+#
+# WHY THIS IS A HOOK AND NOT ADVICE
+# #416 merged the instant CI went green. A follow-up commit was then pushed
+# to that branch, which by then had no open PR. Two pieces of work were
+# simply not on `development`. `git push` reported success; the only signal
+# was a PR showing one commit when two had been pushed.
+#
+# Everything else in epic #421 is a test or a workflow — it runs whether or
+# not anyone remembers. A checklist item would be the same class of defect
+# this epic exists to remove, so this is a hook: it cannot be forgotten.
+#
+# WHY IT ALLOWS THE PUSH WHEN IT CANNOT ANSWER
+# No `gh`, no auth, no network -> allow. A hook that blocks work when it
+# does not know is worse than the problem it solves, and it would be
+# uninstalled within a day. Same idiom as the deploy gates (C-320): skip
+# where the environment cannot answer, and say why.
+#
+# Install:  git config core.hooksPath scripts/git-hooks
+# Bypass:   git push --no-verify
+
+set -uo pipefail   # deliberately NOT -e: every failure path below must fall
+                   # through to "allow", never abort the push by accident.
+
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || exit 0
+[ -n "$branch" ] && [ "$branch" != "HEAD" ] || exit 0
+
+# Long-lived branches are pushed to constantly and never have their own PR.
+case "$branch" in
+    main|development) exit 0 ;;
+esac
+
+command -v gh >/dev/null 2>&1 || {
+    echo "pre-push: gh not installed — cannot check for a merged PR, allowing." >&2
+    exit 0
+}
+
+merged=$(gh pr list --head "$branch" --state merged \
+             --json number,mergedAt --limit 1 2>/dev/null) || {
+    echo "pre-push: gh could not answer (auth or network) — allowing." >&2
+    exit 0
+}
+
+# Empty list, or anything unparseable, means "no merged PR" — allow.
+case "$merged" in
+    ""|"[]") exit 0 ;;
+esac
+
+number=$(printf '%s' "$merged" | sed -n 's/.*"number":\([0-9]*\).*/\1/p')
+when=$(printf '%s' "$merged" | sed -n 's/.*"mergedAt":"\([^"]*\)".*/\1/p')
+[ -n "$number" ] || exit 0   # could not parse -> do not block
+
+cat >&2 <<EOF
+
+  REFUSED: $branch already had its pull request merged.
+
+    PR #${number} merged at ${when:-unknown}
+
+  Pushing here does not reach the base branch. The commit lands on a branch
+  with no open PR, git reports success, and the work is silently not merged.
+  That happened on #416 and is why this hook exists (C-340).
+
+  Put the work on a new branch instead:
+
+    git switch -c <new-branch>
+    git push -u origin <new-branch>
+
+  If you are certain you want this push:  git push --no-verify
+
+EOF
+exit 1
