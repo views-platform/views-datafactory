@@ -45,15 +45,26 @@ def _tag_exists(tag: str) -> bool:
     return tag in result.stdout.strip().splitlines()
 
 
-def _head_tag() -> str | None:
-    """The ``v*`` tag HEAD sits exactly on, or None."""
+def _head_tags() -> list[str]:
+    """Every ``v*`` tag HEAD sits exactly on.
+
+    ``git tag --points-at``, **not** ``git describe --exact-match``. The
+    latter returns exactly one tag — the lexicographically smallest —
+    and a commit can carry several. Reproduced: tag one commit
+    ``v1.11.0`` and ``checkpoint``, and ``describe`` answers
+    ``checkpoint`` regardless of creation order or tag type. The release
+    tag is then invisible, this test skips, and it skips *precisely when
+    a real mismatch is sitting on that commit*. Failing green in the one
+    direction that matters, found by review.
+    """
     result = subprocess.run(
-        ["git", "describe", "--tags", "--exact-match", "HEAD"],
+        ["git", "tag", "--points-at", "HEAD"],
         capture_output=True,
         text=True,
     )
-    tag = result.stdout.strip()
-    return tag if result.returncode == 0 and tag.startswith("v") else None
+    if result.returncode != 0:
+        return []
+    return [t for t in result.stdout.split() if t.startswith("v")]
 
 
 class TestVersionMatchesItsTag:
@@ -93,8 +104,8 @@ class TestVersionMatchesItsTag:
     """
 
     def test_version_equals_the_tag_head_is_on(self) -> None:
-        tag = _head_tag()
-        if tag is None:
+        tags = _head_tags()
+        if not tags:
             pytest.skip(
                 "HEAD is not on a v* tag — there is no tag to compare "
                 "against, and guessing one would be worse than saying so "
@@ -102,8 +113,10 @@ class TestVersionMatchesItsTag:
                 "publish_package.yml, where the triggering tag is known."
             )
         version = _current_version()
-        assert tag == f"v{version}", (
-            f"HEAD is on tag {tag} but pyproject.toml declares version "
+        expected = f"v{version}"
+        assert expected in tags, (
+            f"HEAD is on tag(s) {sorted(tags)} but pyproject.toml declares "
+            f"version "
             f"{version} (expected tag v{version}). A release published "
             f"from this state puts a wheel on PyPI whose metadata "
             f"disagrees with the git history, discoverable only by "

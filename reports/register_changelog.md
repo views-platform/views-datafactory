@@ -56,6 +56,18 @@ pytest was invoked from the main repo while the test shells out to `git describe
 directory*, so it still answered about the wrong tree. Fourth and fifth instances this week of a
 drill whose setup did not happen while the exit code looked fine — the C-345 family.
 
+**The replacement had a fails-green of its own, caught by review not by me.** `_head_tag()` used
+`git describe --tags --exact-match HEAD`, which returns **exactly one** tag — the lexicographically
+smallest — and a commit can carry several. Reproduced: tag one commit `v1.11.0` and `checkpoint`,
+and `describe` answers `checkpoint`, regardless of creation order or tag type. The release tag is
+then invisible, the test skips, and **it skips precisely when a real mismatch is sitting on that
+commit**. Switched to `git tag --points-at`, which lists all of them, and drilled the multi-tag case
+that had no drill before: mismatch with a stray non-`v` tag present now fails `rc=1`.
+
+Worth noting where it was *not* a problem: the `publish_package.yml` guard compares
+`github.ref_name` directly and never shells out to `git describe`, so the unskippable half was
+immune. The two halves failing differently is the argument for having both.
+
 **And the publish guard had a real bug the drill caught.** It read the version with bare `python3 -c
 "import tomllib"`. `tomllib` needs ≥ 3.11; local `python3` is 3.10, and the runner's is whatever the
 image ships. Pinned to `uv run --no-project --python 3.12`, matching the guard beside it. That one
