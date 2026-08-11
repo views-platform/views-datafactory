@@ -17,6 +17,51 @@ entry could.
 
 ---
 
+## C-345 — the instrument that detects this cluster is a member of it (2026-08-11)
+
+`/register-risk` after #432. Tier 2, and the only entry so far found by watching **my own
+verification** rather than the system.
+
+**Twice in one session a failing suite was reported as passing.** First
+`uv run pytest -q | tail -2; echo "EXIT=$?"` — a pipeline's status is its *last* element's, so `tail`
+returned 0 while pytest had exited 1. Then a backgrounded run's task notification said *"exit code
+0"* for the same reason: the command ended in an `echo`. The second was caught only by reading the
+output file, and by then the user had already been told the suite was running and would be folded
+in. One step from reporting green on red.
+
+**Why it is registered rather than remembered.** The suite is the gate on every story in this epic;
+a false green means a defect merges, and per C-343 a `refresh_pipeline.sh` change reaches production
+only at the next cron run after a deploy — a further month later still if the deploy is tag-file-only.
+The precedent for registering a workflow hazard rather than a code one is C-339, an assistant-authored
+command that destroyed a production log.
+
+**A claim was cut from this entry during review, and the cut is worth recording.** The first draft
+justified the tier partly on *"two recorded false-readiness incidents that each cost a full day"*.
+Those incidents are real and known to the operator — but **nothing in this repository records them**.
+A grep of the register, the changelog and every post-mortem returns only the sentence making the
+claim. It also attributed "two months in production" to C-343, which says *one* month and never
+derives the larger figure. Both were caught by fact-checking the entry against the repo rather than
+against memory. Citing evidence a reader cannot find is precisely how a register stops being
+checkable, and the same overreach had already shipped inside C-331 in #432 — corrected here too.
+
+**The shape is the cluster's own, which is the uncomfortable part.** C-330 was a nightly no-op
+exiting 0. C-337 was a lockfile frozen with no error. C-343 was a deploy that deployed nothing. This
+is the same defect in the instrument used to find all three. An epic about mechanisms that report
+success while doing nothing spent a week using one.
+
+**Mitigation adopted, and explicitly not a control:** redirect to a file, capture `$?` unpiped, grep
+`^FAILED` as a second independent reader. A habit is not machinery — nothing stops the next pipeline
+masking a status the same way. The instrument would refuse to report a result it did not obtain
+unpiped; proposed for #424.
+
+**Two findings from the same session deliberately not registered.** The guard-narrower-than-the-
+property pattern (three versions of `test_heartbeat_secret.py`, each failing green) went to C-336 as
+a second addendum — same mechanism, new location. And an unbounded `until … sleep 30` poll that died
+on a transient DNS failure was fixed by bounding the loop; a one-line workflow correction with no
+consequence, below the register's bar.
+
+---
+
 ## C-331 RESOLVED — and the entry's own prescribed fix was the bug (2026-08-10)
 
 Epic #421 Story 2 (#423). The heartbeat URL now reaches `curl` on stdin via `-K -` at all three
@@ -64,7 +109,10 @@ form — running, on the box, the exact exposure this story removes. Replaced wi
 quoting verified against a local listener before being written down.
 
 **Not live on the server.** #423's note said no server change was required. Per C-343 that is false:
-the change lands one run after a deploy, so worst case it is in production two months from merge.
+the change reaches production at the first cron run after a deploy, and a further month later if the
+deploy is tag-file-only — weeks to months depending on when the next release happens. (This read "two
+months from merge" when written; corrected in #433 — C-343 says one month and never derives the
+larger figure.)
 Recorded rather than quietly assumed, and the issue has been corrected.
 
 **The residual was checked, and it was worse than the concern.** C-331's entry flagged that
