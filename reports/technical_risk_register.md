@@ -2550,8 +2550,10 @@ different blast radius.
 **Not live on the server yet**, and the issue said otherwise. #423 stated "no server change is
 required — the script is deployed by tag." C-343 established that bash buffers the script, so a
 change to `refresh_pipeline.sh` lands one run *after* a deploy — a month on a monthly cron — and
-deploying is three steps, not one. Worst case this fix is in production two months from merge, and
-the argv exposure continues until then.
+deploying is three steps, not one. The fix reaches production at the first cron run after a deploy,
+and a further month later if the deploy is tag-file-only — so weeks to months depending on when the
+next release happens, with the argv exposure continuing until then. (Corrected 2026-08-11: this
+read "two months from merge", a figure C-343 does not derive — #433.)
 
 Cross-ref: C-131 (the alert this would silence), ~~C-317~~ (the SIGKILL gap the failure ping closes,
 resolved by drill the same week), C-343 (why this is not yet live), C-336 (why this entry's own
@@ -3141,7 +3143,9 @@ Cross-ref: ~~C-331~~ (the residual this was found chasing), C-322/~~C-324~~ (GDL
 
 The second was caught only by reading the output file instead of the notification — and by then the user had already been told the suite was running and would be folded in. **One step from reporting a green suite that was red.**
 
-**Tier 2, and the justification is required rather than assumed.** Not Tier 3: this is not a maintainability cost. The suite is the primary gate on every story in this epic, and a false green on it means a defect merges. Given C-343 — a shell change lands one cron run after a deploy — that defect can then sit in production for up to two months. Not Tier 1: no data was corrupted and no model output was wrong; the failure is in *knowing whether* work is sound, not in the work itself. The trigger is not hypothetical: it fired twice in one session, and this project has recorded two prior false-readiness incidents that each cost a full day.
+**Tier 2, and the justification is required rather than assumed.** Not Tier 3: this is not a maintainability cost. The suite is the primary gate on every story in this epic, and a false green on it means a defect merges. And per C-343 the defect is not merely merged but slow to surface: a `refresh_pipeline.sh` change reaches production at the next cron run after a deploy, and **one run later still** — a further month — if the deploy is tag-file-only. Not Tier 1: no data was corrupted and no model output was wrong; the failure is in *knowing whether* work is sound, not in the work itself.
+
+**The trigger is not hypothetical — it fired twice in one session.** That is the whole evidentiary basis, and it is deliberately the only one cited. An earlier draft justified the tier by appealing to "two prior false-readiness incidents that each cost a full day". Those incidents are real and known to the operator, but **this repository records neither of them** — not in the register, the changelog, or any post-mortem. Citing history a reader cannot find is how a register stops being checkable, which is C-336's whole subject. The claim is removed rather than softened; that the incidents went unrecorded is itself a gap, and belongs to whoever writes the next post-mortem.
 
 **The shape is the cluster's, exactly.** A mechanism that reports success while establishing nothing. It is the same defect as C-330 (a nightly no-op exiting 0), C-337 (a lockfile frozen with no error) and C-343 (a deploy that deployed nothing) — this time in the instrument used to detect all of them, which is why it belongs registered rather than remembered.
 

@@ -29,11 +29,20 @@ returned 0 while pytest had exited 1. Then a backgrounded run's task notificatio
 output file, and by then the user had already been told the suite was running and would be folded
 in. One step from reporting green on red.
 
-**Why it is registered rather than remembered.** This project has two recorded false-readiness
-incidents that each cost a full day. The suite is the gate on every story in this epic; a false green
-means a defect merges, and C-343 means it can then sit in production for two months. The precedent
-for registering a workflow hazard rather than a code one is C-339 — an assistant-authored command
-that destroyed a production log.
+**Why it is registered rather than remembered.** The suite is the gate on every story in this epic;
+a false green means a defect merges, and per C-343 a `refresh_pipeline.sh` change reaches production
+only at the next cron run after a deploy — a further month later still if the deploy is tag-file-only.
+The precedent for registering a workflow hazard rather than a code one is C-339, an assistant-authored
+command that destroyed a production log.
+
+**A claim was cut from this entry during review, and the cut is worth recording.** The first draft
+justified the tier partly on *"two recorded false-readiness incidents that each cost a full day"*.
+Those incidents are real and known to the operator — but **nothing in this repository records them**.
+A grep of the register, the changelog and every post-mortem returns only the sentence making the
+claim. It also attributed "two months in production" to C-343, which says *one* month and never
+derives the larger figure. Both were caught by fact-checking the entry against the repo rather than
+against memory. Citing evidence a reader cannot find is precisely how a register stops being
+checkable, and the same overreach had already shipped inside C-331 in #432 — corrected here too.
 
 **The shape is the cluster's own, which is the uncomfortable part.** C-330 was a nightly no-op
 exiting 0. C-337 was a lockfile frozen with no error. C-343 was a deploy that deployed nothing. This
@@ -100,7 +109,10 @@ form — running, on the box, the exact exposure this story removes. Replaced wi
 quoting verified against a local listener before being written down.
 
 **Not live on the server.** #423's note said no server change was required. Per C-343 that is false:
-the change lands one run after a deploy, so worst case it is in production two months from merge.
+the change reaches production at the first cron run after a deploy, and a further month later if the
+deploy is tag-file-only — weeks to months depending on when the next release happens. (This read "two
+months from merge" when written; corrected in #433 — C-343 says one month and never derives the
+larger figure.)
 Recorded rather than quietly assumed, and the issue has been corrected.
 
 **The residual was checked, and it was worse than the concern.** C-331's entry flagged that
