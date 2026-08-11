@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-11 — C-345 registered (Tier 2): the verification tooling reported a green suite that was red, twice in one session, so the instrument used to detect this whole cluster is itself a member of it. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-11 — C-342 RESOLVED and C-341 NARROWED (#424): the deploy gates now run on a schedule with a token and full history, `uv lock --check` blocks a stale lockfile at PR time, and the one gate that still runs nowhere is named rather than counted as covered. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 345 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 302 resolved-or-demoted, 40 open concerns (0 Tier 1, 4 Tier 2, 11 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 118 struck-through in active register (297 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 345 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 303 resolved-or-demoted, 39 open concerns (0 Tier 1, 4 Tier 2, 10 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 119 struck-through in active register (298 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -173,7 +173,7 @@
 | C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Before giving any human a command to paste** — if it spans more than one line it is unsafe (terminals join wrapped lines, and the joined form is often still valid shell); if it runs as root, ask what it writes to when mis-parsed | Operational safety |
 | C-340 | 3 | Auto-merge fails silently two ways: `gh pr merge --auto --<method>` refuses to change the method on an already-armed PR (nearly put a squash on `main`), and pushing to a branch whose PR already merged orphans the commit with no error | **Before arming a non-default merge method**, read `auto_merge.merge_method` back; **before any follow-up push to a PR branch**, check `merged` first or use a new branch | Operational safety |
 | C-341 | 4 | Deploy gates only run where someone types pytest — C-320's fix made them skip-with-reason in CI, so they assure only whoever runs the suite at the right moment | **When adding a deploy gate, or relying on one for release assurance:** ask whether it can answer in CI; if not, say so in the skip message and give it an out-of-band runner | Test infra |
-| C-342 | 3 | A stale committed `uv.lock` is invisible — `uv sync` (ci.yml:24,42,60,99) rewrites it in place, so CI goes green on a lock that does not match the committed `pyproject.toml` and the stale one stays in git | **When editing `[project].dependencies` and committing without running `uv lock`** — the working tree self-heals, so nothing tells you. Fix is `uv lock --check` in CI | Dependency policy |
+| ~~C-342~~ | ~~3~~ | ~~A stale committed `uv.lock` is invisible — `uv sync` (ci.yml:24,42,60,99) rewrites it in place, so CI goes green on a lock that does not match the committed `pyproject.toml` and the stale one stays in git~~ | Resolved 2026-08-11 (#424): `uv lock --check` in the `test` job, before `uv sync`; drilled both directions and the ordering is itself guarded by `tests/test_ci_gates.py` | Dependency policy |
 | C-343 | 2 | Writing `~/.views-deploy-tag` is not deploying — the server ran v1.10.0 for five days while the tag file said v1.11.0 and views-frames stayed at the frozen 1.0.0. The in-script `git checkout` cannot fix the running script (bash has buffered it) and never runs `uv sync` | **At the next release** — deploy with all three `server_quickref.md` steps, then verify tag file, `git describe --tags` and installed version all agree | Deployment |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
@@ -193,14 +193,14 @@
 
 *Added by `/review-rr strategic`, 2026-08-04.*
 
-Nine open entries are symptoms of one root cause, and read very differently together than apart.
+Eight open entries are symptoms of one root cause, and read very differently together than apart.
 Individually each is small. Together they say that **this project's characteristic failure is
 silence, not error** — a thing reports success while not doing what it claims.
 
 *C-342 was added to the cluster 2026-08-08, found while building the guard for C-337 — which is the
 cluster's own rule working: the drill found a defect adjacent to the one it was aimed at. C-343 was
 added 2026-08-08 from the production host, and C-317 was **closed by drill** 2026-08-10 — struck in
-the table below rather than removed, so the table has ten rows. C-331 was closed 2026-08-10 and C-345 added 2026-08-11, leaving nine open members of eleven rows.*
+the table below rather than removed, so the table has ten rows. C-331 was closed 2026-08-10, C-345 added and C-342 closed 2026-08-11, leaving eight open members of eleven rows.*
 
 | ID | What reported success while being wrong |
 |---|---|
@@ -213,7 +213,7 @@ the table below rather than removed, so the table has ten rows. C-331 was closed
 | **C-339** | `tee` wrote to an unintended path as root and exited 0 |
 | **C-340** | `git push` succeeds onto a merged branch; `gh pr merge` exits 0 without changing the method |
 | **C-341** | A skipped test is not a red test — gates that assure only whoever ran them |
-| **C-342** | `uv sync` repairs a stale lockfile in CI's checkout, so CI is green and the stale lock stays committed |
+| ~~**C-342**~~ | ~~`uv sync` repairs a stale lockfile in CI's checkout, so CI is green and the stale lock stays committed~~ — **closed 2026-08-11** |
 | **C-343** | The deploy tag file read correctly, the pipeline was green, and the server ran the previous release |
 
 **Why this belongs in the register rather than a post-mortem.** The individual fixes are already
@@ -226,7 +226,7 @@ looking at the production host. **The counts in this paragraph used to be exact 
 twice** — they said "eight" while the table held nine and then ten. That is C-336 happening inside
 the cluster section about it, so the tally is now qualitative on purpose.
 
-**Cluster-level action, cheaper than nine separate ones:** when adding any guard, workflow, or
+**Cluster-level action, cheaper than eight separate ones:** when adding any guard, workflow, or
 operational step, drill it by breaking it. Every guard drilled in the 2026-08 window found a real
 defect — including one in its own author's work, one day after writing it.
 
@@ -2999,11 +2999,31 @@ Partially mitigated 2026-08-03: `release-topology.yml` runs the topology gate da
 
 **Note the shape rather than just the instance.** A guard that cannot run in the environment where it matters is a guard that reports on the runner's discipline, not on the repository. C-337's floor-versus-lock check has the same property today: it is a rule nobody executes.
 
-Cross-ref: ~~C-320~~ (the fix whose residual this is), C-337 (same "nobody runs it" property), C-340. GitHub: #402 item 4. Part of work package: **Test infra**.
+**NARROWED 2026-08-11 (#424) — most gates now have a runner; one genuinely still does not.**
+
+`release-topology.yml` (display name **Release hygiene**) now runs the gates that can answer on a schedule, with `GH_TOKEN` and full history:
+
+| Gate | Before | Now |
+|---|---|---|
+| main ancestor of development | shell check only | shell check **plus** the pytest gate |
+| back-merge is conflict-free | nowhere | **runs** — the shell check never did this |
+| remote stale release branches | local only | **runs** |
+| issue hygiene | local only | **runs**, with `GH_TOKEN` |
+| local-clone branch hygiene | local only | **skips on CI, by design** |
+| version-not-already-tagged | local only | **still nowhere** |
+
+**Two things had to be measured rather than assumed**, and both would have produced a silent non-check:
+
+1. `actions/checkout` leaves exactly **one** local branch, so the gates' bare `git merge-base --is-ancestor main development` exits **128** and they skip themselves — *even at `fetch-depth: 0`*. Verified in a simulated runner checkout. Two `git branch -f` lines fix it, and `tests/test_ci_gates.py` asserts they precede the gate step.
+2. The local-clone branch gate would have **passed trivially** on a runner rather than skipped — claiming coverage it did not have. It now skips with a reason, per this file's C-320 idiom.
+
+**The residue, precisely.** `TestF1VersionBumped::test_version_not_already_tagged` is `@pytest.mark.xfail`, so it cannot fail a suite *anywhere* — running it on a schedule would add a green tick and no information. That is **#425**'s subject, and this entry stays **open** until it lands. Closing it now would claim a coverage the xfail denies.
+
+Cross-ref: ~~C-320~~ (the fix whose residual this is), C-337 (same "nobody runs it" property), C-340, ~~C-342~~ (resolved by the same PR). GitHub: #402 item 4, #424. Part of work package: **Test infra**.
 
 ---
 
-### C-342: A stale committed `uv.lock` is invisible — every command that reads it also silently rewrites it
+### ~~C-342: A stale committed `uv.lock` is invisible — every command that reads it also silently rewrites it~~ — RESOLVED
 
 **Source:** investigation while building the C-337 regression guard, epic #421 Story 1 (2026-08-08). Verified empirically, not inferred.
 
@@ -3032,7 +3052,15 @@ $ git diff --stat uv.lock
 
 **The instrument is `uv lock --check` in CI, not a test.** A pytest reading `tomllib` cannot see this: by the time pytest runs, the lock has already been repaired. Deliberately **not** fixed in Story 1 (#422), whose scope is a test file. Proposed for Story 3 (#424), which is the story about giving gates somewhere to run other than one laptop.
 
-Cross-ref: C-337 (the floor-versus-lock concern this sits beside — same file, different failure), C-341 (a gate with nowhere to run; this is a gate that does not exist), C-336 (an artifact true when written and false later). Part of the **mechanisms that fail green** cluster. GitHub: #430, proposed for #424.
+**RESOLVED 2026-08-11 (#424).** `uv lock --check` runs in `ci.yml`'s **`test` job**, before `uv sync`. Drilled both directions: clean tree `rc=0`; a dependency added to `pyproject.toml` without re-locking `rc=1`, with the message *"The lockfile at `uv.lock` needs to be updated"*; re-locked `rc=0` again.
+
+**The ordering is the whole fix, and it is guarded.** After `uv sync` the check would inspect a lockfile CI has already repaired and pass unconditionally — a green tick verifying nothing. `tests/test_ci_gates.py` asserts the position, and was drilled by moving the step and by deleting it.
+
+**Why this one blocks a PR when the deploy gates deliberately do not.** Those redden for reasons unrelated to the change under review — a diverged `main` is *correct* between a release and its back-merge — which is C-320. This reddens only when the pull request itself left the lock stale: its own fault, fixable inside it with one command. The distinction is stated in the workflow comment so nobody has to re-derive it.
+
+**Confirmed on its own change.** This PR adds `pyyaml` to the dev group for `test_ci_gates.py`; `uv lock --check` was run after re-locking and agreed.
+
+Cross-ref: C-337 (the floor-versus-lock concern this sits beside — same file, different failure), C-341 (narrowed by the same PR), C-336 (an artifact true when written and false later). Part of the **mechanisms that fail green** cluster. GitHub: #430, resolved in #424.
 
 ---
 

@@ -17,6 +17,49 @@ entry could.
 
 ---
 
+## C-342 RESOLVED, C-341 NARROWED — the gates run somewhere, and the one that still does not is named (2026-08-11)
+
+Epic #421 Story 3 (#424). The story shipped smaller than its issue described, and the reason is the
+interesting part.
+
+**The issue's own table was wrong, and measuring it is what showed that.** #424 claimed four gates
+would start running once the workflow got a step and a token. Simulating a runner checkout first:
+
+- `actions/checkout` leaves exactly **one** local branch, so the gates' bare
+  `git merge-base --is-ancestor main development` exits **128** and they skip themselves — *even at
+  `fetch-depth: 0`*, which the workflow already had. Two `git branch -f` lines fix it, and without
+  them the step would have run, passed, and asserted nothing.
+- The local-clone branch gate would have **passed trivially** on a runner rather than skipped. That
+  is worse than skipping: it reports coverage it does not have. It now skips with a reason.
+- `TestF1VersionBumped` is `xfail`. It cannot fail a suite anywhere, so scheduling it would add a
+  green tick and no information.
+
+So of the four gates named, one was redundant, one needed unblocking, one needed *demoting to a
+skip*, and one cannot be made meaningful without #425. **C-341 is narrowed, not closed** — closing
+it would claim a coverage the xfail denies. The back-merge conflict-free check, which nothing was
+running anywhere, is a straight gain the issue never mentioned.
+
+**C-342 resolved**: `uv lock --check` in the `test` job, before `uv sync`. Drilled clean/dirty/clean.
+It is the one merge-blocking check added, and it is different in kind from the deploy gates: those
+redden for reasons unrelated to the change, this reddens only when the PR itself left the lock
+stale. Confirmed on its own change — this PR adds `pyyaml` to the dev group, and the check agreed
+after re-locking.
+
+**A near-miss worth recording.** The `uv lock --check` step was first inserted between
+`- name: Install dependencies` and its `run:`, producing a step with a **duplicate `run:` key**.
+`yaml.safe_load` reported *"YAML parses"* — PyYAML silently keeps the last duplicate — so the
+syntax check passed while the lock check had been overwritten by `uv sync` and would never have
+run. Twenty minutes after registering C-345, the same defect in the same shape: **a parse is not a
+verification.** `tests/test_ci_gates.py` now asserts step well-formedness for exactly this.
+
+**And the drill of that guard was itself wrong first.** Its pass criterion was `rc != 0`, which
+cannot tell "the guard caught it" from "the test file failed to import" — and the file *was* failing
+to import, because `pyyaml` was not a dependency. All four mutations reported CAUGHT while nothing
+ran. Re-drilled with `rc == 1` meaning caught and `rc >= 2` meaning error; five mutations, five
+genuine catches.
+
+---
+
 ## C-345 — the instrument that detects this cluster is a member of it (2026-08-11)
 
 `/register-risk` after #432. Tier 2, and the only entry so far found by watching **my own
