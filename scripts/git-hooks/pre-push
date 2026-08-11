@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Refuse a push to a branch whose pull request has already merged (C-340).
+# Refuse a push that ADDS COMMITS TO A BRANCH WHOSE PR HAS ALREADY MERGED
+# (C-340 mechanism 2).
 #
 # WHY THIS IS A HOOK AND NOT ADVICE
 # #416 merged the instant CI went green. A follow-up commit was then pushed
@@ -11,51 +12,105 @@
 # not anyone remembers. A checklist item would be the same class of defect
 # this epic exists to remove, so this is a hook: it cannot be forgotten.
 #
-# WHY IT ALLOWS THE PUSH WHEN IT CANNOT ANSWER
-# No `gh`, no auth, no network -> allow. A hook that blocks work when it
-# does not know is worse than the problem it solves, and it would be
-# uninstalled within a day. Same idiom as the deploy gates (C-320): skip
-# where the environment cannot answer, and say why.
+# TWO THINGS THIS GOT WRONG FIRST, both found by review (#437):
+#
+#   1. It read the branch from `git rev-parse HEAD` instead of from stdin.
+#      Git hands a pre-push hook the refs actually being pushed, one per
+#      line: <local ref> <local sha> <remote ref> <remote sha>. Using HEAD
+#      meant `git push origin feature-a:feature-a` while `main` was checked
+#      out hit the main fast-path and never checked feature-a at all —
+#      silently allowing the exact push this hook exists to refuse.
+#
+#   2. It matched on branch NAME alone. Names get reused: this repo has
+#      `docs/roadmap-plan-v11` across PRs #50-54 and `feat/acled-phase2`
+#      across #35-36. A fresh branch reusing a name would be permanently
+#      refused, with no recourse but --no-verify. A hook that blocks
+#      legitimate work is worse than the bug it prevents.
+#
+#   3. The first FIX for (2) was also wrong, and only the drill showed it.
+#      It asked "is the merged PR's head an ancestor of what I am pushing".
+#      For a squash merge that works; for a merge-commit merge the branch
+#      head enters the base branch's history permanently, so it is an
+#      ancestor of EVERY branch cut from it afterwards. PR #54's head is an
+#      ancestor of `development` today, so every future branch would have
+#      been refused. Verified, not reasoned.
+#
+# The signal that actually distinguishes the two cases is already on stdin:
+# REMOTE_SHA — what the remote ref points at right now, or forty zeros if
+# it does not exist. If the remote branch is sitting exactly on the merged
+# PR's head, this push adds to merged work. If the remote ref is absent
+# (branch deleted on merge, name reused) or points somewhere else, it does
+# not.
+#
+# WHY IT ALLOWS THE PUSH WHENEVER IT CANNOT ANSWER
+# No `gh`, no auth, no network, object not present locally -> allow. A hook
+# that blocks work when it does not know gets uninstalled within a day, and
+# then it guards nothing. Same idiom as the deploy gates (C-320): skip where
+# the environment cannot answer, and say why.
 #
 # Install:  git config core.hooksPath scripts/git-hooks
 # Bypass:   git push --no-verify
 
 set -uo pipefail   # deliberately NOT -e: every failure path below must fall
-                   # through to "allow", never abort the push by accident.
+                   # through to "allow", never abort a push by accident.
 
-branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || exit 0
-[ -n "$branch" ] && [ "$branch" != "HEAD" ] || exit 0
-
-# Long-lived branches are pushed to constantly and never have their own PR.
-case "$branch" in
-    main|development) exit 0 ;;
-esac
+ZERO="0000000000000000000000000000000000000000"
+refused=0
 
 command -v gh >/dev/null 2>&1 || {
     echo "pre-push: gh not installed — cannot check for a merged PR, allowing." >&2
     exit 0
 }
 
-merged=$(gh pr list --head "$branch" --state merged \
-             --json number,mergedAt --limit 1 2>/dev/null) || {
-    echo "pre-push: gh could not answer (auth or network) — allowing." >&2
-    exit 0
-}
+# One line per ref being pushed. Reading from stdin without a pipe keeps
+# this in the current shell, so `refused` survives the loop.
+while read -r _local_ref local_sha remote_ref remote_sha; do
+    [ -n "${remote_ref:-}" ] || continue
 
-# Empty list, or anything unparseable, means "no merged PR" — allow.
-case "$merged" in
-    ""|"[]") exit 0 ;;
-esac
+    # Deleting a remote ref: nothing is being added, nothing to refuse.
+    [ "$local_sha" = "$ZERO" ] && continue
 
-number=$(printf '%s' "$merged" | sed -n 's/.*"number":\([0-9]*\).*/\1/p')
-when=$(printf '%s' "$merged" | sed -n 's/.*"mergedAt":"\([^"]*\)".*/\1/p')
-[ -n "$number" ] || exit 0   # could not parse -> do not block
+    # Branches only. Tags are immutable by ruleset and have no PR.
+    case "$remote_ref" in
+        refs/heads/*) branch=${remote_ref#refs/heads/} ;;
+        *) continue ;;
+    esac
 
-cat >&2 <<EOF
+    # Long-lived branches are pushed to constantly and have no PR of their own.
+    case "$branch" in
+        main|development) continue ;;
+    esac
 
-  REFUSED: $branch already had its pull request merged.
+    # Creating the branch on the remote: there is nothing there to add to.
+    # This is the reused-name case, and it must be allowed.
+    [ "${remote_sha:-$ZERO}" = "$ZERO" ] && continue
+
+    pr=$(gh pr list --head "$branch" --state merged \
+             --json number,mergedAt,headRefOid --limit 1 2>/dev/null) || {
+        echo "pre-push: gh could not answer for $branch (auth or network) — allowing." >&2
+        continue
+    }
+    case "$pr" in ""|"[]") continue ;; esac
+
+    number=$(printf '%s' "$pr" | sed -n 's/.*"number":\([0-9]*\).*/\1/p')
+    when=$(printf '%s' "$pr" | sed -n 's/.*"mergedAt":"\([^"]*\)".*/\1/p')
+    head=$(printf '%s' "$pr" | sed -n 's/.*"headRefOid":"\([^"]*\)".*/\1/p')
+    [ -n "$number" ] && [ -n "$head" ] || continue   # unparseable -> allow
+
+    # THE DISTINGUISHING TEST. The remote branch must be sitting exactly
+    # on the merged PR's head — that is the #416 shape: branch merged,
+    # remote ref left where the merge found it, and a new commit pushed on
+    # top. Anything else (remote moved on, name reused after a delete) is
+    # not this bug and must not be blocked.
+    [ "$remote_sha" = "$head" ] || continue
+
+    refused=1
+    cat >&2 <<EOF
+
+  REFUSED: $branch still carries the work of a pull request that has merged.
 
     PR #${number} merged at ${when:-unknown}
+    the remote branch is still sitting on its head ${head}
 
   Pushing here does not reach the base branch. The commit lands on a branch
   with no open PR, git reports success, and the work is silently not merged.
@@ -69,4 +124,6 @@ cat >&2 <<EOF
   If you are certain you want this push:  git push --no-verify
 
 EOF
-exit 1
+done
+
+exit "$refused"
