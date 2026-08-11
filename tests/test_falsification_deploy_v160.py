@@ -2,8 +2,11 @@
 
 Claim: "We are ready to bump the version, merge to main, tag, and deploy."
 
-Hard falsification F1: version not bumped — pyproject.toml still says 1.5.0,
-    but tag v1.5.0 already exists on main.
+Hard falsification F1: REMOVED 2026-08-11 (#425). It asserted "the version
+    is not already tagged", which cannot fail in this repo — version is bumped
+    only at release time, so between releases the version is always a tag that
+    exists. Replaced by TestVersionMatchesItsTag, which asserts the half that
+    can fail, plus an unskippable guard in publish_package.yml. See C-346.
 Hard falsification F2: main has merge commits not in development.
     Originally phrased as "the deploy guide prescribes ``git merge development
     --ff-only`` and fast-forward is impossible". Both halves of that framing are
@@ -42,17 +45,71 @@ def _tag_exists(tag: str) -> bool:
     return tag in result.stdout.strip().splitlines()
 
 
-class TestF1VersionBumped:
-    """F1: version in pyproject.toml must be newer than any existing tag."""
+def _head_tag() -> str | None:
+    """The ``v*`` tag HEAD sits exactly on, or None."""
+    result = subprocess.run(
+        ["git", "describe", "--tags", "--exact-match", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    tag = result.stdout.strip()
+    return tag if result.returncode == 0 and tag.startswith("v") else None
 
-    @pytest.mark.xfail(reason="version already tagged — expected post-deploy")
-    def test_version_not_already_tagged(self) -> None:
-        """Current version must not already have a git tag."""
+
+class TestVersionMatchesItsTag:
+    """The released version must equal the tag it was released under (#363).
+
+    **Replaces ``TestF1VersionBumped``, deleted 2026-08-11 (#425).** That
+    class asserted "the current version is not already tagged", and it
+    could not fail. Version here is bumped only at release time, so from
+    the moment a release lands until the next bump the version *is* a tag
+    that exists — the whole inter-release period. Hence its unconditional
+    ``xfail``. Measured before removing it:
+
+    ===================  ======================  ===========
+    version tagged?      result                  suite exit
+    ===================  ======================  ===========
+    yes (steady state)   XFAIL                   0
+    no  (just bumped)    XPASS                   0
+    ===================  ======================  ===========
+
+    Green either way. It asked *"have you bumped yet?"*, which repo state
+    cannot answer, because "about to release" is not knowable from the
+    repo — only from the tag that triggers a release. That question is
+    now answered where it can be: `publish_package.yml` compares
+    ``github.ref_name`` to the version, before the build, unskippably.
+
+    What IS answerable here is the other half: **if HEAD is on a tag, the
+    version must match it.** That can fail, and does — drilled by setting
+    the version away from the tag.
+
+    Four sibling copies of the deleted assertion survive in
+    ``test_falsification_{deploy_v130,ghspop_deploy_v2,ghsbuilts_deploy_v2}``
+    and ``test_falsification_vdem_deploy``. They use a *conditional*
+    ``xfail`` that looks more rigorous and is not: it runs only when the
+    version is untagged, then asserts the version is untagged — asserting
+    the condition that selected it. Left in place deliberately; removing
+    four more classes is beyond this story. Registered as **C-346**.
+    """
+
+    def test_version_equals_the_tag_head_is_on(self) -> None:
+        tag = _head_tag()
+        if tag is None:
+            pytest.skip(
+                "HEAD is not on a v* tag — there is no tag to compare "
+                "against, and guessing one would be worse than saying so "
+                "(C-320). The unskippable half of this check lives in "
+                "publish_package.yml, where the triggering tag is known."
+            )
         version = _current_version()
-        tag = f"v{version}"
-        assert not _tag_exists(tag), (
-            f"pyproject.toml says {version} but tag {tag} already exists. "
-            f"Bump version before deploying."
+        assert tag == f"v{version}", (
+            f"HEAD is on tag {tag} but pyproject.toml declares version "
+            f"{version} (expected tag v{version}). A release published "
+            f"from this state puts a wheel on PyPI whose metadata "
+            f"disagrees with the git history, discoverable only by "
+            f"comparing them by hand. v* tags are immutable under the "
+            f"tag ruleset, so the fix is to bump pyproject.toml — the "
+            f"tag cannot be moved."
         )
 
 

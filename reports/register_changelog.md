@@ -17,6 +17,52 @@ entry could.
 
 ---
 
+## C-341 RESOLVED by deleting the gate, and C-346 — four more that cannot fail (2026-08-11)
+
+Epic #421 Story 4 (#425), which also closes #363. The instruction was "delete F1". It turned out
+not to be one deletion.
+
+**The gate could not fail, and that was structural rather than accidental.** `TestF1VersionBumped`
+asserted *"the current version is not already tagged"*. Version here is bumped only at release time,
+so from the moment a release lands until the next bump the version **is** a tag that exists — the
+entire inter-release period. Measured in both states rather than argued:
+
+| state | result | suite exit |
+|---|---|---|
+| version tagged (steady state) | XFAIL | 0 |
+| version untagged (just bumped) | XPASS | 0 |
+
+Green either way. It asked *"have you bumped yet?"*, which repo state cannot answer, because *"about
+to release"* is not knowable from the repo — only from the tag that triggers a release.
+
+**So it was deleted rather than given a runner**, and replaced by the two halves that *are*
+answerable: `TestVersionMatchesItsTag` (if HEAD is on a tag, the version must equal it) and an
+**unskippable** guard in `publish_package.yml` comparing `github.ref_name` to the version before the
+build. The new test was drilled to a genuine failure in an isolated worktree checked out at
+v1.11.0 — `rc=1`, naming both values. Its predecessor could not fail in any state.
+
+**Grepping for the thing being deleted found four more.** `test_version_not_already_tagged` also
+lives in three other deploy suites, using a *conditional* `xfail` that reads as more rigorous and is
+worse: it runs only when the version is untagged, then asserts the version is untagged — asserting
+the condition that selected it. Registered as **C-346**, Tier 4, and deliberately left in place:
+removing four classes across unrelated suites plus the meta-test that *enforces* the marker is its
+own change, and the replacement now exists.
+
+**Two drills of my own were wrong before they were right, both the same way.** A `git checkout
+v1.11.0` was silently refused because of uncommitted changes, so the "want FAIL" case ran with HEAD
+not on a tag, skipped, and returned `rc=0` — which I would have recorded as a result. Redone in a
+worktree, with the setup verified (`HEAD tag=v1.11.0`) before the assertion ran. Then the same again:
+pytest was invoked from the main repo while the test shells out to `git describe` in the *current
+directory*, so it still answered about the wrong tree. Fourth and fifth instances this week of a
+drill whose setup did not happen while the exit code looked fine — the C-345 family.
+
+**And the publish guard had a real bug the drill caught.** It read the version with bare `python3 -c
+"import tomllib"`. `tomllib` needs ≥ 3.11; local `python3` is 3.10, and the runner's is whatever the
+image ships. Pinned to `uv run --no-project --python 3.12`, matching the guard beside it. That one
+would have surfaced at a release — the single worst moment, against an immutable tag.
+
+---
+
 ## C-342 RESOLVED, C-341 NARROWED — the gates run somewhere, and the one that still does not is named (2026-08-11)
 
 Epic #421 Story 3 (#424). The story shipped smaller than its issue described, and the reason is the
