@@ -44,6 +44,17 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # `gh` infers the repository from the git remote. This job has NO checkout —
+  # deliberately: it fetches one URL and reads it, and never touches the repo —
+  # so every `gh issue` call died with `failed to run git: fatal: not a git
+  # repository` and took the whole run with it. It had never once succeeded:
+  # 10 runs, 10 failures, from the day it was added (C-351).
+  #
+  # GH_REPO supplies the input that was actually missing. `actions/checkout`
+  # would also silence the error, by giving `gh` a remote to infer from — but
+  # it would clone a repository this job has no use for, to satisfy an
+  # inference step we can skip outright.
+  GH_REPO: ${{ github.repository }}
   STATUS_URL: http://204.168.219.108/status.html
   # The monthly cron runs on the 21st, so ~31 days is a normal maximum age.
   # 40 gives one grace window, mirroring the heartbeat's 30d period + 48h grace.
