@@ -115,23 +115,31 @@ gh api -X PUT repos/views-platform/views-datafactory/branches/<branch>/protectio
 
 ---
 
-## One-time setup — the pre-push hook
+## Work orphaned on a merged branch — detected, not prevented
+
+A pull request auto-merges the instant CI goes green. Push a follow-up commit and it lands on a
+branch with no open PR: `git push` reports success and the work is simply not on `development`.
+That is C-340 mechanism 2, and it has happened twice — #416, and again on #437 while #437 was
+fixing it.
+
+**There is no client-side guard, deliberately.** A pre-push hook was written four times and
+abandoned; each version was defeated by a different property of the environment (the refs git
+supplies on stdin, reused branch names, merge-commit ancestry, and `delete_branch_on_merge`
+removing the branch before the next push). A client check races GitHub's asynchronous branch
+deletion, which is a property of the system rather than a bug to iterate out. The register entry
+for C-340 records all four so nobody rebuilds them.
+
+Instead, `release-topology.yml` checks daily for any remote branch carrying commits **beyond its
+merged PR's head** with no open PR, and folds it into the same tracking issue as the other
+release-hygiene checks. Recovery is what #417 did:
 
 ```bash
-git config core.hooksPath scripts/git-hooks
+git checkout -b <new-branch> origin/development
+git cherry-pick <sha>
 ```
 
-Run this once per clone. `core.hooksPath` is per-clone config that git does **not** version, so a
-fresh clone has no hooks until you set it.
-
-`scripts/git-hooks/pre-push` **refuses a push to a branch whose pull request has already merged.**
-That is C-340 mechanism 2, and it happened: #416 merged the instant CI went green, a follow-up
-commit was pushed to that branch, and two pieces of work were simply not on `development`.
-`git push` reported success. The only signal was a PR showing one commit when two had been pushed.
-
-It **allows** the push whenever it cannot answer — `gh` absent, unauthenticated, or offline — and
-says why. A hook that blocks work when it does not know gets uninstalled within a day, and then it
-guards nothing. Bypass with `git push --no-verify`.
+You learn within a day rather than at push time. Both real incidents were recovered inside an hour
+anyway.
 
 ## Arming auto-merge — use the script, not `gh pr merge`
 

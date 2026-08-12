@@ -129,6 +129,87 @@ jobs:
         #   TestF7ProductPlanCurrency reads only files and already runs in the
         #   normal PR suite; it needs no scheduled runner.
 
+      - name: Look for work orphaned on a merged branch
+        id: orphans
+        # C-340 mechanism 2. A PR auto-merges the instant CI goes green; a
+        # follow-up commit is then pushed to a branch that no longer has an
+        # open PR, and the work is simply not on the base branch. `git push`
+        # reports success. It happened on #416 and again on #437.
+        #
+        # THIS IS DETECTION, NOT PREVENTION, AND THAT IS DELIBERATE.
+        # Four versions of a client-side pre-push hook were written and all
+        # four were defeated by a different property of the environment: it
+        # checked the wrong branch; it refused branch names that had been
+        # reused; `git merge-base --is-ancestor` cannot distinguish reuse
+        # because a merge-commit merge puts the head into the base branch
+        # forever; and `remote_sha` is 0000... because delete_branch_on_merge
+        # removes the branch before the next push. A client-side check is
+        # racing GitHub's asynchronous branch deletion — a property of the
+        # system, not a bug to iterate out.
+        #
+        # The orphaned STATE, by contrast, is unambiguous and trivial to see
+        # once things have settled: a remote branch whose tip is not in
+        # `development` and which has no open PR. No ancestry subtleties, no
+        # merge-method dependence, no client dependencies, nothing to install,
+        # and it cannot block anyone's work.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          found=""
+          for branch in $(git ls-remote --heads origin | sed 's|.*refs/heads/||'); do
+            case "$branch" in main|development) continue ;; esac
+
+            git fetch --quiet origin "$branch" 2>/dev/null || continue
+            tip=$(git rev-parse FETCH_HEAD 2>/dev/null) || continue
+
+            # Already in development: nothing is stranded.
+            git merge-base --is-ancestor "$tip" origin/development 2>/dev/null && continue
+
+            # An open PR means the work has a route to the base branch. This
+            # is the whole reason the check is safe: a branch waiting for
+            # review is indistinguishable from an orphan by SHAs alone, and
+            # only the PR state separates them.
+            open=$(gh pr list --head "$branch" --state open --json number \
+                     --jq '.[0].number // empty' 2>/dev/null) || continue
+            [ -n "$open" ] && continue
+
+            # No open PR and not in development. If a PR for this branch has
+            # merged, the branch outlived it — that is the #416 shape.
+            pr=$(gh pr list --head "$branch" --state merged \
+                   --json number,headRefOid --limit 1 2>/dev/null) || continue
+            merged=$(printf '%s' "$pr" | sed -n 's/.*"number":\([0-9]*\).*/\1/p')
+            head=$(printf '%s' "$pr" | sed -n 's/.*"headRefOid":"\([^"]*\)".*/\1/p')
+            [ -n "$merged" ] && [ -n "$head" ] || continue
+
+            # The branch sitting EXACTLY on the merged head is the normal
+            # post-merge state, briefly, before delete_branch_on_merge removes
+            # it. Nothing is stranded there. Only commits BEYOND that head are
+            # work that went nowhere — and because merges here are squashes,
+            # measuring against `development` instead would report every
+            # merged branch's own commits as orphaned.
+            [ "$tip" = "$head" ] && continue
+
+            stranded=$(git rev-list --count "${head}..${tip}" 2>/dev/null || echo "?")
+            [ "$stranded" = "0" ] && continue
+            found="${found}
+          - \`${branch}\` — ${stranded} commit(s) pushed AFTER PR #${merged} merged, no open PR"
+          done
+
+          if [ -n "$found" ]; then
+            echo "orphans=true" >> "$GITHUB_OUTPUT"
+            DELIM="ORPHANS_$(openssl rand -hex 8)"
+            {
+              echo "list<<${DELIM}"
+              printf '%s\n' "$found"
+              echo "${DELIM}"
+            } >> "$GITHUB_OUTPUT"
+            echo "::warning::Work appears orphaned on a merged branch."
+          else
+            echo "orphans=false" >> "$GITHUB_OUTPUT"
+            echo "No orphaned branches."
+          fi
+
       - name: Summarise the gate result
         id: gateresult
         run: |
@@ -153,9 +234,11 @@ jobs:
           fi
 
       - name: Open or update the tracking issue
-        if: steps.check.outputs.diverged == 'true' || steps.gateresult.outputs.failed == 'true'
+        if: steps.check.outputs.diverged == 'true' || steps.gateresult.outputs.failed == 'true' || steps.orphans.outputs.orphans == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          ORPHANS: ${{ steps.orphans.outputs.orphans }}
+          ORPHAN_LIST: ${{ steps.orphans.outputs.list }}
           DIVERGED: ${{ steps.check.outputs.diverged }}
           COMMITS: ${{ steps.check.outputs.commits }}
           SHAS: ${{ steps.check.outputs.shas }}
@@ -212,9 +295,32 @@ jobs:
           fi
           set -euo pipefail
           TITLE="Release hygiene: one or more deploy gates are failing"
+          ORPHAN_SECTION=""
+          if [ "${ORPHANS:-false}" = "true" ]; then
+            ORPHAN_SECTION=$(cat <<ORPH
+          ## Work may be orphaned on a merged branch
+
+          These remote branches carry commits that are **not on \`development\`**, have **no open
+          pull request**, and had a pull request that already **merged**. That is C-340 mechanism 2:
+          a commit pushed to a branch after its PR merged goes nowhere, and \`git push\` reports
+          success.
+          ${ORPHAN_LIST}
+
+          Recover the same way #417 did — cherry-pick onto a new branch and open a PR:
+
+          \`\`\`bash
+          git checkout -b <new-branch> origin/development
+          git cherry-pick <sha>
+          \`\`\`
+
+          If the commits are genuinely unwanted, delete the branch and this closes itself.
+          ORPH
+          )
+          fi
           BODY=$(cat <<EOF
           ${TOPOLOGY_SECTION}
           ${GATES_SECTION}
+          ${ORPHAN_SECTION}
 
           Detected by [release-hygiene](${RUN_URL}). This issue is reused rather than duplicated,
           and closes itself once every check passes again.
@@ -230,7 +336,7 @@ jobs:
           fi
 
       - name: Close the tracking issue if every check passes
-        if: steps.check.outputs.diverged == 'false' && steps.gateresult.outputs.failed == 'false'
+        if: steps.check.outputs.diverged == 'false' && steps.gateresult.outputs.failed == 'false' && steps.orphans.outputs.orphans == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -249,7 +355,7 @@ jobs:
           done
 
       - name: Fail the run so the problem is visible in the Actions tab
-        if: steps.check.outputs.diverged == 'true' || steps.gateresult.outputs.failed == 'true'
+        if: steps.check.outputs.diverged == 'true' || steps.gateresult.outputs.failed == 'true' || steps.orphans.outputs.orphans == 'true'
         run: |
           echo "::error::A release-hygiene check failed — see the tracking issue."
           exit 1

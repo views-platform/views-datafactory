@@ -1230,7 +1230,32 @@ Cross-ref: ~~C-330~~ (the work being done when this happened), C-323/C-324 (the 
 
 **The shared property, which is the reason this is registered at all:** both fail *green*. `git push` succeeds; `gh pr merge` exits 0. Neither has a failure mode that announces itself, so neither can be caught by anything except deliberately reading state back. That is the same class as C-330 (a nightly no-op reporting success) and C-337 (a lockfile frozen with no error).
 
-Cross-ref: ~~C-320~~ (auto-merge silently degrading to a plain merge when branch protection was absent — same family, different mechanism, resolved), C-339 (the other silent-failure incident of this session). Part of work package: **Operational safety**.
+**NARROWED 2026-08-12 (#426, #437, #439). Mechanism 1 has a working guard. Mechanism 2 has a detector, not a preventer, and the reason is worth more than the fix.**
+
+**Mechanism 1 — resolved.** `scripts/arm_automerge.sh` arms via the GraphQL disable/enable pair (which does honour the method) and then **reads `auto_merge.mergeMethod` back**, exiting non-zero on mismatch. Reproduced live on #437 before shipping: `gh pr merge 437 --auto --squash` against an already-`MERGE`-armed PR exited **0** and left the method `MERGE`; the script changed it and verified. Nothing forces the script's use, which is the residue below.
+
+**Mechanism 2 — four client-side attempts, four different defeats.** A pre-push hook was built and abandoned:
+
+| | approach | defeated by |
+|---|---|---|
+| v1 | `git rev-parse HEAD` + branch name | checked the wrong branch entirely (git supplies pushed refs on **stdin**); and permanently refused branch names reused from old PRs — `docs/roadmap-plan-v11` spans #50-54 |
+| v2 | merged head is an **ancestor** of the push | a merge-commit merge puts that head in the base branch **permanently**, so it is an ancestor of every later branch. PR #54's head is an ancestor of `development` today |
+| v3 | `remote_sha` equals the merged head | `delete_branch_on_merge` removes the branch first, so git reports `0000…` — indistinguishable from creating a branch. Proved with a two-clone experiment |
+| v4 | ancestor AND not in base | never shipped |
+
+Its test suite was **vacuous**: reconstructing v1 and running all seven behavioural tests passed every one.
+
+**Why it was abandoned rather than fixed a fifth time.** A client-side check is racing GitHub's asynchronous branch deletion. That is a property of the system, not a defect to iterate out — and four failures from four *different* environment properties is the signature of inferring state you cannot see. A multi-expert panel reached the same conclusion independently: Kleppmann (two views of one system read at different times, with an async deletion between), Ousterhout (a shallow module whose complexity is entirely special cases), Beck (twice in ~440 PRs, both recovered by cherry-pick inside the hour — the guard already cost more than the failures).
+
+**What replaced it.** The orphaned *state* is unambiguous once things settle: a remote branch carrying commits beyond its merged PR's head, with no open PR. `release-topology.yml` now checks that daily and folds it into the same reusable issue. Drilled end-to-end against live repository state — it found the genuine orphan (`ops/pre-push-hook-and-automerge`, *"1 commit(s) pushed AFTER PR #437 merged"*), correctly ignored a branch whose PR was closed-unmerged, and reported clean once the branch was deleted.
+
+Measured against the merged PR's head rather than against `development`, deliberately: merges here are squashes, so a branch's own commits are *never* ancestors of `development`, and the naive comparison would report every merged branch as orphaned.
+
+**The residue, and it is real.** This is detection, not prevention. Work can still be orphaned; you learn within a day rather than at push time. And nothing forces `arm_automerge.sh` — `gh pr merge --auto` is one keystroke away, so *"read the value back rather than trusting the command"* remains a habit no mechanism enforces. **This entry stays open on that residue**, and Story 7 (#428) should say so rather than claim a clean resolution.
+
+**It recurred while being fixed.** #437 auto-merged carrying the broken v1 hook; the review fixes were pushed to that branch afterwards and orphaned — the same defect, inside the pull request addressing it. The hook was not installed in that clone, because `core.hooksPath` is per-clone config git does not version. That is the strongest available argument that a client-side install-it-yourself guard was the wrong instrument.
+
+Cross-ref: ~~C-320~~ (auto-merge silently degrading to a plain merge when branch protection was absent — same family, different mechanism, resolved), C-339 (the other silent-failure incident of that session), C-345 (a check reporting success while establishing nothing — the vacuous test suite here is the same shape). Part of work package: **Operational safety**. GitHub: #426, #437, #438 (closed unmerged), #439.
 
 ---
 

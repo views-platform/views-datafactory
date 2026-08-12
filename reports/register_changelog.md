@@ -17,6 +17,55 @@ entry could.
 
 ---
 
+## C-340 NARROWED — four versions of a guard, abandoned for a detector (2026-08-12)
+
+Epic #421 Story 5 (#426, #437, #438 closed unmerged, #439). The most instructive entry of the epic,
+because the deliverable is a **removal**.
+
+**Mechanism 1 resolved.** `scripts/arm_automerge.sh` arms via GraphQL disable/enable and reads the
+method back. Reproduced live on #437 before shipping: `gh pr merge --auto --squash` against an
+already-`MERGE`-armed PR exited **0** and changed nothing.
+
+**Mechanism 2: four client-side attempts, four different defeats.** v1 read `git rev-parse HEAD`
+instead of the refs git supplies on stdin *and* matched on branch name, permanently refusing names
+reused from old PRs. v2 used ancestry — defeated because a merge-commit merge puts the head into the
+base branch forever. v3 used `remote_sha` — defeated because `delete_branch_on_merge` removes the
+branch first, so git reports `0000…`. v4 was never shipped. The test suite was **vacuous**:
+reconstructing v1 and running all seven behavioural tests passed every one.
+
+**It recurred while being fixed.** #437 auto-merged carrying broken v1; the review fixes were pushed
+to that branch afterwards and orphaned. The same defect, inside the pull request addressing it. The
+hook was not installed in that clone — `core.hooksPath` is per-clone config git does not version,
+which is itself the argument against an install-it-yourself guard.
+
+**Why it was abandoned rather than fixed a fifth time.** Four failures from four *different*
+environment properties is the signature of inferring state you cannot see, not of carelessness. A
+multi-expert panel converged independently: Kleppmann (a client check races an asynchronous
+deletion — a property, not a bug), Ousterhout (a shallow module whose complexity is entirely special
+cases; four versions are four attempts to enumerate them), Beck (twice in ~440 PRs, both recovered
+by cherry-pick inside the hour — the guard had already cost more than the failures). Their verdict
+on the *warning* variant was the sharpest: a notice printed on every push goes invisible in a week,
+which is the exact fails-green shape this epic exists to remove, and shipping it would have created
+a precedent to cite later.
+
+**The framing was the error, and that was the finding.** The orphaned *state* is unambiguous once
+things settle — a remote branch with commits beyond its merged PR's head and no open PR. Two
+questions, no ancestry subtleties, no merge-method dependence, nothing to install, and it cannot
+block anyone's work. `release-topology.yml` already had `fetch-depth: 0`, `issues: write`, a daily
+cron and one-reusable-issue machinery.
+
+**Drilled end-to-end against live state**, with the body extracted from the workflow rather than
+retyped: it found the genuine orphan (*"1 commit(s) pushed AFTER PR #437 merged, no open PR"*),
+correctly ignored a branch whose PR was closed-unmerged, and reported clean once that branch was
+deleted. Measured against the merged PR's head rather than `development` — merges here are squashes,
+so a branch's own commits are never ancestors of `development` and the naive comparison would flag
+every merged branch.
+
+**Left open on the residue**, and #428 must say so: this is detection, not prevention, and nothing
+forces `arm_automerge.sh` — `gh pr merge --auto` is one keystroke away.
+
+---
+
 ## C-341 RESOLVED by deleting the gate, and C-346 — four more that cannot fail (2026-08-11)
 
 Epic #421 Story 4 (#425), which also closes #363. The instruction was "delete F1". It turned out
