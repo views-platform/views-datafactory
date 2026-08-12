@@ -17,6 +17,85 @@ entry could.
 
 ---
 
+## C-347, C-348 registered and C-345 corrected — the detector arrived with three fails-green defects (2026-08-12)
+
+Epic #421 Story 5 (#439), the `/code-review` round on the fix for C-340. **The cluster grew out of an
+attempt to shrink it.** That is the honest result and Story 7 (#428) has to report it.
+
+**Three defects in the replacement, none of which would have reddened anything.** The orphan
+detector was drilled end-to-end the night before and reported working. Review found: (1) the
+workflow's `permissions:` block never granted `pull-requests`, and an explicit block sets every
+unlisted scope to `none` — so both `gh pr list` calls would 403, swallowed by `2>/dev/null || continue`,
+and the step would report "No orphaned branches" on a daily cron forever; (2) merged PRs were matched
+by **branch name alone**, the same property that defeated hook v1 — and reuse is real here
+(`chore/version-bump-1.2.13`, `docs/roadmap-plan-v11`, `feat/acled-phase2` have each headed more than
+one PR), with the old head absent from the new branch's ancestry so `git rev-list` errored and was
+reported as `? commit(s)`; (3) `for branch in $(git ls-remote ...)` hides a failure of the
+substitution completely — GitHub runs `bash -e {0}` and `set -uo pipefail` does not remove `-e`, but a
+`for` word list is exempt. Verified: `bash -e -c 'for x in $(false | sed s/a/b/); do echo BODY; done; echo END'`
+prints only `END`.
+
+**C-347 — why the drill could not have caught any of this.** It ran under the operator's personal `gh`
+credentials, which carry full scope; production runs under `GITHUB_TOKEN` with `pull-requests`
+revoked. The drill obtained and reported its result *correctly*; it simply ran in the wrong world.
+That is not C-345 (an instrument misreading a result it did obtain) and it is not C-336 (a guard whose
+claim is narrower than its property) — it is a third thing, and it has now fired four times in one
+week, each from a different environment property: `gh` never hidden because it lives in
+`~/.local/bin`; a `git checkout` silently refused so a "want FAIL" case ran on-tag; `pytest` run from
+the main repo while the test shelled out to `git describe` in the wrong tree; and this. **A drill is
+an experiment, and it silently inherits every variable you did not control.**
+
+**C-348 — the deletion took a guard with it.** `tests/test_git_hooks.py` was deleted with the hook,
+correctly for the hook's own assertions. It also held the only guard on `scripts/arm_automerge.sh`'s
+executable bit — a script the same pull request deliberately *keeps*. A test module is an
+organisational unit that quietly doubles as a coverage unit, and only the first is visible when you
+delete it. Tier 4: the loss surfaces loudly as `Permission denied`. Registered because two more
+deletions are scheduled in this epic.
+
+**C-345's own prescribed mitigation is defective, and the drill is what proved it.** The entry
+recommends `grep -cE '^FAILED' out.txt` as a second independent reader. pytest **colourises** its
+summary, so the line is `\033[31mFAILED\033[0m tests/...` and the caret never matches. The harness
+built for these drills required both `rc != 0` and `FAILED >= 1`, and reported *"DID NOT CATCH"* four
+times while all four drills had in fact caught. Had it trusted only the grep — the reading C-345
+recommends — a red suite would have read green. Corrected to `--color=no` at the source rather than an
+ANSI-aware regex, which would only be one more narrow claim. **This is the second time an entry in
+this register has prescribed a defective remedy** (C-331's unquoted `printf 'url=%s'` turned a failure
+ping into a success ping). A mitigation written into an entry is untested code that inherits the
+entry's credibility without earning it — worth saying out loud, because the corrections are the
+valuable part.
+
+**All four new guards were drilled against the broken state, with a control.** Revoke the permission,
+restore the blind loop, move the fetch step after the detector, strip the executable bit: each
+reddened exactly the guard aimed at it, and the fixed tree stayed green.
+
+**Then `/review-diff` found the same defect one level down, and C-349 came out of generalising it.**
+The permission fix removed the *systematic* 403, but every per-branch `|| continue` still converted
+"could not check this branch" into "this branch is fine" — a rate limit or a 502 would skip branches
+and the step would still print a confident all-clear. The detector now counts what it answered for,
+qualifies a partial result, and **exits non-zero if it answered for nothing**: a clean report resting
+on zero observations is the defect itself, not a degraded mode of it.
+
+Grepping for that shape in production code found it three times — `acled.py`, `ucdp.py` and
+`health.py` all drop an unparseable ledger line with a bare `except json.JSONDecodeError: continue`,
+uncounted, while `grid_compilation.py` twenty lines of a different module away already does it
+correctly with `n_skipped_spatial += 1`. Since the consolidators use the ledger to decide what to
+consolidate, a dropped line means a successful harvest is silently not consolidated. Registered as
+**C-349** and deliberately **not fixed here** — #439 is a CI story, and an untested change to
+consolidation does not belong in a pull request about a workflow.
+
+**The reused-name fix was drilled in a scratch repository**, since git ancestry semantics do not
+differ between the operator's machine and the runner (the C-347 caveat is about credentials and
+environment, not about git). Squash-merge a branch, push a follow-up to it, then delete the branch
+and cut a fresh one reusing the name: the new logic reports the genuine orphan as 1 stranded commit
+and **skips** the namesake, where the old logic reported the namesake as 3 commits stranded.
+
+One guard was also loosened rather than tightened: the ls-remote assertion had matched the exact
+wording of a log message, which would redden on a reword for no behavioural reason. It now checks
+that a failure path exists at all. Asserting the *how* instead of the *what* is C-336's second
+addendum, and it is easy to commit while writing a guard against something else.
+
+---
+
 ## C-340 NARROWED — four versions of a guard, abandoned for a detector (2026-08-12)
 
 Epic #421 Story 5 (#426, #437, #438 closed unmerged, #439). The most instructive entry of the epic,

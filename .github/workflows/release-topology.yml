@@ -48,6 +48,16 @@ on:
 permissions:
   contents: read
   issues: write
+  # `pull-requests: read` is load-bearing, not tidiness. Once a `permissions:`
+  # block exists, every scope NOT listed is set to `none` — so omitting this
+  # revokes it. The orphan detector below is built entirely on `gh pr list`,
+  # and its calls are written `... 2>/dev/null) || continue`, which makes a
+  # 403 indistinguishable from "no PR found": every branch would be skipped
+  # and the step would report "No orphaned branches" forever, green, on a
+  # daily cron. It was nearly shipped that way — the drill that verified the
+  # detector ran under the operator's own `gh` credentials, which carry full
+  # scope, so it could not have caught this (C-347).
+  pull-requests: read
 
 concurrency:
   group: release-topology
@@ -147,54 +157,124 @@ jobs:
         # racing GitHub's asynchronous branch deletion — a property of the
         # system, not a bug to iterate out.
         #
-        # The orphaned STATE, by contrast, is unambiguous and trivial to see
-        # once things have settled: a remote branch whose tip is not in
-        # `development` and which has no open PR. No ancestry subtleties, no
-        # merge-method dependence, no client dependencies, nothing to install,
-        # and it cannot block anyone's work.
+        # The orphaned STATE, by contrast, is unambiguous once things have
+        # settled: a remote branch carrying commits BEYOND its merged PR's
+        # head, with no open PR. No merge-method dependence, no client
+        # dependencies, nothing to install, and it cannot block anyone's work.
+        #
+        # This step needs `pull-requests: read` — see the permissions block.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
+
+          # Capture and check, rather than iterating the substitution directly.
+          # `for x in $(cmd)` swallows a failure of `cmd` completely: GitHub
+          # runs `bash -e {0}` and `set -uo pipefail` does NOT remove `-e`, but
+          # a failing command substitution in a `for` word list is exempt from
+          # it. Verified: `bash -e -c 'for x in $(false | sed s/a/b/); do echo
+          # BODY; done; echo END'` prints only END. One transient `ls-remote`
+          # failure would give an empty loop and a confident "No orphaned
+          # branches" — the exact shape this step exists to detect (C-347).
+          branches=$(git ls-remote --heads origin | sed 's|.*refs/heads/||') || {
+            echo "::error::git ls-remote failed — cannot enumerate branches."
+            exit 1
+          }
+          # A repository always has at least `main` and `development`. Empty
+          # here means the command succeeded and told us nothing, which is not
+          # the same as "no branches" and must not read as a clean result.
+          [ -n "$branches" ] || {
+            echo "::error::git ls-remote returned no branches at all."
+            exit 1
+          }
+
+          # "Could not answer for this branch" is NOT "this branch is fine".
+          # Every `|| continue` below is a place where a rate limit, a 502 or a
+          # branch deleted mid-loop silently removes a branch from the check —
+          # and if enough of them fire, the step reports a confident all-clear
+          # having observed nothing. That is C-347 one level down, so the
+          # skips are counted and the result is qualified by the count. The
+          # abandoned hook's own rule was "skip where the environment cannot
+          # answer, AND SAY WHY"; saying why is the half that is easy to drop.
           found=""
-          for branch in $(git ls-remote --heads origin | sed 's|.*refs/heads/||'); do
+          answered=0
+          unanswered=0
+          for branch in $branches; do
             case "$branch" in main|development) continue ;; esac
 
-            git fetch --quiet origin "$branch" 2>/dev/null || continue
-            tip=$(git rev-parse FETCH_HEAD 2>/dev/null) || continue
+            # A branch deleted between `ls-remote` and here is a benign race,
+            # not an outage — but it is still a branch we did not check.
+            git fetch --quiet origin "$branch" 2>/dev/null || { unanswered=$((unanswered + 1)); continue; }
+            tip=$(git rev-parse FETCH_HEAD 2>/dev/null) || { unanswered=$((unanswered + 1)); continue; }
 
-            # Already in development: nothing is stranded.
-            git merge-base --is-ancestor "$tip" origin/development 2>/dev/null && continue
+            # Already in development: nothing is stranded. A definite answer.
+            git merge-base --is-ancestor "$tip" origin/development 2>/dev/null && { answered=$((answered + 1)); continue; }
 
             # An open PR means the work has a route to the base branch. This
             # is the whole reason the check is safe: a branch waiting for
             # review is indistinguishable from an orphan by SHAs alone, and
             # only the PR state separates them.
             open=$(gh pr list --head "$branch" --state open --json number \
-                     --jq '.[0].number // empty' 2>/dev/null) || continue
-            [ -n "$open" ] && continue
+                     --jq '.[0].number // empty' 2>/dev/null) || { unanswered=$((unanswered + 1)); continue; }
+            [ -n "$open" ] && { answered=$((answered + 1)); continue; }
 
             # No open PR and not in development. If a PR for this branch has
             # merged, the branch outlived it — that is the #416 shape.
             pr=$(gh pr list --head "$branch" --state merged \
-                   --json number,headRefOid --limit 1 2>/dev/null) || continue
+                   --json number,headRefOid --limit 1 2>/dev/null) || { unanswered=$((unanswered + 1)); continue; }
             merged=$(printf '%s' "$pr" | sed -n 's/.*"number":\([0-9]*\).*/\1/p')
-            head=$(printf '%s' "$pr" | sed -n 's/.*"headRefOid":"\([^"]*\)".*/\1/p')
-            [ -n "$merged" ] && [ -n "$head" ] || continue
+            merged_head=$(printf '%s' "$pr" | sed -n 's/.*"headRefOid":"\([^"]*\)".*/\1/p')
+            # No merged PR for this name is a real answer, not a failure.
+            [ -n "$merged" ] && [ -n "$merged_head" ] || { answered=$((answered + 1)); continue; }
 
             # The branch sitting EXACTLY on the merged head is the normal
             # post-merge state, briefly, before delete_branch_on_merge removes
-            # it. Nothing is stranded there. Only commits BEYOND that head are
-            # work that went nowhere — and because merges here are squashes,
-            # measuring against `development` instead would report every
-            # merged branch's own commits as orphaned.
-            [ "$tip" = "$head" ] && continue
+            # it. Nothing is stranded there.
+            [ "$tip" = "$merged_head" ] && { answered=$((answered + 1)); continue; }
 
-            stranded=$(git rev-list --count "${head}..${tip}" 2>/dev/null || echo "?")
+            # BRANCH NAMES ARE REUSED HERE, and matching a merged PR by name
+            # alone is exactly the property that defeated hook v1. Verified:
+            # `chore/version-bump-1.2.13`, `docs/roadmap-plan-v11` and
+            # `feat/acled-phase2` have each headed more than one PR. A brand
+            # new branch on a reused name, pushed before its PR is opened,
+            # matches the OLD merged PR — and since that PR's head is not in
+            # the new branch's ancestry, `git rev-list` errors out, which the
+            # first version reported as "? commit(s)" rather than skipping.
+            #
+            # So require the merged head to be a genuine ancestor: this branch
+            # must be a CONTINUATION of that pull request, not a namesake.
+            git merge-base --is-ancestor "$merged_head" "$tip" 2>/dev/null || { answered=$((answered + 1)); continue; }
+
+            # `--not origin/development` because a reused name whose old PR was
+            # merged with a MERGE COMMIT still passes the ancestry test — that
+            # head is in `development` forever, so it is an ancestor of every
+            # branch cut afterwards (this is what defeated hook v2). Excluding
+            # what is already on `development` leaves only commits that went
+            # nowhere. All of this repo's recent merges are squashes, for which
+            # the ancestry test alone is sufficient; this covers the pre-#54 era.
+            stranded=$(git rev-list --count "${merged_head}..${tip}" --not origin/development 2>/dev/null) || { unanswered=$((unanswered + 1)); continue; }
+            answered=$((answered + 1))
             [ "$stranded" = "0" ] && continue
             found="${found}
           - \`${branch}\` — ${stranded} commit(s) pushed AFTER PR #${merged} merged, no open PR"
           done
+
+          echo "Checked ${answered} branch(es); ${unanswered} could not be answered for."
+
+          # Answering for NOTHING while reporting clean is the defect itself,
+          # not a degraded mode of it. If every branch we attempted failed, the
+          # environment is broken (revoked scope, rate limit, network) and the
+          # only honest output is a red run.
+          if [ "$answered" -eq 0 ] && [ "$unanswered" -gt 0 ]; then
+            echo "::error::Could not answer for any of ${unanswered} branch(es) — reporting clean here would assert nothing."
+            exit 1
+          fi
+
+          # Some answered, some not: report what was found, but never let the
+          # all-clear read as unqualified.
+          if [ "$unanswered" -gt 0 ]; then
+            echo "::warning::${unanswered} branch(es) could not be checked; this result is partial."
+          fi
 
           if [ -n "$found" ]; then
             echo "orphans=true" >> "$GITHUB_OUTPUT"
@@ -207,7 +287,11 @@ jobs:
             echo "::warning::Work appears orphaned on a merged branch."
           else
             echo "orphans=false" >> "$GITHUB_OUTPUT"
-            echo "No orphaned branches."
+            if [ "$unanswered" -gt 0 ]; then
+              echo "No orphaned branches among the ${answered} checked."
+            else
+              echo "No orphaned branches."
+            fi
           fi
 
       - name: Summarise the gate result
