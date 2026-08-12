@@ -115,23 +115,26 @@ gh api -X PUT repos/views-platform/views-datafactory/branches/<branch>/protectio
 
 ---
 
-## One-time setup — the pre-push hook
+## Pushing to a branch whose pull request already merged
+
+A pull request auto-merges the instant CI goes green. Push a follow-up commit and it lands on a
+branch with no open PR: `git push` reports success and the work is not on `development`. This has
+happened twice in ~440 pull requests (#416, #437).
+
+**There is no guard, deliberately.** A pre-push hook was written four times and a scheduled detector
+three times; every version was defeated by a different property of git, `gh` or GitHub — reused
+branch names, merge-commit ancestry, `delete_branch_on_merge` removing the branch before the next
+push, `git fetch` resolving `refs/tags/` first. The guards cost far more than the failures they
+prevent. C-340 records the attempts so nobody rebuilds them.
+
+**If it happens, recover it:**
 
 ```bash
-git config core.hooksPath scripts/git-hooks
+git checkout -b <new-branch> origin/development
+git cherry-pick <sha>
 ```
 
-Run this once per clone. `core.hooksPath` is per-clone config that git does **not** version, so a
-fresh clone has no hooks until you set it.
-
-`scripts/git-hooks/pre-push` **refuses a push to a branch whose pull request has already merged.**
-That is C-340 mechanism 2, and it happened: #416 merged the instant CI went green, a follow-up
-commit was pushed to that branch, and two pieces of work were simply not on `development`.
-`git push` reported success. The only signal was a PR showing one commit when two had been pushed.
-
-It **allows** the push whenever it cannot answer — `gh` absent, unauthenticated, or offline — and
-says why. A hook that blocks work when it does not know gets uninstalled within a day, and then it
-guards nothing. Bypass with `git push --no-verify`.
+Both real incidents were recovered this way.
 
 ## Arming auto-merge — use the script, not `gh pr merge`
 
