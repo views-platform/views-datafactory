@@ -71,21 +71,26 @@ ledger reader — **already logs the skip**, falsifying the entry's central *"no
 that it happened"*. An entry that undercounts gets closed after a partial fix. Corrected, with the
 grep written into the Location field so the count is re-derivable rather than asserted.
 
-**What is not fixed, and why the story stops here.** Nine verified behavioural findings remain — the
-recovery the issue body prescribes never clears the alert, so the cron would go permanently red and
-the shared issue permanently open; a partial scan writes an unqualified `orphans=false` that
-auto-closes a genuine orphan issue; the issue-reuse path never renders the orphan section at all, so
-the daily comment names no branch; `merge-base` exit 128 is booked as a definite answer *inside* the
-accounting added to fix C-347; two `sed` parsers depend on `gh`'s compact JSON; `--limit 1` orders
-by `createdAt`, not `mergedAt`; and a bare branch name in `git fetch` resolves against
-`refs/tags/` first.
+**What was not fixed at that point** — nine verified behavioural findings in the *precise* detector:
+the printed recovery never cleared the alert; a partial scan wrote an unqualified `orphans=false`
+that auto-closed a genuine orphan issue; the reuse path never rendered the orphan section; a
+`merge-base` exit 128 was booked as a definite answer; two `sed` parsers depended on `gh`'s compact
+JSON; `--limit 1` ordered by `createdAt`; and a bare branch name in `git fetch` resolved `refs/tags/`
+first.
 
-**The pattern is the finding.** Round one: five defects. Round two: fifteen, each from a different
-property of git, of `gh`, or of GitHub. That is the signature that ended the pre-push hook after
-four versions, reappearing in its replacement — and the panel's argument then applies unchanged now:
-the failure has occurred twice in ~440 pull requests and both times was recovered by cherry-pick
-inside the hour. **Continuing to iterate is the tired answer, not the engineering one.** The design
-question goes back to the operator rather than being resolved by a third round.
+**Superseded by `3e1fa37`, which deleted the code they lived in.** Seven of the nine have no
+referent in the shipped workflow — grep the executable lines for `merge-base`, `--limit 1`,
+`git fetch`, `rev-list` or `sed -n` and you get nothing; those tokens survive only in comments
+describing the abandoned version. The remaining two were fixed: the detector now writes a third
+value, `partial`, rather than an unqualified `false`, and the reuse path renders the orphan section.
+**This paragraph is left standing with its correction rather than rewritten**, because #428 is
+chartered to close the epic from this record and would otherwise schedule work against nine defects
+nobody can reproduce — which is how a changelog stops being checkable (C-336).
+
+**The pattern is the finding.** Round one: five defects. Round two: fifteen. Round three, against the
+*simplified* version: fifteen again, **seven of them in the new test guards themselves** — five
+assertions defeated by one-line mutations that keep the suite green. That is the epic's own subject,
+committed inside it, twice.
 
 ---
 
@@ -201,7 +206,9 @@ environment properties is the signature of inferring state you cannot see, not o
 multi-expert panel converged independently: Kleppmann (a client check races an asynchronous
 deletion — a property, not a bug), Ousterhout (a shallow module whose complexity is entirely special
 cases; four versions are four attempts to enumerate them), Beck (twice in ~440 PRs, both recovered
-by cherry-pick inside the hour — the guard had already cost more than the failures). Their verdict
+by cherry-pick — the guard had already cost more than the failures; **note the "inside the hour"
+figure originally cited to Beck here was wrong, see the 2026-08-12 correction: the real gap was
+13h 44m and the second incident was never recovered**). Their verdict
 on the *warning* variant was the sharpest: a notice printed on every push goes invisible in a week,
 which is the exact fails-green shape this epic exists to remove, and shipping it would have created
 a precedent to cite later.

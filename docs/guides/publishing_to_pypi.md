@@ -133,8 +133,11 @@ on running `main`'s copy until the next release promotion carries it across (C-3
 trigger it by hand:
 
 ```bash
-gh workflow run release-topology.yml
+gh workflow run release-topology.yml --ref development
 ```
+
+**`--ref` is not optional here.** Without it `gh` dispatches the *default branch's* copy — `main`, which has no
+detector — and the run goes green having executed none of it, which reads exactly like a clean result.
 
 **What it checks, once live.** `delete_branch_on_merge` is on, so a branch normally disappears when
 its pull request merges. `release-topology.yml` therefore asks one question of every remote branch:
@@ -159,8 +162,7 @@ git push origin --delete <branch>
 ```
 
 If a branch is already gone but its work never reached `development`, recover it the way #417 did —
-cherry-pick onto a new branch and open a pull request. Both real incidents were recovered inside an
-hour.
+cherry-pick onto a new branch and open a pull request. twice in ~440 PRs — and the recovery figure this entry first cited was wrong. **Measured:** #416 merged 2026-08-03T11:24:10Z and its recovery #417 was not opened until 2026-08-04T01:08:49Z, **13h 44m later**; #437's recovery #438 was closed unmerged and that work never landed at all (it became moot when the hook was deleted). The claim *"both recovered by cherry-pick inside the hour"* was repeated in this register, the changelog and the guide, and it was the only quantitative basis offered for abandoning the guard. Corrected 2026-08-12 by `/code-review max`. It cuts both ways and both are worth stating: 14 hours to notice makes a daily detector comparable rather than clearly worse, **and** it removes the "cheap to recover" premise the abandonment argument leaned on.
 
 ## Arming auto-merge — use the script, not `gh pr merge`
 
