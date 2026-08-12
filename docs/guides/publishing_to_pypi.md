@@ -123,33 +123,44 @@ That is C-340 mechanism 2, and it has happened twice — #416, and again on #437
 fixing it.
 
 **There is no client-side guard, deliberately.** A pre-push hook was written four times and
-abandoned; each version was defeated by a different property of the environment (the refs git
-supplies on stdin, reused branch names, merge-commit ancestry, and `delete_branch_on_merge`
-removing the branch before the next push). A client check races GitHub's asynchronous branch
-deletion, which is a property of the system rather than a bug to iterate out. The register entry
-for C-340 records all four so nobody rebuilds them.
+abandoned; each version was defeated by a different property of the environment. A client check
+races GitHub's asynchronous branch deletion, which is a property of the system rather than a bug to
+iterate out. The register entry for C-340 records all four so nobody rebuilds them.
 
 **It is not yet running.** GitHub executes a `schedule` trigger from the **default branch only**, and
-this repository's default branch is `main`. The detector lands on `development`, so the 06:00 cron
-goes on running `main`'s copy — which has no detector — until the next release promotion carries it
-across. Verified: every `event: schedule` run of this workflow has `headBranch: main`. Until then the
-check exists only as a `workflow_dispatch` you can trigger by hand:
+this repository's default branch is `main`. The check lands on `development`, so the 06:00 cron goes
+on running `main`'s copy until the next release promotion carries it across (C-350). Until then,
+trigger it by hand:
 
 ```bash
 gh workflow run release-topology.yml
 ```
 
-Once promoted, `release-topology.yml` checks daily for any remote branch carrying commits **beyond its
-merged PR's head** with no open PR, and folds it into the same tracking issue as the other
-release-hygiene checks. Recovery is what #417 did:
+**What it checks, once live.** `delete_branch_on_merge` is on, so a branch normally disappears when
+its pull request merges. `release-topology.yml` therefore asks one question of every remote branch:
+**is there an open pull request for it?** If not, it says so, and folds the branch into the same
+tracking issue as the other release-hygiene checks.
+
+That is deliberately blunter than "is this work orphaned". A first version tried to establish
+orphan-ness properly — matching the merged pull request, comparing head SHAs, counting commits
+beyond it — and two review rounds found fifteen defects in it, each from a different property of
+git, `gh`, or GitHub. Precision there requires inferring state we cannot see. This version reports a
+branch you pushed before opening its PR, which is not really a false positive: it is a branch with
+work on it and no route to `development`.
+
+**Clearing it takes one command, either way:**
 
 ```bash
-git checkout -b <new-branch> origin/development
-git cherry-pick <sha>
+gh pr create --base development --head <branch>
 ```
 
-Once it is running on `main` you learn within a day rather than at push time. Both real incidents were recovered inside an hour
-anyway.
+```bash
+git push origin --delete <branch>
+```
+
+If a branch is already gone but its work never reached `development`, recover it the way #417 did —
+cherry-pick onto a new branch and open a pull request. Both real incidents were recovered inside an
+hour.
 
 ## Arming auto-merge — use the script, not `gh pr merge`
 

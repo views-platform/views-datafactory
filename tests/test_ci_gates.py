@@ -253,3 +253,26 @@ class TestOrphanDetectorCanActuallyAnswer:
             "on no observations is the defect itself, not a degraded "
             "mode of it (C-347)."
         )
+
+    def test_a_partial_scan_does_not_report_a_clean_result(self) -> None:
+        """`orphans=false` is what closes the tracking issue.
+
+        If a scan that could not reach some branches wrote `false`, the
+        close step would close a live orphan issue on the strength of a
+        scan that skipped the very branch it was about. A third value is
+        the point: `partial` neither opens nor closes.
+        """
+        run = self._run()
+        assert "orphans=partial" in run, (
+            "The detector no longer distinguishes a partial scan from a "
+            "clean one. `orphans=false` drives the issue-close step, so a "
+            "degraded scan writing `false` closes a live orphan issue "
+            "(C-347)."
+        )
+        # And a finding must survive a degraded scan rather than being
+        # rounded down to "partial".
+        assert run.index('orphans=true') < run.index('orphans=partial'), (
+            "The `found` branch must be tested BEFORE the partial branch, "
+            "or a real orphan discovered during a degraded scan is "
+            "reported as merely 'partial' and never opens an issue."
+        )
