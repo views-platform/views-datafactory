@@ -129,7 +129,17 @@ removing the branch before the next push). A client check races GitHub's asynchr
 deletion, which is a property of the system rather than a bug to iterate out. The register entry
 for C-340 records all four so nobody rebuilds them.
 
-Instead, `release-topology.yml` checks daily for any remote branch carrying commits **beyond its
+**It is not yet running.** GitHub executes a `schedule` trigger from the **default branch only**, and
+this repository's default branch is `main`. The detector lands on `development`, so the 06:00 cron
+goes on running `main`'s copy — which has no detector — until the next release promotion carries it
+across. Verified: every `event: schedule` run of this workflow has `headBranch: main`. Until then the
+check exists only as a `workflow_dispatch` you can trigger by hand:
+
+```bash
+gh workflow run release-topology.yml
+```
+
+Once promoted, `release-topology.yml` checks daily for any remote branch carrying commits **beyond its
 merged PR's head** with no open PR, and folds it into the same tracking issue as the other
 release-hygiene checks. Recovery is what #417 did:
 
@@ -138,7 +148,7 @@ git checkout -b <new-branch> origin/development
 git cherry-pick <sha>
 ```
 
-You learn within a day rather than at push time. Both real incidents were recovered inside an hour
+Once it is running on `main` you learn within a day rather than at push time. Both real incidents were recovered inside an hour
 anyway.
 
 ## Arming auto-merge — use the script, not `gh pr merge`

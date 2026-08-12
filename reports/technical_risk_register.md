@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-12 — C-347 and C-348 registered and C-340 narrowed (#439): the orphan detector that replaced the abandoned pre-push hook was found, before merge, to be unauthorised, name-matched and silently empty-loopable, and the drill that had "verified" it ran under the operator's own credentials rather than the runner's. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-12 — C-347, C-348 and C-349 registered, C-340 narrowed and C-345 corrected (#439): the orphan detector that replaced the abandoned pre-push hook was found, before merge, to be unauthorised, name-matched and silently empty-loopable, and the drill that had "verified" it ran under the operator's own credentials rather than the runner's. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 349 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 42 open concerns (0 Tier 1, 6 Tier 2, 10 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 351 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 44 open concerns (0 Tier 1, 8 Tier 2, 10 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -163,6 +163,8 @@
 | ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
 | C-346 | 4 | Four copies of `test_version_not_already_tagged` use a conditional `xfail` that reads as rigorous and is circular — the test runs only when the version is untagged, then asserts it is untagged. Measured green in every reachable state | **Before trusting any `xfail`-marked test as a gate**: name the state that makes it fail. If none does, it is decoration | Test infra |
 | C-349 | 2 | A malformed ledger line is silently dropped by both consolidators and by the health reader — `except json.JSONDecodeError: continue`, uncounted. A harvest recorded as successful would simply not be consolidated, and the run would report success | **Before the next consolidation run after any unclean shutdown, disk-full event, or manual ledger edit** — and when adding any new ledger reader, count what you skip rather than skipping silently | Consolidation correctness |
+| C-350 | 2 | A workflow merged to `development` never runs on its own `schedule` — GitHub fires cron from the **default branch only**, which here is `main`. The orphan detector was documented as "checks daily" in three places while `origin/main`'s copy contained no detector at all | **Before documenting any scheduled workflow as live**, confirm the file is on the default branch: `git show origin/main:<path>`. And at every release promotion, list which workflows the promotion is what activates | Operational monitoring |
+| C-351 | 2 | **Live incident:** `serving-freshness.yml` has failed every scheduled run since at least 2026-08-08 — `fatal: not a git repository`, because the job has no `actions/checkout` step. Freshness alerting for served data has been dead for five days and nothing surfaced it | **Immediately** — this is firing now, not a future risk. Then: no scheduled workflow should be able to fail silently for days; the run-status of the monitoring workflows is itself unmonitored | Operational monitoring |
 | C-347 | 2 | A drill run in the operator's environment cannot verify a mechanism that runs in the runner's — the orphan detector was drilled under personal `gh` auth and passed; under `GITHUB_TOKEN`, whose workflow grants no `pull-requests` scope, every `gh pr list` 403s into `\|\| continue` and it reports clean forever | **Before calling any CI or server mechanism verified because a local drill passed**: name what the runner has that you do not, and what you have that it does not — credentials, PATH, refs, working directory | Test infra |
 | C-348 | 4 | Deleting a test module drops the assertions that were only co-located with it — removing `tests/test_git_hooks.py` with the hook also removed the sole guard on `scripts/arm_automerge.sh`'s executable bit, a script the same PR keeps and the guide tells operators to run | **Before deleting any test module**, list its test functions and check which ones cover code that survives the deletion | Test coverage |
 | C-345 | 2 | Verification tooling reported a green suite that was red, twice in one session — a piped `pytest \| tail; echo $?` yields the pipe's status, and a task notification reported "exit code 0" for a run that exited 1 | **When capturing a long-running check's result** — piping it, backgrounding it, or reading a notification instead of an unpiped `$?`. Redirect to a file, capture `$?` unpiped, and grep `^FAILED` as a second reader | Test infra |
@@ -223,6 +225,8 @@ the table below rather than removed, so the table has ten rows. C-331 closed 202
 | **C-347** | A drill that passed under the operator's credentials, for a mechanism that runs under the runner's |
 | **C-348** | A test module deleted with its subject, taking an unrelated guard with it |
 | **C-349** | A ledger line that fails to parse is skipped uncounted, so a missing harvest reads as a complete run |
+| **C-350** | A scheduled workflow that exists only on a non-default branch — documented as running daily, never invoked |
+| **C-351** | A monitoring workflow red every morning for five days, with nobody reading the mornings |
 
 **Why this belongs in the register rather than a post-mortem.** The individual fixes are already
 made or tracked. What the cluster adds is a *design rule*: in this system, **absence of an error is
@@ -1253,11 +1257,11 @@ Its test suite was **vacuous**: reconstructing v1 and running all seven behaviou
 
 **Why it was abandoned rather than fixed a fifth time.** A client-side check is racing GitHub's asynchronous branch deletion. That is a property of the system, not a defect to iterate out — and four failures from four *different* environment properties is the signature of inferring state you cannot see. A multi-expert panel reached the same conclusion independently: Kleppmann (two views of one system read at different times, with an async deletion between), Ousterhout (a shallow module whose complexity is entirely special cases), Beck (twice in ~440 PRs, both recovered by cherry-pick inside the hour — the guard already cost more than the failures).
 
-**What replaced it.** The orphaned *state* is unambiguous once things settle: a remote branch carrying commits beyond its merged PR's head, with no open PR. `release-topology.yml` now checks that daily and folds it into the same reusable issue. Drilled end-to-end against live repository state — it found the genuine orphan (`ops/pre-push-hook-and-automerge`, *"1 commit(s) pushed AFTER PR #437 merged"*), correctly ignored a branch whose PR was closed-unmerged, and reported clean once the branch was deleted.
+**What replaced it.** The orphaned *state* is unambiguous once things settle: a remote branch carrying commits beyond its merged PR's head, with no open PR. `release-topology.yml` gains that check and folds it into the same reusable issue — **but it is not yet running on the cron**. GitHub fires `schedule` from the **default branch only**, which here is `main`; the detector merges to `development`, so the 06:00 job keeps executing `main`'s copy until a release promotion carries it over. Verified: `origin/main`'s workflow contains zero occurrences of `orphan`, and every scheduled run has `headBranch: main`. Found by `/code-review max` on #439, after the guide, this entry and the changelog had all stated *"checks daily"* as present fact — **a mechanism documented as live while dark, which is this cluster's shape applied to the cluster's own remedy.** See C-350. Drilled end-to-end against live repository state — it found the genuine orphan (`ops/pre-push-hook-and-automerge`, *"1 commit(s) pushed AFTER PR #437 merged"*), correctly ignored a branch whose PR was closed-unmerged, and reported clean once the branch was deleted.
 
 Measured against the merged PR's head rather than against `development`, deliberately: merges here are squashes, so a branch's own commits are *never* ancestors of `development`, and the naive comparison would report every merged branch as orphaned.
 
-**The residue, and it is real.** This is detection, not prevention. Work can still be orphaned; you learn within a day rather than at push time. And nothing forces `arm_automerge.sh` — `gh pr merge --auto` is one keystroke away, so *"read the value back rather than trusting the command"* remains a habit no mechanism enforces. **This entry stays open on that residue**, and Story 7 (#428) should say so rather than claim a clean resolution.
+**The residue, and it is real.** This is detection, not prevention. Work can still be orphaned; you learn within a day rather than at push time — and only once the workflow reaches `main` (C-350). And nothing forces `arm_automerge.sh` — `gh pr merge --auto` is one keystroke away, so *"read the value back rather than trusting the command"* remains a habit no mechanism enforces. **This entry stays open on that residue**, and Story 7 (#428) should say so rather than claim a clean resolution.
 
 **It recurred while being fixed.** #437 auto-merged carrying the broken v1 hook; the review fixes were pushed to that branch afterwards and orphaned — the same defect, inside the pull request addressing it. The hook was not installed in that clone, because `core.hooksPath` is per-clone config git does not version. That is the strongest available argument that a client-side install-it-yourself guard was the wrong instrument.
 
@@ -3240,26 +3244,25 @@ Two readers, because one reader that can be wrong is what this entry is about.
 
 **Open, because a habit is not a control.** Nothing prevents the next pipeline from masking a status the same way. The instrument would be a wrapper that refuses to report a result it did not obtain unpiped — proposed for **#424**, which is the story about giving checks somewhere to run other than one operator's discretion.
 
-**Addendum 2026-08-12 (#439) — the mitigation prescribed above is itself defective, and it failed in the drill that found it.** The "second independent reader" recommended here is `grep -cE '^FAILED' out.txt`. **pytest colourises its summary**, so the line in the file is `\033[31mFAILED\033[0m tests/...` and the caret never matches. Measured on a genuinely failing run:
+**Addendum 2026-08-12 (#439), CORRECTED THE SAME DAY — the first version of this addendum was wrong, and being wrong is the point of it.**
+
+**What was claimed:** that the mitigation prescribed above (`grep -cE '^FAILED' out.txt`) is defective because *"pytest colourises its summary"*, so the line is `\033[31mFAILED\033[0m` and the caret never matches. It was written after a drill harness reported *"DID NOT CATCH"* four times while all four drills had in fact caught, because the grep returned 0 on genuinely failing runs.
+
+**What is actually true.** pytest does **not** colourise when stdout is redirected to a file. The ANSI codes came from `FORCE_COLOR=3`, which is exported in the operator/agent shell. Measured both ways on a genuinely failing run in this repository:
 
 ```
-real rc=1
-  grep -cE '^FAILED'   -> 0      <- what this entry prescribes
-  with --color=no      -> 1
+uv run pytest -q > out.txt 2>&1                  ->  grep -cE '^FAILED' = 0,  19 ANSI-bearing lines
+env -u FORCE_COLOR uv run pytest -q > out.txt 2>&1 ->  grep -cE '^FAILED' = 1,   0 ANSI-bearing lines
 ```
 
-It surfaced while drilling four new guards for #439: a harness reported *"DID NOT CATCH"* four times in a row while every drill had in fact caught, because the harness required **both** `rc != 0` **and** `FAILED >= 1` and the second reader always returned 0. Had the harness required only the grep — the reading this entry recommends — a genuinely red suite would have been reported green. **The second reader was not merely useless; it was wrong in the dangerous direction.**
+**So C-345's original prescription works** — in a plain shell and in CI, which is where it matters. It fails only in a shell that forces colour, which this operator's does.
 
-This is the same shape as C-331, whose own prescribed fix (`printf 'url=%s'`, unquoted) turned a failure ping into a success ping. Two entries in this register have now recommended a defective remedy, which is an argument about the register itself: **a mitigation written into an entry is untested code**, and it inherits the credibility of the entry without having earned it.
+**The correction is worth more than the original claim, because the error is C-347 and it was committed inside the commit that registers C-347.** A drill ran in an environment carrying a variable nobody controlled for, produced an anomalous result, and the anomaly was diagnosed as a defect in the *tool* rather than in the *environment*. It was then escalated into a general claim about this register — *"the second time an entry has prescribed a defective remedy"*, *"a mitigation written into an entry is untested code"* — resting entirely on that uncontrolled variable. Both sentences are withdrawn. C-331's defective remedy was real and measured; this one was not, and pairing them manufactured a pattern from one instance.
 
-**Corrected prescription** — disable colour at the source rather than pattern-match around it, because the ANSI-aware regex is one more narrow claim about a property (C-336):
+**What survives.** `--color=no` is still the right thing to write, because it removes a dependency on the caller's environment rather than assuming it — the same reasoning that makes it correct is what the wrong diagnosis got backwards. The mitigation block above is left standing unedited, with this addendum after it, per the convention that corrections are recorded rather than applied silently.
 
-```bash
-uv run pytest -q --color=no > out.txt 2>&1; echo "PYTEST_EXIT=$?"
-grep -cE '^FAILED' out.txt
-```
+**And the second reader really was not independent** — not because of pytest, but because the harness required `rc != 0` **and** `FAILED >= 1`, so a reader that always returned 0 in that shell could only ever suppress a catch, never report one. Requiring both readers to agree means the weaker one governs. That part of the original addendum stands.
 
-Also worth stating plainly, since this entry is the one people will read for the rule: a check whose two readers can *both* be wrong in the same direction is one reader. `--color=no` is what makes them independent.
 
 Cross-ref: C-339 (the other assistant-workflow hazard, and the precedent for registering one), C-330/C-337/C-343 (same shape, different mechanisms), C-341 (gates that assure only whoever ran them — this is the failure mode *of* running them). Part of the **mechanisms that fail green** cluster. GitHub: #432.
 
@@ -3339,6 +3342,16 @@ An explicit `permissions:` block sets every unlisted scope to `none`. `pull-requ
 
 Four instances, four *different* environment properties — the same signature that ended the pre-push hook (C-340). The pattern is not carelessness; it is that a drill is an experiment, and an experiment silently inherits every variable you did not control.
 
+**Verified live, by the remedy this entry prescribes (run 31590304501, 2026-08-12).** The workflow was **dispatched** on the branch rather than having its body run locally, and the step reported:
+
+```
+Checked 1 branch(es); 0 could not be answered for.
+```
+
+That is the decisive line. The pull request's own branch is the only branch that is neither `main` nor `development`; it is not in `development`, so the step reached `gh pr list` and **got an answer**. Had `pull-requests` still been revoked, that call would have 403'd into `|| continue`, giving `answered=0, unanswered=1`, and the new zero-answers rule would have exited non-zero. The run was green, the tracking-issue step was correctly skipped, and no issue was opened.
+
+**What this does not verify, stated because the entry is about exactly this distinction:** only the *permission* and the *counting* are confirmed in the production environment. The detector's positive path — actually finding an orphan — has no live instance to exercise and was drilled against a scratch repository, where git ancestry semantics are identical. Two different classes of evidence, and conflating them is the mistake.
+
 **What would actually close this.** A drill is only evidence if it is run under the production principal, or if the difference is enumerated and argued to be irrelevant. For workflows specifically, that means dispatching the workflow rather than running its body locally. Nothing enforces this today, which is why the entry is open. #424 is the story about giving checks somewhere to run other than one operator's discretion, and this belongs to it.
 
 Cross-ref: C-345 (the instrument misreading a result it did obtain — this is the complement: reading correctly in the wrong environment), C-339 (the precedent for registering an operator-workflow hazard), C-340 (the mechanism whose replacement this nearly shipped broken), C-341 (gates that assure only whoever ran them — the same question asked of *where* rather than *whether*), C-336 (a guard's claim narrower than the property). Part of the **mechanisms that fail green** cluster. GitHub: #426, #439.
@@ -3371,7 +3384,7 @@ Cross-ref: C-346 (the sibling copies that survived a deletion — the same sprin
 
 **Trigger:** **Before the next consolidation run following any unclean shutdown, disk-full event, or manual ledger edit** — those are the ways a partial line gets written. And **when adding any new ledger reader**: count what you skip.
 
-**Location:** `src/datafactory_consolidation/consolidators/acled.py` (`_ledger_entries`, the `json.JSONDecodeError` handler), `src/datafactory_consolidation/consolidators/ucdp.py` (same shape), `src/datafactory_provenance/health.py` (`read_last_entries`). Contrast with `src/datafactory_compilation/grid_compilation.py`, which already does this correctly.
+**Location:** seven `json.JSONDecodeError` sites under `src/` — `grep -rn JSONDecodeError src/` is the enumeration, and **counting them is part of the fix**. The ones that swallow silently: `consolidators/acled.py`, `consolidators/ucdp.py`, `datafactory_provenance/health.py` (`read_last_entries`, and a second `except (json.JSONDecodeError, OSError): pass` in the freshness check that leaves `content_fresh` unset). **The precedent to copy is `datafactory_provenance/digests_and_ledgers.py` (`_read_ledger_entries`), which already logs `"Skipping malformed ledger line %d in %s"`** — the provenance package's own ledger reader, a closer model than `grid_compilation.py`'s out-of-bounds cell counter.
 
 **The defect.** All three read the provenance ledger line by line and do:
 
@@ -3382,15 +3395,57 @@ except json.JSONDecodeError:
     continue
 ```
 
-A line that fails to parse is dropped, and **nothing anywhere records that it happened**. The consolidators use the ledger to decide which harvested files to consolidate, so a dropped line means a harvest that succeeded is simply not consolidated — and the run reports success, because from its point of view there was nothing to do. The output is short by one source file, with no error, no warning, and no count.
+A line that fails to parse is dropped, and in these readers **nothing records that it happened**. (An earlier version of this entry said *nothing anywhere* records it, and named three sites. Both were wrong: the grep returns seven, and `digests_and_ledgers.py` already logs the skip. Corrected by `/code-review max` on #439 before merge — an entry that undercounts its own locations gets closed after a partial fix, which is C-336's *claim narrower than the property* inside a new concern.) The consolidators use the ledger to decide which harvested files to consolidate, so a dropped line means a harvest that succeeded is simply not consolidated — and the run reports success, because from its point of view there was nothing to do. The output is short by one source file, with no error, no warning, and no count.
 
-**Why it is registered rather than merely fixed.** The repository already contains the correct pattern, twenty lines of a different module away: `grid_compilation.py` writes `n_skipped_spatial += 1` beside its `continue` and surfaces the total. The inconsistency is the finding. A reader of either consolidator has no way to tell whether "skip silently" was a considered decision or an omission, and the next ledger reader will be copied from whichever one is nearest.
+**Why it is registered rather than merely fixed.** The repository already contains the correct pattern **in the same package**: `digests_and_ledgers.py` warns on a malformed ledger line, and `grid_compilation.py` counts its skipped cells. The inconsistency between readers of the *same file format* is the finding. A reader of either consolidator has no way to tell whether "skip silently" was a considered decision or an omission, and the next ledger reader will be copied from whichever one is nearest.
 
 **Tier 2, argued rather than assumed.** Not Tier 3: the consequence is missing data in a consolidated artefact that feeds model inputs, not a maintainability cost. Not Tier 1: no instance has been observed, and the ledger is written by our own code with `json.dumps` under a lock (C-294/C-295), so a malformed line requires a partial write or a manual edit. Likelihood is low; **detectability is zero**, and that is the axis this cluster is about.
 
 **The fix is small and already specified by the codebase's own precedent:** count the skips, include the count in the outcome, and fail loudly if it is non-zero — a ledger that cannot be parsed is not a ledger with fewer entries. Deliberately **not** done in #439, which is a CI story; doing it there would have put an untested change to consolidation inside a pull request about a workflow.
 
 Cross-ref: C-347 (the same "could not check" read as "checked and fine", in the orphan detector — this entry is that finding generalised into production code), C-330 (a no-op reporting success), C-136 (`read_last_entries` crashing on non-UTF8 — the *loud* failure mode of the same function, demoted; this is the silent one), C-294/C-295 (the locking that makes a partial write unlikely). Part of the **mechanisms that fail green** cluster. GitHub: #439.
+
+---
+
+### C-350: A workflow merged to `development` does not run on its own schedule
+
+**Source:** `/code-review max` on #439 (2026-08-12). The headline finding of that review, and the reason the story it reviewed is not shippable as written.
+
+**Trigger:** **Before describing any scheduled workflow as live** — confirm the file is on the default branch with `git show origin/main:.github/workflows/<name>.yml`. And **at every release promotion**, note which workflows the promotion is what activates; that is a side effect of promotion nobody currently records.
+
+**Location:** `.github/workflows/release-topology.yml` (the `orphans` step, added on `development`), `docs/guides/publishing_to_pypi.md`, and this register's own C-340 narrowing. All three have been corrected.
+
+**The mechanism.** GitHub fires a `schedule` trigger from the **default branch only** — not from the branch the workflow file was added on. This repository's default branch is `main`, and all work goes through `development` (never PR to `main` is a standing rule here). So **every scheduled workflow authored on `development` is dark until a release promotion carries it to `main`**, and promotions are irregular — the last was v1.11.0 on 2026-08-03.
+
+**Measured, not inferred:** `gh repo view --json defaultBranchRef` returns `main`; `git show origin/main:.github/workflows/release-topology.yml | grep -ci orphan` returns **0**; and every run of that workflow with `event: schedule` has `headBranch: main`.
+
+**Why this is the cluster's shape and not a footnote.** The detector was written, drilled, reviewed, verified live by `workflow_dispatch`, and documented in three places as *"checks daily"* — while the thing that would actually invoke it had no copy of it. Every one of those verifications was true and none of them was the question. **A `workflow_dispatch` run proves the code works; it says nothing about whether anything will ever call it.** The four guards in `tests/test_ci_gates.py` assert properties of the branch's file, so they go green on every pull request while the branch that runs the cron has none of it — a test suite that is structurally incapable of noticing.
+
+**Tier 2, argued.** Not Tier 3: the consequence is a control believed to be operating that is not, which is worse than a control known to be absent — the belief displaces the manual habit. Not Tier 1: nothing is corrupted; the detector's absence only means orphaned work is found later, by hand, as it was before. The generality is what earns the tier — this applies to *every* scheduled workflow this project will ever add, and the project adds them regularly (`release-topology.yml`, `serving-freshness.yml`).
+
+**What would close it.** A guard that reads the default branch's copy of each scheduled workflow and compares it to the branch's, so "this workflow is not live yet" is a visible state rather than an assumption. Note the ordinary CI job cannot do this naively — it would redden every PR that touches a workflow, which is correct information delivered as noise. Belongs with #424.
+
+Cross-ref: C-347 (verified in the wrong environment — this is verified in the right environment and never invoked, the complementary error), C-341 (a gate that skipped itself), C-343 (a deploy that deployed nothing — the same "shipped ≠ running" gap, one layer down), C-351 (a scheduled workflow that *is* live and has been failing unnoticed). Part of the **mechanisms that fail green** cluster. GitHub: #439.
+
+---
+
+### C-351: `serving-freshness.yml` has failed every scheduled run since 2026-08-08 — [FIRING]
+
+**Source:** `/code-review max` on #439 (2026-08-12), flagged as an out-of-diff observation while checking the workflow family.
+
+**Trigger:** **Fired.** This is a live failure, not a future risk. Fix the workflow, then answer the second-order question: nothing watches whether the watchers ran.
+
+**Location:** `.github/workflows/serving-freshness.yml`.
+
+**Observed.** Every scheduled run from at least 2026-08-08 through 2026-08-12 has concluded `failure`. The job has **no `actions/checkout` step**, so a git command in the close step aborts with `fatal: not a git repository`. `grep -c 'actions/checkout' .github/workflows/serving-freshness.yml` returns 0.
+
+**What it means operationally.** This workflow is the freshness check for served data — the mechanism that says the zarr/parquet endpoints are serving something current. It has been dead for five days. Nobody noticed, which is the part that matters: a red cron in the Actions tab is *loud* in principle and *silent* in practice, because nobody opens the Actions tab on a morning when nothing seems wrong.
+
+**Tier 2.** Freshness alerting for the served artefacts is inoperative, and per C-338 this workflow exists precisely because the monitoring vendor's free tier cannot do content checks — so there is no second path. Not Tier 1: no data is corrupted and the pipeline itself is unaffected; what is lost is notice.
+
+**Deliberately not fixed in #439**, which is a story about the orphan detector. Recorded here immediately rather than left as a review aside, because *"pre-existing"* is not a disposition this project accepts — we are the only developers, and a failing check is a failing check on the day it is seen.
+
+Cross-ref: C-338 (why this workflow exists rather than a vendor keyword monitor), C-335 (the serving-path freshness question), C-131 (the dead-man switch — the same "silence reads as health" problem), C-350 (the other scheduled-workflow defect found in the same review). Part of the **mechanisms that fail green** cluster. GitHub: #439.
 
 ---
 

@@ -17,6 +17,78 @@ entry could.
 
 ---
 
+## `/code-review max` — the detector was never going to run, and three of my own corrections were wrong (2026-08-12)
+
+Second review round on #439. Fifteen findings, verified empirically rather than argued: the shell
+step was extracted from the YAML and executed under `bash -e` against synthetic repositories with a
+stubbed `gh`. **The round is worth more than the story.**
+
+**C-350 — the deliverable would not have run.** GitHub fires `schedule` from the **default branch
+only**. This repository's default branch is `main`; all work goes through `development`. So the
+detector merges to `development` and the 06:00 cron keeps executing `main`'s copy, which contains no
+detector, until an irregular release promotion carries it over. Measured: `origin/main`'s workflow
+has **zero** occurrences of `orphan`, and every `event: schedule` run has `headBranch: main`.
+
+Meanwhile the guide, this changelog and C-340's narrowing all stated *"checks daily"* as present
+fact, and the four new guards assert properties of the **branch's** file, so they go green on every
+pull request while the branch that runs the cron has none of it. Every verification performed was
+true and none of them was the question. A `workflow_dispatch` run proves the code works; it says
+nothing about whether anything will ever call it. All three claims corrected.
+
+**C-351 — a live red gate nobody was reading.** `serving-freshness.yml` has failed every scheduled
+run since at least 2026-08-08: no `actions/checkout` step, so a git command aborts with `fatal: not
+a git repository`. Freshness alerting for the served artefacts has been dead for five days. Recorded
+immediately rather than as a review aside, because *"pre-existing"* is not a disposition this
+project accepts.
+
+**Three of my own guards could not fail for what they claimed.** `"answered="` is a **substring** of
+`"unanswered="`, so the counting assertion passed with every `answered` counter deleted; and a bare
+`"::error::" in run` searching a 130-line body was satisfied by an unrelated guard a hundred lines
+below, so deleting *both* branch-enumeration guards kept the suite green. The class comment three
+lines above warns against asserting "the how, not the what" and cites C-336. Rewritten with a
+lookbehind, anchored patterns, and step lookup by stable `id:` rather than by a substring of the
+body under test — then drilled against the exact three defeats the review demonstrated.
+
+Rewriting them produced a fourth instance of the same thing: the first replacement matched the
+step's own **comments**, which quote the anti-patterns they warn against, so it reddened the *fixed*
+file. Caught by the control run. Comments are now stripped before matching — which is what
+`test_heartbeat_secret.py` already learned, in this same epic.
+
+**The C-345 addendum written this morning was wrong, and is retracted in place.** It claimed pytest
+colourises its summary so `grep -cE '^FAILED'` cannot match. pytest does **not** colourise into a
+file; the ANSI codes came from `FORCE_COLOR=3` exported in this operator's shell. Measured both
+ways: with it, `grep -cE '^FAILED'` returns 0 on a failing run; with `env -u FORCE_COLOR`, it
+returns 1 and there are zero ANSI lines. **C-345's original prescription was fine in a plain shell
+and in CI.** An anomaly produced by an uncontrolled environment variable was diagnosed as a defect
+in the tool and escalated into a general claim about this register — *"the second time an entry has
+prescribed a defective remedy"* — which is withdrawn. That is C-347, committed inside the commit
+registering C-347. `--color=no` stays, because removing a dependency on the caller's environment is
+right for the reason the wrong diagnosis inverted.
+
+**C-349 undercounted its own locations.** It named three `JSONDecodeError` sites; `grep -rn
+JSONDecodeError src/` returns seven, and `digests_and_ledgers.py` — the provenance package's own
+ledger reader — **already logs the skip**, falsifying the entry's central *"nothing anywhere records
+that it happened"*. An entry that undercounts gets closed after a partial fix. Corrected, with the
+grep written into the Location field so the count is re-derivable rather than asserted.
+
+**What is not fixed, and why the story stops here.** Nine verified behavioural findings remain — the
+recovery the issue body prescribes never clears the alert, so the cron would go permanently red and
+the shared issue permanently open; a partial scan writes an unqualified `orphans=false` that
+auto-closes a genuine orphan issue; the issue-reuse path never renders the orphan section at all, so
+the daily comment names no branch; `merge-base` exit 128 is booked as a definite answer *inside* the
+accounting added to fix C-347; two `sed` parsers depend on `gh`'s compact JSON; `--limit 1` orders
+by `createdAt`, not `mergedAt`; and a bare branch name in `git fetch` resolves against
+`refs/tags/` first.
+
+**The pattern is the finding.** Round one: five defects. Round two: fifteen, each from a different
+property of git, of `gh`, or of GitHub. That is the signature that ended the pre-push hook after
+four versions, reappearing in its replacement — and the panel's argument then applies unchanged now:
+the failure has occurred twice in ~440 pull requests and both times was recovered by cherry-pick
+inside the hour. **Continuing to iterate is the tired answer, not the engineering one.** The design
+question goes back to the operator rather than being resolved by a third round.
+
+---
+
 ## C-347, C-348 registered and C-345 corrected — the detector arrived with three fails-green defects (2026-08-12)
 
 Epic #421 Story 5 (#439), the `/code-review` round on the fix for C-340. **The cluster grew out of an
@@ -88,6 +160,13 @@ differ between the operator's machine and the runner (the C-347 caveat is about 
 environment, not about git). Squash-merge a branch, push a follow-up to it, then delete the branch
 and cut a fresh one reusing the name: the new logic reports the genuine orphan as 1 stranded commit
 and **skips** the namesake, where the old logic reported the namesake as 3 commits stranded.
+
+**The permission fix was then verified the way C-347 says to verify things** — by dispatching the
+workflow (run 31590304501) rather than running its body locally. It reported *"Checked 1 branch(es);
+0 could not be answered for."* Had the scope still been revoked, `gh pr list` would have 403'd into
+`|| continue` and the new zero-answers rule would have turned the run red. Writing C-347 and then
+*not* dispatching would have been the entry's own failure mode, committed in the commit that
+registers it.
 
 One guard was also loosened rather than tightened: the ls-remote assertion had matched the exact
 wording of a log message, which would redden on a reword for no behavioural reason. It now checks

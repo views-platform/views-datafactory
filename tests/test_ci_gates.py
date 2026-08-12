@@ -28,6 +28,7 @@ verification (C-345).
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,19 @@ def _index_of_run(steps: list[dict[str, Any]], needle: str) -> int:
         if needle in run:
             return i
     raise AssertionError(f"no step runs {needle!r}")
+
+
+def _step_by_id(workflow: Path, job: str, step_id: str) -> dict[str, Any]:
+    """Locate a step by its stable ``id:``.
+
+    NOT by a substring of the body being asserted on: that makes the
+    guard retarget itself if any other step ever contains the same
+    command, and it couples step identity to the very text under test.
+    """
+    for step in _steps(workflow, job):
+        if step.get("id") == step_id:
+            return step
+    raise AssertionError(f"{workflow.name}:{job} has no step with id {step_id!r}")
 
 
 class TestEveryStepIsWellFormed:
@@ -129,119 +143,113 @@ class TestDeployGatesCanActuallyAnswer:
 
 
 class TestOrphanDetectorCanActuallyAnswer:
-    """The orphan detector (C-340 mechanism 2) has two silent preconditions.
+    """The orphan detector's silent preconditions.
 
-    Both were live defects when it was first written, and neither would
-    have reddened anything: the step would have run, exited 0, and
-    reported "No orphaned branches" — while asserting nothing at all.
-    Found by ``/code-review`` before merge, not by the drill that was
-    supposed to have verified the detector (C-347).
+    Every assertion here was rewritten after `/code-review max` found
+    that three of the four originals could not fail for the property
+    they claimed: ``"answered="`` is a substring of ``"unanswered="``, so
+    stripping every ``answered`` counter still matched; and a bare
+    ``"::error::" in run`` was satisfied by an unrelated guard elsewhere
+    in the same 130-line step, so deleting both branch-enumeration
+    guards kept the suite green. A guard written against fails-green
+    that itself fails green is the epic's subject, committed inside it.
     """
+
+    def _run(self) -> str:
+        """The step body with whole-line comments removed.
+
+        Load-bearing. This step's comments quote the anti-patterns they
+        warn against — ``# `for x in $(cmd)` swallows a failure`` — so a
+        shape assertion run against the raw body matches the explanation
+        and reddens on the *fixed* file. That is exactly how v1 of
+        ``test_heartbeat_secret.py`` failed (C-336), caught here by the
+        control run rather than by review.
+        """
+        run = _step_by_id(HYGIENE, "topology", "orphans")["run"]
+        return "\n".join(
+            line for line in run.splitlines() if not line.lstrip().startswith("#")
+        )
 
     def test_the_workflow_grants_pull_requests_read(self) -> None:
         """The detector is built entirely on ``gh pr list``.
 
-        Once a ``permissions:`` block exists, every scope NOT listed is
-        set to ``none`` — so omitting this one revokes it rather than
-        leaving a default in place. Every ``gh pr list`` call would then
-        403, and because they are written ``... 2>/dev/null) || continue``
-        a 403 is indistinguishable from "no PR found": every branch is
-        skipped, ``found`` stays empty, and the step reports clean on a
-        daily cron, forever.
-
-        This asserts the grant, not the calls, because the grant is the
-        part no drill run under a personal token can check.
+        An explicit ``permissions:`` block sets every unlisted scope to
+        ``none``, so omitting this revokes it. The calls are written
+        ``... 2>/dev/null) || ...``, making a 403 indistinguishable from
+        "no PR found". Verified live under ``GITHUB_TOKEN`` by
+        dispatching the workflow (run 31590304501), which is the only
+        way to check a grant — a local drill runs as the operator.
         """
         data = yaml.safe_load(HYGIENE.read_text())
         perms = data.get("permissions") or {}
         assert perms.get("pull-requests") == "read", (
             f"release-topology.yml must grant `pull-requests: read`; it "
-            f"grants {perms!r}. An explicit permissions block sets every "
-            f"unlisted scope to `none`, so the orphan detector's `gh pr "
-            f"list` calls would 403 — swallowed by `2>/dev/null || "
-            f"continue` and reported as 'No orphaned branches' (C-347)."
+            f"grants {perms!r}. Without it every `gh pr list` 403s, is "
+            f"swallowed, and the step reports clean forever (C-347)."
         )
 
-    def test_long_lived_branches_are_fetched_before_the_detector_runs(
-        self,
-    ) -> None:
-        """``origin/development`` must exist before the ancestry checks.
-
-        The detector asks twice whether something is an ancestor of
-        ``origin/development``. Without the fetch, that ref does not
-        resolve, ``git merge-base`` exits 128 into ``2>/dev/null``, and
-        the ``&&`` short-circuits — so the "already merged, skip it"
-        branch does **not** fire and every remote branch falls through
-        into the PR queries. Wrong order, green run: the same shape as
-        the deploy-gate ordering above, for a dependency that did not
-        exist when this file was written.
-        """
-        steps = _steps(HYGIENE, "topology")
-        fetch = _index_of_run(steps, "git fetch --quiet origin main development")
-        detector = _index_of_run(steps, "git ls-remote --heads origin")
-        assert fetch < detector, (
-            "The step fetching `main`/`development` must run BEFORE the "
-            "orphan detector. The detector tests ancestry against "
-            "`origin/development`; if that ref is missing, `git "
-            "merge-base` exits 128, the error is swallowed, the skip "
-            "does not fire, and every branch is treated as a candidate."
-        )
-
-    def test_the_branch_list_is_checked_rather_than_iterated_blind(self) -> None:
+    def test_the_branch_list_is_not_iterated_blind(self) -> None:
         """``for x in $(cmd)`` hides a failure of ``cmd`` completely.
 
-        GitHub runs ``bash -e {0}`` and ``set -uo pipefail`` does not
-        remove ``-e``, but a failing command substitution in a ``for``
-        word list is exempt from it. Verified::
+        GitHub runs ``bash -e {0}``; ``set -uo pipefail`` does not remove
+        ``-e``; and a failing command substitution in a ``for`` word list
+        is exempt from it. So a transient ``ls-remote`` failure gives an
+        empty loop and a confident all-clear.
 
-            bash -e -c 'for x in $(false | sed s/a/b/); do echo BODY; done; echo END'
-
-        prints only ``END``. So a transient ``git ls-remote`` failure
-        would give an empty loop and a confident all-clear. The list must
-        be captured, its status checked, and emptiness treated as an
-        error — a repository always has at least two branches.
+        Matched on the *shape* rather than on the loop variable's name,
+        which the first version keyed on and which a rename defeated.
         """
-        steps = _steps(HYGIENE, "topology")
-        run = steps[_index_of_run(steps, "git ls-remote --heads origin")]["run"]
-        assert "for branch in $(git ls-remote" not in run, (
-            "The orphan detector iterates `git ls-remote` output directly. "
-            "A failure of that command is invisible there — bash's `-e` "
-            "exempts command substitution in a `for` word list — so one "
-            "network hiccup yields an empty loop and a green 'No orphaned "
-            "branches'. Capture it, check the status, and reject empty."
-        )
-        # The property, not the wording. An earlier version of this
-        # assertion matched the exact sentence of the log message, which
-        # would redden on a reword for no behavioural reason — the same
-        # "guard asserts the how, not the what" mistake C-336's second
-        # addendum records.
-        assert "::error::" in run and "exit 1" in run, (
-            "The orphan detector must fail loudly when it cannot "
-            "enumerate branches. Silently reporting clean because the "
-            "listing failed is the defect the detector exists to catch."
+        assert not re.search(r"for\s+\w+\s+in\s+\$\(", self._run()), (
+            "The orphan detector iterates a command substitution "
+            "directly. A failure of that command is invisible there, so "
+            "one network hiccup yields an empty loop and a green 'No "
+            "orphaned branches'. Capture it, check the status, reject "
+            "empty (C-347)."
         )
 
-    def test_a_result_resting_on_no_observations_is_an_error(self) -> None:
-        """Answering for nothing must not read as answering "all clear".
+    def test_failing_to_enumerate_branches_is_loud(self) -> None:
+        """Both enumeration guards must survive, individually.
 
-        Every per-branch check can fail — a rate limit, a 502, a branch
-        deleted mid-loop — and each failure removes a branch from the
-        result silently. If enough fire, the step reports a confident
-        all-clear having observed nothing, which is C-347 one level down
-        from the permission defect that prompted it. The step therefore
-        counts what it answered for, refuses to report clean on zero, and
-        qualifies a partial result rather than rounding it to success.
+        The first version asserted ``"::error::" in run and "exit 1" in
+        run`` against the whole step — satisfied on their own by the
+        zero-observation guard a hundred lines below, so deleting BOTH
+        enumeration guards left it green. Each is now anchored to the
+        condition it guards.
         """
-        steps = _steps(HYGIENE, "topology")
-        run = steps[_index_of_run(steps, "git ls-remote --heads origin")]["run"]
-        for needle, why in [
-            ("answered=", "must count the branches it actually resolved"),
-            ("unanswered=", "must count the branches it could not resolve"),
-            ('"$answered" -eq 0', "must detect having answered for nothing"),
-        ]:
-            assert needle in run, (
-                f"The orphan detector no longer contains {needle!r} — it "
-                f"{why}. Without the count, a run in which every branch "
-                f"failed to resolve is indistinguishable from a run in "
-                f"which every branch was clean (C-347)."
-            )
+        run = self._run()
+        pattern = r"git ls-remote[^\n]*\n(?:[^\n]*\n)?\s*echo \"::error::"
+        assert re.search(pattern, run), (
+            "The `git ls-remote` failure path no longer raises an error. "
+            "Reporting clean because the branch listing failed is exactly "
+            "the defect the detector exists to catch."
+        )
+        assert re.search(r'\[ -n "\$branches" \]', run), (
+            "The empty-branch-list guard is gone. `ls-remote` succeeding "
+            "and returning nothing is not the same as 'no branches' — a "
+            "repository always has at least main and development."
+        )
+
+    def test_answered_and_unanswered_are_counted_separately(self) -> None:
+        """The counting the zero-observation rule rests on.
+
+        ``"answered="`` is a SUBSTRING of ``"unanswered="``, so the first
+        version of this test passed with every ``answered`` counter
+        deleted. The lookbehind is the whole point.
+        """
+        run = self._run()
+        assert re.search(r"(?<!un)answered=\$\(\(answered \+ 1\)\)", run), (
+            "No `answered=$((answered + 1))` increment remains. Without "
+            "it `answered` is always 0 and the zero-observation guard "
+            "below fires on every run, or — if that guard is also gone — "
+            "a scan that answered for nothing reports clean (C-347)."
+        )
+        assert "unanswered=$((unanswered + 1))" in run, (
+            "No `unanswered` increment remains, so a branch the detector "
+            "could not check is indistinguishable from one it checked "
+            "and found clean."
+        )
+        assert re.search(r'\[ "\$answered" -eq 0 \]', run), (
+            "The zero-observation guard is gone. A clean report resting "
+            "on no observations is the defect itself, not a degraded "
+            "mode of it (C-347)."
+        )
