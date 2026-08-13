@@ -321,6 +321,44 @@ difference between it and everything else in this cluster.
 
 ---
 
+## v1.12.0 deployed — three concerns get evidence, one of them uncomfortable (2026-08-13)
+
+The release reached the server, and the redeploy was run as **all three** `server_quickref.md` steps
+rather than the tag file alone — which is C-343's entire content.
+
+**C-331 was already resolved; today it became true in production.** #423 fixed the heartbeat URL and
+drilled it with a canary. But a fix merged is not a fix running: the deployed tag still carried the
+old form until this release. Both halves were checked on the host — all three sites read
+`printf 'url = "%s"' … | curl -K -`, and then `curl -K -` was *executed* on the box. That second
+check is the one that mattered: every ping is guarded by `|| true`, so a form this machine's curl
+rejected would have silenced the dead-man switch while looking identical to a working one. This is
+the C-322/C-324 distinction — fixed-in-code and fixed-in-production are different claims — applied
+before anyone had to learn it again.
+
+**C-348 was measured and stays open, which is the honest disposition.** The host runs Python
+**3.12.3**, resolving `tifffile 2026.5.15` / `imagecodecs 2026.5.10` — the current fork, the one
+`test-py313` covers. Production has been on the right side of the floor all along.
+
+Read the reason rather than the result: 3.12.3 is Ubuntu 24.04's system interpreter, and the guide
+in force said *"Install Python 3.10+"*. **The server is correct by distro accident, not by
+decision** — which is precisely what the entry says, so measuring it does not close it. One
+observation is not an assertion, and the next reprovision on a distro shipping 3.11 would silently
+install the March-2026 decoder.
+
+**C-343's instance was clean before we touched anything** — tag file, HEAD and environment all said
+v1.11.0. On 2026-08-08 those three disagreed for five days. The instance is remediated; the concern
+is not, because #434 (the pre-flight that would *prevent* recurrence) was closed unstarted with
+epic #421. Worth stating plainly rather than letting a clean reading imply a fix.
+
+**C-347's trigger fired and was actioned.** `test-py313` reported green on `development` and on
+`main` — the precondition — and was then added to the required-status-check lists on both, with the
+result read back rather than assumed. That readback discipline is C-340's, and it is now applied to
+branch protection as well as to merge methods. This changelog entry's own pull request is the first
+to pass through the new required check, which is the only way to find out that requiring it does not
+deadlock every merge.
+
+---
+
 ## The Python floor, and a refutation that expired (2026-08-13)
 
 `#443` lowered `requires-python` from `>=3.12` to `>=3.11`. Two entries registered: **C-347**
