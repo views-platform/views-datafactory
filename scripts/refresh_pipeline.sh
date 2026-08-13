@@ -28,14 +28,33 @@
 # Deployment gate:
 #   Before running any steps, the script reads ~/.views-deploy-tag
 #   to find which tagged release to run (e.g., "v1.1.0"). It then
-#   checks out that exact tag. This means the server always runs a
+#   checks out that exact tag, so the PYTHON the pipeline invokes is a
 #   specific, tested version — not whatever happens to be on a branch.
+#   It does NOT make that true of this shell script or of the installed
+#   dependencies; see "DEPLOYING IS NOT ONE STEP" below before relying
+#   on it.
 #   If the file is missing, empty, or the tag doesn't exist, the script
 #   stops immediately (fail-loud, ADR-011). See ADR-022 for rationale.
 #
-#   To deploy a new version: update ~/.views-deploy-tag on the server.
-#   To roll back: write the old tag name to ~/.views-deploy-tag.
-#   See docs/guides/hetzner_deployment_guide.md for full details.
+#   DEPLOYING IS NOT ONE STEP. This comment used to say "to deploy a
+#   new version: update ~/.views-deploy-tag" and that is WRONG — it is
+#   what left the server on v1.10.0 for five days while the tag file
+#   said v1.11.0 and views-frames stayed at the frozen 1.0.0 (C-343,
+#   observed 2026-08-08). Two reasons the checkout below does not save
+#   you:
+#     1. bash has already buffered THIS FILE, so a change to
+#        refresh_pipeline.sh itself takes effect only on the NEXT run
+#        — one month away on a monthly cron.
+#     2. `uv sync` never runs, so a dependency change never lands at
+#        all, no matter how many times the pipeline runs.
+#
+#   Deploy — and roll back — with ALL THREE steps in
+#   docs/guides/server_quickref.md §"Deploy a new version": the tag
+#   file, then the git fetch/checkout, then `uv sync`. Deliberately not
+#   repeated here: two copies of a procedure drifting apart is what
+#   C-343 IS, and a fix that adds a third copy would be the same bug.
+#   **If this comment and the quickref ever disagree, the quickref
+#   wins.** See docs/guides/hetzner_deployment_guide.md for full detail.
 #
 # Requires:
 #   - ~/.views-deploy-tag file containing a valid git tag
@@ -88,9 +107,26 @@ on_failure() {
     # only alert at the next missed schedule (up to the grace
     # period). /fail flips the check to failing right now. The
     # || true guard must stay — an unreachable monitoring service
-    # must never mask the original exit code under set -e.
+    # must never mask the original exit code under set -e. It still
+    # covers the whole pipeline below, because || binds looser than |.
+    #
+    # C-331 — the URL goes to curl on STDIN, never as an argument.
+    # HEARTBEAT_URL is a capability: anyone holding it can forge a
+    # success ping and silence this alert permanently. Command lines
+    # are world-readable via /proc/<pid>/cmdline and four accounts
+    # have shells on the box. printf is a bash BUILTIN, so no helper
+    # process carries the URL in its own argv either — that is the
+    # part worth re-drilling if this is ever rewritten.
+    #
+    # The quotes in 'url = "%s"' are load-bearing. Unquoted, curl
+    # truncates the value at the first whitespace AND SENDS IT: a
+    # stray space or CR in HEARTBEAT_URL would turn this /fail into
+    # a plain success ping. Quoted, curl exits 3 and sends nothing,
+    # which is the safe direction. Measured, not assumed:
+    #   unquoted 'http://h/uuid /fail' -> parsed http://h/uuid, sent
+    #   quoted   'http://h/uuid /fail' -> exit 3, nothing sent
     if [ -n "${HEARTBEAT_URL:-}" ]; then
-        curl -fsS --max-time 10 "$HEARTBEAT_URL/fail" >/dev/null 2>&1 || true
+        printf 'url = "%s"\n' "$HEARTBEAT_URL/fail" | curl -fsS --max-time 10 -K - >/dev/null 2>&1 || true
     fi
 }
 trap on_failure ERR
@@ -160,7 +196,8 @@ export VIEWS_PIPELINE_LOCK_HELD=1
 # leaves a dangling "started" state that healthchecks flags at
 # the grace timeout (~24h) instead.
 if [ -n "${HEARTBEAT_URL:-}" ]; then
-    curl -fsS --max-time 10 "$HEARTBEAT_URL/start" >/dev/null 2>&1 || true
+    # stdin, not argv — see the C-331 note in on_failure().
+    printf 'url = "%s"\n' "$HEARTBEAT_URL/start" | curl -fsS --max-time 10 -K - >/dev/null 2>&1 || true
 fi
 
 PIPELINE_START=$(date +%s)
@@ -287,7 +324,8 @@ rm -f "$ALERT_FILE"
 # Optional heartbeat for external monitoring (C-131).
 # Set HEARTBEAT_URL to a healthchecks.io/cronitor/uptimerobot ping URL.
 if [ -n "${HEARTBEAT_URL:-}" ]; then
-    curl -fsS --max-time 10 "$HEARTBEAT_URL" >/dev/null 2>&1 || true
+    # stdin, not argv — see the C-331 note in on_failure().
+    printf 'url = "%s"\n' "$HEARTBEAT_URL" | curl -fsS --max-time 10 -K - >/dev/null 2>&1 || true
 fi
 
 # Record pipeline duration (C-91)

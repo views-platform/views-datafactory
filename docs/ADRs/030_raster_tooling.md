@@ -4,6 +4,7 @@
 **Date:** 2026-05-18
 **Deciders:** Simon Polichinel von der Maase, Claude Code
 **Applies:** ADR-029 (GHS-POP as First Population Source), ADR-012 (Four-Layer Data Architecture)
+**Amended:** 2026-08-13 — the Python floor is now `>=3.11`. The tooling decision is unchanged; see the Amendment at the end of Consequences. *(A header pointer is an extension of ADR-051's inline-amendment convention, added because this ADR is long and its floor claim appears in five places — a reader who stops after "In scope" would otherwise leave with a fact that is no longer true.)*
 
 ---
 
@@ -159,6 +160,79 @@ Write the Rust raster processing tool immediately for GHS-POP, skip the tifffile
 - **tifffile doesn't parse GeoTIFF CRS metadata as first-class objects.** We validate CRS by reading raw TIFF GeoKey tags rather than through a geospatial API. This is adequate for WGS84 validation but less ergonomic than rasterio.
 - **Python ≥3.12 version bump required.** Current tifffile releases require Python 3.12+. This is assessed as safe for this repository (no 3.10-specific patterns in codebase, all dependencies have 3.12-compatible versions) but requires bumping dependency lower bounds (numpy ≥1.26, pandas ≥2.0, matplotlib ≥3.8).
 
+> ### Amendment, 2026-08-13 — the floor drops to 3.11, and what that costs
+>
+> **The tooling decision is untouched.** tifffile now, Rust long-term, no GDAL, `read_geotiff` as
+> the single reader — all of it stands. Only the version consequence above is amended. Recorded
+> rather than rewritten, per ADR-051.
+>
+> **What changed.** `requires-python` is now `">=3.11"` (#443).
+>
+> **Why the original reason did not survive contact.** The bullet above is the whole argument, and
+> it is a fact about a vendor at a moment — *"current tifffile releases require Python 3.12+"* —
+> not an architectural requirement. It was true when written. What we did not notice is that it
+> made a third party's release schedule into our public API. **3.11 was never considered:** the
+> string does not appear anywhere in this ADR, and there is no Considered Alternative about
+> interpreter versions. The bullet's own supporting evidence assesses the wrong thing — *"no
+> 3.10-specific patterns in codebase"* says nothing about 3.11 or 3.12.
+>
+> **The consumer that forced the question.** The views-models conda environments run 3.11.14 and
+> 3.11.15, and 28 requirements files there reference this package, so `pip install
+> views-datafactory` failed in every one of them. This is named deliberately: without a concrete
+> consumer, the right action would have been to leave the floor alone and merely record that it
+> had been inherited rather than chosen.
+>
+> **Verified before deciding, not after.** Full suite green on 3.11.13 with the same six
+> pre-existing xfails; `ruff` at `py311`, `mypy src/`, and `compileall` all clean; and a search for
+> the constructs that would actually require 3.12 — PEP 695 type parameters, `itertools.batched`,
+> `typing.override`, `Path.walk`, `sys.monitoring` — found none.
+>
+> **The cost, which is real and permanent.** `uv.lock` is now multi-version. Under 3.11 the raster
+> stack resolves `tifffile 2026.3.3` and `imagecodecs 2026.3.6`; under ≥3.12 it keeps `2026.5.15`
+> and `2026.5.10`. Both upstreams dropped 3.11 deliberately and neither will restore it: tifffile
+> adopted PEP 695 syntax at 2026.4.11, so newer releases would raise `SyntaxError` on 3.11 rather
+> than merely warn, and imagecodecs ships `cp312-abi3` wheels only from 2026.5.10. A 3.11 consumer
+> is therefore pinned to the March-2026 raster line for good.
+>
+> **Which decoder decodes production pixels — and the gap this exposed.** §Consequences above says
+> `imagecodecs` covers "exotic compression" and calls it "unlikely for a population grid". That is
+> wrong, and was corrected in code one day after this ADR was accepted without the ADR being
+> updated. Every GHS-POP and GHS-BUILT-S GeoTIFF JRC publishes is LZW-compressed, and tifffile has
+> no pure-Python LZW path: `read_geotiff`'s `page.asarray()` dispatches to `imagecodecs.lzw_decode`
+> unconditionally. Blocking the import and attempting an LZW write raises
+> `KeyError: "<COMPRESSION.LZW: 5> requires the 'imagecodecs' package"` — measured, not inferred.
+>
+> `imagecodecs` is imported by **nothing** under `src/`. So it is load-bearing and invisible: an
+> import-graph audit concludes it is removable, and removing it would break every production raster
+> read while leaving the suite green. **Until #443, no test in this repository had ever written a
+> compressed TIFF on any interpreter** — every `imwrite` was uncompressed, so neither decoder line
+> had been exercised. That hole predates this change by three months; the change only made it
+> visible, because for the first time there are two candidate decoders and a reason to ask which
+> one was tested.
+>
+> **What is still not verified.** Nothing compares the two decoder lines' *output*. We now assert
+> that each can decode LZW; we do not assert they produce identical pixels. Do not read the new
+> test as parity evidence.
+>
+> **CI consequence.** The required `test` check runs the floor, so it exercises the *old* raster
+> line, while the dev venv and the server run the new one. A non-required `test-py313` job covers
+> the production line. A check nobody must satisfy is ignorable, and that residual is registered as
+> **C-347** with the follow-up that closes it: make `test-py313` required on both branches once it
+> has reported. A `strategy.matrix` is not available here — it renames the required `test` context
+> and deadlocks every pull request under `enforce_admins`.
+>
+> **Open Question 4 is answered and replaced.** "Python 3.12 availability on the production server"
+> was the wrong question. The right one is *which interpreter does the server run, and therefore
+> which raster line does it install* — and nothing in this repository asserts it. Registered as
+> **C-348**.
+>
+> **One instance of a class, worth naming.** `hetzner_deployment_guide.md` said "Install Python
+> 3.10+" for the entire three months this ADR mandated `>=3.12` — an instruction that produced an
+> environment where the package could not be installed at all. Neither document was wrong on its
+> own terms; they were never compared. Fixed in #443, and `tests/test_ci_gates.py` now asserts that
+> CI's interpreter pins equal the declared floor, so at least that pair can no longer drift
+> silently.
+
 ---
 
 ## Implementation Notes
@@ -166,6 +240,10 @@ Write the Rust raster processing tool immediately for GHS-POP, skip the tifffile
 ### Immediate (GHS-POP integration)
 
 1. Bump `requires-python` to `">=3.12"` in `pyproject.toml`. Adjust dependency lower bounds as needed.
+   > **Superseded by the Amendment above — do not follow this step.** The floor is `>=3.11`.
+   > Re-raising it here would re-break the views-models 3.11 environments. Left in place rather
+   > than edited, per this repo's amend-don't-rewrite convention, but flagged inline because an
+   > implementer reading only §Implementation Notes would otherwise reverse #443.
 2. Add `tifffile` to dependencies.
 3. Verify `uv run pytest` passes after dependency changes.
 4. GeoTIFF reading pattern: `tifffile.imread(path)` returns numpy array. Validate dimensions (21600×43200 for 30ss global), check GeoKey tags for EPSG:4326, replace nodata (-9999) with 0.
@@ -211,6 +289,9 @@ Write the Rust raster processing tool immediately for GHS-POP, skip the tifffile
 2. **Infrastructure data landscape.** The format survey covered likely sources but infrastructure data has not been broadly surveyed. An unusual infrastructure dataset could change the tooling calculus.
 3. **tifffile compression support.** GHS-POP GeoTIFFs are compressed (likely LZW or DEFLATE). tifffile handles these, but the specific compression used by JRC should be verified on first download.
 4. **Python 3.12 on production server.** The Hetzner server currently runs the pipeline. Python 3.12 availability needs to be confirmed before deployment.
+   > **Answered and replaced by the Amendment above.** The floor is `>=3.11`, so availability is no
+   > longer the question — *which* interpreter the server has is, because it now selects the raster
+   > decoder. Nothing in this repository asserts it; tracked as **C-348**.
 
 ---
 

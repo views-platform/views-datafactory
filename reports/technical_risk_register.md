@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-03 — C-330 RESOLVED (logrotate pointed at a path the pipeline left; four months of silent no-ops) and C-339 registered (a pasted heredoc destroyed refresh.log). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-13 — the Python floor dropped to `>=3.11` (#443/#444), registering C-347 (the required CI check decodes with a different codec build than the server), C-348 (nothing asserts the server's interpreter) and C-349 (a config value restated in prose has nothing binding it back). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 339 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 293 resolved, 43 open concerns (0 Tier 1, 2 Tier 2, 11 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger), 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 109 struck-through in active register (293 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 349 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 42 open concerns (0 Tier 1, 4 Tier 2, 12 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -22,17 +22,17 @@
 | ~~C-36~~ | ~~4~~ | ~~UCDP API contract has no schema versioning~~ | Resolved 2026-06-19 (ADR-046 documents schema defense strategy, #209) | UCDP schema |
 | ~~C-37~~ | ~~4~~ | ~~`date_prec=5` semantics hardcoded~~ | Resolved 2026-06-19 (DGP validation fail-loud on unknown date_prec, #212) | UCDP schema |
 | ~~C-45~~ | ~~4~~ | ~~No Parquet schema evolution strategy~~ | Resolved 2026-06-19 (ADR-046 documents promote_options + fingerprint approach, #209) | UCDP schema |
-| C-46 | 4 | No ledger write idempotency | Before monitoring dashboard or external audit tool reads provenance JSONL directly | — |
+| ~~C-46~~ | ~~4~~ | ~~No ledger write idempotency~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): mechanical (idempotency guard on one writer), single-file scope, never fired in ~4 months; ledger corruption would be loud, not silent. Re-register if the trigger becomes concrete. | — |
 | C-32 | — | Source registry returns `Any` | Accepted by design | — |
 | C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Before WDI integration (10th source) or multi-target deployment | Test infra |
-| C-70 | 4 | No circuit breaker for UCDP API | Multi-operator deployment | UCDP resilience |
-| C-72 | 4 | HTTP 429 not distinguished from 500 | UCDP returns 429s | UCDP resilience |
+| C-70 | 4 | No circuit breaker for UCDP API | Before a second operator runs harvests concurrently, or before harvest concurrency is raised above 1 | UCDP resilience |
+| C-72 | 4 | HTTP 429 not distinguished from 500 | The first time a harvest fails with HTTP 429, or before raising harvest concurrency | UCDP resilience |
 | ~~C-74~~ | ~~4~~ | ~~CompilationConfig leaks strategy vocabulary~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-78~~ | ~~4~~ | ~~`_place_events` hard to test in isolation~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-79~~ | ~~4~~ | ~~Compilation/consolidation require real Parquet I/O~~ | Demoted to tech-debt backlog 2026-06-14 (trigger permanently fired — suite at 6m38s, functioning normally) | — |
 | C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
-| C-116 | 4 | No retry on remote zarr network failures | Consumer reports transient failures | Query resilience |
-| C-117 | 4 | Remote zarr downloads all spatial cells before region filter | Consumer queries single country over slow connection | Query performance |
+| ~~C-116~~ | ~~4~~ | ~~No retry on remote zarr network failures~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): mechanical (wrap one read in the existing retry helper), never fired; a network failure here raises, it does not corrupt. Re-register if the trigger becomes concrete. | Query resilience |
+| ~~C-117~~ | ~~4~~ | ~~Remote zarr downloads all spatial cells before region filter~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): a performance observation, not a risk — remote reads are already time/feature-subset before materialising (v1.8.0); the residual is spatial only and nobody has hit it. Re-register if the trigger becomes concrete. | Query performance |
 | ~~C-131~~ | ~~2~~ | ~~No external monitoring for cron job failure on Hetzner~~ | Resolved 2026-06-24 (heartbeat hook) — 2026-07-19 correction: HEARTBEAT_URL WAS configured and success pings were arriving (e.g. 2026-07-06 run). The real gap: success-only pings make failure = silence, detectable only after the 30-day schedule + grace lapses — so the 2026-07-02 mid-run failures alerted nobody for weeks by design. Failure-side /fail ping shipped (PR #330) closes this; live drill 2026-07-19: /fail flipped the check red in seconds | Operational monitoring |
 | ~~C-136~~ | ~~4~~ | ~~`read_last_entries()` crashes on non-UTF8 ledger files~~ | Demoted to tech-debt backlog 2026-06-16 (mechanical fix, single-file, perpetual trigger, loud failure) | — |
 | C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
@@ -94,11 +94,11 @@
 | ~~C-144~~ | ~~3~~ | ~~Compilation `to_pydict()` materializes millions of Python objects~~ | Resolved 2026-06-26 (columnar `.to_numpy()` extraction + row-index bins, #275) | Scaling headroom |
 | ~~C-145~~ | ~~3~~ | ~~Viewpoint builder loads full consolidated store into memory~~ | Resolved 2026-06-26 (column-selective `pq.read_table()` in UCDP + ACLED builders, #276) | Scaling headroom |
 | C-146 | 4 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
-| C-147 | 4 | No pipeline orchestrator in repository | Operator runs scripts out of order or skips a step | Operations |
+| ~~C-147~~ | ~~4~~ | ~~No pipeline orchestrator in repository~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): wants a tool this project does not need at one monthly cron; carried since v1.2.x with a perpetual trigger and no incident. Re-register if the trigger becomes concrete. | Operations |
 | ~~C-148~~ | ~~4~~ | ~~Hardcoded Hetzner server IP in `defaults.py`~~ | Demoted to tech-debt backlog 2026-06-16 (mechanical fix, single-file, perpetual, Tier 4) | — |
 | C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
-| C-155 | 4 | No shared visual audit framework — per-source scripts are idiosyncratic | Before 6th pipeline source (WDI) requires a verify script | Visual audit |
+| ~~C-155~~ | ~~4~~ | ~~No shared visual audit framework — per-source scripts are idiosyncratic~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): a nice-to-have framework for per-source audit scripts; five sources shipped without it and none of them needed it. Re-register if the trigger becomes concrete. | Visual audit |
 | ~~C-195~~ | ~~4~~ | ~~37 falsification test files accumulated without curation (3,129 lines)~~ | Demoted to tech-debt backlog 2026-06-19 (no correctness risk, single-developer scope) | — |
 | C-173 | 4 | Hetzner server memory headroom (CPX42 + swap) | CPX42 RSS usage during full pipeline run exceeds 80% of available RAM (observed during WDI pilot) | Server hardening |
 | C-164 | 3 | Cross-layer WET debt: 6 sources replicate patterns across all 4 layers — **trigger fired** | Before WDI integration or next data source | WET-before-DRY |
@@ -147,29 +147,39 @@
 | ~~C-314~~ | ~~2~~ | ~~ACLED January 2026 fatality sum 3-4x typical — unverified anomaly served to consumers~~ | Resolved 2026-07-15 (#320: verdict REAL — Jan 8-9 Iran crackdown; falsification audit SURVIVED 5/5; UCDP corroborates) | Data soundness |
 | ~~C-315~~ | ~~3~~ | ~~source_features readers scan top-level provenance but real assembly nests under "sources" — pre-coverage warnings never fired on real data~~ | Resolved 2026-07-19 (both readers scan both levels + real-shape regression test; caught by verify_consumer_contract's first server run) | Data soundness |
 | ~~C-316~~ | ~~3~~ | ~~Standalone writer scripts bypass the pipeline flock — manual export collided with cron assembly~~ | Resolved 2026-07-22 (#353/PR #359: hold_pipeline_lock in 9 writers, refuse-fast + --force-no-lock; live drill named holder PID) | Pipeline safety |
-| C-317 | 3 | SIGKILL bypasses ERR+EXIT traps — no failure ping, no status page on OOM kill | /start ping shipped (PR #359); OPEN pending live grace-timeout drill on server after v1.8.1 deploy | Operational monitoring |
+| ~~C-317~~ | ~~3~~ | ~~SIGKILL bypasses ERR+EXIT traps — no failure ping on OOM kill~~ | Resolved 2026-08-10 by live drill: throwaway check (5 min period / 1 min grace), `/start` then silence — flipped DOWN with *Last Ping Type: Started*, e-mail delivered. Detection latency ~32 days → the grace window. Status page on SIGKILL is a separate matter (C-338) | Operational monitoring |
 | C-318 | 4 | Data server basic-auth password crosses the wire in cleartext (HTTP, no TLS) — **partially fired** (6 logins as of 2026-07-31, all trusted circle) | Before adding external consumers or serving anything beyond courtesy-protected research data | Server hardening |
 | ~~C-319~~ | ~~2~~ | ~~In-process writer main() in tests holds the production pipeline lock for pytest lifetime — 42 suite errors on every full run since v1.8.1~~ | Resolved 2026-07-27 (test_consumer_provenance sets VIEWS_PIPELINE_LOCK_HELD=1 around in-process main(); full suite green) | Test infra |
 | ~~C-320~~ | ~~3~~ | ~~Deploy-gate falsification tests fail in CI (shallow checkout breaks merge-base; no GH_TOKEN breaks gh) — CI red on every branch, releases merged unnoticed~~ | Resolved 2026-07-27 (gates skip with reason where the environment cannot answer; still enforce locally) | Test infra |
 | ~~C-321~~ | ~~4~~ | ~~Remote-zarr 401 escapes as raw aiohttp ClientResponseError — documented PermissionError contract broken (ClientResponseError is not an OSError)~~ | Resolved 2026-07-27 (non-OSError 401s mapped to PermissionError + netrc hint; found by TestPyPI clean-room rehearsal) | Query resilience |
 | ~~C-322~~ | ~~3~~ | ~~GDL token leaks into crash tracebacks — requests embeds the full ?token= URL in exception messages, which land in refresh.log~~ | Resolved 2026-07-28 (#369 audit: credential-redaction at the shared HTTP layer; UCDP/ACLED/netrc flows verified clean) | Credential hygiene |
 | C-323 | 4 | Five team passwords in cleartext at rest on the server (`~/team_passwords.txt`) pending out-of-band distribution | Before the next server snapshot/backup or any new shell account — confirm the file was distributed and deleted | Server hardening |
-| C-324 | 3 | GDL token unrotated after the C-322 leak — pre-fix `refresh.log` lines persist and the deployed (tagged) harvester still leaks | At the next tagged release + redeploy, or before granting anyone new read access to server logs — rotate `GDL_API_TOKEN` and scrub the pre-fix lines | Credential hygiene |
+| ~~C-324~~ | ~~3~~ | ~~GDL token unrotated after the C-322 leak~~ | Resolved 2026-08-01: token rotated and the leaked one **revoked** at GDL (one-token-per-account forced it), replacement verified live; server on v1.11.0 so the leaking harvester is gone; the log itself was destroyed by C-339 | Credential hygiene |
 | C-325 | 4 | CI tests pandas 2.3.3 while a fresh consumer install resolves pandas 3 (cap removed with the extra; suite verified green on 3.0.5) | Before the next release, re-run the suite under the then-current pandas 3.x | Dependency policy |
 | C-326 | 4 | The `[pandas]` extra gates nothing — xarray is the real pandas carrier; the fail-loud `ImportError` paths are unreachable until it leaves | When #381 resolves: go makes the extra real and the error paths live; no-go makes it vestigial | Dependency policy |
 | C-327 | 4 | A Caddy basic-auth password was published in git history — **credential verified dead (401)**, password pattern exposed | Next rotation of the `views` password, or retiring the shared account for per-user logins; also check future post-mortems for quoted credentials | Server hardening |
 | C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
 | C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
 | ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
-| C-331 | 4 | `HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`, lets a local user silence the dead-man alert | Next edit to `refresh_pipeline.sh` — switch to `curl -K -` from stdin, reclassify as a secret | Operational monitoring |
-| C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | Any change to `backends_zarr.py` or `datafactory_http/retry.py` | Credential hygiene |
+| C-346 | 4 | Four copies of `test_version_not_already_tagged` use a conditional `xfail` that reads as rigorous and is circular — the test runs only when the version is untagged, then asserts it is untagged. Measured green in every reachable state | **Before trusting any `xfail`-marked test as a gate**: name the state that makes it fail. If none does, it is decoration | Test infra |
+| C-345 | 2 | Verification tooling reported a green suite that was red, twice in one session — a piped `pytest \| tail; echo $?` yields the pipe's status, and a task notification reported "exit code 0" for a run that exited 1 | **When capturing a long-running check's result** — piping it, backgrounding it, or reading a notification instead of an unpiped `$?`. Redirect to a file, capture `$?` unpiped, and grep `^FAILED` as a second reader | Test infra |
+| ~~C-344~~ | ~~2~~ | ~~`views-deploy`'s `~/.profile` was mode 644 inside a 751 home — every harvest credential (`UCDP_API_TOKEN`, `ACLED_*`, `GDL_API_TOKEN`, `HEARTBEAT_URL`) readable by all four accounts, continuously~~ | Registered and resolved 2026-08-10 (#432): `chmod 600`, verified unreadable from a second account and still readable by the owner. Rotation considered and **declined** by the operator 2026-08-10 — a judgement about who holds the three accounts, not evidence of non-access; revisit if a new shell account appears (C-88) | Credential hygiene |
+| ~~C-331~~ | ~~4~~ | ~~`HEARTBEAT_URL` capability URL passed on the curl command line — readable via `/proc`~~ | Resolved 2026-08-10 (#423): all three pings take the URL on stdin via `-K -`; drilled with a canary and a negative control. The entry's own suggested unquoted form was superseded — it truncates at whitespace and sends anyway | Operational monitoring |
+| C-332 | 3 | Credential redaction incomplete — `_redact_url` ignores URL userinfo, `zarr_path` interpolated raw into 7 messages, netrc exceptions log contents, `BasicAuth`/`_TokenState` reprs | **Before interpolating any URL, path, or credential-bearing value into a log line or exception message** — that is the act that creates the exposure, not editing these files | Credential hygiene |
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
 | ~~C-335~~ | ~~2~~ | ~~Nothing watches the data-serving path — green while every consumer gets nothing~~ | Resolved 2026-08-03: Better Stack monitor live and verified (Up, ~27ms, test alert delivered) + serving-freshness.yml for the content half | Operational monitoring |
 | C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
 | C-337 | 2 | A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics (tip_mass 0.5, pre-1.2.0 HDI tower) | **Before declaring or keeping any floor**: ask what the floor *permits* and what the lock has *chosen* — not only whether our imports resolve. Check `uv.lock`, not just `pyproject.toml` | Dependency policy |
 | C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
-| C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Never hand a multi-line heredoc to a human to paste.** Terminals join lines. Use one command per line, or an editor. And never construct a `sudo` command whose failure mode is writing to an unintended path | Operational safety |
-| C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | If UCDP changes API hosts or adds redirects, or at the next harvester auth review | Credential hygiene |
+| C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Before giving any human a command to paste** — if it spans more than one line it is unsafe (terminals join wrapped lines, and the joined form is often still valid shell); if it runs as root, ask what it writes to when mis-parsed | Operational safety |
+| C-340 | 3 | Auto-merge fails silently two ways: `gh pr merge --auto --<method>` refuses to change the method on an already-armed PR (nearly put a squash on `main`), and pushing to a branch whose PR already merged orphans the commit with no error | **Before arming a non-default merge method**, read `auto_merge.merge_method` back; **before any follow-up push to a PR branch**, check `merged` first or use a new branch | Operational safety |
+| ~~C-341~~ | ~~4~~ | ~~Deploy gates only run where someone types pytest — C-320's fix made them skip-with-reason in CI, so they assure only whoever runs the suite at the right moment | **When adding a deploy gate, or relying on one for release assurance:** ~~ | Resolved 2026-08-11 (#424 gave the answerable gates a scheduled runner; #425 deleted the one that could never answer and replaced it with a publish-time guard) | Test infra |
+| ~~C-342~~ | ~~3~~ | ~~A stale committed `uv.lock` is invisible — `uv sync` (ci.yml:24,42,60,99) rewrites it in place, so CI goes green on a lock that does not match the committed `pyproject.toml` and the stale one stays in git~~ | Resolved 2026-08-11 (#424): `uv lock --check` in the `test` job, before `uv sync`; drilled both directions and the ordering is itself guarded by `tests/test_ci_gates.py` | Dependency policy |
+| C-343 | 2 | Writing `~/.views-deploy-tag` is not deploying — the server ran v1.10.0 for five days while the tag file said v1.11.0 and views-frames stayed at the frozen 1.0.0. The in-script `git checkout` cannot fix the running script (bash has buffered it) and never runs `uv sync` | **At the next release** — deploy with all three `server_quickref.md` steps, then verify tag file, `git describe --tags` and installed version all agree | Deployment |
+| C-347 | 3 | The required CI check exercises a different raster decoder than production — since the 3.11 floor the lock forks, so `test` decodes with `imagecodecs 2026.3.6` while the server uses `2026.5.10`. `test-py313` covers the production line but is **not a required check**, and a red nobody must satisfy is ignorable | **Before the next release tag, and whenever `tifffile` or `imagecodecs` moves in either fork** — confirm `test-py313` is green, and whether it has been added to the required lists on `main` and `development`. Resolved when it is required on both | Test infra |
+| C-348 | 3 | Nothing asserts which Python the production server runs, and the floor now admits one that installs a **different raster line**. `preflight.py`, `check_health.py` and `refresh_pipeline.sh` contain no `sys.version_info` check of any kind. Created by #443 — this risk did not exist under `>=3.12` | **At the next server provisioning, Python upgrade on the Hetzner host, or any runbook edit that says `apt install python3`** — pin the interpreter explicitly and record which raster fork it resolves | Server hardening |
+| C-349 | 4 | A config value restated in prose has nothing binding it back — `hetzner_deployment_guide.md` said "Install Python 3.10+" for the three months `pyproject.toml` declared `>=3.12`, an instruction producing an environment where the package could not install. The #444 pin guard binds *workflow* pins to `requires-python`; nothing binds *prose* | **When writing a Python version, or any pyproject value, into a guide or ADR** — link to the declaration instead of restating it, or accept that the copy will not be checked | Documentation drift |
+| C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -182,6 +192,53 @@
 | C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
 | C-06 | — | Provenance composability | Deferred by design | — |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design | — |
+
+## Causal cluster: mechanisms that fail green
+
+*Added by `/review-rr strategic`, 2026-08-04.*
+
+Eight open entries are symptoms of one root cause, and read very differently together than apart.
+Individually each is small. Together they say that **this project's characteristic failure is
+silence, not error** — a thing reports success while not doing what it claims.
+
+*C-342 was added to the cluster 2026-08-08, found while building the guard for C-337 — which is the
+cluster's own rule working: the drill found a defect adjacent to the one it was aimed at. C-343 was
+added 2026-08-08 from the production host, and C-317 was **closed by drill** 2026-08-10 — struck in
+the table below rather than removed, so the table has ten rows. C-331 closed 2026-08-10; C-345 and C-346 added and C-342 and C-341 closed 2026-08-11, leaving eight open members of twelve rows.*
+
+| ID | What reported success while being wrong |
+|---|---|
+| ~~**C-317**~~ | ~~`SIGKILL` bypasses the `ERR`/`EXIT` traps, so a killed run sends no failure ping~~ — **closed by drill 2026-08-10, the first member closed by observation** |
+| **C-345** | A piped exit status and a task notification each reported a failing suite as passing |
+| **C-346** | A conditional `xfail` that asserts the very condition selecting it — green in every state |
+| ~~**C-331**~~ | ~~`HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice~~ — **closed 2026-08-10, drilled with a negative control** |
+| **C-336** | Governance docs true when written, false later, nothing failing in between |
+| **C-337** | `views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever |
+| **C-338** | Freshness detection that runs daily-and-by-issue rather than alerting |
+| **C-339** | `tee` wrote to an unintended path as root and exited 0 |
+| **C-340** | `git push` succeeds onto a merged branch; `gh pr merge` exits 0 without changing the method |
+| ~~**C-341**~~ | ~~A skipped test is not a red test — gates that assure only whoever ran them~~ — **closed 2026-08-11** |
+| ~~**C-342**~~ | ~~`uv sync` repairs a stale lockfile in CI's checkout, so CI is green and the stale lock stays committed~~ — **closed 2026-08-11** |
+| **C-343** | The deploy tag file read correctly, the pipeline was green, and the server ran the previous release |
+
+**Why this belongs in the register rather than a post-mortem.** The individual fixes are already
+made or tracked. What the cluster adds is a *design rule*: in this system, **absence of an error is
+not evidence of success**, so any new mechanism needs an answer to "how would I know if this
+silently did nothing?" before it ships. Several were caught by the operator rather than by any
+check, twice by contradicting an assistant's stated conclusion; two were caught only by reading a
+value back and finding it disagreed with what had just been commanded; and C-343 was caught only by
+looking at the production host. **The counts in this paragraph used to be exact and went stale
+twice** — they said "eight" while the table held nine and then ten. That is C-336 happening inside
+the cluster section about it, so the tally is now qualitative on purpose.
+
+**Cluster-level action, cheaper than eight separate ones:** when adding any guard, workflow, or
+operational step, drill it by breaking it. Every guard drilled in the 2026-08 window found a real
+defect — including one in its own author's work, one day after writing it.
+
+Cross-ref: ~~C-320~~ and ~~C-330~~ are resolved members of the same family; the v1.9.0 → v1.11.0
+post-mortem documents six instances end to end.
+
+---
 
 ## Work Packages
 
@@ -1160,6 +1217,26 @@ Cross-ref: ~~C-330~~ (the work being done when this happened), C-323/C-324 (the 
 
 ---
 
+### C-340: Auto-merge fails silently, in two different ways
+
+**Source:** v1.11.0 release close-out (2026-08-03/04). Both observed; neither raised an error.
+
+**Trigger:** **Before arming auto-merge with a non-default merge method** — read `auto_merge.merge_method` back rather than trusting the command. **Before pushing any follow-up commit to a PR branch** — check `merged` first, or put the work on a new branch.
+
+**Location:** operational procedure. Affects every PR in this repo, since all of them are auto-merge armed.
+
+**Mechanism 1 — the method silently does not change.** During v1.10.0 a `development` → `main` PR was armed `squash`, then re-armed with `gh pr merge --auto --merge`. The command printed nothing and left `squash` in place. Caught only by reading `auto_merge.merge_method` back and seeing it still said `squash`. A squash onto `main` rewrites the release SHAs and permanently breaks the ancestry the back-merge exists to maintain — the damage would not have been noticed until a later release diffed against a base that never existed. Worked around with the GraphQL `disablePullRequestAutoMerge` / `enablePullRequestAutoMerge` pair, which does change it.
+
+**Mechanism 2 — pushing to an already-merged branch orphans the work.** #416 merged the moment CI went green. A follow-up commit was then pushed to that branch, which by then had no open PR. Two pieces of work — the C-320 addendum and the post-mortem's fourth finding — were simply not on `development`. `git push` reported success. The only signal was `commits=1` on a PR that had been pushed to twice.
+
+**Why Tier 3.** No data or model-output impact, and both are recoverable — mechanism 2 by cherry-pick, mechanism 1 by re-arming before the merge lands. Not Tier 4, because auto-merge is armed on every PR here so both are live on every change, and mechanism 1's damage to `main` would be permanent rather than recoverable.
+
+**The shared property, which is the reason this is registered at all:** both fail *green*. `git push` succeeds; `gh pr merge` exits 0. Neither has a failure mode that announces itself, so neither can be caught by anything except deliberately reading state back. That is the same class as C-330 (a nightly no-op reporting success) and C-337 (a lockfile frozen with no error).
+
+Cross-ref: ~~C-320~~ (auto-merge silently degrading to a plain merge when branch protection was absent — same family, different mechanism, resolved), C-339 (the other silent-failure incident of this session). Part of work package: **Operational safety**.
+
+---
+
 ## Tier 4 — Accept or Defer
 
 ### C-146: Assembly logic lives in script, not importable package — [DEFER]
@@ -1197,7 +1274,10 @@ API envelope format and 13 `REQUIRED_FIELDS` are hardcoded in `ucdp_annual.py:43
 **Source:** Kleppmann (expert review 6). DDIA Ch.4 pp.112-127, 131.
 **Update (2026-06-10):** Test review found UCDP consolidation has no schema drift test and no corrupted Parquet test — ACLED has both (`test_acled_consolidation.py::TestSchemaEvolution`, `TestCorruptedParquet`). This is a specific instance of C-45: when UCDP does change schema, no test detects the regression. Location: `src/datafactory_consolidation/ucdp.py`, missing test in `tests/test_consolidation.py`.
 
-### C-46: No ledger write idempotency — [DEFER]
+### ~~C-46: No ledger write idempotency~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). Mechanical (idempotency guard on one writer), single-file scope, never fired in ~4 months; ledger corruption would be loud, not silent. Re-register if the trigger becomes concrete.
+
 `append_ledger_entry()` has no dedup key. Process crash after append but before caller return causes duplicate on retry. Ledger readers tolerate duplicates. Kleppmann (Ch.12 pp.516-518) argues exactly-once semantics require idempotence via operation identifiers — each write carries a unique ID; consumers deduplicate on read. Ch.7 p.231 warns that retrying a successful-but-unacknowledged write without dedup causes silent duplication. Recommended approach: add an `operation_id` field (e.g., content digest of the entry) to each ledger record. **Trigger: Before monitoring dashboard or external audit tool reads provenance JSONL directly (trigger rewritten during review-rr 2026-06-19).**
 **Source:** Kleppmann (expert review 6). DDIA Ch.7 p.231, Ch.12 pp.516-518.
 
@@ -1234,12 +1314,18 @@ Demoted to tech-debt backlog 2026-06-06 (review-rr strategic curation). Test erg
 Demoted to tech-debt backlog 2026-05-28 (review-rr strategic curation). Threshold is documented in ADR-023 and matches VIEWSER. No evidence of UCDP or VIEWSER changing this. Re-register if threshold changes.
 **Source:** Parity investigation 2026-04-08, notebook archaeology (GED_loader{0,1,2}.ipynb).
 
-### C-116: No retry on remote zarr network failures — [DEFER]
+### ~~C-116: No retry on remote zarr network failures~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). Mechanical (wrap one read in the existing retry helper), never fired; a network failure here raises, it does not corrupt. Re-register if the trigger becomes concrete.
+
 `_load_grid_from_zarr` in `dataset.py` opens a remote zarr store via xarray/fsspec/aiohttp. Transient network errors (DNS timeout, TCP reset, server restart) fail immediately — no retry, no backoff. `datafactory_http.retry.request_with_retry()` exists but is designed for `requests`-based harvester calls, not the xarray/fsspec path. For consumers, a transient failure at 2am during automated training means a full pipeline retry. **Trigger: consumer reports intermittent failures loading remote data.** Cross-ref: C-70 (circuit breaker, harvester path).
 **Source:** Expert review #5 (M12 investigation), Nygard perspective, 2026-04-08.
 **Update (2026-06-14, repo-assimilation):** The entire remote zarr code path has zero test coverage — `test_query.py` (18 tests) exercises only the npy backend. Not just edge cases; the happy path through `_load_grid_from_zarr` is also untested.
 
-### C-117: Remote zarr downloads all spatial cells before region filter — [DEFER]
+### ~~C-117: Remote zarr downloads all spatial cells before region filter~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). A performance observation, not a risk — remote reads are already time/feature-subset before materialising (v1.8.0); the residual is spatial only and nobody has hit it. Re-register if the trigger becomes concrete.
+
 `_load_grid_from_zarr` applies temporal and feature subsetting lazily (xarray isel/variable selection), but spatial subsetting (region → pgid set) happens AFTER full grid materialization in `load_dataset`. For remote stores, this means downloading all 259,200 cells even when only ~13,000 are needed (e.g., Africa). The spatial dimension is 360x720 per time step per feature — less impactful than temporal (which IS subsetted), but still ~20x more data than needed for typical region queries. xarray does not support efficient irregular spatial selection on chunked stores without rechunking. **Trigger: consumer queries a single country over a slow connection and complains about latency.**
 **Source:** Expert review #5 (M12 investigation), Kleppmann perspective, 2026-04-08.
 
@@ -1256,7 +1342,10 @@ Demoted to tech-debt backlog 2026-05-28 (review-rr strategic curation). Only ris
 Demoted to tech-debt backlog 2026-06-16 (review-rr strategic curation). Mechanical fix (add encoding guard), single-file scope, perpetual trigger, loud failure (crash, not silent corruption). Re-register if ledger files are exposed to external writers.
 **Source:** Test review gap implementation (2026-04-22). Cross-ref: C-131, C-132 (operational monitoring).
 
-### C-147: No pipeline orchestrator in repository — [DEFER]
+### ~~C-147: No pipeline orchestrator in repository~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). Wants a tool this project does not need at one monthly cron; carried since v1.2.x with a perpetual trigger and no incident. Re-register if the trigger becomes concrete.
+
 
 | Field | Value |
 |-------|-------|
@@ -1288,7 +1377,10 @@ The `ACLED_FEATURES` tuple in `tests/test_acled_compilation.py` is a copy-paste 
 
 See also C-29 (no integration test), C-74 (strategy vocabulary).
 
-### C-155: No shared visual audit framework — per-source scripts are idiosyncratic — [DEFER]
+### ~~C-155: No shared visual audit framework — per-source scripts are idiosyncratic~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). A nice-to-have framework for per-source audit scripts; five sources shipped without it and none of them needed it. Re-register if the trigger becomes concrete.
+
 
 | Field | Value |
 |-------|-------|
@@ -2075,7 +2167,7 @@ Cross-ref: ~~C-285~~ (the pipeline-vs-pipeline half, resolved — this is the un
 
 ---
 
-### C-317: SIGKILL bypasses ERR and EXIT traps — no failure ping, no status page on OOM kill
+### ~~C-317: SIGKILL bypasses ERR and EXIT traps — no failure ping on OOM kill~~ — RESOLVED
 
 The failure alerting shipped in #324 (heartbeat `/fail` ping in the ERR trap) and the status page (EXIT trap) both depend on bash trap execution. SIGKILL — which is what the kernel OOM killer sends — bypasses both: an OOM-killed pipeline dies with no alert, no status page regeneration, and the dead-man detection only fires at the next missed monthly schedule (up to ~31 days). Near-miss 2026-07-21: the cron export ran for 9+ hours at 95.9% RSS (15.3 of 16 GB) in swap — one allocation away from an invisible death. Mitigation options for the follow-up issue: (a) healthchecks.io start-ping (`$HEARTBEAT_URL/start`) at pipeline start, so a kill leaves a visible dangling "started" state that alerts at the check's grace timeout instead of the schedule period; (b) memory headroom (C-173, RAM upgrade); (c) an external watchdog comparing pipeline PID liveness to lock state.
 
@@ -2087,7 +2179,27 @@ The failure alerting shipped in #324 (heartbeat `/fail` ping in the ERR trap) an
 | Trigger | Pipeline process OOM-killed during assembly/export — near-miss observed 2026-07-21 |
 | Location | `scripts/refresh_pipeline.sh` (on_failure ERR trap, generate_status_on_exit EXIT trap), healthchecks.io check configuration |
 
-Cross-ref: ~~C-131~~ (heartbeat — closed for the trap-reachable case; this is the trap-unreachable case), C-173 (memory headroom — the underlying pressure), C-316 (same incident).
+**RESOLVED 2026-08-10 — the drill ran, and the mitigation works.**
+
+The `/start` ping shipped in PR #359 on the theory that healthchecks.io would flag a run that began and never finished. That theory sat unverified for weeks, and this entry said so: *"OPEN pending live grace-timeout drill."* An untested mitigation for a silent-failure concern is itself a silent failure, which is why it was never closed on the strength of the ping being sent.
+
+**Method.** A throwaway check was created on healthchecks.io — period 5 minutes, grace 1 minute — so the timeout was observable in about a minute instead of the production check's 30 days + 48 hours. Production `HEARTBEAT_URL` and the production check were not touched. A single `/start` was sent and then **nothing**: no success, no `/fail`. That is the OOM kill, reproduced exactly — the traps never run, so neither ping ever fires.
+
+**Prediction, recorded before the ping** (per this repo's falsification discipline): the check flips red roughly one minute later and an e-mail arrives.
+
+**Observed.** It did. The alert:
+
+> *"THROWAWAY - C-317 drill - delete me" is DOWN (success signal did not arrive on time, grace time passed).*
+> **Last Ping Type: Started** · Status Changed to Down at Mon, 10 Aug 2026 03:35:56 +0200
+
+`Last Ping Type: Started` is the whole finding: healthchecks.io alerted on the *dangling start*, with no failure signal ever sent. Detection latency drops from up to ~32 days to the grace window. Throwaway check deleted afterwards; dashboard confirmed back to one check, green.
+
+**Two things learned that were not being looked for.** healthchecks.io's own schedule dialog documents the mechanism — *"Grace Time — when a check is late, **or has received a 'start' signal**, how long to wait to send an alert"* — so this was documented by the vendor all along and simply never read. And the sample check repurposed for the drill had sat at **grey, never red**, for two months while permanently overdue: **a check that has never been pinged does not alert.** A monitor someone creates and never wires up stays silent forever, and silence is what we are trained to read as healthy — see the "Silence lies" section of `docs/guides/monitoring.md`.
+
+**What this does not close.** The status page is still not regenerated on a SIGKILL (the EXIT trap does not run), so after an OOM kill the served `status.html` is stale until the next run. That is the serving-path question, covered by ~~C-335~~/C-338, not here. And detection is not prevention: C-173 (memory headroom) is what stops the kill happening.
+
+Cross-ref: ~~C-131~~ (heartbeat — closed for the trap-reachable case; this was the trap-unreachable case), C-173 (memory headroom — the underlying pressure, still open), C-316 (same incident), C-338. Part of the **mechanisms that fail green** cluster — the first member closed by observation rather than by argument. GitHub: #427.
+
 ---
 
 ### C-318: Data server basic-auth password crosses the wire in cleartext — [DEFER]
@@ -2125,6 +2237,14 @@ Cross-ref: C-316 (the lock this contaminates on), C-320 (why CI didn't catch the
 ---
 
 ### ~~C-320: Deploy-gate falsification tests fail in CI — CI red on every branch, releases merged unnoticed~~ — RESOLVED
+
+**Addendum 2026-08-04 — the same defect, in the gate that catches it.** `TestF8StaleBranches` read `git branch -a`, which folds in **remote-tracking refs** — a local cache that goes stale the moment anyone deletes a branch, and that only `git fetch --prune` refreshes. So the gate failed against a repository that was genuinely clean.
+
+Observed while closing out v1.11.0: `delete_branch_on_merge` had removed every merged branch from the remote, yet the gate went red because the local clone had been fetched without `--prune` all session. Nine local branches were deleted chasing a problem that did not exist, and the actual cause was a stale view.
+
+Demonstrated rather than argued: fabricating **only** a `refs/remotes/origin/release/v1.11.0` ref — with no branch on the remote and none locally — was enough to fail it.
+
+This is C-320's own failure mode: *a gate that reddens for reasons unrelated to what it asserts stops being read.* Split into two checks — local branches from `git branch`, remote branches from `git ls-remote` (authoritative, and skipped when offline per this file's existing idiom). Drilled all three ways: clean passes, the stale-ref case now passes, a real local leftover still fails.
 
 **Resolved 2026-07-27:** the four gates now `pytest.skip` with an explicit reason when the environment cannot answer the question, and still enforce locally: merge-topology tests skip when `git merge-base` cannot resolve `main`/`development` (CI shallow single-branch checkout returns exit 128; only 0/1 are verdicts); the issue-hygiene test skips when `gh` is unauthenticated (no `GH_TOKEN` in CI).
 
@@ -2377,7 +2497,7 @@ entry and is now closed too.
 Cross-ref: C-324 (what is currently sitting in this file), C-322 (how it got there), C-88 (who can reach the shell to read it), #391 (the same overreach in ADR-026:97), C-327 (the same failure mode in a security audit).
 ---
 
-### C-331: `HEARTBEAT_URL` is a capability URL passed on the command line — [DEFER]
+### ~~C-331: `HEARTBEAT_URL` is a capability URL passed on the command line~~ — RESOLVED
 
 `scripts/refresh_pipeline.sh:93,163,290` pass `$HEARTBEAT_URL` to `curl` as an argv element. Command lines are world-readable via `/proc/<pid>/cmdline`, and no `hidepid` mount option is configured. The URL is a healthchecks.io bearer capability: anyone who reads it can send forged success pings and **permanently silence the C-131 dead-man alert**, which is the only detector for a silently dead pipeline. It is currently stored and treated as ordinary configuration in `~/.profile`, not as a secret (`docs/ADRs/018_operational_resilience.md:107`).
 
@@ -2389,9 +2509,61 @@ Exposure window is ≤10s per ping, three times per run, to local users only. Th
 | Tier | 4 — requires local shell access and a well-timed read; consequence is loss of alerting rather than data harm |
 | Source | Five-angle security sweep, scripts audit (2026-07-31) |
 | Trigger | Next edit to `refresh_pipeline.sh` — switch the three pings to `curl -K -` from stdin and reclassify the URL as a secret in ADR-018 |
-| Location | `scripts/refresh_pipeline.sh:93,163,290`, `docs/ADRs/018_operational_resilience.md:107` |
+| Location | `scripts/refresh_pipeline.sh` — the `/fail` ping in `on_failure()`, the `/start` ping after the `flock`, the bare success ping before the duration record; `docs/ADRs/018_operational_resilience.md` §monitoring. **Cited by symbol**: the line numbers here read `93,163,290` and had drifted to 112/182/309, in an entry whose own trigger was "next edit to this file" (C-336) |
 
-Cross-ref: C-131 (the alert this would silence), C-317 (the SIGKILL gap the failure ping closes).
+**RESOLVED 2026-08-10 (#423).** All three pings pass the URL to `curl` on stdin as a config file
+(`printf 'url = "%s"\n' "$HEARTBEAT_URL..." | curl -fsS --max-time 10 -K -`), never as an argv
+element. Guarded by `tests/test_heartbeat_secret.py`.
+
+**Drilled with a negative control, because a clean scan otherwise proves only that the scanner is
+broken.** Canary string against an unrouted RFC1918 address, so the request hangs until `--max-time`
+and stays in flight while `/proc` is walked:
+
+```
+DRILL A — control:  LEAK /proc/1037255 :: curl -fsS --max-time 20 http://10.255.255.1:8099/CANARY-.../fail
+DRILL B — the fix:  in flight: 1038214 curl -fsS --max-time 20 -K -
+                    (clean — no process carries the canary in argv)   [x3, one per ping]
+DRILL C — delivery: GET /CANARY-.../fail   GET /CANARY-.../start   GET /CANARY-...
+```
+
+`printf` is a bash **builtin**, so no helper process carries the URL in its own argv either — which
+is what Drill B actually establishes, rather than the weaker "stdin implies safety".
+
+**This entry's own prescribed fix was wrong, and wrong in this cluster's signature way.** The text
+above suggested `printf 'url=%s\n'` — unquoted. Measured against curl 7.81.0 with a value carrying
+a stray space:
+
+| form | result |
+|---|---|
+| `url=%s` | parses `http://h/uuid`, **drops the `/fail`, and sends it** — the failure ping becomes a success ping |
+| `url = "%s"` | exit 3, nothing sent |
+
+A trailing space or CR is the realistic contamination for a hex-UUID URL. The unquoted form fails
+*green*; the quoted form fails *safe*. **Superseded** — the shipped form is quoted, and the reason
+is in the script's own comment so it survives the next rewrite.
+
+**What this does not close.** The URL remains in the process environment (`/proc/<pid>/environ`,
+mode `-r--------`, owner and root only). Root is out of scope by any mechanism available here.
+
+**The `~/.profile` residual was checked, and it was real — see C-344.** Observed 2026-08-10:
+`/home/views-deploy/.profile` was mode **644** inside a **751** home, and `test -r` from
+`simmaa_prio` returned **readable**. So the URL — and every harvest credential beside it — had been
+readable by three other accounts continuously, which dwarfed the ≤10 s × 3 window this entry is
+about. Fixed the same session; registered separately because it is a different concern with a
+different blast radius.
+
+**Not live on the server yet**, and the issue said otherwise. #423 stated "no server change is
+required — the script is deployed by tag." C-343 established that bash buffers the script, so a
+change to `refresh_pipeline.sh` lands one run *after* a deploy — a month on a monthly cron — and
+deploying is three steps, not one. The fix reaches production at the first cron run after a deploy,
+and a further month later if the deploy is tag-file-only — so weeks to months depending on when the
+next release happens, with the argv exposure continuing until then. (Corrected 2026-08-11: this
+read "two months from merge", a figure C-343 does not derive — #433.)
+
+Cross-ref: C-131 (the alert this would silence), ~~C-317~~ (the SIGKILL gap the failure ping closes,
+resolved by drill the same week), C-343 (why this is not yet live), C-336 (why this entry's own
+Location was stale). Part of the **mechanisms that fail green** cluster. GitHub: #423.
+
 ---
 
 ### C-332: Credential redaction is incomplete — userinfo URLs, raw store paths, netrc exceptions, and credential reprs
@@ -2462,7 +2634,18 @@ This is credential *egress*, not log leakage — a different failure mode from C
 Cross-ref: C-318 (plaintext scheme default), C-332 (the logging-side siblings).
 ---
 
-### C-324: GDL token unrotated after the C-322 leak — pre-fix log lines persist and the deployed harvester still leaks
+### ~~C-324: GDL token unrotated after the C-322 leak — pre-fix log lines persist and the deployed harvester still leaks~~ — RESOLVED
+
+**RESOLVED 2026-08-01/03.** Every remediation this entry prescribed has happened, and the entry had gone stale in exactly the way it warned about — a record describing a world that changed. Found by `/review-rr strategic` on 2026-08-04.
+
+| What the entry says | What is true |
+|---|---|
+| "carrying a **still-valid** credential" | Revoked 2026-08-01. GDL allows one token per account, so issuing the replacement *forced* revocation; the new token was verified with a live request (HTTP 200) |
+| "rotate the token at globaldatalab.org" | Done, by the operator |
+| "the deployed harvester is still the leaking version… newest tag v1.9.0" | Server runs **v1.11.0**; the redaction fix shipped in v1.10.0 |
+| "scrub the pre-fix lines from `logs/refresh.log`" | Moot — the log was destroyed on 2026-08-03 (C-339). Rotation had already made the logged value inert, which the entry itself notes is the sufficient step |
+
+**Residual: none.** Both residues named in the entry are closed by different means, one of them accidental.
 
 C-322 closed the leak *in code*. Two residues remain on the production server, and neither is fixed by that merge:
 
@@ -2755,6 +2938,10 @@ Cross-ref: C-326 (why the extra exists), ADR-050 (the contract this would break)
 
 **Location:** `docs/ADRs/006_intent_contracts_for_non_trivial_classes.md`, `docs/ADRs/010_gridconfig_spatial_only.md`, `docs/CICs/grid_to_country_month.md`, and eight other ADRs. Guarded by `tests/test_docs_citations.py`.
 
+**Addendum 2026-08-10 — it happened in this file.** The "mechanisms that fail green" cluster's prose said *"three of the eight"* and *"cheaper than eight separate ones"* while the table below it held nine entries, and then ten. Nothing failed: the header count and the per-tier sums are guarded, the **prose** is not. Found by `/code-review medium` on #431 — an agent counting rows, not a test. The counts there are now deliberately qualitative, because a tally no guard protects is a claim that will go stale again. Registered here rather than as a new concern: same mechanism, new location.
+
+**Second addendum, 2026-08-10 (#432) — the same shape, in a guard rather than in prose.** `tests/test_heartbeat_secret.py` was written to assert that the heartbeat URL never reaches curl's argv. It went through three versions before it asserted that. v1 checked *"the line contains both `curl` and `HEARTBEAT_URL`"* and failed against the **fixed** script, because `printf … | curl …` legitimately puts both on one line. v2 checked *"the literal `HEARTBEAT_URL` appears after `curl`"* and passed a two-line reintroduction of the exact defect — `FAIL_URL="$HEARTBEAT_URL/fail"; curl "$FAIL_URL"` — caught by review, not by the author. v3 tracks assignment to a fixpoint; its first regex anchored at column 0 and matched no indented assignment, so the hardening itself did nothing until drilled. **A guard is a claim about a property, and the claim is usually narrower than the property.** Only running it against states it was *not* written for tells them apart — three times here, and all three gaps failed green.
+
 The audit found three distinct drift mechanisms, all fixed here.
 
 **1. Line-number citations rot silently.** Ten `file.py:NNN` references across the ADRs. Three were already wrong: ADR-026 cited `ucdp_annual.py:132-142` for `get_ucdp_token()` and line 132 had become blank; ADR-040 cited a line in `grid_compilation.py` that is now empty. Nothing detects this, because a line number is still syntactically valid when it points at whitespace. All ten replaced with symbol names — views-frames reached the same conclusion independently (their #212).
@@ -2796,6 +2983,329 @@ So notice of stale data can slip a day or more, and arrives somewhere you have t
 The upgrade path is written down in `docs/guides/monitoring.md` §5 so the decision is ready-made rather than re-derived: keyword monitor first, then phone escalation, then multi-region.
 
 Cross-ref: ~~C-335~~ (the gap this is the residual of), C-320 (why none of this blocks a merge), ADR-051, ADR-038. GitHub: #401.
+
+---
+
+### ~~C-341: Deploy gates only run where someone types pytest~~ — RESOLVED
+
+**Source:** v1.9.0 → v1.11.0 post-mortem (2026-08-03), as the residual of ~~C-320~~'s fix.
+
+**Trigger:** **When adding a new deploy gate, or when relying on one for release assurance.** Ask whether it can answer in CI. If it cannot, say so in its skip message and give it an out-of-band runner — otherwise it assures only the person who happens to run the suite.
+
+**Location:** `tests/test_falsification_deploy_v160.py`, `tests/test_falsification_deploy_v160_r2.py`; `.github/workflows/release-topology.yml` (the one gate that now has a runner).
+
+C-320 was that these gates failed in CI — shallow checkout cannot answer `git merge-base`, and there is no `gh` auth — leaving CI red on every branch. The fix was right: skip with a reason where the environment cannot answer, rather than fail. The consequence was not examined at the time. **They now run nowhere except a local suite.**
+
+The cost is measurable. After v1.10.0 the `main`/`development` divergence went undetected for four hours, and was found by accident when the full suite happened to be run. It had been silently true after **every** prior release.
+
+Partially mitigated 2026-08-03: `release-topology.yml` runs the topology gate daily with `fetch-depth: 0`, and opens one reusable issue. The others — stale release branches, version-not-already-tagged, issue hygiene — remain local-only.
+
+**Tier 4:** no correctness impact. What is lost is timeliness of bookkeeping errors, and those are recoverable whenever they are found.
+
+**Note the shape rather than just the instance.** A guard that cannot run in the environment where it matters is a guard that reports on the runner's discipline, not on the repository. C-337's floor-versus-lock check has the same property today: it is a rule nobody executes.
+
+**NARROWED 2026-08-11 (#424) — most gates now have a runner; one genuinely still does not.**
+
+`release-topology.yml` (display name **Release hygiene**) now runs the gates that can answer on a schedule, with `GH_TOKEN` and full history:
+
+| Gate | Before | Now |
+|---|---|---|
+| main ancestor of development | shell check only | shell check **plus** the pytest gate |
+| back-merge is conflict-free | nowhere | **runs** — the shell check never did this |
+| remote stale release branches | local only | **runs** |
+| issue hygiene | local only | **runs**, with `GH_TOKEN` |
+| local-clone branch hygiene | local only | **skips on CI, by design** |
+| version-not-already-tagged | local only | **still nowhere** |
+
+Two classes are deliberately absent from that table rather than forgotten:
+`TestF7ProductPlanCurrency` and `TestDF2ReleaseGuideCompleteness` read only files, so they already
+run in the ordinary PR suite and never needed a scheduled runner. The table covers gates that
+require a *deploy environment* — git history, a token, or a real clone.
+
+**Two things had to be measured rather than assumed**, and both would have produced a silent non-check:
+
+1. `actions/checkout` leaves exactly **one** local branch, so the gates' bare `git merge-base --is-ancestor main development` exits **128** and they skip themselves — *even at `fetch-depth: 0`*. Verified in a simulated runner checkout. Two `git branch -f` lines fix it, and `tests/test_ci_gates.py` asserts they precede the gate step.
+2. The local-clone branch gate would have **passed trivially** on a runner rather than skipped — claiming coverage it did not have. It now skips with a reason, per this file's C-320 idiom.
+
+**RESOLVED 2026-08-11 (#425) — the residue is gone, by deletion rather than by a runner.**
+
+The residue was `TestF1VersionBumped::test_version_not_already_tagged`, unconditionally `xfail`. #425 established *why* it could not simply be un-xfailed: version is bumped only at release time, so between releases the version is always a tag that exists, and the assertion is false for the entire inter-release period. Measured in both states — XFAIL when tagged, XPASS when not, **exit 0 either way**.
+
+It was asking a question repo state cannot answer. Deleted, and replaced by the two halves that *are* answerable: `TestVersionMatchesItsTag` (if HEAD is on a tag, the version must equal it — drilled to a real failure) and an **unskippable** guard in `publish_package.yml` comparing `github.ref_name` to the version before the build.
+
+**Four sibling copies of the deleted assertion survive** in three other deploy suites, using a conditional `xfail` that is circular rather than merely inert. Registered as **C-346** rather than swept up here — they are cleanup, not a gap, because the replacement now exists.
+
+Cross-ref: ~~C-320~~ (the fix whose residual this is), C-337 (same "nobody runs it" property), C-340, ~~C-342~~ (resolved by the same PR). GitHub: #402 item 4, #424. Part of work package: **Test infra**.
+
+---
+
+### ~~C-342: A stale committed `uv.lock` is invisible — every command that reads it also silently rewrites it~~ — RESOLVED
+
+**Source:** investigation while building the C-337 regression guard, epic #421 Story 1 (2026-08-08). Verified empirically, not inferred.
+
+**Trigger:** **When editing `[project].dependencies` and committing without running `uv lock`** — the working tree self-heals, so nothing tells you the committed lock is now stale. Also whenever anyone reasons from `uv.lock` about what an environment resolved.
+
+**Location:** `uv.lock`; `.github/workflows/ci.yml` — the `uv sync` step in the `lint`, `typecheck`, `test` and `import-enforcement` jobs (named rather than cited by line, because line citations rot — C-336).
+
+**What happens.** `uv sync` re-resolves and **rewrites `uv.lock` in place** whenever `pyproject.toml` has moved. Every CI job that needs Python runs it first — three on a PR to `development` (`lint`, `typecheck`, `test`; `import-enforcement` is gated to `main`, and `docs` is bash and needs no `uv`). So a pull request whose committed lock does not match its committed `pyproject.toml` goes green: CI repairs the lock in its own checkout, tests the repaired version, and throws it away. The stale lock stays in git, unremarked.
+
+**Verified, not assumed.** Adding a dependency to `pyproject.toml` without re-locking (output elided at `...`):
+
+```
+$ uv lock --check
+Resolved 54 packages in 46ms
+The lockfile at `uv.lock` needs to be updated, but `--locked` was provided.
+To update the lockfile, run `uv lock`.
+$ uv sync
+... Uninstalled 1 package ... Installed 1 package
+$ git diff --stat uv.lock
+ uv.lock | 2 ++
+```
+
+**Why it matters, and why only Tier 3.** No consumer is affected: PyPI wheels carry `pyproject.toml` metadata, not the lock, so an installer never reads it. What is lost is the lock's one job — being the reproducible record of what was resolved. A stale lock means the committed artifact describes an environment nobody ran, and a reviewer reasoning from it reasons from fiction. No data corruption, no wrong numbers, recoverable by one command.
+
+**Also worth stating plainly:** this weakens the guard that found it. `tests/test_dependency_floors.py` reads the committed lock. In practice both CI and `uv run` refresh it before pytest starts, so the test reads a real resolution — but that is a property of how the suite is invoked, not of the file, and it would stop being true under `uv sync --frozen`.
+
+**The instrument is `uv lock --check` in CI, not a test.** A pytest reading `tomllib` cannot see this: by the time pytest runs, the lock has already been repaired. Deliberately **not** fixed in Story 1 (#422), whose scope is a test file. Proposed for Story 3 (#424), which is the story about giving gates somewhere to run other than one laptop.
+
+**RESOLVED 2026-08-11 (#424).** `uv lock --check` runs in `ci.yml`'s **`test` job**, before `uv sync`. Drilled both directions: clean tree `rc=0`; a dependency added to `pyproject.toml` without re-locking `rc=1`, with the message *"The lockfile at `uv.lock` needs to be updated"*; re-locked `rc=0` again.
+
+**The ordering is the whole fix, and it is guarded.** After `uv sync` the check would inspect a lockfile CI has already repaired and pass unconditionally — a green tick verifying nothing. `tests/test_ci_gates.py` asserts the position, and was drilled by moving the step and by deleting it.
+
+**Why this one blocks a PR when the deploy gates deliberately do not.** Those redden for reasons unrelated to the change under review — a diverged `main` is *correct* between a release and its back-merge — which is C-320. This reddens only when the pull request itself left the lock stale: its own fault, fixable inside it with one command. The distinction is stated in the workflow comment so nobody has to re-derive it.
+
+**Confirmed on its own change.** This PR adds `pyyaml` to the dev group for `test_ci_gates.py`; `uv lock --check` was run after re-locking and agreed.
+
+Cross-ref: C-337 (the floor-versus-lock concern this sits beside — same file, different failure), C-341 (narrowed by the same PR), C-336 (an artifact true when written and false later). Part of the **mechanisms that fail green** cluster. GitHub: #430, resolved in #424.
+
+---
+
+### C-343: Writing the deploy tag is not deploying — the server ran v1.10.0 for five days while every signal said v1.11.0
+
+**Source:** direct observation on the production host, 2026-08-08, during epic #421. Not a code reading — the operator ran the commands and pasted the output.
+
+**Trigger:** **At the next release.** Deploy with all three steps from `server_quickref.md`, then verify the three sources agree — tag file, `git describe --tags`, installed version. A release that changes `scripts/refresh_pipeline.sh` or any dependency is the acute case.
+
+**Location:** `scripts/refresh_pipeline.sh` (deployment-gate header comment, and the `git checkout "$DEPLOY_TAG"` in the deployment gate), `docs/guides/server_quickref.md` §"Deploy a new version".
+
+**Observed.** On 2026-08-08 the production host reported:
+
+```
+~/.views-deploy-tag           v1.11.0
+git log -1 --decorate         d72602b (tag: v1.10.0)      <- five days stale
+site-packages/views_frames-   1.0.0.dist-info             <- the frozen version C-337 was about
+git fetch --tags              * [new tag] v1.11.0         <- the tag was not even present
+```
+
+Three sources of truth, all disagreeing, no error anywhere. v1.11.0 shipped on 2026-08-03 **for the sole purpose of raising the views-frames floor** — and the floor was still 1.0.0 on the box.
+
+**Why it happened.** Two documents describe deploying, and they contradict:
+
+| Source | Says |
+|---|---|
+| `refresh_pipeline.sh` header | *"To deploy a new version: update `~/.views-deploy-tag` on the server."* |
+| `server_quickref.md` §Deploy | tag file **plus** `git fetch --tags && git checkout <tag>` **plus** `uv sync` |
+
+The wrong one is the one a person reads while inside the file they are editing. Corrected in the same PR as this entry.
+
+**Why the in-script checkout does not rescue it — tested, not reasoned.** `refresh_pipeline.sh` runs `git checkout "$DEPLOY_TAG"` while bash is executing that same file. A throwaway repository was built to see what bash actually does, at 31 KB — nearly triple the real script's 11,592 bytes at v1.11.0 (this PR's own comment fix grows it to 12,385 — the anchor is the tag, not "current", precisely so the number cannot rot):
+
+```
+start: I am V1
+TAIL EXECUTED FROM: V1        <- V2 was checked out at line 3 and never executed
+```
+
+Bash buffers the script and does not re-read it; git writes in place (inode unchanged), so a *large enough* script could in principle splice, but at this size it simply runs the old body to completion. Two consequences:
+
+1. A change to `refresh_pipeline.sh` itself takes effect **one run later** — on a monthly cron, one month.
+2. `uv sync` is never invoked by the pipeline at all, so a dependency change **never** lands, however many times it runs.
+
+**Tier 2, and the justification is required.** Not Tier 3: this is not a maintainability cost, it is the server running code nobody believes it is running, with no error at any point — the status page is green, the heartbeat pings, the tag file reads correctly. Not Tier 1: it does not itself corrupt data. What it does is **silently prevent fixes from landing**, which converts every future correctness fix into a fix that may or may not be in effect. The trigger is not hypothetical — it fires at the next release, and epic #421's own Story 2 (#423) ships a `refresh_pipeline.sh` change, precisely the class that lags.
+
+**Blast radius on this occasion was small, and saying so matters.** `git diff v1.10.0..v1.11.0` spans 31 files, but **no `src/` file and no pipeline script**; outside `docs/`, `reports/` and `tests/` it is only `pyproject.toml`, `uv.lock` and three GitHub workflows that never run on the host. Production imports four non-estimator symbols from views_frames and no estimator, so no number was wrong. Consumers were never exposed: the published PyPI wheel carried the correct floor throughout. The damage was to what we could *claim*, not to what we produced.
+
+**Remediated 2026-08-08** by running the three documented steps; `uv sync` moved views-frames 1.0.0 → 1.10.2 and views-datafactory 1.10.0 → 1.11.0, and `FeatureFrame` was imported on the host afterwards to confirm the ten-minor-version jump is clean. The entry stays **open** because nothing prevents recurrence.
+
+**The instrument, not yet built.** A pre-flight check in `refresh_pipeline.sh` comparing `$DEPLOY_TAG` against the HEAD the script *started* from, and refusing to run when they disagree — fail-loud per ADR-011, rather than silently self-correcting one run late. Proposed for #424; deliberately not built here, because this PR is a register entry and a comment fix.
+
+Cross-ref: C-337 (the fix this failed to deliver), C-342 (the other lockfile-versus-reality entry from the same day), C-341 (gates that run nowhere), C-98/ADR-022 (the deployment gate this undermines). Part of the **mechanisms that fail green** cluster. GitHub: #421.
+
+---
+
+### ~~C-344: `views-deploy`'s `~/.profile` was world-readable — every harvest credential, to every account, permanently~~ — RESOLVED
+
+**Source:** residual check while resolving ~~C-331~~ (2026-08-10). Found by asking a question the C-331 work implied but did not require, then measuring instead of reasoning.
+
+**Trigger:** **Before adding any secret to a dotfile on the host, and at the next server touch** — check the mode of the file *and* the traversability of its directory, then confirm with `test -r` from another account. Permission arithmetic is not evidence; `test -r` is.
+
+**Location:** `/home/views-deploy/.profile` (host, not in this repo). Documented by `docs/guides/hetzner_deployment_guide.md` §4.6 and `docs/guides/server_operations.md` §Dead-Man Heartbeat, both of which show `>> ~/.profile` without a `chmod`.
+
+**Observed.**
+
+```
+$ stat -c '%a %n' /home/views-deploy/.profile     644 /home/views-deploy/.profile
+$ stat -c '%a %n' /home/views-deploy              751 /home/views-deploy
+$ test -r /home/views-deploy/.profile && echo ... READABLE BY simmaa_prio
+```
+
+`751` on the home lets any account traverse in by name; `644` on the file then lets it read. Confirmed by direct test from a second account, not inferred from the bits.
+
+**What was exposed.** Everything the pipeline exports: `UCDP_API_TOKEN`, `ACLED_USERNAME`, `ACLED_PASSWORD`, `GDL_API_TOKEN`, `HEARTBEAT_URL`. To `dylpin`, `simmaa_prio` and `sonja_prio`, continuously, from deployment until 2026-08-10 — not a window, a standing condition.
+
+**Tier 2.** Broader than any single credential concern registered so far: C-331 was one capability URL for ≤10 s three times a month; C-322 was one token in one log. This was **every** credential, always. Not Tier 1 — no data was corrupted and no model output was wrong — and the readers are named colleagues on a research host rather than adversaries, which is why this is an exposure to close rather than an incident to declare.
+
+**Resolved 2026-08-10:** `chmod 600`, then verified from the account that could read it a moment earlier (`no longer readable by simmaa_prio`), then verified the owner still can (`views-deploy reads its own profile fine — pipeline path intact`). Both directions, because a permission fix that also breaks the pipeline is not a fix.
+
+**Swept the rest of the home rather than assuming this was the only one.** `.netrc` was already `600` — the data-server credentials were never exposed. `.ssh` `700`; `.bash_history`, `.python_history`, `.lesshst` all `600`. `.views-deploy-tag` is `644` and contains `v1.11.0`, not a secret.
+
+**One hypothesis raised and killed.** `.local`, `.config`, `.cache` are `775` and `.zshrc` is `664` — group-writable — and `refresh_pipeline.sh` prepends `$HOME/.local/bin` to `PATH`. Had another account shared the group, it could have dropped a binary there and had the monthly pipeline execute it as `views-deploy` with every credential: strictly worse than reading them. `getent group views-deploy` returns `views-deploy:x:1000:` — **no other members**. Not a finding. Recorded because the next person to see `775` on that path deserves the answer rather than the alarm.
+
+**Rotation: decided against, 2026-08-10, by the operator.** The question was raised deliberately — they were readable by more parties than intended for months, and C-322's GDL token was rotated on weaker evidence. The operator's answer: *"no I don't think anyone have been on the server to read the credentials — that would be a huge surprise to me."*
+
+**What that decision rests on, stated plainly so a later reader can re-weigh it:** the three accounts belong to known colleagues, and there is no indication any of them read the file. It does **not** rest on evidence of non-access — no audit record exists that could establish that, and none was consulted. This is a judgement about who holds the accounts, which is the operator's to make and is reasonable on a single-team research host. It would not survive the accounts being held by anyone outside the team, or the host being multi-tenant.
+
+**Revisit if:** a new shell account is created here (C-88 tracks who has one), or any of these credentials appears in a place with a wider audience than intended — which is exactly what C-322 was, and it *was* rotated.
+
+**The docs that caused it are fixed in the same PR.** Both setup guides showed `echo 'export ...' >> ~/.profile` with no `chmod`, so the mode was whatever `umask` gave it. A guide that creates a secret without securing it will keep producing this.
+
+Cross-ref: ~~C-331~~ (the residual this was found chasing), C-322/~~C-324~~ (GDL token exposure and rotation — the precedent for the open question above), C-318 (cleartext auth on the same host), C-88 (who has shells here at all). GitHub: #423/#432.
+
+---
+
+### C-345: The verification tooling reported a green suite that was red — twice in one session
+
+**Source:** observed while executing epic #421 Story 2 (2026-08-10/11). Not analysis — it happened, twice, and was caught by accident the second time.
+
+**Trigger:** **When capturing the result of a long-running check** — piping it, backgrounding it, or reading its outcome from a task notification rather than its exit status. Concretely: any `pytest`/`ruff`/`mypy` invocation whose status is read from anything other than an unpiped `$?`.
+
+**Location:** the verification step of every story in this epic. Not a repo file — a workflow defect, registered on the precedent of C-339.
+
+**What happened.** Twice, a full-suite run was reported as passing when it had failed.
+
+1. `uv run pytest -q | tail -2; echo "EXIT=$?"` — a pipeline's exit status is that of its **last** element. `tail` succeeds whatever pytest did, so `EXIT` was `0` while pytest had exited `1`.
+2. A backgrounded run's harness task-notification reported *"exit code 0"* for a command whose pytest had exited `1`, because the command ended in an `echo`.
+
+The second was caught only by reading the output file instead of the notification — and by then the user had already been told the suite was running and would be folded in. **One step from reporting a green suite that was red.**
+
+**Tier 2, and the justification is required rather than assumed.** Not Tier 3: this is not a maintainability cost. The suite is the primary gate on every story in this epic, and a false green on it means a defect merges. And per C-343 the defect is not merely merged but slow to surface: a `refresh_pipeline.sh` change reaches production at the next cron run after a deploy, and **one run later still** — a further month — if the deploy is tag-file-only. Not Tier 1: no data was corrupted and no model output was wrong; the failure is in *knowing whether* work is sound, not in the work itself.
+
+**The trigger is not hypothetical — it fired twice in one session.** That is the whole evidentiary basis, and it is deliberately the only one cited. An earlier draft justified the tier by appealing to "two prior false-readiness incidents that each cost a full day". Those incidents are real and known to the operator, but **this repository records neither of them** — not in the register, the changelog, or any post-mortem. Citing history a reader cannot find is how a register stops being checkable, which is C-336's whole subject. The claim is removed rather than softened; that the incidents went unrecorded is itself a gap, and belongs to whoever writes the next post-mortem.
+
+**The shape is the cluster's, exactly.** A mechanism that reports success while establishing nothing. It is the same defect as C-330 (a nightly no-op exiting 0), C-337 (a lockfile frozen with no error) and C-343 (a deploy that deployed nothing) — this time in the instrument used to detect all of them, which is why it belongs registered rather than remembered.
+
+**Mitigation adopted mid-session, not yet enforced by anything:** redirect to a file, capture `$?` on the **unpiped** command, then grep the output for `^FAILED` as a second independent reader:
+
+```bash
+uv run pytest -q > out.txt 2>&1; echo "PYTEST_EXIT=$?"
+grep -cE '^FAILED' out.txt
+```
+
+Two readers, because one reader that can be wrong is what this entry is about.
+
+**Open, because a habit is not a control.** Nothing prevents the next pipeline from masking a status the same way. The instrument would be a wrapper that refuses to report a result it did not obtain unpiped — proposed for **#424**, which is the story about giving checks somewhere to run other than one operator's discretion.
+
+Cross-ref: C-339 (the other assistant-workflow hazard, and the precedent for registering one), C-330/C-337/C-343 (same shape, different mechanisms), C-341 (gates that assure only whoever ran them — this is the failure mode *of* running them). Part of the **mechanisms that fail green** cluster. GitHub: #432.
+
+---
+
+### C-346: Four surviving copies of a version gate that cannot fail — the conditional form looks rigorous and is circular
+
+**Source:** #425, while removing the fifth copy (2026-08-11). Found by grepping for the one being deleted and discovering it was not alone.
+
+**Trigger:** **Before trusting any `xfail`-marked test as a gate**, and specifically before the next release: ask which state makes it *fail*. If no state does, it is decoration. Also whenever the release flow changes — these become answerable only if version stops being bumped at release time.
+
+**Location:** `tests/test_falsification_deploy_v130.py`, `tests/test_falsification_ghspop_deploy_v2.py`, `tests/test_falsification_ghsbuilts_deploy_v2.py`, `tests/test_falsification_vdem_deploy.py` — each a `test_version_not_already_tagged`. Plus the meta-test in `test_falsification_deploy_v130.py` that *enforces* the marker.
+
+**The construction.** Four of the five copies use a conditional marker:
+
+```python
+@pytest.mark.xfail(condition=_version_already_tagged(), reason="version already tagged")
+def test_version_not_already_tagged(self):
+    assert not _tag_exists(f"v{version}")
+```
+
+It reads as rigorous — xfail only when expected. It is **circular**: the test runs only when the version is *not* tagged, and then asserts the version is *not* tagged. It asserts the condition that selected it.
+
+**Measured in both states rather than argued** (the fifth copy, since deleted, behaved identically):
+
+| state | result | suite exit |
+|---|---|---|
+| version tagged (steady state, all but release day) | XFAIL | 0 |
+| version untagged (just bumped) | XPASS / pass | 0 |
+
+**Green in every reachable state.** None of the four can report a failure.
+
+**Why the question is unanswerable here at all.** They ask *"have you bumped yet?"*, which repo state cannot answer, because *"about to release"* is not knowable from the repo. Version is bumped only at release time, so between releases the version is always a tag that exists — the whole inter-release period. The question is answerable exactly one place: the release workflow, where `github.ref_name` is the tag that triggered the run. #425 put it there, unskippably, before the build.
+
+**Tier 4.** No correctness impact and no data exposure; the cost is four tests that read as coverage and are not, plus a meta-test that actively *requires* the marker keeping them that way. Not Tier 3: they mislead a reader, they do not increase the cost of change.
+
+**Deliberately not fixed here.** #425's scope was the fifth copy, and removing four more classes across three unrelated deploy suites — plus reworking the meta-test that enforces the marker — is its own change. The replacement already exists (`TestVersionMatchesItsTag` plus the publish-time guard), so this is cleanup, not a gap.
+
+**One thing to preserve if they are ever removed:** the meta-test exists because of the v1.2.29 post-mortem, which asked that these be xfailed *or restructured to check "tag exists AND tag commit matches HEAD"*. The second option is what #425 finally built. Whoever removes them should close that post-mortem item rather than silently drop it.
+
+Cross-ref: ~~C-341~~ (this was its last residue; resolved by the same PR), C-336 (a claim narrower than the property it names), C-345 (a check reporting success while establishing nothing). Part of the **mechanisms that fail green** cluster. GitHub: #425, #363.
+
+---
+
+### C-347: The required CI check decodes rasters with a different codec build than production
+
+**Source:** #443, lowering `requires-python` to `>=3.11` (2026-08-13).
+
+**Trigger:** **Before the next release tag, and whenever `tifffile` or `imagecodecs` moves in either fork.** Confirm `test-py313` is green, and confirm whether it has yet been added to the required-check lists.
+
+**Location:** `.github/workflows/ci.yml` (jobs `test` and `test-py313`); `uv.lock` (forked entries for `tifffile` and `imagecodecs`); `src/datafactory_viewpoint/raster_io.py` (`read_geotiff`).
+
+**What happens.** Since the floor dropped to 3.11 the lockfile is multi-version: 3.11 resolves `tifffile 2026.3.3` / `imagecodecs 2026.3.6`, and >=3.12 keeps `2026.5.15` / `2026.5.10`. The **required** `test` job pins the floor, so the codec build that CI blocks merges on is not the one decoding production GHS-POP and GHS-BUILT-S pixels. `test-py313` runs the production line but is deliberately **not required**: a required check that has never reported blocks every merge, so it must report first.
+
+**Why this is the fails-green shape and not merely a coverage note.** A check nobody must satisfy carries the same information as no check. It can go red on a Friday and be merged past on the same Friday, and nothing distinguishes that from green. The mitigation is not documentation — it is making it required.
+
+**Why a matrix is not the answer.** `strategy.matrix` renames the reported context to `test (3.11)`. Branch protection on both branches requires the bare name `test` with `enforce_admins: true`, so the required check would never report and every pull request would wait forever. Adding a separate job name is the only shape that does not deadlock.
+
+**Closure condition, stated so it cannot be quietly dropped:** resolved when `test-py313` appears in the required-status-check list on **both** `main` and `development`. That is a GitHub settings action, not a file edit, which is exactly why it is registered — a control whose enforcement lives outside the repository is weaker than one inside it.
+
+Cross-ref: C-348 (the server-side half of the same question), C-320 (a check that reddens for unrelated reasons stops being read; this is its mirror — a red that binds nothing). Part of the **mechanisms that fail green** cluster. GitHub: #443.
+
+---
+
+### C-348: Nothing asserts which Python the production server runs — and the floor now admits one that installs a different raster line
+
+**Source:** #443 (2026-08-13). **Created by that change**; under `>=3.12` this risk did not exist.
+
+**Trigger:** **At the next server provisioning, the next Python upgrade on the Hetzner host, or any runbook edit that reintroduces `apt install python3`.** Pin the interpreter explicitly and record which raster fork it resolves.
+
+**Location:** `docs/guides/hetzner_deployment_guide.md` (§1.3); `scripts/refresh_pipeline.sh`, `scripts/preflight.py`, `scripts/check_health.py` — none contains a `sys.version_info` check.
+
+**What happens.** While the floor was `>=3.12`, a too-old interpreter on the host produced a loud failure: the package would not install. At `>=3.11` it installs on either, and the interpreter silently selects the codec build. On 3.11 the server would decode every production raster with `imagecodecs 2026.3.6`; on 3.12+ with `2026.5.10`. Nothing in the repository, the status page, or the provenance ledger records which.
+
+The deployment guide made this concrete: it said *"Install Python 3.10+"* for the three months the project declared `>=3.12` — an instruction that produced an uninstallable environment, and nothing noticed, because the guide and `pyproject.toml` were each internally consistent and never compared. Fixed in #443 by naming an explicit interpreter.
+
+**Tier 3, not 2.** No evidence of a wrong number today, and the two codec lines are two months apart on a mature library rather than a semantic rewrite. But it is a silent, unrecorded determinant of production numeric output, which is why it is not Tier 4.
+
+**Note for whoever closes this.** If it becomes a check, it must **skip with a reason** when run off-server rather than pass trivially (C-320). A test that quietly passes everywhere except the one machine it is about would be a new instance of the class it is meant to close.
+
+Cross-ref: C-347 (the CI-side half), C-343 (three sources of truth about the deployed version disagreeing, unnoticed for five days), ADR-030 amendment. GitHub: #443.
+
+---
+
+### C-349: A config value restated in prose has nothing binding it back
+
+**Source:** `/code-review medium` on #444 (2026-08-13), as the *residual* of the guard added in that PR.
+
+**Trigger:** **When writing a Python version — or any `pyproject.toml` value — into a guide or ADR.** Link to the declaration rather than restating it; if you restate it, know that nothing will check the copy.
+
+**Location:** `docs/guides/hetzner_deployment_guide.md`; `docs/ADRs/030_raster_tooling.md`; `tests/test_ci_gates.py` (the guard that covers workflows and not prose).
+
+**What happened.** From 2026-05-18 to 2026-08-13 the deployment guide said *"Install Python 3.10+"* while `pyproject.toml` declared `>=3.12`. Following the guide produced an environment in which this package **could not be installed at all**. Neither document was wrong on its own terms; they were never compared, and nothing compared them.
+
+**Why this is registered rather than closed by #444.** That PR added `TestCiPinsTrackTheDeclaredFloor`, and the first draft of its docstring — and the PR body — claimed it would have caught this. **It would not.** Checked against `12d5afa`: CI pinned 3.12 and pyproject declared `>=3.12`, so the guard would have been **green** for the entire window. Only the prose disagreed. The claim was corrected in review; the gap it papered over is this entry.
+
+**Why the obvious instrument is wrong.** A test that greps docs for `Python 3.x` and compares to the floor would be a C-320 machine. Prose legitimately names other versions all over this repository — the ADR-030 amendment records that *"tifffile dropped 3.11 at 2026.4.11"*, the changelog records a drill run on `python3.10`, and historical entries describe the world as it was. A guard that cannot distinguish a stale instruction from an accurate history would redden constantly and stop being read.
+
+**So the mitigation is editorial, not mechanical:** in runbooks, point at `requires-python` instead of copying its value. `hetzner_deployment_guide.md` §1.3 now names an interpreter for a *different* reason — it selects the raster fork (C-348) — which is a restatement this entry would otherwise object to, and is accepted deliberately because that number must be pinned rather than derived.
+
+**Tier 4:** documentation quality, no correctness or reliability impact on outputs. It cost onboarding time and a broken instruction, both recoverable the moment anyone tried the command.
+
+Cross-ref: C-336 (the same family — docs true when written, false later; that entry is about *code* citations, this one about *config values*), C-348 (the server-interpreter question the guide's number now decides). GitHub: #444.
 
 ---
 

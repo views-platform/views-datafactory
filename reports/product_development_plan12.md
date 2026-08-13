@@ -1,9 +1,42 @@
-# Product Development Plan v12 — current through v1.11, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.12, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
+
+---
+
+## v1.12 Addendum (2026-08-13)
+
+**v1.12.0 (Python floor; no change to shipped code).** `src/` is untouched again — the wheel is
+byte-identical apart from metadata. Minor rather than patch because the *supported environment set
+grew*: `requires-python` moved `>=3.12` → `>=3.11`.
+
+*Why it was a problem worth a release.* This repository was the only one on the platform above 3.11.
+Everything else declares `>=3.10` or `>=3.11`, and the views-models conda environments run 3.11.14 /
+3.11.15 — so `pip install views-datafactory` failed in all four of them, and 28 requirements files
+could not use the package at all. The floor was never chosen: ADR-030 set `>=3.12` in May because
+*"tifffile's current releases require it"*, a fact about a vendor at a moment. 3.11 was never
+considered — the string does not appear in that ADR. Nothing in our own code needs 3.12; verified by
+running the suite, ruff, mypy and `compileall` at 3.11.13 before deciding.
+
+*The cost, which is permanent and worth stating.* `uv.lock` now forks. Under 3.11 the raster stack
+resolves `tifffile 2026.3.3` / `imagecodecs 2026.3.6`; under >=3.12 it stays `2026.5.15` /
+`2026.5.10`. Both upstreams dropped 3.11 deliberately — tifffile adopted PEP 695 syntax, imagecodecs
+ships `cp312-abi3` wheels only — so a 3.11 consumer is pinned to the March-2026 line for good. The
+required CI check runs the floor and therefore exercises the *older* decoder than the server does
+(**C-347**); a non-required `test-py313` job covers the production line until it can be made
+required. ADR-030 amended rather than superseded — the tooling decision was never in question.
+
+*What the change exposed rather than caused.* `imagecodecs` decodes every GHS-POP and GHS-BUILT-S
+GeoTIFF — all of them LZW — is imported by **nothing** under `src/`, and until this release **no
+test in this repository had ever written a compressed TIFF**. An import-graph audit would have
+called the dependency removable, and removing it would have broken every production raster read
+while leaving the suite green. Now covered. Also registered: **C-348** (nothing asserts which
+interpreter the server runs, and the wider floor now lets that choice select a decoder) and
+**C-349** (a config value restated in prose has nothing binding it back — the deployment guide said
+"Install Python 3.10+" for the three months the floor was `>=3.12`).
 
 ---
 

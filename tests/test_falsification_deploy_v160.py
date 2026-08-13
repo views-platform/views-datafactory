@@ -2,8 +2,11 @@
 
 Claim: "We are ready to bump the version, merge to main, tag, and deploy."
 
-Hard falsification F1: version not bumped — pyproject.toml still says 1.5.0,
-    but tag v1.5.0 already exists on main.
+Hard falsification F1: REMOVED 2026-08-11 (#425). It asserted "the version
+    is not already tagged", which cannot fail in this repo — version is bumped
+    only at release time, so between releases the version is always a tag that
+    exists. Replaced by TestVersionMatchesItsTag, which asserts the half that
+    can fail, plus an unskippable guard in publish_package.yml. See C-346.
 Hard falsification F2: main has merge commits not in development.
     Originally phrased as "the deploy guide prescribes ``git merge development
     --ff-only`` and fast-forward is impossible". Both halves of that framing are
@@ -42,17 +45,84 @@ def _tag_exists(tag: str) -> bool:
     return tag in result.stdout.strip().splitlines()
 
 
-class TestF1VersionBumped:
-    """F1: version in pyproject.toml must be newer than any existing tag."""
+def _head_tags() -> list[str]:
+    """Every ``v*`` tag HEAD sits exactly on.
 
-    @pytest.mark.xfail(reason="version already tagged — expected post-deploy")
-    def test_version_not_already_tagged(self) -> None:
-        """Current version must not already have a git tag."""
+    ``git tag --points-at``, **not** ``git describe --exact-match``. The
+    latter returns exactly one tag — the lexicographically smallest —
+    and a commit can carry several. Reproduced: tag one commit
+    ``v1.11.0`` and ``checkpoint``, and ``describe`` answers
+    ``checkpoint`` regardless of creation order or tag type. The release
+    tag is then invisible, this test skips, and it skips *precisely when
+    a real mismatch is sitting on that commit*. Failing green in the one
+    direction that matters, found by review.
+    """
+    result = subprocess.run(
+        ["git", "tag", "--points-at", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return []
+    return [t for t in result.stdout.split() if t.startswith("v")]
+
+
+class TestVersionMatchesItsTag:
+    """The released version must equal the tag it was released under (#363).
+
+    **Replaces ``TestF1VersionBumped``, deleted 2026-08-11 (#425).** That
+    class asserted "the current version is not already tagged", and it
+    could not fail. Version here is bumped only at release time, so from
+    the moment a release lands until the next bump the version *is* a tag
+    that exists — the whole inter-release period. Hence its unconditional
+    ``xfail``. Measured before removing it:
+
+    ===================  ======================  ===========
+    version tagged?      result                  suite exit
+    ===================  ======================  ===========
+    yes (steady state)   XFAIL                   0
+    no  (just bumped)    XPASS                   0
+    ===================  ======================  ===========
+
+    Green either way. It asked *"have you bumped yet?"*, which repo state
+    cannot answer, because "about to release" is not knowable from the
+    repo — only from the tag that triggers a release. That question is
+    now answered where it can be: `publish_package.yml` compares
+    ``github.ref_name`` to the version, before the build, unskippably.
+
+    What IS answerable here is the other half: **if HEAD is on a tag, the
+    version must match it.** That can fail, and does — drilled by setting
+    the version away from the tag.
+
+    Four sibling copies of the deleted assertion survive in
+    ``test_falsification_{deploy_v130,ghspop_deploy_v2,ghsbuilts_deploy_v2}``
+    and ``test_falsification_vdem_deploy``. They use a *conditional*
+    ``xfail`` that looks more rigorous and is not: it runs only when the
+    version is untagged, then asserts the version is untagged — asserting
+    the condition that selected it. Left in place deliberately; removing
+    four more classes is beyond this story. Registered as **C-346**.
+    """
+
+    def test_version_equals_the_tag_head_is_on(self) -> None:
+        tags = _head_tags()
+        if not tags:
+            pytest.skip(
+                "HEAD is not on a v* tag — there is no tag to compare "
+                "against, and guessing one would be worse than saying so "
+                "(C-320). The unskippable half of this check lives in "
+                "publish_package.yml, where the triggering tag is known."
+            )
         version = _current_version()
-        tag = f"v{version}"
-        assert not _tag_exists(tag), (
-            f"pyproject.toml says {version} but tag {tag} already exists. "
-            f"Bump version before deploying."
+        expected = f"v{version}"
+        assert expected in tags, (
+            f"HEAD is on tag(s) {sorted(tags)} but pyproject.toml declares "
+            f"version "
+            f"{version} (expected tag v{version}). A release published "
+            f"from this state puts a wheel on PyPI whose metadata "
+            f"disagrees with the git history, discoverable only by "
+            f"comparing them by hand. v* tags are immutable under the "
+            f"tag ruleset, so the fix is to bump pyproject.toml — the "
+            f"tag cannot be moved."
         )
 
 
@@ -161,25 +231,91 @@ class TestF7ProductPlanCurrency:
 
 
 class TestF8StaleBranches:
-    """F8: merged branches should be deleted before next release."""
+    """F8: merged branches should be deleted before next release.
 
-    def test_no_stale_release_branches(self) -> None:
-        """No release/* branches should exist for already-tagged versions."""
+    Local branches and remote branches are checked from different
+    sources, deliberately. The original version used ``git branch -a``,
+    which folds in **remote-tracking refs** — a local cache that goes
+    stale the moment someone else deletes a branch, and that only
+    ``git fetch --prune`` refreshes.
+
+    That made the gate fail against a repository which was actually
+    clean. Observed 2026-08-03: `delete_branch_on_merge` had removed
+    every merged branch on the remote, yet this test failed because the
+    local clone had been fetched without ``--prune`` all session. Nine
+    local branches were deleted chasing a problem that did not exist.
+
+    A gate that reddens for reasons unrelated to what it asserts stops
+    being read — that is C-320. So remote state is now taken from the
+    remote (``git ls-remote``), which is authoritative, and the test
+    skips rather than guesses when the network cannot answer.
+    """
+
+    @staticmethod
+    def _stale(names: list[str]) -> list[str]:
+        return [
+            n for n in names
+            if "release/" in n and _tag_exists(n.split("release/")[-1])
+        ]
+
+    def test_no_stale_local_release_branches(self) -> None:
+        """Local ``release/*`` branches for tagged versions are leftovers.
+
+        Skipped on CI, deliberately. This asserts a property of *an
+        operator's clone*, and a fresh runner is not one: ``actions/
+        checkout`` leaves exactly one local branch, so the assertion is
+        trivially true there. A gate that passes because there is
+        nothing to look at is worse than one that skips — it reports
+        coverage it does not have. Same idiom as the remote check below
+        and as C-320: skip where the environment cannot answer.
+        """
+        import os
+
+        if os.environ.get("CI"):
+            pytest.skip(
+                "local-clone hygiene is not answerable on a fresh CI "
+                "runner — actions/checkout leaves one local branch, so "
+                "this would pass without inspecting anything. The remote "
+                "half of this class DOES run in CI."
+            )
         result = subprocess.run(
-            ["git", "branch", "-a"],
+            ["git", "branch", "--format=%(refname:short)"],
             capture_output=True,
             text=True,
         )
-        release_branches = [
-            line.strip()
-            for line in result.stdout.splitlines()
-            if "release/" in line
-        ]
-        stale = []
-        for branch in release_branches:
-            version_part = branch.split("release/")[-1]
-            if _tag_exists(version_part):
-                stale.append(branch)
+        stale = self._stale(
+            [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
+        )
         assert not stale, (
-            f"Stale release branches for already-tagged versions: {stale}"
+            f"Stale LOCAL release branches for already-tagged versions: "
+            f"{stale}. Delete with `git branch -D <name>`. These are your "
+            f"own leftovers — the remote is checked separately."
+        )
+
+    def test_no_stale_remote_release_branches(self) -> None:
+        """Asks the remote, not the local cache of it."""
+        probe = subprocess.run(
+            ["git", "ls-remote", "--heads", "origin", "refs/heads/release/*"],
+            capture_output=True,
+            text=True,
+        )
+        if probe.returncode != 0:
+            pytest.skip(
+                "cannot reach origin — remote branch state is not "
+                "answerable offline; local gate above still applies "
+                "(C-320: skip where the environment cannot answer)"
+            )
+        names = [
+            ln.split("refs/heads/", 1)[1]
+            for ln in probe.stdout.splitlines()
+            if "refs/heads/" in ln
+        ]
+        stale = self._stale(names)
+        assert not stale, (
+            f"Stale release branches ON THE REMOTE for already-tagged "
+            f"versions: {stale}. `delete_branch_on_merge` should have "
+            f"removed these; if it did not, the repo setting may have been "
+            f"turned off. Note this reads the remote directly, so a stale "
+            f"local `remotes/origin/...` ref cannot cause this failure — "
+            f"run `git fetch --prune` to tidy your own view."
         )

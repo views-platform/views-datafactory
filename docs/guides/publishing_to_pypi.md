@@ -115,6 +115,42 @@ gh api -X PUT repos/views-platform/views-datafactory/branches/<branch>/protectio
 
 ---
 
+## Pushing to a branch whose pull request already merged
+
+A pull request auto-merges the instant CI goes green. Push a follow-up commit and it lands on a
+branch with no open PR: `git push` reports success and the work is not on `development`. This has
+happened twice in ~440 pull requests (#416, #437).
+
+**There is no guard, deliberately.** A pre-push hook was written four times and a scheduled detector
+three times; every version was defeated by a different property of git, `gh` or GitHub — reused
+branch names, merge-commit ancestry, `delete_branch_on_merge` removing the branch before the next
+push, `git fetch` resolving `refs/tags/` first. The guards cost far more than the failures they
+prevent. C-340 records the attempts so nobody rebuilds them.
+
+**If it happens, recover it:**
+
+```bash
+git checkout -b <new-branch> origin/development
+git cherry-pick <sha>
+```
+
+Both real incidents were recovered this way.
+
+## Arming auto-merge — use the script, not `gh pr merge`
+
+```bash
+scripts/arm_automerge.sh <pr-number> <merge|squash|rebase>
+```
+
+`gh pr merge --auto --<method>` on an **already-armed** PR silently refuses to change the method. It
+prints nothing and exits 0. During v1.10.0 a `development` → `main` promotion was armed `squash`,
+re-armed with `--merge`, and stayed `squash` — caught only by reading the value back. **A squash onto
+`main` rewrites the release SHAs** and permanently breaks the ancestry the back-merge maintains; it
+would not have surfaced until a later release diffed against a base that never existed.
+
+The script uses the GraphQL disable/enable pair, which does honour the method, then **reads the
+method back and exits non-zero if it disagrees**. Reading back is the point; arming is the easy part.
+
 ## Prerequisites (one-time setup) — Trusted Publishing
 
 The release workflow authenticates with **Trusted Publishing (OIDC)** — there is **no
@@ -163,7 +199,7 @@ uvx --from twine twine check dist/*            # both files must say PASSED
 uv publish --publish-url https://test.pypi.org/legacy/ dist/*
 
 # clean-room install back (TestPyPI for this pkg, real PyPI for the dependencies)
-uv venv --clear --python 3.12 /tmp/tp-check && source /tmp/tp-check/bin/activate
+uv venv --clear --python 3.11 /tmp/tp-check && source /tmp/tp-check/bin/activate
 uv pip install --index-url https://test.pypi.org/simple/ \
                --extra-index-url https://pypi.org/simple/ views-datafactory
 python -c "from datafactory_query import load_dataset, CONTRACT_VERSION; print('OK', CONTRACT_VERSION)"
@@ -242,10 +278,25 @@ shipped, and the next release's diff starts from a base that no longer reflects 
 **Squashing step 5 defeats it entirely** — a squash creates yet another commit that is not `main`,
 so `main` still is not an ancestor.
 
-Detection is automated by `.github/workflows/release-topology.yml`: it runs on every published
-release and daily, with full git history, and opens a single tracking issue if the branches have
-diverged. It deliberately does **not** run in the PR test job — that would make every PR red
-between a release and its back-merge, which is C-320's permanently-red CI all over again.
+Detection is automated by `.github/workflows/release-topology.yml` (display name **Release
+hygiene** since 2026-08-11 — the filename is kept so run history and existing citations stay
+valid). It runs on every published release and daily, with full git history, and opens **one**
+tracking issue covering everything it finds.
+
+It checks more than topology now (#424): the deploy gates that used to run only where someone typed
+`pytest` — remote stale release branches, issue hygiene, and the conflict-free back-merge — run
+there too, with `GH_TOKEN` so the `gh`-dependent one can answer instead of skipping.
+
+Two gates deliberately do **not** run there, and the reasons matter more than the coverage number:
+
+- **Local-clone branch hygiene** skips on CI. A fresh runner has one local branch, so it would pass
+  without inspecting anything — a green tick claiming coverage it does not have.
+- **version-not-already-tagged** is `xfail`, so it cannot fail a suite anywhere. #425 owns that.
+
+None of it runs in the PR test job — that would make every PR red between a release and its
+back-merge, which is C-320's permanently-red CI all over again. The one merge-blocking check added
+alongside is `uv lock --check` in `ci.yml`, and it is different in kind: it reddens only when the
+pull request itself left `uv.lock` stale, which is that PR's own fault and fixable inside it.
 
 Merged branches now delete themselves (`delete_branch_on_merge`), so no cleanup step is needed;
 eleven stale branches had accumulated before that was switched on.
@@ -279,6 +330,6 @@ eleven stale branches had accumulated before that was switched on.
 
 - This guide and `.github/workflows/publish_package.yml` mirror the views-frames
   routine (`views-frames/docs/guides/publishing-to-pypi.md`), adapted: Python floor
-  3.12, nine bundled packages, and the code-only wheel/sdist guarantee.
+  3.11, nine bundled packages, and the code-only wheel/sdist guarantee.
 - First exercised by the `v1.9.0` release (2026-07) — the first PyPI publish of this
   project.

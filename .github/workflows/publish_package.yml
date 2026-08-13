@@ -29,14 +29,49 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
-      - name: Install uv (+ Python 3.12)
+      - name: Install uv (+ Python 3.11)
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
         with:
-          python-version: "3.12"   # requires-python is >=3.12; the wheel is pure-Python (py3-none-any)
+          python-version: "3.11"   # requires-python is >=3.11; the wheel is pure-Python (py3-none-any)
+
+      - name: Guard — pyproject version must equal the tag being released
+        # #363 / C-346. The guard below checks the version BEATS PyPI. It does
+        # not check the version MATCHES THE TAG, so a release cut from a branch
+        # whose pyproject was never bumped publishes a wheel whose metadata
+        # disagrees with the git history — discoverable only by comparing them
+        # by hand.
+        #
+        # This is the last moment before an immutable artifact exists. The tag
+        # ruleset makes v* tags immutable: no deletion, no update, no bypass.
+        # After publish a mismatch cannot be corrected, only superseded.
+        #
+        # Unlike the pytest twin, this CANNOT be skipped — `github.ref_name` is
+        # the tag that triggered the run, so "about to release" is knowable
+        # here and nowhere else.
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # `uv run --no-project --python 3.11`, matching the guard below.
+          # Bare `python3` is whatever the runner image ships, and tomllib
+          # needs >= 3.11 — drilled locally on python3.10, where the bare
+          # form died with ModuleNotFoundError. Pinning the interpreter is
+          # the difference between a guard and a guard that works.
+          VERSION=$(uv run --no-project --python 3.11 python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          if [ "$TAG" != "v${VERSION}" ]; then
+            echo "::error::Tag/version mismatch — refusing to publish."
+            echo "  tag that triggered this run : ${TAG}"
+            echo "  pyproject [project].version : ${VERSION}  (expected tag v${VERSION})"
+            echo ""
+            echo "The tag is immutable, so this cannot be fixed by retagging."
+            echo "Bump pyproject.toml to match, or cut a new tag that matches."
+            exit 1
+          fi
+          echo "tag/version guard OK: ${TAG} == v${VERSION}"
 
       - name: Guard — pyproject version must be newer than what's on PyPI
         run: |
-          uv run --no-project --python 3.12 --with packaging python - <<'PY'
+          uv run --no-project --python 3.11 --with packaging python - <<'PY'
           import json, tomllib, urllib.request
           from packaging.version import parse
           new = tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]
