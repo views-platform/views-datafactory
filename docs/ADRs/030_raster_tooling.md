@@ -240,6 +240,10 @@ Write the Rust raster processing tool immediately for GHS-POP, skip the tifffile
 ### Immediate (GHS-POP integration)
 
 1. Bump `requires-python` to `">=3.12"` in `pyproject.toml`. Adjust dependency lower bounds as needed.
+   > **Superseded by the Amendment above — do not follow this step.** The floor is `>=3.11`.
+   > Re-raising it here would re-break the views-models 3.11 environments. Left in place rather
+   > than edited, per this repo's amend-don't-rewrite convention, but flagged inline because an
+   > implementer reading only §Implementation Notes would otherwise reverse #443.
 2. Add `tifffile` to dependencies.
 3. Verify `uv run pytest` passes after dependency changes.
 4. GeoTIFF reading pattern: `tifffile.imread(path)` returns numpy array. Validate dimensions (21600×43200 for 30ss global), check GeoKey tags for EPSG:4326, replace nodata (-9999) with 0.
@@ -285,6 +289,9 @@ Write the Rust raster processing tool immediately for GHS-POP, skip the tifffile
 2. **Infrastructure data landscape.** The format survey covered likely sources but infrastructure data has not been broadly surveyed. An unusual infrastructure dataset could change the tooling calculus.
 3. **tifffile compression support.** GHS-POP GeoTIFFs are compressed (likely LZW or DEFLATE). tifffile handles these, but the specific compression used by JRC should be verified on first download.
 4. **Python 3.12 on production server.** The Hetzner server currently runs the pipeline. Python 3.12 availability needs to be confirmed before deployment.
+   > **Answered and replaced by the Amendment above.** The floor is `>=3.11`, so availability is no
+   > longer the question — *which* interpreter the server has is, because it now selects the raster
+   > decoder. Nothing in this repository asserts it; tracked as **C-348**.
 
 ---
 

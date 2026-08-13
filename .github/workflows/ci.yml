@@ -137,10 +137,14 @@ jobs:
         run: uv sync --frozen
 
       - name: The interpreter is not the floor
-        run: uv run python -c "import sys; assert sys.version_info[:2] == (3, 13), sys.version"
+        # --frozen on EVERY uv run, not just the sync. `uv run` locks and syncs
+        # by default, so a bare `uv run` here would re-resolve and rewrite a
+        # stale lock — undoing the --frozen above and masking exactly what
+        # `uv lock --check` in `test` exists to catch.
+        run: uv run --frozen python -c "import sys; assert sys.version_info[:2] == (3, 13), sys.version"
 
       - name: Test
-        run: uv run pytest
+        run: uv run --frozen pytest
 
   docs:
     # Documentation consistency. The script has existed since the base-docs

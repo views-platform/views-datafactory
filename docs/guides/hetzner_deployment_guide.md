@@ -1168,7 +1168,7 @@ su - views-deploy -c "sudo ls /"
 # Expected: permission denied (not in sudo group)
 
 # 7. Automated verification (run on server)
-python3 scripts/verify_server_hardening.py
+uv run python scripts/verify_server_hardening.py
 # Expected: all checks pass
 ```
 
@@ -1299,7 +1299,7 @@ rm /root/.ssh/id_ed25519 /root/.ssh/id_ed25519.pub
 #### Verification
 
 ```bash
-python3 /home/views-deploy/views-datafactory/scripts/verify_server_hardening.py
+uv run --directory /home/views-deploy/views-datafactory python scripts/verify_server_hardening.py
 # Expected: 21/21 checks pass
 # Check 20: "Personal SSH key removed from /root — removed"
 # Check 21: "Deploy key exists for service user"
@@ -1480,7 +1480,7 @@ ssh <your-user>@204.168.219.108 "sudo passwd -S <username>"
 Or run the automated check:
 
 ```bash
-python3 /home/views-deploy/views-datafactory/scripts/verify_server_hardening.py
+uv run --directory /home/views-deploy/views-datafactory python scripts/verify_server_hardening.py
 # Looks for named accounts with sudo, verifies each has a password
 # and an authorized_keys file.
 ```

@@ -351,22 +351,40 @@ than one asserting against the real `uv.lock`. A test that reads the live lock p
 whenever the lock has no duplicates — which is the state the original refutation described, and
 which will recur the moment the floor rises again.
 
-**The fork bit within the hour, and only because both ends were run.** Pinning mypy to the floor
-(`python_version = "3.11"`, added so the declared floor is checked at the keyboard and not only in
-CI) made mypy parse *third-party* source at 3.11 as well. On a 3.12+ interpreter the installed
-tifffile is 2026.5.15, which uses PEP 695, so mypy died on **its** source:
+**The fork bit within the hour, and only because both ends were run.** `python_version = "3.11"`
+was added to mypy so the declared floor would be checked at the keyboard rather than only in CI.
+That makes mypy parse *third-party* source at 3.11 too, and on a 3.12+ interpreter the installed
+tifffile is 2026.5.15, which uses PEP 695 — so mypy died on **its** source:
 `tifffile.py:929: Type statement is only supported in Python 3.12 and greater`. Under 3.11 the env
-holds tifffile 2026.3.3, which predates PEP 695 — so the identical command passed. A single-ended
-check would have shipped this, and it would have failed on every developer machine while CI stayed
-green. Fixed with a `follow_imports = "skip"` override for tifffile only.
+holds tifffile 2026.3.3, which predates PEP 695, so the identical command passed. A single-ended
+check would have shipped a config that fails on every developer machine while CI stays green.
 
-**And the fix for that had a fails-green of its own, immediately.** The override table was first
+**The first fix for that was worse than the problem, and review caught it.** Adding
+`follow_imports = "skip"` for tifffile silenced the crash — and silently deleted type checking of
+`read_geotiff`, the single surface in this repository that calls tifffile. Drilled both ways:
+with the skip, `page.asarray(maxworkerz=1)` type-checks **clean**; without it, mypy says
+*Unexpected keyword argument "maxworkerz" ... did you mean "maxworkers"?*. The comment justifying
+the skip said "we type-check our code, not tifffile's" — but the loss was **in our code**, at the
+call site that decodes every production raster. So `python_version` was removed instead: CI's
+typecheck job runs on the floor anyway, and ruff's `target-version = "py311"` catches
+floor-violating syntax locally. A convenience was traded away to keep a real check.
+
+**And the abandoned fix had a fails-green of its own on the way out.** The override table was first
 written *inside* `[tool.mypy]`. A `[[tool.mypy.overrides]]` header ends the parent table, so
 `disallow_any_generics = false` — written below it — silently became an override key instead of a
 global one. mypy went from clean to **98 errors** in code nobody had touched. The TOML parsed
-perfectly and meant something else; caught only because the error count was implausible. Moved to
-the end of the section with a comment saying it must stay there. Same shape as the duplicate `run:`
-key in #424, three weeks earlier: **a parse is not a verification.**
+perfectly and meant something else; caught only because the error count was implausible. Same shape
+as the duplicate `run:` key in #424, three weeks earlier: **a parse is not a verification.**
+
+**A third round, for the guard added against the second.** `/review-diff` then found that the new
+`--python` pin check regexed the raw text of every workflow, so it reddened on a legitimate
+`--python 3.13` inside `test-py313` — the one job whose purpose is being off-floor — and on a
+version mentioned in a *comment*. Both reproduced by probe. A guard that goes red for reasons
+unrelated to what it asserts is C-320, introduced into a change that cites C-320 three times. Now
+parses YAML, exempts the off-floor job, and strips comments; re-drilled all three ways, with real
+drift in `publish_package.yml` still failing and naming the job. **Not registered** — it is fixed,
+and an entry saying "we sometimes write guards that false-positive" would have a perpetual trigger,
+which is the entry class the #421 close-out was written against.
 
 **Two holes closed in passing, neither registered because neither stays open.** The parser
 collapse above; and the absence of any LZW coverage. `imagecodecs` is imported by nothing under

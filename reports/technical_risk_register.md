@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-13 — the Python floor dropped to `>=3.11` (#443), unblocking the views-models 3.11 environments at the cost of a forked raster stack, and registering C-347 (the required CI check decodes with a different codec build than the server) and C-348 (nothing asserts the server's interpreter). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-13 — the Python floor dropped to `>=3.11` (#443/#444), registering C-347 (the required CI check decodes with a different codec build than the server), C-348 (nothing asserts the server's interpreter) and C-349 (a config value restated in prose has nothing binding it back). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 348 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 41 open concerns (0 Tier 1, 4 Tier 2, 12 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 349 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 42 open concerns (0 Tier 1, 4 Tier 2, 12 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -178,6 +178,7 @@
 | C-343 | 2 | Writing `~/.views-deploy-tag` is not deploying — the server ran v1.10.0 for five days while the tag file said v1.11.0 and views-frames stayed at the frozen 1.0.0. The in-script `git checkout` cannot fix the running script (bash has buffered it) and never runs `uv sync` | **At the next release** — deploy with all three `server_quickref.md` steps, then verify tag file, `git describe --tags` and installed version all agree | Deployment |
 | C-347 | 3 | The required CI check exercises a different raster decoder than production — since the 3.11 floor the lock forks, so `test` decodes with `imagecodecs 2026.3.6` while the server uses `2026.5.10`. `test-py313` covers the production line but is **not a required check**, and a red nobody must satisfy is ignorable | **Before the next release tag, and whenever `tifffile` or `imagecodecs` moves in either fork** — confirm `test-py313` is green, and whether it has been added to the required lists on `main` and `development`. Resolved when it is required on both | Test infra |
 | C-348 | 3 | Nothing asserts which Python the production server runs, and the floor now admits one that installs a **different raster line**. `preflight.py`, `check_health.py` and `refresh_pipeline.sh` contain no `sys.version_info` check of any kind. Created by #443 — this risk did not exist under `>=3.12` | **At the next server provisioning, Python upgrade on the Hetzner host, or any runbook edit that says `apt install python3`** — pin the interpreter explicitly and record which raster fork it resolves | Server hardening |
+| C-349 | 4 | A config value restated in prose has nothing binding it back — `hetzner_deployment_guide.md` said "Install Python 3.10+" for the three months `pyproject.toml` declared `>=3.12`, an instruction producing an environment where the package could not install. The #444 pin guard binds *workflow* pins to `requires-python`; nothing binds *prose* | **When writing a Python version, or any pyproject value, into a guide or ADR** — link to the declaration instead of restating it, or accept that the copy will not be checked | Documentation drift |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -3283,6 +3284,28 @@ The deployment guide made this concrete: it said *"Install Python 3.10+"* for th
 **Note for whoever closes this.** If it becomes a check, it must **skip with a reason** when run off-server rather than pass trivially (C-320). A test that quietly passes everywhere except the one machine it is about would be a new instance of the class it is meant to close.
 
 Cross-ref: C-347 (the CI-side half), C-343 (three sources of truth about the deployed version disagreeing, unnoticed for five days), ADR-030 amendment. GitHub: #443.
+
+---
+
+### C-349: A config value restated in prose has nothing binding it back
+
+**Source:** `/code-review medium` on #444 (2026-08-13), as the *residual* of the guard added in that PR.
+
+**Trigger:** **When writing a Python version — or any `pyproject.toml` value — into a guide or ADR.** Link to the declaration rather than restating it; if you restate it, know that nothing will check the copy.
+
+**Location:** `docs/guides/hetzner_deployment_guide.md`; `docs/ADRs/030_raster_tooling.md`; `tests/test_ci_gates.py` (the guard that covers workflows and not prose).
+
+**What happened.** From 2026-05-18 to 2026-08-13 the deployment guide said *"Install Python 3.10+"* while `pyproject.toml` declared `>=3.12`. Following the guide produced an environment in which this package **could not be installed at all**. Neither document was wrong on its own terms; they were never compared, and nothing compared them.
+
+**Why this is registered rather than closed by #444.** That PR added `TestCiPinsTrackTheDeclaredFloor`, and the first draft of its docstring — and the PR body — claimed it would have caught this. **It would not.** Checked against `12d5afa`: CI pinned 3.12 and pyproject declared `>=3.12`, so the guard would have been **green** for the entire window. Only the prose disagreed. The claim was corrected in review; the gap it papered over is this entry.
+
+**Why the obvious instrument is wrong.** A test that greps docs for `Python 3.x` and compares to the floor would be a C-320 machine. Prose legitimately names other versions all over this repository — the ADR-030 amendment records that *"tifffile dropped 3.11 at 2026.4.11"*, the changelog records a drill run on `python3.10`, and historical entries describe the world as it was. A guard that cannot distinguish a stale instruction from an accurate history would redden constantly and stop being read.
+
+**So the mitigation is editorial, not mechanical:** in runbooks, point at `requires-python` instead of copying its value. `hetzner_deployment_guide.md` §1.3 now names an interpreter for a *different* reason — it selects the raster fork (C-348) — which is a restatement this entry would otherwise object to, and is accepted deliberately because that number must be pinned rather than derived.
+
+**Tier 4:** documentation quality, no correctness or reliability impact on outputs. It cost onboarding time and a broken instruction, both recoverable the moment anyone tried the command.
+
+Cross-ref: C-336 (the same family — docs true when written, false later; that entry is about *code* citations, this one about *config values*), C-348 (the server-interpreter question the guide's number now decides). GitHub: #444.
 
 ---
 

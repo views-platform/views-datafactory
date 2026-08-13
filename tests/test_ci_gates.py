@@ -28,6 +28,7 @@ verification (C-345).
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 CI = REPO / ".github" / "workflows" / "ci.yml"
 HYGIENE = REPO / ".github" / "workflows" / "release-topology.yml"
+WORKFLOWS = REPO / ".github" / "workflows"
 
 
 def _steps(workflow: Path, job: str) -> list[dict[str, Any]]:
@@ -128,56 +130,114 @@ class TestDeployGatesCanActuallyAnswer:
         )
 
 
-def _python_pin(job: str) -> str | None:
-    """The `python-version` a job hands to setup-python, if it sets one."""
-    for step in _steps(CI, job):
-        uses = step.get("uses") or ""
-        if "actions/setup-python" in uses:
-            with_ = step.get("with") or {}
-            pin = with_.get("python-version")
-            return None if pin is None else str(pin)
-    return None
+def _floor() -> str:
+    """The `>=` floor from requires-python — the single source of truth."""
+    import tomllib
+
+    requires = tomllib.loads((REPO / "pyproject.toml").read_text())["project"][
+        "requires-python"
+    ]
+    assert requires.startswith(">="), (
+        f"requires-python is {requires!r}; these guards assume a `>=` floor. "
+        f"If the form changed, update them rather than deleting them."
+    )
+    return requires.removeprefix(">=").split(",")[0].strip()
+
+
+def _python_pins(workflow: Path) -> dict[str, str]:
+    """job -> the `python-version` it hands setup-python, where it sets one.
+
+    Any step whose `uses` mentions setup-python OR setup-uv counts: setup-uv
+    also accepts a `python-version` input, and publish_package.yml uses that
+    form. Reading only setup-python would leave the release build's pin
+    unguarded.
+    """
+    data = yaml.safe_load(workflow.read_text())
+    pins: dict[str, str] = {}
+    for job, spec in (data.get("jobs") or {}).items():
+        for step in spec.get("steps") or []:
+            uses = step.get("uses") or ""
+            if "actions/setup-python" in uses or "setup-uv" in uses:
+                pin = (step.get("with") or {}).get("python-version")
+                if pin is not None:
+                    pins[job] = str(pin)
+    return pins
 
 
 class TestCiPinsTrackTheDeclaredFloor:
-    """CI must exercise the floor pyproject declares, not a nearby version.
+    """Every workflow pin must equal the floor pyproject declares.
 
-    The drift this prevents is not hypothetical. Between 2026-05-18 and
-    2026-08-13 `pyproject.toml` said `>=3.12`, `hetzner_deployment_guide.md`
-    said "Install Python 3.10+", and CI said 3.12 — three numbers, two of
-    them wrong, none of them checked against another. The guide's number
-    described an environment in which this package could not be installed
-    at all, and nothing noticed for three months.
+    **What this does NOT cover, stated because the first draft of this
+    docstring overclaimed it** (caught in review on #444): the drift that
+    actually happened between 2026-05-18 and 2026-08-13 was
+    `hetzner_deployment_guide.md` saying "Install Python 3.10+" while
+    pyproject said `>=3.12` — an instruction producing an environment where
+    the package could not be installed. This test would have been **green**
+    for that entire window, because CI's pins and pyproject agreed with each
+    other; only the prose disagreed. Verified against `12d5afa`.
+
+    So: this binds workflow pins to `requires-python`. Nothing yet binds
+    prose to either. Do not cite this test as covering the guide.
     """
 
-    # WET on purpose: four names written out, not derived. Deriving them
-    # ("every job with a setup-python step") would silently start excusing
-    # `test-py313`, which is the one job that MUST differ.
-    FLOOR_JOBS = ["lint", "typecheck", "test", "import-enforcement"]
+    # Jobs allowed to differ, each because it is deliberately NOT the floor.
+    # An allow-list rather than a derived rule: deriving ("every job with a
+    # setup-python step") would silently start excusing any future job that
+    # drifts, which is the failure this guard exists to prevent.
+    NOT_THE_FLOOR = {"test-py313"}
 
-    def test_required_jobs_pin_the_declared_floor(self) -> None:
-        import tomllib
-
-        data = tomllib.loads((REPO / "pyproject.toml").read_text())
-        requires = data["project"]["requires-python"]
-        assert requires.startswith(">="), (
-            f"requires-python is {requires!r}; this guard assumes a `>=` "
-            f"floor. If the form changed, update the guard rather than "
-            f"deleting it."
-        )
-        floor = requires.removeprefix(">=").split(",")[0].strip()
-
-        wrong = {
-            job: pin
-            for job in self.FLOOR_JOBS
-            if (pin := _python_pin(job)) != floor
-        }
+    def test_every_workflow_pin_equals_the_declared_floor(self) -> None:
+        wrong = {}
+        for wf in sorted(WORKFLOWS.glob("*.yml")):
+            for job, pin in _python_pins(wf).items():
+                if job not in self.NOT_THE_FLOOR and pin != _floor():
+                    wrong[f"{wf.name}:{job}"] = pin
         assert not wrong, (
-            f"pyproject declares requires-python {requires!r} (floor "
-            f"{floor}), but these ci.yml jobs pin something else: {wrong}. "
-            f"CI must exercise the weakest supported configuration — it is "
-            f"the one no developer runs locally. Change the pins, or change "
-            f"the floor deliberately and change them together."
+            f"pyproject declares a floor of {_floor()}, but these workflow "
+            f"jobs pin something else: {wrong}. CI must exercise the weakest "
+            f"supported configuration — it is the one no developer runs "
+            f"locally. Change the pins, or change the floor deliberately and "
+            f"change them together.\n\n"
+            f"Scanning ALL workflows, not just ci.yml, because "
+            f"publish_package.yml builds the artefact that actually reaches "
+            f"consumers: a floor raised in pyproject and not there would "
+            f"build the release on an interpreter below requires-python."
+        )
+
+    def test_hardcoded_python_flags_match_the_floor(self) -> None:
+        """`uv run --python X` is a pin too, and setup-python cannot see it.
+
+        Scans executable lines only. Comments are stripped first, and jobs in
+        ``NOT_THE_FLOOR`` are exempt — both because the first version of this
+        guard reddened on a comment mentioning an old version, and on the one
+        job whose whole purpose is running off the floor. A guard that goes
+        red for reasons unrelated to what it asserts stops being read, which
+        is C-320; it is not much use adding one of those to a change that
+        cites C-320 three times.
+        """
+        pattern = re.compile(r"--python\s+(\d+\.\d+)")
+        wrong = []
+        for wf in sorted(WORKFLOWS.glob("*.yml")):
+            for job, spec in (
+                yaml.safe_load(wf.read_text()).get("jobs") or {}
+            ).items():
+                if job in self.NOT_THE_FLOOR:
+                    continue
+                for step in spec.get("steps") or []:
+                    run = step.get("run") or ""
+                    code = "\n".join(
+                        ln for ln in run.splitlines()
+                        if not ln.lstrip().startswith("#")
+                    )
+                    for ver in set(pattern.findall(code)):
+                        if ver != _floor():
+                            wrong.append(f"{wf.name}:{job}: --python {ver}")
+        assert not wrong, (
+            f"Workflow steps pin an interpreter on the command line that is "
+            f"not the declared floor ({_floor()}): {wrong}. "
+            f"publish_package.yml's version guards use this form, so they are "
+            f"invisible to the setup-python check above — which is exactly how "
+            f"a pin drifts unnoticed."
         )
 
 
@@ -196,24 +256,25 @@ class TestSomethingTestsANonFloorInterpreter:
     """
 
     def test_a_job_runs_pytest_on_something_other_than_the_floor(self) -> None:
-        import tomllib
-
-        data = tomllib.loads((REPO / "pyproject.toml").read_text())
-        floor = (
-            data["project"]["requires-python"]
-            .removeprefix(">=")
-            .split(",")[0]
-            .strip()
-        )
+        floor = _floor()
         jobs = yaml.safe_load(CI.read_text())["jobs"]
 
         covering = [
             name
             for name in jobs
-            if (pin := _python_pin(name)) is not None
+            if (pin := _python_pins(CI).get(name)) is not None
             and pin != floor
+            # A BARE `uv run pytest` — the full suite. `import-enforcement`
+            # runs `pytest tests/test_import_enforcement.py -x -q`, so a
+            # substring match on "pytest" would let it satisfy this guard if
+            # its pin ever differed from the floor, and `test-py313` could
+            # then be deleted with the test still green.
             and any(
-                "pytest" in (s.get("run") or "") for s in _steps(CI, name)
+                re.search(
+                    r"uv run (--frozen )?pytest\s*$",
+                    (s.get("run") or "").strip(),
+                )
+                for s in _steps(CI, name)
             )
         ]
         assert covering, (
