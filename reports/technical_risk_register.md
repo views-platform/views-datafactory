@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-11 — C-341 RESOLVED and C-346 registered (#425): the version gate that could never fail was deleted rather than given a runner, replaced by a tag-vs-version test that does fail and an unskippable publish-time guard; four circular sibling copies are recorded rather than swept up. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-13 — the Python floor dropped to `>=3.11` (#443/#444), registering C-347 (the required CI check decodes with a different codec build than the server), C-348 (nothing asserts the server's interpreter) and C-349 (a config value restated in prose has nothing binding it back). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 346 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 39 open concerns (0 Tier 1, 4 Tier 2, 10 Tier 3, 19 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 349 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 42 open concerns (0 Tier 1, 4 Tier 2, 12 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -176,6 +176,9 @@
 | ~~C-341~~ | ~~4~~ | ~~Deploy gates only run where someone types pytest — C-320's fix made them skip-with-reason in CI, so they assure only whoever runs the suite at the right moment | **When adding a deploy gate, or relying on one for release assurance:** ~~ | Resolved 2026-08-11 (#424 gave the answerable gates a scheduled runner; #425 deleted the one that could never answer and replaced it with a publish-time guard) | Test infra |
 | ~~C-342~~ | ~~3~~ | ~~A stale committed `uv.lock` is invisible — `uv sync` (ci.yml:24,42,60,99) rewrites it in place, so CI goes green on a lock that does not match the committed `pyproject.toml` and the stale one stays in git~~ | Resolved 2026-08-11 (#424): `uv lock --check` in the `test` job, before `uv sync`; drilled both directions and the ordering is itself guarded by `tests/test_ci_gates.py` | Dependency policy |
 | C-343 | 2 | Writing `~/.views-deploy-tag` is not deploying — the server ran v1.10.0 for five days while the tag file said v1.11.0 and views-frames stayed at the frozen 1.0.0. The in-script `git checkout` cannot fix the running script (bash has buffered it) and never runs `uv sync` | **At the next release** — deploy with all three `server_quickref.md` steps, then verify tag file, `git describe --tags` and installed version all agree | Deployment |
+| C-347 | 3 | The required CI check exercises a different raster decoder than production — since the 3.11 floor the lock forks, so `test` decodes with `imagecodecs 2026.3.6` while the server uses `2026.5.10`. `test-py313` covers the production line but is **not a required check**, and a red nobody must satisfy is ignorable | **Before the next release tag, and whenever `tifffile` or `imagecodecs` moves in either fork** — confirm `test-py313` is green, and whether it has been added to the required lists on `main` and `development`. Resolved when it is required on both | Test infra |
+| C-348 | 3 | Nothing asserts which Python the production server runs, and the floor now admits one that installs a **different raster line**. `preflight.py`, `check_health.py` and `refresh_pipeline.sh` contain no `sys.version_info` check of any kind. Created by #443 — this risk did not exist under `>=3.12` | **At the next server provisioning, Python upgrade on the Hetzner host, or any runbook edit that says `apt install python3`** — pin the interpreter explicitly and record which raster fork it resolves | Server hardening |
+| C-349 | 4 | A config value restated in prose has nothing binding it back — `hetzner_deployment_guide.md` said "Install Python 3.10+" for the three months `pyproject.toml` declared `>=3.12`, an instruction producing an environment where the package could not install. The #444 pin guard binds *workflow* pins to `requires-python`; nothing binds *prose* | **When writing a Python version, or any pyproject value, into a guide or ADR** — link to the declaration instead of restating it, or accept that the copy will not be checked | Documentation drift |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -3241,6 +3244,68 @@ It reads as rigorous — xfail only when expected. It is **circular**: the test 
 **One thing to preserve if they are ever removed:** the meta-test exists because of the v1.2.29 post-mortem, which asked that these be xfailed *or restructured to check "tag exists AND tag commit matches HEAD"*. The second option is what #425 finally built. Whoever removes them should close that post-mortem item rather than silently drop it.
 
 Cross-ref: ~~C-341~~ (this was its last residue; resolved by the same PR), C-336 (a claim narrower than the property it names), C-345 (a check reporting success while establishing nothing). Part of the **mechanisms that fail green** cluster. GitHub: #425, #363.
+
+---
+
+### C-347: The required CI check decodes rasters with a different codec build than production
+
+**Source:** #443, lowering `requires-python` to `>=3.11` (2026-08-13).
+
+**Trigger:** **Before the next release tag, and whenever `tifffile` or `imagecodecs` moves in either fork.** Confirm `test-py313` is green, and confirm whether it has yet been added to the required-check lists.
+
+**Location:** `.github/workflows/ci.yml` (jobs `test` and `test-py313`); `uv.lock` (forked entries for `tifffile` and `imagecodecs`); `src/datafactory_viewpoint/raster_io.py` (`read_geotiff`).
+
+**What happens.** Since the floor dropped to 3.11 the lockfile is multi-version: 3.11 resolves `tifffile 2026.3.3` / `imagecodecs 2026.3.6`, and >=3.12 keeps `2026.5.15` / `2026.5.10`. The **required** `test` job pins the floor, so the codec build that CI blocks merges on is not the one decoding production GHS-POP and GHS-BUILT-S pixels. `test-py313` runs the production line but is deliberately **not required**: a required check that has never reported blocks every merge, so it must report first.
+
+**Why this is the fails-green shape and not merely a coverage note.** A check nobody must satisfy carries the same information as no check. It can go red on a Friday and be merged past on the same Friday, and nothing distinguishes that from green. The mitigation is not documentation — it is making it required.
+
+**Why a matrix is not the answer.** `strategy.matrix` renames the reported context to `test (3.11)`. Branch protection on both branches requires the bare name `test` with `enforce_admins: true`, so the required check would never report and every pull request would wait forever. Adding a separate job name is the only shape that does not deadlock.
+
+**Closure condition, stated so it cannot be quietly dropped:** resolved when `test-py313` appears in the required-status-check list on **both** `main` and `development`. That is a GitHub settings action, not a file edit, which is exactly why it is registered — a control whose enforcement lives outside the repository is weaker than one inside it.
+
+Cross-ref: C-348 (the server-side half of the same question), C-320 (a check that reddens for unrelated reasons stops being read; this is its mirror — a red that binds nothing). Part of the **mechanisms that fail green** cluster. GitHub: #443.
+
+---
+
+### C-348: Nothing asserts which Python the production server runs — and the floor now admits one that installs a different raster line
+
+**Source:** #443 (2026-08-13). **Created by that change**; under `>=3.12` this risk did not exist.
+
+**Trigger:** **At the next server provisioning, the next Python upgrade on the Hetzner host, or any runbook edit that reintroduces `apt install python3`.** Pin the interpreter explicitly and record which raster fork it resolves.
+
+**Location:** `docs/guides/hetzner_deployment_guide.md` (§1.3); `scripts/refresh_pipeline.sh`, `scripts/preflight.py`, `scripts/check_health.py` — none contains a `sys.version_info` check.
+
+**What happens.** While the floor was `>=3.12`, a too-old interpreter on the host produced a loud failure: the package would not install. At `>=3.11` it installs on either, and the interpreter silently selects the codec build. On 3.11 the server would decode every production raster with `imagecodecs 2026.3.6`; on 3.12+ with `2026.5.10`. Nothing in the repository, the status page, or the provenance ledger records which.
+
+The deployment guide made this concrete: it said *"Install Python 3.10+"* for the three months the project declared `>=3.12` — an instruction that produced an uninstallable environment, and nothing noticed, because the guide and `pyproject.toml` were each internally consistent and never compared. Fixed in #443 by naming an explicit interpreter.
+
+**Tier 3, not 2.** No evidence of a wrong number today, and the two codec lines are two months apart on a mature library rather than a semantic rewrite. But it is a silent, unrecorded determinant of production numeric output, which is why it is not Tier 4.
+
+**Note for whoever closes this.** If it becomes a check, it must **skip with a reason** when run off-server rather than pass trivially (C-320). A test that quietly passes everywhere except the one machine it is about would be a new instance of the class it is meant to close.
+
+Cross-ref: C-347 (the CI-side half), C-343 (three sources of truth about the deployed version disagreeing, unnoticed for five days), ADR-030 amendment. GitHub: #443.
+
+---
+
+### C-349: A config value restated in prose has nothing binding it back
+
+**Source:** `/code-review medium` on #444 (2026-08-13), as the *residual* of the guard added in that PR.
+
+**Trigger:** **When writing a Python version — or any `pyproject.toml` value — into a guide or ADR.** Link to the declaration rather than restating it; if you restate it, know that nothing will check the copy.
+
+**Location:** `docs/guides/hetzner_deployment_guide.md`; `docs/ADRs/030_raster_tooling.md`; `tests/test_ci_gates.py` (the guard that covers workflows and not prose).
+
+**What happened.** From 2026-05-18 to 2026-08-13 the deployment guide said *"Install Python 3.10+"* while `pyproject.toml` declared `>=3.12`. Following the guide produced an environment in which this package **could not be installed at all**. Neither document was wrong on its own terms; they were never compared, and nothing compared them.
+
+**Why this is registered rather than closed by #444.** That PR added `TestCiPinsTrackTheDeclaredFloor`, and the first draft of its docstring — and the PR body — claimed it would have caught this. **It would not.** Checked against `12d5afa`: CI pinned 3.12 and pyproject declared `>=3.12`, so the guard would have been **green** for the entire window. Only the prose disagreed. The claim was corrected in review; the gap it papered over is this entry.
+
+**Why the obvious instrument is wrong.** A test that greps docs for `Python 3.x` and compares to the floor would be a C-320 machine. Prose legitimately names other versions all over this repository — the ADR-030 amendment records that *"tifffile dropped 3.11 at 2026.4.11"*, the changelog records a drill run on `python3.10`, and historical entries describe the world as it was. A guard that cannot distinguish a stale instruction from an accurate history would redden constantly and stop being read.
+
+**So the mitigation is editorial, not mechanical:** in runbooks, point at `requires-python` instead of copying its value. `hetzner_deployment_guide.md` §1.3 now names an interpreter for a *different* reason — it selects the raster fork (C-348) — which is a restatement this entry would otherwise object to, and is accepted deliberately because that number must be pinned rather than derived.
+
+**Tier 4:** documentation quality, no correctness or reliability impact on outputs. It cost onboarding time and a broken instruction, both recoverable the moment anyone tried the command.
+
+Cross-ref: C-336 (the same family — docs true when written, false later; that entry is about *code* citations, this one about *config values*), C-348 (the server-interpreter question the guide's number now decides). GitHub: #444.
 
 ---
 

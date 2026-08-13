@@ -8,7 +8,17 @@ authors = [
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.12"
+# Lowered 3.12 -> 3.11 on 2026-08-13 (#443). ADR-030 set >=3.12 because
+# "tifffile's current releases require it" — a fact about a vendor at a
+# moment, not an architectural need; 3.11 was never considered there.
+# The consumer that forced the question: the views-models conda envs run
+# 3.11.14/3.11.15, so 28 requirements files could not install this at all.
+# COST, and it is real: the lock now forks. Under 3.11 the raster stack
+# resolves tifffile 2026.3.3 / imagecodecs 2026.3.6; under >=3.12 it stays
+# 2026.5.15 / 2026.5.10. Both upstreams dropped 3.11 permanently (tifffile
+# uses PEP 695 from 2026.4.11 and would SyntaxError; imagecodecs ships
+# cp312-abi3 only from 2026.5.10). See the ADR-030 amendment and C-347.
+requires-python = ">=3.11"
 keywords = ["conflict-forecasting", "priogrid", "ucdp", "acled", "data-pipeline", "provenance", "zarr"]
 # License is declared via the SPDX `license` expression above (PEP 639); the deprecated
 # `License ::` classifier is intentionally omitted to avoid the expression/classifier clash.
@@ -17,6 +27,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
@@ -142,7 +153,7 @@ include = ["/src"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM"]
@@ -151,9 +162,32 @@ ignore = ["UP046"]
 [tool.mypy]
 strict = true
 ignore_missing_imports = true
+# NO `python_version` pin here, and that is a decision with evidence (#443).
+#
+# Pinning it to the floor was tried first, so that a 3.12-only annotation
+# would fail at the keyboard rather than only in CI. It cannot be done
+# cheaply: mypy then parses THIRD-PARTY source at 3.11 too, and on a 3.12+
+# interpreter the installed tifffile is 2026.5.15, which uses PEP 695. mypy
+# dies on its source — "tifffile.py:929: Type statement is only supported in
+# Python 3.12 and greater" — so every developer on 3.13 is blocked.
+#
+# The only escape is `follow_imports = "skip"` for tifffile, and that costs
+# more than the pin is worth. tifffile ships py.typed, and `read_geotiff` is
+# the single surface in this repository that calls into it. Measured both
+# ways: with the skip, `page.asarray(maxworkerz=1)` type-checks CLEAN; without
+# it, mypy says 'Unexpected keyword argument "maxworkerz" ... did you mean
+# "maxworkers"?'. Skipping would have deleted checking of our own call site —
+# the one that decodes every production raster — to gain a check CI already
+# performs, since the typecheck job runs on the floor interpreter.
+#
+# So: mypy checks against whatever interpreter runs it, CI runs it on the
+# floor, and ruff's target-version = "py311" catches floor-violating syntax
+# locally. Do not add `python_version` back without re-running that drill.
+
 # numpy's ndarray is generic but parameterising it everywhere is noisy
 # and deviates from community convention.
 disallow_any_generics = false
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -321,6 +321,84 @@ difference between it and everything else in this cluster.
 
 ---
 
+## The Python floor, and a refutation that expired (2026-08-13)
+
+`#443` lowered `requires-python` from `>=3.12` to `>=3.11`. Two entries registered: **C-347**
+(the required CI check decodes rasters with a different codec build than the server) and **C-348**
+(nothing asserts the server's interpreter, and the wider floor now lets it choose a codec line).
+ADR-030 amended rather than superseded — its tooling decision was never in question.
+
+**The lesson worth keeping is not about Python.** When `/code-review` ran on #430, one finder
+flagged that `_locked_versions()` in `tests/test_dependency_floors.py` builds a dict keyed by
+package name and would silently drop a duplicate. It was scored 25 and refuted, and the refutation
+was *correct*: this project had a single `requires-python` and no environment markers, so
+`uv.lock` could not contain two entries for one package. The changelog recorded it as such.
+
+#443 deleted that premise. Lowering the floor forks the lock — `tifffile` and `imagecodecs` each
+resolve twice — and the collapse became live: the guard would have compared a floor against a
+version it never read and reported success. In the file whose entire subject is mechanisms that
+fail green.
+
+**A refutation is only as durable as its premise, and nothing was watching the premise.** Findings
+are dismissed with a reason; the reason is a claim about the world; and claims about the world go
+stale exactly like the documentation this register keeps catching. We have no mechanism that
+re-examines a dismissal when its premise changes, and this is the second time in two weeks that a
+"cannot happen here" turned into "happened here" (see also C-343, where three sources of truth
+about the deployed version disagreed for five days).
+
+The practical consequence adopted here: the fix ships with a **fixture-based** parser test rather
+than one asserting against the real `uv.lock`. A test that reads the live lock passes vacuously
+whenever the lock has no duplicates — which is the state the original refutation described, and
+which will recur the moment the floor rises again.
+
+**The fork bit within the hour, and only because both ends were run.** `python_version = "3.11"`
+was added to mypy so the declared floor would be checked at the keyboard rather than only in CI.
+That makes mypy parse *third-party* source at 3.11 too, and on a 3.12+ interpreter the installed
+tifffile is 2026.5.15, which uses PEP 695 — so mypy died on **its** source:
+`tifffile.py:929: Type statement is only supported in Python 3.12 and greater`. Under 3.11 the env
+holds tifffile 2026.3.3, which predates PEP 695, so the identical command passed. A single-ended
+check would have shipped a config that fails on every developer machine while CI stays green.
+
+**The first fix for that was worse than the problem, and review caught it.** Adding
+`follow_imports = "skip"` for tifffile silenced the crash — and silently deleted type checking of
+`read_geotiff`, the single surface in this repository that calls tifffile. Drilled both ways:
+with the skip, `page.asarray(maxworkerz=1)` type-checks **clean**; without it, mypy says
+*Unexpected keyword argument "maxworkerz" ... did you mean "maxworkers"?*. The comment justifying
+the skip said "we type-check our code, not tifffile's" — but the loss was **in our code**, at the
+call site that decodes every production raster. So `python_version` was removed instead: CI's
+typecheck job runs on the floor anyway, and ruff's `target-version = "py311"` catches
+floor-violating syntax locally. A convenience was traded away to keep a real check.
+
+**And the abandoned fix had a fails-green of its own on the way out.** The override table was first
+written *inside* `[tool.mypy]`. A `[[tool.mypy.overrides]]` header ends the parent table, so
+`disallow_any_generics = false` — written below it — silently became an override key instead of a
+global one. mypy went from clean to **98 errors** in code nobody had touched. The TOML parsed
+perfectly and meant something else; caught only because the error count was implausible. Same shape
+as the duplicate `run:` key in #424, three weeks earlier: **a parse is not a verification.**
+
+**A third round, for the guard added against the second.** `/review-diff` then found that the new
+`--python` pin check regexed the raw text of every workflow, so it reddened on a legitimate
+`--python 3.13` inside `test-py313` — the one job whose purpose is being off-floor — and on a
+version mentioned in a *comment*. Both reproduced by probe. A guard that goes red for reasons
+unrelated to what it asserts is C-320, introduced into a change that cites C-320 three times. Now
+parses YAML, exempts the off-floor job, and strips comments; re-drilled all three ways, with real
+drift in `publish_package.yml` still failing and naming the job. **Not registered** — it is fixed,
+and an entry saying "we sometimes write guards that false-positive" would have a perpetual trigger,
+which is the entry class the #421 close-out was written against.
+
+**Two holes closed in passing, neither registered because neither stays open.** The parser
+collapse above; and the absence of any LZW coverage. `imagecodecs` is imported by nothing under
+`src/`, is reached only implicitly through `read_geotiff`'s `page.asarray()`, and decodes 100% of
+production GHS-POP and GHS-BUILT-S rasters — yet **no test in this repository had ever written a
+compressed TIFF on any interpreter**. Blocking the import and attempting an LZW write raises
+`KeyError: "<COMPRESSION.LZW: 5> requires the 'imagecodecs' package"`; the uncompressed path that
+every existing test used keeps working. So an import-graph audit would have called the dependency
+removable, and removing it would have broken every production raster read while the suite stayed
+green. That is the C-337 audit shape again: every step true, conclusion wrong, because the question
+asked about imports rather than about what runs.
+
+---
+
 ## C-342 — the lockfile nobody can catch being stale (2026-08-08)
 
 `/register-risk` after `/code-review medium` on **#430**, the first story of epic #421.

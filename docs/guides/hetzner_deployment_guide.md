@@ -118,13 +118,35 @@ sudo apt update && sudo apt upgrade -y
 ### 1.3 Install Python and uv
 
 ```bash
-# Install Python 3.10+
-sudo apt install -y python3 python3-pip git
+# Install git; get Python from uv, NOT from apt (see the note below)
+sudo apt install -y git
 
 # Install uv (fast Python package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.cargo/env  # or restart shell
+
+# Pin the interpreter EXPLICITLY. Do not rely on `apt install python3`.
+uv python install 3.13
 ```
+
+> **Why the interpreter is named here, and why `apt install python3` is not enough.**
+>
+> This block used to read `# Install Python 3.10+`. For three months the project
+> declared `requires-python = ">=3.12"`, so anyone following that instruction on a
+> distro shipping 3.10 or 3.11 built an environment in which this package could not
+> be installed at all. Nothing detected it; the guide and `pyproject.toml` were each
+> internally consistent and never compared.
+>
+> Since #443 the floor is `>=3.11`, so bare `apt install python3` no longer *fails* —
+> which is worse, because the version it happens to give you now **selects which raster
+> decoder the server runs**. On 3.11, `uv sync` resolves `tifffile 2026.3.3` and
+> `imagecodecs 2026.3.6`; on 3.12+ it resolves the current line. Those are the codecs
+> that decode every GHS-POP and GHS-BUILT-S pixel. A distro default silently choosing
+> between them is not a deployment decision anyone made.
+>
+> Name the version, and keep it equal to what CI's non-floor job exercises. Nothing in
+> this repository asserts which interpreter the server actually has — that gap is
+> registered as **C-348**.
 
 ### 1.4 Clone the repository
 
@@ -1146,7 +1168,7 @@ su - views-deploy -c "sudo ls /"
 # Expected: permission denied (not in sudo group)
 
 # 7. Automated verification (run on server)
-python3 scripts/verify_server_hardening.py
+uv run python scripts/verify_server_hardening.py
 # Expected: all checks pass
 ```
 
@@ -1277,7 +1299,7 @@ rm /root/.ssh/id_ed25519 /root/.ssh/id_ed25519.pub
 #### Verification
 
 ```bash
-python3 /home/views-deploy/views-datafactory/scripts/verify_server_hardening.py
+uv run --directory /home/views-deploy/views-datafactory python scripts/verify_server_hardening.py
 # Expected: 21/21 checks pass
 # Check 20: "Personal SSH key removed from /root — removed"
 # Check 21: "Deploy key exists for service user"
@@ -1458,7 +1480,7 @@ ssh <your-user>@204.168.219.108 "sudo passwd -S <username>"
 Or run the automated check:
 
 ```bash
-python3 /home/views-deploy/views-datafactory/scripts/verify_server_hardening.py
+uv run --directory /home/views-deploy/views-datafactory python scripts/verify_server_hardening.py
 # Looks for named accounts with sudo, verifies each has a password
 # and an authorized_keys file.
 ```

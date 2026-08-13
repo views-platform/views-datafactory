@@ -96,6 +96,17 @@ jobs:
             echo "main is NOT an ancestor of development."
           fi
 
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          # This workflow had NO interpreter pin — it ran `uv sync` and took
+          # whatever uv chose. That was tolerable while requires-python was
+          # >=3.12 and narrow; since #443 widened it to >=3.11 the unpinned
+          # choice also selects which raster fork installs. These gates touch
+          # no rasters, so the impact is nil today — pinned anyway, because
+          # "nil today" is how the deployment guide's Python line survived
+          # three months of being wrong.
+          python-version: "3.11"
+
       - name: Install uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4 — pinned, NOT upgraded
 

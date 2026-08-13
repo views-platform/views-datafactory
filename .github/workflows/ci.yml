@@ -15,7 +15,11 @@ jobs:
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
-          python-version: "3.12"
+          # The DECLARED FLOOR, not a convenient version. CI must exercise the
+          # weakest supported config, because that is the one nobody runs
+          # locally. Keep equal to requires-python — test_ci_gates.py asserts
+          # it. The other end (3.13) is covered by test-py313 below.
+          python-version: "3.11"
 
       - name: Install uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4 — pinned, NOT upgraded
@@ -33,7 +37,11 @@ jobs:
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
-          python-version: "3.12"
+          # The DECLARED FLOOR, not a convenient version. CI must exercise the
+          # weakest supported config, because that is the one nobody runs
+          # locally. Keep equal to requires-python — test_ci_gates.py asserts
+          # it. The other end (3.13) is covered by test-py313 below.
+          python-version: "3.11"
 
       - name: Install uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4 — pinned, NOT upgraded
@@ -51,7 +59,11 @@ jobs:
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
-          python-version: "3.12"
+          # The DECLARED FLOOR, not a convenient version. CI must exercise the
+          # weakest supported config, because that is the one nobody runs
+          # locally. Keep equal to requires-python — test_ci_gates.py asserts
+          # it. The other end (3.13) is covered by test-py313 below.
+          python-version: "3.11"
 
       - name: Install uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4 — pinned, NOT upgraded
@@ -76,8 +88,63 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
+      - name: The interpreter is the declared floor
+        # An assertion, not an echo. That setup-python's 3.11 is the
+        # interpreter `uv run` then selects is an inference about how two
+        # actions interact via PATH — true today, unobserved until now.
+        # An echo would print the answer into a log nobody reads; this
+        # fails the job. (C-336: claims inferred rather than observed.)
+        run: uv run python -c "import sys; assert sys.version_info[:2] == (3, 11), sys.version"
+
       - name: Test
         run: uv run pytest
+
+  test-py313:
+    # The OTHER end of the supported range, and the reason it is a separate
+    # job rather than a matrix leg: branch protection requires the status
+    # check named exactly `test`, with enforce_admins. A strategy.matrix
+    # renames it to `test (3.11)`, the required `test` never reports, and
+    # every PR waits forever. New job names are safe precisely because they
+    # are NOT required.
+    #
+    # What it buys: since the floor dropped to 3.11 (#443) the lock forks —
+    # 3.11 resolves tifffile 2026.3.3 / imagecodecs 2026.3.6, >=3.12 keeps
+    # 2026.5.15 / 2026.5.10. The required `test` job therefore exercises the
+    # OLD raster line while the dev venv and the server run the new one.
+    # This job is the only thing that runs the production line. It is not
+    # required yet — a required check that has never reported blocks every
+    # merge — so the follow-up in C-347 is to add it to both branches'
+    # required lists once it has reported. Until then it is visible, not
+    # enforced, and that gap is registered rather than glossed.
+    #
+    # Full suite, not raster-only: the fork is a property of the resolver,
+    # so the next upstream to drop 3.11 adds a package a raster-scoped job
+    # would silently miss.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4 — pinned, NOT upgraded
+
+      - name: Install dependencies
+        # --frozen: this job must not be able to repair a stale lock, or it
+        # would mask exactly what `uv lock --check` in `test` exists to catch.
+        run: uv sync --frozen
+
+      - name: The interpreter is not the floor
+        # --frozen on EVERY uv run, not just the sync. `uv run` locks and syncs
+        # by default, so a bare `uv run` here would re-resolve and rewrite a
+        # stale lock — undoing the --frozen above and masking exactly what
+        # `uv lock --check` in `test` exists to catch.
+        run: uv run --frozen python -c "import sys; assert sys.version_info[:2] == (3, 13), sys.version"
+
+      - name: Test
+        run: uv run --frozen pytest
 
   docs:
     # Documentation consistency. The script has existed since the base-docs
@@ -107,7 +174,11 @@ jobs:
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
-          python-version: "3.12"
+          # The DECLARED FLOOR, not a convenient version. CI must exercise the
+          # weakest supported config, because that is the one nobody runs
+          # locally. Keep equal to requires-python — test_ci_gates.py asserts
+          # it. The other end (3.13) is covered by test-py313 below.
+          python-version: "3.11"
 
       - name: Install uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a  # v4 — pinned, NOT upgraded
