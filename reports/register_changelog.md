@@ -321,6 +321,66 @@ difference between it and everything else in this cluster.
 
 ---
 
+## The Python floor, and a refutation that expired (2026-08-13)
+
+`#443` lowered `requires-python` from `>=3.12` to `>=3.11`. Two entries registered: **C-347**
+(the required CI check decodes rasters with a different codec build than the server) and **C-348**
+(nothing asserts the server's interpreter, and the wider floor now lets it choose a codec line).
+ADR-030 amended rather than superseded — its tooling decision was never in question.
+
+**The lesson worth keeping is not about Python.** When `/code-review` ran on #430, one finder
+flagged that `_locked_versions()` in `tests/test_dependency_floors.py` builds a dict keyed by
+package name and would silently drop a duplicate. It was scored 25 and refuted, and the refutation
+was *correct*: this project had a single `requires-python` and no environment markers, so
+`uv.lock` could not contain two entries for one package. The changelog recorded it as such.
+
+#443 deleted that premise. Lowering the floor forks the lock — `tifffile` and `imagecodecs` each
+resolve twice — and the collapse became live: the guard would have compared a floor against a
+version it never read and reported success. In the file whose entire subject is mechanisms that
+fail green.
+
+**A refutation is only as durable as its premise, and nothing was watching the premise.** Findings
+are dismissed with a reason; the reason is a claim about the world; and claims about the world go
+stale exactly like the documentation this register keeps catching. We have no mechanism that
+re-examines a dismissal when its premise changes, and this is the second time in two weeks that a
+"cannot happen here" turned into "happened here" (see also C-343, where three sources of truth
+about the deployed version disagreed for five days).
+
+The practical consequence adopted here: the fix ships with a **fixture-based** parser test rather
+than one asserting against the real `uv.lock`. A test that reads the live lock passes vacuously
+whenever the lock has no duplicates — which is the state the original refutation described, and
+which will recur the moment the floor rises again.
+
+**The fork bit within the hour, and only because both ends were run.** Pinning mypy to the floor
+(`python_version = "3.11"`, added so the declared floor is checked at the keyboard and not only in
+CI) made mypy parse *third-party* source at 3.11 as well. On a 3.12+ interpreter the installed
+tifffile is 2026.5.15, which uses PEP 695, so mypy died on **its** source:
+`tifffile.py:929: Type statement is only supported in Python 3.12 and greater`. Under 3.11 the env
+holds tifffile 2026.3.3, which predates PEP 695 — so the identical command passed. A single-ended
+check would have shipped this, and it would have failed on every developer machine while CI stayed
+green. Fixed with a `follow_imports = "skip"` override for tifffile only.
+
+**And the fix for that had a fails-green of its own, immediately.** The override table was first
+written *inside* `[tool.mypy]`. A `[[tool.mypy.overrides]]` header ends the parent table, so
+`disallow_any_generics = false` — written below it — silently became an override key instead of a
+global one. mypy went from clean to **98 errors** in code nobody had touched. The TOML parsed
+perfectly and meant something else; caught only because the error count was implausible. Moved to
+the end of the section with a comment saying it must stay there. Same shape as the duplicate `run:`
+key in #424, three weeks earlier: **a parse is not a verification.**
+
+**Two holes closed in passing, neither registered because neither stays open.** The parser
+collapse above; and the absence of any LZW coverage. `imagecodecs` is imported by nothing under
+`src/`, is reached only implicitly through `read_geotiff`'s `page.asarray()`, and decodes 100% of
+production GHS-POP and GHS-BUILT-S rasters — yet **no test in this repository had ever written a
+compressed TIFF on any interpreter**. Blocking the import and attempting an LZW write raises
+`KeyError: "<COMPRESSION.LZW: 5> requires the 'imagecodecs' package"`; the uncompressed path that
+every existing test used keeps working. So an import-graph audit would have called the dependency
+removable, and removing it would have broken every production raster read while the suite stayed
+green. That is the C-337 audit shape again: every step true, conclusion wrong, because the question
+asked about imports rather than about what runs.
+
+---
+
 ## C-342 — the lockfile nobody can catch being stale (2026-08-08)
 
 `/register-risk` after `/code-review medium` on **#430**, the first story of epic #421.

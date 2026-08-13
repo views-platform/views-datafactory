@@ -199,7 +199,7 @@ uvx --from twine twine check dist/*            # both files must say PASSED
 uv publish --publish-url https://test.pypi.org/legacy/ dist/*
 
 # clean-room install back (TestPyPI for this pkg, real PyPI for the dependencies)
-uv venv --clear --python 3.12 /tmp/tp-check && source /tmp/tp-check/bin/activate
+uv venv --clear --python 3.11 /tmp/tp-check && source /tmp/tp-check/bin/activate
 uv pip install --index-url https://test.pypi.org/simple/ \
                --extra-index-url https://pypi.org/simple/ views-datafactory
 python -c "from datafactory_query import load_dataset, CONTRACT_VERSION; print('OK', CONTRACT_VERSION)"
@@ -330,6 +330,6 @@ eleven stale branches had accumulated before that was switched on.
 
 - This guide and `.github/workflows/publish_package.yml` mirror the views-frames
   routine (`views-frames/docs/guides/publishing-to-pypi.md`), adapted: Python floor
-  3.12, nine bundled packages, and the code-only wheel/sdist guarantee.
+  3.11, nine bundled packages, and the code-only wheel/sdist guarantee.
 - First exercised by the `v1.9.0` release (2026-07) — the first PyPI publish of this
   project.

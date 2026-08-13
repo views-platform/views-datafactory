@@ -8,7 +8,17 @@ authors = [
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.12"
+# Lowered 3.12 -> 3.11 on 2026-08-13 (#443). ADR-030 set >=3.12 because
+# "tifffile's current releases require it" — a fact about a vendor at a
+# moment, not an architectural need; 3.11 was never considered there.
+# The consumer that forced the question: the views-models conda envs run
+# 3.11.14/3.11.15, so 28 requirements files could not install this at all.
+# COST, and it is real: the lock now forks. Under 3.11 the raster stack
+# resolves tifffile 2026.3.3 / imagecodecs 2026.3.6; under >=3.12 it stays
+# 2026.5.15 / 2026.5.10. Both upstreams dropped 3.11 permanently (tifffile
+# uses PEP 695 from 2026.4.11 and would SyntaxError; imagecodecs ships
+# cp312-abi3 only from 2026.5.10). See the ADR-030 amendment and C-347.
+requires-python = ">=3.11"
 keywords = ["conflict-forecasting", "priogrid", "ucdp", "acled", "data-pipeline", "provenance", "zarr"]
 # License is declared via the SPDX `license` expression above (PEP 639); the deprecated
 # `License ::` classifier is intentionally omitted to avoid the expression/classifier clash.
@@ -17,6 +27,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
@@ -142,7 +153,7 @@ include = ["/src"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM"]
@@ -151,9 +162,40 @@ ignore = ["UP046"]
 [tool.mypy]
 strict = true
 ignore_missing_imports = true
+# Check against the DECLARED FLOOR, not whatever interpreter happens to be
+# running. Without this mypy uses the running one — 3.13 in the dev venv —
+# so a 3.12-only annotation would pass locally and fail only in CI. Ruff's
+# target-version already does the analogous job for lint. Keep both equal to
+# requires-python; tests/test_ci_gates.py asserts CI's pins match it too.
+python_version = "3.11"
+
+# tifffile is EXCLUDED from analysis, and the reason is the fork itself.
+# Pinning python_version to the floor makes mypy parse third-party source at
+# 3.11 too — and on a 3.12+ interpreter the installed tifffile is 2026.5.15,
+# which uses PEP 695 `type` statements. mypy then dies on ITS source, not
+# ours: "tifffile.py:929: Type statement is only supported in Python 3.12
+# and greater". Under 3.11 the env holds tifffile 2026.3.3, which predates
+# PEP 695, so the same command passes — the failure appears only on the
+# interpreter developers actually use.
+#
+# Found by running mypy at both ends rather than one (#443). Skipping the
+# import is right regardless: we type-check our code, not tifffile's, and
+# `read_geotiff` is the single narrow surface that touches it. Do not
+# "fix" this by dropping python_version — that would silence the floor
+# check everywhere to work around one third-party file.
 # numpy's ndarray is generic but parameterising it everywhere is noisy
 # and deviates from community convention.
 disallow_any_generics = false
+
+# MUST stay the last thing in the mypy section. A `[[tool.mypy.overrides]]`
+# table ends `[tool.mypy]`, so any plain key written after it silently
+# becomes an override key instead of a global one. Placed mid-section while
+# writing #443, this swallowed `disallow_any_generics = false` and mypy went
+# from clean to 98 errors — a config file that parsed perfectly and meant
+# something else.
+[[tool.mypy.overrides]]
+module = ["tifffile", "tifffile.*"]
+follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

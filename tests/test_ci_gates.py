@@ -126,3 +126,103 @@ class TestDeployGatesCanActuallyAnswer:
             "local branch, so it would otherwise claim coverage it does not "
             "have."
         )
+
+
+def _python_pin(job: str) -> str | None:
+    """The `python-version` a job hands to setup-python, if it sets one."""
+    for step in _steps(CI, job):
+        uses = step.get("uses") or ""
+        if "actions/setup-python" in uses:
+            with_ = step.get("with") or {}
+            pin = with_.get("python-version")
+            return None if pin is None else str(pin)
+    return None
+
+
+class TestCiPinsTrackTheDeclaredFloor:
+    """CI must exercise the floor pyproject declares, not a nearby version.
+
+    The drift this prevents is not hypothetical. Between 2026-05-18 and
+    2026-08-13 `pyproject.toml` said `>=3.12`, `hetzner_deployment_guide.md`
+    said "Install Python 3.10+", and CI said 3.12 — three numbers, two of
+    them wrong, none of them checked against another. The guide's number
+    described an environment in which this package could not be installed
+    at all, and nothing noticed for three months.
+    """
+
+    # WET on purpose: four names written out, not derived. Deriving them
+    # ("every job with a setup-python step") would silently start excusing
+    # `test-py313`, which is the one job that MUST differ.
+    FLOOR_JOBS = ["lint", "typecheck", "test", "import-enforcement"]
+
+    def test_required_jobs_pin_the_declared_floor(self) -> None:
+        import tomllib
+
+        data = tomllib.loads((REPO / "pyproject.toml").read_text())
+        requires = data["project"]["requires-python"]
+        assert requires.startswith(">="), (
+            f"requires-python is {requires!r}; this guard assumes a `>=` "
+            f"floor. If the form changed, update the guard rather than "
+            f"deleting it."
+        )
+        floor = requires.removeprefix(">=").split(",")[0].strip()
+
+        wrong = {
+            job: pin
+            for job in self.FLOOR_JOBS
+            if (pin := _python_pin(job)) != floor
+        }
+        assert not wrong, (
+            f"pyproject declares requires-python {requires!r} (floor "
+            f"{floor}), but these ci.yml jobs pin something else: {wrong}. "
+            f"CI must exercise the weakest supported configuration — it is "
+            f"the one no developer runs locally. Change the pins, or change "
+            f"the floor deliberately and change them together."
+        )
+
+
+class TestSomethingTestsANonFloorInterpreter:
+    """The floor is not the only supported version, so it cannot be the only tested one.
+
+    Since #443 the lockfile forks: 3.11 resolves an older tifffile and
+    imagecodecs than >=3.12 does, so the required `test` job decodes
+    rasters with a different codec build than the server. `test-py313`
+    is the only thing covering the production line. Delete it while
+    tidying and this test is what notices.
+
+    Asserted as a property ("some job runs pytest on a non-floor
+    interpreter") rather than by name, so renaming the job is fine and
+    removing the coverage is not.
+    """
+
+    def test_a_job_runs_pytest_on_something_other_than_the_floor(self) -> None:
+        import tomllib
+
+        data = tomllib.loads((REPO / "pyproject.toml").read_text())
+        floor = (
+            data["project"]["requires-python"]
+            .removeprefix(">=")
+            .split(",")[0]
+            .strip()
+        )
+        jobs = yaml.safe_load(CI.read_text())["jobs"]
+
+        covering = [
+            name
+            for name in jobs
+            if (pin := _python_pin(name)) is not None
+            and pin != floor
+            and any(
+                "pytest" in (s.get("run") or "") for s in _steps(CI, name)
+            )
+        ]
+        assert covering, (
+            f"No ci.yml job runs pytest on an interpreter other than the "
+            f"declared floor ({floor}). The floor is not the only supported "
+            f"version — classifiers claim more — and since #443 the lock "
+            f"resolves a DIFFERENT raster stack above 3.11, so testing only "
+            f"the floor leaves the version the server actually runs "
+            f"unexercised. Restore a job like `test-py313`. Do NOT solve "
+            f"this with strategy.matrix: it renames the required `test` "
+            f"check and every PR then blocks forever."
+        )
