@@ -43,6 +43,11 @@ on:
     # 06:00 UTC daily. Divergence is not urgent — it is a bookkeeping error,
     # not an outage — but it should not survive a working day unnoticed.
     - cron: "0 6 * * *"
+  # On demand. It was already here, and that is worth a sentence: this
+  # workflow COULD have been dispatched against a branch to exercise #435's
+  # new step before it reached `main`, and was not. The two dispatch runs on
+  # 2026-08-12 both targeted `main`, whose copy did not yet contain the step.
+  # The trigger was present; nobody aimed it at the change (#450).
   workflow_dispatch:
 
 permissions:
@@ -75,9 +80,25 @@ jobs:
         # checkout. Two real assertions were being skipped for want of these
         # two lines, one of which (conflict-free back-merge) the shell check
         # below does not perform at all.
+        #
+        # `update-ref`, NOT `git branch -f`. This workflow runs on `release`
+        # and `schedule`, both of which check out the DEFAULT BRANCH — so
+        # HEAD is on `main`, and `git branch -f main …` is refused outright:
+        # "fatal: Cannot force update the current branch." The job then died
+        # at this step and every step after it was skipped, including the
+        # gates themselves and the one that closes the tracking issue.
+        #
+        # It shipped in #435 and could not be caught before `main`: this
+        # workflow has no `pull_request` trigger, so the step had never once
+        # executed until the v1.12.0 promotion put it on the default branch.
+        # Then it failed silently for two days — the mechanism built to stop
+        # gates running nowhere was itself running nothing (#450).
+        #
+        # `update-ref` writes the ref regardless of what is checked out, and
+        # is a no-op when HEAD already equals it, which on this runner it does.
         run: |
-          git branch -f main origin/main
-          git branch -f development origin/development
+          git update-ref refs/heads/main origin/main
+          git update-ref refs/heads/development origin/development
 
       - name: Check main is an ancestor of development
         id: check

@@ -14,7 +14,7 @@ Creating local ``main``/``development`` refs must precede the gates
     gates' bare ``git merge-base --is-ancestor main development`` exits
     128 and they **skip themselves**. Measured, not assumed: a simulated
     runner checkout returns 128 even at ``fetch-depth: 0``. Remove those
-    two ``git branch -f`` lines while "tidying" and the gates go on
+    the ref-creation lines while "tidying" and the gates go on
     reporting success while asserting nothing — C-341 restored, silently.
 
 **Why the parse is not enough.** These were nearly shipped with a
@@ -103,7 +103,7 @@ class TestLockCheckRunsBeforeSync:
 class TestDeployGatesCanActuallyAnswer:
     def test_local_refs_are_created_before_the_gates_run(self) -> None:
         steps = _steps(HYGIENE, "topology")
-        refs = _index_of_run(steps, "git branch -f main origin/main")
+        refs = _index_of_run(steps, "update-ref refs/heads/main")
         gates = _index_of_run(steps, "test_falsification_deploy_v160")
         assert refs < gates, (
             "The step creating local `main`/`development` refs must run "
@@ -113,6 +113,35 @@ class TestDeployGatesCanActuallyAnswer:
             "themselves — reporting success while asserting nothing, which "
             "is C-341 exactly."
         )
+
+    def test_the_ref_step_does_not_force_update_a_checked_out_branch(
+        self,
+    ) -> None:
+        """`git branch -f <current>` is refused, and killed this job for 2 days.
+
+        This workflow triggers on `release` and `schedule`, both of which
+        check out the DEFAULT branch — so HEAD is on `main`. The original
+        form, `git branch -f main origin/main`, dies with "fatal: Cannot
+        force update the current branch", and because it is step 3 of 13,
+        *every* later step was skipped: the gates, and the step that closes
+        the tracking issue. Reproduced locally rather than inferred.
+
+        The test above only ever asserted the step EXISTS and comes first.
+        It was true and green throughout. This one asserts the step can
+        actually run — which is the difference #450 was about.
+        """
+        steps = _steps(HYGIENE, "topology")
+        refs = steps[_index_of_run(steps, "update-ref refs/heads/main")]
+        run = refs.get("run") or ""
+        for branch in ("main", "development"):
+            assert f"git branch -f {branch}" not in run, (
+                f"The ref step uses `git branch -f {branch}`. This workflow "
+                f"runs on the default branch, so git refuses to force-update "
+                f"whichever branch is checked out and the whole job dies "
+                f"before the gates. Use `git update-ref refs/heads/{branch} "
+                f"origin/{branch}`, which writes the ref regardless of what "
+                f"is checked out. See #450."
+            )
 
     def test_the_gates_get_a_token_and_the_ci_marker(self) -> None:
         steps = _steps(HYGIENE, "topology")
