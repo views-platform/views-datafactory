@@ -359,6 +359,33 @@ deadlock every merge.
 
 ---
 
+## C-351 entered retroactively — a dangling ID in a published release note (2026-08-18)
+
+Third `/falsify` on the same session-close claim. The first two found a broken workflow and a
+stale issue; this one found a **reference to a concern that did not exist**.
+
+`C-351` is cited in commit `8c8d897` and in the **published v1.12.0 release notes**, for the
+`serving-freshness.yml` fix in #440 — a workflow that had failed every run of its existence
+because `gh` had no repository to infer from. The fix was real and verified. The ID was never
+registered: zero occurrences here, zero in the register, zero open issues.
+
+**Why it is registered rather than corrected.** Editing the release note would leave commit
+`8c8d897` citing a non-existent ID forever, and commit messages are immutable. Registering the
+concern the citations *meant* makes both correct retroactively and costs one struck-through row.
+
+**Where the finding was nearly lost.** It was first written into the closing comment of #457 —
+and #457 was then closed. For a few hours the only record of an inaccuracy in a public artifact
+lived in a closed issue and a chat message, which is precisely the failure written down hours
+earlier as a memory. The lesson did not fire at the moment it was needed; the audit caught it
+instead.
+
+**The register's own guard caught the bookkeeping.** Adding the struck-through row without
+moving `resolved-or-demoted` from 304 to 305 failed
+`TestTechDebtResolved::test_concerns_header_accuracy` immediately. The counts are not
+decoration.
+
+---
+
 ## The Python floor, and a refutation that expired (2026-08-13)
 
 `#443` lowered `requires-python` from `>=3.12` to `>=3.11`. Two entries registered: **C-347**
