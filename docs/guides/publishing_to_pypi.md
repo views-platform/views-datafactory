@@ -247,6 +247,24 @@ and delete the over-privileged "entire account" token from your PyPI account set
    override — C-320's lesson. A release is a deliberate, low-frequency moment where a human is
    already paying attention, which is what the check actually needs.
 
+0b. **Did this release change a workflow with no `pull_request` trigger?** If so, dispatch it
+   against your branch before promoting. `release-topology.yml` is the one that exists today.
+
+   ```bash
+   gh workflow run release-topology.yml --ref <your-branch>
+   gh run list --workflow=release-topology.yml --limit 1
+   ```
+
+   **Why this step exists.** That workflow runs only on `schedule` and `release`, and both use the
+   **default branch's** copy — so CI never executes your edit on a pull request. It goes live the
+   instant it reaches `main`. In August 2026 a broken line sat on `development` for two days, went
+   live with a promotion, and ran nothing for four more; the job died at step 3 of 13 and skipped
+   the deploy gates *and* the step that closes its own tracking issue. `workflow_dispatch` was
+   available the whole time and nobody aimed it at the change (C-350, #450).
+
+   Running it on pull requests instead is not the fix — it would redden every PR between a release
+   and its back-merge, when the branches are *correctly* diverged. That is C-320.
+
 1. **Bump `version`** in `pyproject.toml` via the house release ritual (bump branch →
    PR → development; development → main PR). SemVer; you cannot reuse a published version.
 2. (Optional) rehearse on TestPyPI (§A) with a throwaway `X.Y.Z.dev1`; revert before merge.
