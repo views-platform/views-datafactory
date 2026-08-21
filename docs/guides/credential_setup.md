@@ -31,13 +31,13 @@ source code or config files distributed with the package.
 **The platform's other seam:** this guide governs the **datafactory
 seam** (features served over HTTP). Forecast storage and delivery run
 over the **Appwrite seam**, governed by
-[PLATFORM-001 — Identity, Secrets & Configuration Contract](https://github.com/views-platform/views-appwrite/blob/appwrite-seam-v1.7.1/docs/ADRs/platform/appwrite_seam_contract.md)
-(homed in views-appwrite; reciprocally cross-linked per þing-01). A
-full modeling/delivery runtime needs **both** seams' credentials in
-one environment — from this seam, the `~/.netrc` entry is the sole
-co-resident secret. The harvest tokens below are needed **only where
-harvests run**; no model, postprocessing, or serving runtime ever
-needs them.
+[The Appwrite Seam Contract — Identity, Secrets & Configuration](https://github.com/views-platform/views-appwrite/blob/appwrite-seam-v1.7.1/docs/ADRs/platform/appwrite_seam_contract.md)
+(formerly `PLATFORM-001`; homed in views-appwrite, reciprocally
+cross-linked per þing-01). A full modeling/delivery runtime needs
+**both** seams' credentials in one environment — from this seam,
+the `~/.netrc` entry is the sole co-resident secret. The harvest
+tokens below are needed **only where harvests run**; no model,
+postprocessing, or serving runtime ever needs them.
 
 ---
 
@@ -236,8 +236,9 @@ two or more sources share identical auth flows.
 - Shared service accounts for sources that prohibit credential sharing
 - Credentials in any carrier — env var, netrc entry, header, or URL
   query value — reaching a log line or exception message; endpoints may
-  be logged (PLATFORM-001 redaction clause, enforced for query-param
-  tokens at the shared HTTP layer in `datafactory_http.retry`)
+  be logged (The Appwrite Seam Contract's redaction clause, enforced
+  for query-param tokens at the shared HTTP layer in
+  `datafactory_http.retry`)
 
 ---
 

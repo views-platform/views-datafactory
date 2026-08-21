@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 # (GDL/SHDI) only accept the token as a query param, and requests embeds
 # the FULL url — query string included — in exception messages, which
 # fail-loud crash tracebacks then carry into log files. Redact at the
-# shared layer so no source can leak (PLATFORM-001 redaction clause:
-# credentials in any carrier are never logged; endpoints may be).
+# shared layer so no source can leak (The Appwrite Seam Contract's
+# redaction clause: credentials in any carrier are never logged;
+# endpoints may be).
 _SENSITIVE_QUERY_KEYS: frozenset[str] = frozenset({
     "token", "access_token", "apikey", "api_key", "key",
     "password", "secret",
