@@ -1953,3 +1953,127 @@ class TestStorageOptionsSeam:
             storage_options={"client_kwargs": {"headers": {}}},
         )
         assert ff.n_rows == 18
+
+
+class TestNoCredentialInQueryErrorPaths:
+    """A consumer URL may carry credentials; messages must not.
+
+    `~/.netrc` is the documented credential path, but nothing stops a
+    caller passing https://user:pass@host/grid.zarr — and this module
+    interpolates the store URL into seven error and warning messages.
+    A traceback from any of them lands in whatever log the caller keeps
+    (#388 item 6).
+    """
+
+    def test_permission_error_does_not_echo_userinfo(self) -> None:
+        from unittest.mock import patch
+
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
+
+        with (
+            patch(
+                "xarray.open_zarr",
+                side_effect=OSError("HTTP 401 Unauthorized"),
+            ),
+            pytest.raises(PermissionError) as ei,
+        ):
+            _load_grid_from_zarr(
+                "https://alice:s3cret@data.test/grid.zarr"
+            )
+
+        assert "s3cret" not in str(ei.value)
+        assert "data.test" in str(ei.value)
+
+    def test_file_not_found_does_not_echo_userinfo(self) -> None:
+        from unittest.mock import patch
+
+        from datafactory_query.backends_zarr import _load_grid_from_zarr
+
+        with (
+            patch(
+                "xarray.open_zarr",
+                side_effect=OSError("connection reset"),
+            ),
+            pytest.raises(FileNotFoundError) as ei,
+        ):
+            _load_grid_from_zarr(
+                "https://alice:s3cret@data.test/grid.zarr"
+            )
+
+        assert "s3cret" not in str(ei.value)
+
+    def test_netrc_parse_failure_is_logged_by_type_not_content(
+        self,
+    ) -> None:
+        """CPython's netrc parser embeds the offending token in the
+        exception, so an unquoted password containing a space leaks
+        fragments when the exception is logged as %s."""
+        from netrc import NetrcParseError
+        from unittest.mock import patch
+
+        from datafactory_query.backends_zarr import (
+            _resolve_storage_options,
+        )
+
+        boom = NetrcParseError(
+            "bad toplevel token 's3cretfragment'", "/home/u/.netrc", 3
+        )
+        # Patch netrc.netrc, not the module attribute: the loader does
+        # `from netrc import netrc` INSIDE the function, so a
+        # module-attribute patch would never be consulted and both
+        # assertions below would pass vacuously.
+        with (
+            patch("netrc.netrc", side_effect=boom),
+            patch(
+                "datafactory_query.backends_zarr.logger"
+            ) as mock_logger,
+        ):
+            _resolve_storage_options("https://data.test/grid.zarr")
+
+        logged = " ".join(
+            str(a) for c in mock_logger.warning.call_args_list
+            for a in c[0]
+        )
+        assert "s3cretfragment" not in logged
+        assert "NetrcParseError" in logged
+
+
+class TestDefaultsAuthDoesNotSurviveRedirect:
+    """urllib copies every header but content-length/content-type onto
+    a redirected request, so an Authorization header added with
+    `add_header` follows a 30x to any host. `add_unredirected_header`
+    is urllib's own API for exactly this (#388 item 7, second site)."""
+
+    def test_basic_auth_is_added_as_an_unredirected_header(
+        self,
+    ) -> None:
+        from unittest.mock import MagicMock, patch
+
+        import datafactory_query.defaults as d
+
+        captured: dict = {}
+
+        def _fake_urlopen(req, timeout=None):  # noqa: ANN001, ANN202
+            captured["req"] = req
+            resp = MagicMock()
+            resp.read.return_value = b'{"last_valid_month_id": 560}'
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = lambda *a: False
+            return resp
+
+        nrc = MagicMock()
+        nrc.authenticators.return_value = ("views", None, "s3cret")
+
+        with (
+            patch.object(d, "netrc", return_value=nrc),
+            patch.object(d.urllib.request, "urlopen", _fake_urlopen),
+        ):
+            d.get_last_valid_month_id("https://data.test/grid.zarr")
+
+        req = captured["req"]
+        assert "Authorization" not in req.headers, (
+            "Authorization in req.headers is copied onto a redirected "
+            "request by urllib and would reach any host the server "
+            "redirects to"
+        )
+        assert "Authorization" in req.unredirected_hdrs

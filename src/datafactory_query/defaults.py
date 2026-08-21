@@ -67,7 +67,13 @@ def get_last_valid_month_id(
             encoded = base64.b64encode(
                 f"{login}:{password}".encode(),
             ).decode()
-            req.add_header("Authorization", f"Basic {encoded}")
+            # add_unredirected_header, NOT add_header: urllib copies
+            # every header except content-length/content-type onto a
+            # redirected request, so add_header would forward this
+            # credential to whatever host a 30x points at (#388).
+            req.add_unredirected_header(
+                "Authorization", f"Basic {encoded}",
+            )
     except (FileNotFoundError, NetrcParseError, KeyError):
         pass
 
