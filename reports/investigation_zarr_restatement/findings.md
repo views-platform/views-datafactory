@@ -37,7 +37,7 @@ runs out, that is said rather than smoothed over.
 ```
 
 There is no incremental or append code path anywhere in the export. Assembly behaves the same way —
-it pre-allocates with `np.zeros` and rebuilds the whole `[T, H, W, C]` array (ADR-047 §3).
+it pre-allocates with `np.zeros` and rebuilds the whole `[T, H, W, C]` array (ADR-047, rule 3 under `### Rules`).
 
 **Consequence for you:** every byte you fetch may differ from last month's, including bytes for
 1990. Not because they were targeted, but because nothing writes a subset.
@@ -51,7 +51,7 @@ replaced**. No mechanism exists that could rewrite only the tail.
 
 ### 1.3 Upstream data is mutable, and this was measured, not assumed.
 
-On 2026-03-21, probing every retained UCDP candidate version
+On 2026-03-21, probing 26 retained UCDP candidate versions spanning 2024-2026 (the API retains candidates from January 2018 onward per ADR-015:16; earlier versions were **not** probed, which bounds §2.1)
 (`reports/dot9_investigation/findings.md:277-280`):
 
 | Versions | Count | Result |
@@ -73,7 +73,7 @@ about because the two layers behave differently:
 - **The consolidated store is append-only.** ADR-015:49 — *"Each harvest run adds records to the
   store. Existing records are never modified. If UCDP revises an event in a new annual release,
   the revision appears as a new record with a different `_source_version`."* Every vintage is kept.
-- **The grid is not.** `src/datafactory_viewpoint/survivorship.py:57-74` (`annual_wins`) selects
+- **The grid is not.** `src/datafactory_viewpoint/survivorship.py:57-77` (`annual_wins`) selects
   **annual if available, else the latest candidate**. So when a new annual release lands, months
   previously served from candidate data are **replaced** by the annual figures.
 
@@ -114,9 +114,15 @@ magnitude, not a measurement of run-to-run drift. It is the closest number that 
 The 2026-03-21 probe is consistent with it — all fourteen recent versions moved, all twelve
 year-old ones did not.
 
-**If true**, restatement is effectively bounded to a trailing window and an append-plus-recent-window
-strategy would be safe. **We cannot tell you it is true.** It is a pattern observed once, not a
-policy anyone has stated. Do not build on it.
+**Even if it were confirmed, it would not make append-only safe** — an earlier draft said it would,
+which was wrong. The boundary concerns **candidate** versions. Annual releases are a separate
+mechanism: ADR-015:15 says a new annual release *"may revise events from prior years"*, with no
+stated limit, and §1.4 shows survivorship replacing served months when one lands. **There is no
+recency window on annual restatement.**
+
+So this is an interesting observation about one upstream series, not a route to a cheaper strategy.
+Do not build on it — not merely because it is unconfirmed, but because it would be insufficient even
+if confirmed.
 
 ### 2.2 Restatement and append almost always arrive together.
 
@@ -151,13 +157,27 @@ each cycle — `source_digest` and `last_valid_month_id`:
 
 | Observation | What it means | Your action |
 |---|---|---|
-| `source_digest` unchanged | **Nothing changed anywhere.** Guaranteed by §1.2 | **Skip the re-pull entirely.** This is the real saving |
-| digest changed, `last_valid_month_id` **advanced** | At least a new month arrived. **Cannot rule out a simultaneous restatement** | Re-pull |
-| digest changed, `last_valid_month_id` **unchanged** | **Something moved that was not an append.** The only unambiguous restatement signal in the system | Re-pull |
+| `source_digest` unchanged | **No grid values changed.** Guaranteed by §1.2. It digests `grid.npy` only, so a re-export with different chunking or labels could republish under the same digest — values are what it protects, and values are what you care about | **Skip the re-pull entirely.** This is the real saving |
+| `source_digest` changed | **Something changed. We cannot tell you what.** | Re-pull |
 
-Row 2 is the ambiguous one — and per §2.2 it is the **normal** case, not a rare edge. So this is not
-a general solution. It is a cheap way to detect *no change*, and an honest admission that when
-something did change, we cannot tell you what.
+**That is the whole signal. Two states, not three.**
+
+An earlier draft of this document claimed a third — that a changed digest with an *unchanged*
+`last_valid_month_id` was an unambiguous restatement signal. **That was wrong, and the error is
+recorded here because it is exactly the kind that would have cost you.**
+
+`last_valid_month_id` is computed from `ged_*` features **only**: `scripts/export_zarr.py:280-294`
+filters `feature_names` to those beginning `ged_`, i.e. UCDP. The grid also carries ACLED, GHS-POP,
+GHS-BUILT-S, V-Dem, SHDI and the GAUL crosswalk. So a run in which **only ACLED gains a month**
+changes the digest and leaves `last_valid_month_id` exactly where it was — producing the signature
+the draft called "unambiguous restatement" for what is a plain append.
+
+Acted on, that would have had views-postprocessing report a history rewrite to FAO in a month where
+nothing was rewritten. Caught in review before publication.
+
+**So `last_valid_month_id` tells you whether UCDP's observed frontier moved, and nothing else.** It
+is what views-postprocessing already uses to decide which months are fabricated in the delivery.
+Do not press it into service as a change detector.
 
 **We are deliberately not building a finer signal.** Reasons, in case it is asked for later: a
 per-month digest could be asserted by us but not *verified* by you, because the store's chunks span
@@ -178,9 +198,15 @@ survivorship selects one.
 
 ### 3.4 What reaches FAO is a parquet, not this store.
 
-Worth stating because it changes who can act on §3.2. FAO's historical file is produced by
-`scripts/generate_consumer_data.py`, and its provenance manifest (`:278-298`) is **not served** —
-the public server exposes exactly three paths: `grid.zarr`, `dataframe.parquet` and `status.html`.
+Worth stating because it changes who can act on §3.2. **views-postprocessing builds and re-uploads
+FAO's historical file themselves** — this repository does not deliver to FAO directly. What it
+serves is exactly three paths: `grid.zarr`, `dataframe.parquet` (produced by
+`scripts/export_dataframe.py`, `refresh_pipeline.sh:301`) and `status.html`. No provenance manifest
+is served alongside either artifact.
+
+*(An earlier draft named `scripts/generate_consumer_data.py` here. That is the views-models training
+bridge — it writes `{model}/data/raw/{run_type}_viewser_df.parquet` — and is not on the FAO path.
+Corrected in review.)*
 
 So the digest check in §3.2 is available to **views-postprocessing**, who fetch the zarr. It is not
 available to FAO's contractor directly. Any saving has to be realised on the views-postprocessing
