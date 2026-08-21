@@ -2320,7 +2320,7 @@ in-memory; error paths name the netrc *path*, never contents).
 | Trigger | Fired on any SHDI harvest HTTP failure since the source shipped (ADR-036) |
 | Location | `src/datafactory_http/retry.py` (fix: `_redact_url`, `_redacted_copy`), `src/datafactory_harvester/sources/shdi.py:231` (the query-param transport), `tests/test_http_retry.py:TestCredentialRedaction` |
 
-Cross-ref: C-318 (transport-layer credential exposure, sibling concern), PLATFORM-001 redaction clause (the platform-wide rule this enforces), C-321 (the real-exception-type test rule applied here).
+Cross-ref: C-318 (transport-layer credential exposure, sibling concern), The Appwrite Seam Contract's redaction clause (the platform-wide rule this enforces), C-321 (the real-exception-type test rule applied here).
 
 **Residual (2026-07-31):** the code fix removes the *future* leak vector only. The credential itself was never rotated and the pre-fix code is still what the server runs — tracked separately as C-324, which is open.
 ---

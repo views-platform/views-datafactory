@@ -366,7 +366,8 @@ class TestRequestWithRetryRed:
 
 class TestCredentialRedaction:
     """No credential may reach a log line or exception message
-    (þing-01 / PLATFORM-001 redaction clause; #369 audit).
+    (þing-01 / The Appwrite Seam Contract redaction clause;
+    #369 audit).
 
     GDL/SHDI is the one source that must carry its token as a query
     param; requests embeds the FULL url in exception text, and crash
