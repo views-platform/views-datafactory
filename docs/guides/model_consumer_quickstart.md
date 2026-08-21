@@ -66,12 +66,26 @@ Paste your API key from wandb.ai/authorize when prompted.
 
 A model uses the datafactory backend when its `configs/config_queryset.py`
 returns a dict descriptor with `"source": "views-datafactory"` (viewser models
-return a `Queryset` object instead). Example: `warring_cleric`.
+return a `Queryset` object instead). On views-models `main` today that is
+`bright_starship`, `heavy_freighter`, `heavy_strider`, `light_strider` and
+`shining_codex` — five of the eighty models there. Example: `light_strider`.
 
 ```bash
-cd models/warring_cleric
+cd models/light_strider
 ./run.sh -r calibration -t -e
 ```
+
+> **If you cloned views-models `main`, this step may fail before it trains**, with a
+> `KeyError` about `skip_predictions_delivery` from the config sniffer. That is a
+> views-models branch-sync gap, not a datafactory problem: the config key that
+> avoids it exists on their `development` for 55 models and has not reached `main`.
+> Reported as #455. Nothing in this guide works around it — the fix is theirs to
+> ship.
+>
+> This guide previously named `warring_cleric`, which is datafactory-backed but
+> exists **only** on views-models `development`. A clean-install reader following
+> `main` could not find it at all. Named models here must be verified against
+> `git ls-tree origin/main models/` before being written down.
 
 `run.sh` builds the model's environment on first run — installing
 `views-datafactory` from PyPI per the model's `requirements.txt` — then
