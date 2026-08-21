@@ -154,7 +154,7 @@ API (regions, time formats, FeatureFrames, country-month aggregation), see the
   the harvest tokens you'd need to run the pipeline yourself
 - **[consumer_contract.md](consumer_contract.md)** — the stability promise
   behind the column names and formats your model depends on
-- **[PLATFORM-001](https://github.com/views-platform/views-appwrite/blob/main/docs/ADRs/platform/PLATFORM-001_identity_secrets_configuration_contract.md)**
+- **[PLATFORM-001](https://github.com/views-platform/views-appwrite/blob/appwrite-seam-v1.7.1/docs/ADRs/platform/appwrite_seam_contract.md)**
   — the identity/secrets contract for the platform's *other* seam (Appwrite
   forecast storage). Running a model touches only this guide's seam; running
   the full delivery chain needs both seams' credentials in one environment

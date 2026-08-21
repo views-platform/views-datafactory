@@ -9,10 +9,29 @@ governs how credentials work in this project. The key rules:
 credentials live in environment variables or `~/.netrc`, never in
 source code or config files distributed with the package.
 
+<!-- PIN: appwrite-seam-v1.7.1. Not `main` — a bare main link is not a pin, and this
+     one already changed meaning underneath us once (#393).
+
+     Moving this pin obliges a diff-read; it is not a version bump. The registry at
+     `docs/ADRs/platform/coordinate_registry.toml` in views-appwrite states the rule:
+
+         conformant  <=>  your_pin >= obliges_consumers_since   (currently 1.5.2)
+
+     Read the [edition."X.Y.Z"] table there and look only at editions with
+     obliges_consumers = true; the rest are console observations that ask nothing.
+
+     Diff-read done 2026-08-21, v1.2.0 -> v1.7.1. Three obliging editions in that range:
+       1.3.0  the rename PLATFORM-001 -> The Appwrite Seam Contract. APPLIES TO US (#395).
+       1.5.0  [contract.*] table + UNFAO_CONSUMER_DOCUMENT_NAME. Parties are
+              views-postprocessing and views-faoapi. Not us.
+       1.5.2  UNCRAFD_CONSUMER_DOCUMENT_NAME. Parties are views-postprocessing and
+              views-crafdapi. Not us.
+     Section 5 is byte-identical across the two tags, so §5.6 — the redaction clause
+     cited in src/datafactory_http/retry.py — has not moved. -->
 **The platform's other seam:** this guide governs the **datafactory
 seam** (features served over HTTP). Forecast storage and delivery run
 over the **Appwrite seam**, governed by
-[PLATFORM-001 — Identity, Secrets & Configuration Contract](https://github.com/views-platform/views-appwrite/blob/main/docs/ADRs/platform/PLATFORM-001_identity_secrets_configuration_contract.md)
+[PLATFORM-001 — Identity, Secrets & Configuration Contract](https://github.com/views-platform/views-appwrite/blob/appwrite-seam-v1.7.1/docs/ADRs/platform/appwrite_seam_contract.md)
 (homed in views-appwrite; reciprocally cross-linked per þing-01). A
 full modeling/delivery runtime needs **both** seams' credentials in
 one environment — from this seam, the `~/.netrc` entry is the sole
