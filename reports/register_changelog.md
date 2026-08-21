@@ -17,6 +17,44 @@ entry could.
 
 ---
 
+## C-354 — the fix you can afford is not always the fix you would choose (2026-08-22)
+
+#388 item 7: a custom credential header (`x-ucdp-access-token`) survives a cross-host redirect,
+because `requests` strips only the literal `Authorization`. The canonical remedy is a
+`requests.Session` overriding `rebuild_auth` — the hook the library provides for precisely this.
+
+It was unaffordable. **Nine test modules patch `datafactory_http.retry.requests.request` directly,
+63 sites, five asserting the exact kwarg set.** `Session().request` is not `requests.request`, so
+the good fix breaks every one of them.
+
+What shipped is narrower and, on its own merits, better: refuse redirects only for requests carrying
+a header from a named set, and fail loudly on a 3xx rather than following it or silently dropping
+the header. It preserves redirects for the eleven sources that share the function — GHSL and GAUL
+downloads are exactly the kind that move to a CDN.
+
+**Two things are worth admitting rather than smoothing over.** `Authorization` is excluded from the
+sensitive set for a correct reason (requests already strips it) *and* a convenient one (it is the
+header those five exact-kwarg assertions pass). And the guard tests `status_code` rather than
+`resp.is_redirect` because a bare `MagicMock` has a truthy `is_redirect` — test-shape has leaked
+into a production branch condition, with a comment in the source saying so.
+
+**The audit's item 6 was also understated.** It said `_redact_url` "does not handle userinfo". True,
+but the larger half was the outer filter `_redact_one(part) if "?" in part else part` — a
+credential-bearing URL with no query string never reached the redactor at all. Demonstrated before
+fixing:
+
+```
+https://alice:s3cret@data.test/grid.zarr  ->  unchanged
+```
+
+**And a site the audit missed entirely.** `datafactory_query/defaults.py` added the netrc basic-auth
+credential with `req.add_header`; urllib copies every header but `content-length`/`content-type`
+onto a redirected request. Read from the CPython source rather than assumed. One word fixes it —
+`add_unredirected_header` — and that credential is the shared one every consumer holds, so it was
+the more valuable of the two.
+
+---
+
 ## C-353 — a plausible argument, measured for the first time, and it is 99.75% right (2026-08-21)
 
 `generate_area_majority_gaul.py` ranks candidate GAUL polygons by `cell.intersection(poly).area`

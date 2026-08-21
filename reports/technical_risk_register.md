@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-21 — C-353 registered (#465, #387): area-majority ranks candidate GAUL polygons in **square degrees, not area**; measured exhaustively above 55°N, **9 of 3,591 border cells flip**, all nine delivered to FAO, none changing country. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-22 — C-354 registered (#388): nine test modules patch `requests.request` directly (63 sites), which made the canonical fix for a cross-host credential leak unaffordable and shaped the one that shipped. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 353 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 308 resolved-or-demoted, 42 open concerns (0 Tier 1, 3 Tier 2, 13 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 124 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 354 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 308 resolved-or-demoted, 43 open concerns (0 Tier 1, 3 Tier 2, 13 Tier 3, 21 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 124 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -183,6 +183,7 @@
 | ~~C-351~~ | ~~3~~ | ~~`serving-freshness.yml` failed every run of its existence — ten runs, ten failures from 2026-08-03. `gh` infers the repo from the git remote and the job has no `actions/checkout`, deliberately, so every `gh issue` call died~~ | Resolved 2026-08-12 (#440): `GH_REPO: ${{ github.repository }}` supplies the input that was missing; verified by the workflow's first successful run. **Registered retroactively 2026-08-18** — the ID was cited in commit `8c8d897` and the v1.12.0 release notes but never entered here | Operational monitoring |
 | C-352 | 3 | `last_valid_month_id` is **UCDP-scoped but generally named**: computed from `ged_*` features only (`export_zarr.py:280-294`) while the grid carries ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI and GAUL. Two sibling repos read it as *the store's* frontier — views-postprocessing to decide which months are marked **fabricated in the FAO delivery**, views-models to gate liveness | **Before relying on it to mean anything other than "UCDP's observed frontier"** — and before adding a source whose coverage can outrun UCDP's. Confirm with views-postprocessing whether UCDP-scoping is what their observed/fabricated split intends | Consumer contract |
 | C-353 | 3 | **Area-majority ranks candidate GAUL polygons in square degrees, not area** (`generate_area_majority_gaul.py:157-172`). Measured 2026-08-21 over every cell above 55°N: **9 of 3,591 border cells flip** under true area. All nine are in the FAO delivery. Eight differ at `gaul2_code` only, one also at `gaul1_code`, **none at `gaul0_code`** | **Before any correction of `data/raw/gaul_admin/*.parquet`** — views-postprocessing's `test_gaul_lookup_fidelity.py` breaks loudly on a changed digest and step 4 of their correction procedure (who tells FAO, on what notice) is still open. Also when GAUL is next reharvested, which reruns the same ranking | Compilation |
+| C-354 | 4 | **Nine test modules patch `datafactory_http.retry.requests.request` directly — 63 sites, five asserting the exact kwarg set.** The mock target is an implementation detail of `request_with_retry`, so any change to *how* it issues its request (a `requests.Session` for connection pooling, urllib3-level retries, or redirect safety) breaks tests that have nothing to do with the change | **Before changing how `request_with_retry` issues its request** — introducing a `Session`, an adapter, or a transport wrapper. Budget the test churn as part of that change rather than discovering it mid-implementation, as #388 did | HTTP layer |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -3442,6 +3443,40 @@ Cross-ref: C-130 (zero-filled future months, the concern this attribute was adde
 **A second thing the measurement surfaced, not fixed:** `area_majority_join` (`:103-126`, tested) and `_compute_cell_polygon_map` (`:157-172`, called) are near-duplicates whose tie-breaking differs — lowest GAUL code versus lowest polygon index. The tested one is not the one that runs. Out of scope for #465 and recorded in its own right.
 
 Cross-ref: C-149 (the coastal gap this assignment was built to fix), ADR-039, ADR-030 (dependency floor). GitHub: #387, #465, epic #461.
+
+### C-354: The HTTP layer's tests are coupled to *how* it makes a request, not what it guarantees
+
+**Source:** #388 item 7, while designing the cross-host redirect guard (2026-08-21). Found because the obvious fix was impossible, not by reading the tests.
+
+**Trigger:** **Before changing how `request_with_retry` issues its request** — a `requests.Session` for connection pooling or urllib3-level retries, an adapter, a transport wrapper. Budget the test churn as part of that work.
+
+**Location:** `src/datafactory_http/retry.py:106` (`request_with_retry`); mocked from `tests/test_http_retry.py`, `test_acled_harvester.py`, `test_ucdp_annual.py`, `test_ucdp_dot9.py`, `test_ucdp_candidate.py`, `test_ghspop_harvester.py`, `test_gaul_admin.py`, `test_grid.py`, `test_falsification_acled_phase2.py`.
+
+**The coupling.** `MOCK_TARGET = "datafactory_http.retry.requests.request"` — 63 patch sites across nine modules name the module-level function this implementation happens to call. Five go further and assert the exact kwargs:
+
+```python
+mock_request.assert_called_once_with(
+    "GET", "http://test", headers=..., params=...,
+    data=None, json=None, timeout=10,
+)
+```
+
+**What it cost, concretely.** #388 item 7 asks that a custom credential header not survive a cross-host redirect. The canonical fix is a `requests.Session` overriding `rebuild_auth` — the hook `requests` provides for exactly this, which strips sensitive headers on host change while leaving redirects working. **All 63 sites would have broken**, because `Session().request` is not `requests.request`.
+
+The shipped fix instead passes `allow_redirects=False` only when a request carries a header from a named set, and fails loudly on a 3xx. It is a good fix on its merits — narrower blast radius, fails loud per ADR-011, and does not disable redirects for the eleven sources that share the function. **But it was chosen partly because the better-known one was unaffordable, and that is worth recording.**
+
+**Two details that make this sharper than "tests use mocks".**
+
+1. **`Authorization` was deliberately excluded** from the sensitive-header set. It is genuinely unnecessary — `requests` already strips it on host change — but it is *also* the header those five exact-kwarg assertions pass. The right answer and the cheap answer coincided here. They will not always.
+2. **The guard checks `status_code`, not `resp.is_redirect`**, because a bare `MagicMock` has a truthy `is_redirect` and would have made every UCDP test raise. The production code carries a comment saying so. **Test-shape has leaked into a production branch condition** — small, and exactly the kind of thing this entry exists to make visible.
+
+**Tier 4, not 3.** Nothing is wrong and no data can be corrupted; the tests pass and test what they claim. The cost is entirely future: a change that should touch one file touches ten. Not dismissed as noise because it has already redirected one design decision, on the day it was found.
+
+**Not fixed here, and possibly not worth fixing.** Rewriting 63 sites to patch at a seam of our own choosing is a large mechanical change with real risk of weakening what the tests assert, in exchange for a benefit nobody needs today. WET-before-DRY applies to test doubles too. The point of this entry is that the next person meets the constraint in writing rather than three hours into an implementation.
+
+**Adjacent, verified, not a concern.** The same cross-host question for the *other* two credential carriers was checked: `urllib` (`datafactory_query/defaults.py`) copies every header but `content-length`/`content-type` onto a redirected request, and **was** leaking the netrc basic-auth credential — fixed in #388 with `add_unredirected_header`. `aiohttp` 3.13.5, reached via fsspec in `backends_zarr.py`, already does `if url.origin() != redirect_origin: auth = None`, so it is safe. The declared floor is `aiohttp>=3.9` and **it was not verified that 3.9 carries that strip**; `uv.lock` pins 3.13.5, so every environment built from the lock is safe.
+
+Cross-ref: C-322 (the redaction this layer performs), C-345, ADR-011 (fail-loud). GitHub: #388.
 
 ---
 
