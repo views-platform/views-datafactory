@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-21 — epic #461 Story 1 (#462): sixteen residue issues closed with evidence, C-329 and C-337 struck as fixed-in-code-but-open-on-paper, and C-328's trigger honoured by redacting the shell-account names this file re-published. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-21 — C-352 registered (#469): `last_valid_month_id` is UCDP-scoped but generally named, and two sibling repos read it as the store's frontier — found as a wrong claim in the FAO-facing answer before it published. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 351 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 308 resolved-or-demoted, 40 open concerns (0 Tier 1, 3 Tier 2, 11 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 124 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 352 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 308 resolved-or-demoted, 41 open concerns (0 Tier 1, 3 Tier 2, 12 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 124 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -181,6 +181,7 @@
 | C-349 | 4 | A config value restated in prose has nothing binding it back — `hetzner_deployment_guide.md` said "Install Python 3.10+" for the three months `pyproject.toml` declared `>=3.12`, an instruction producing an environment where the package could not install. The #444 pin guard binds *workflow* pins to `requires-python`; nothing binds *prose* | **When writing a Python version, or any pyproject value, into a guide or ADR** — link to the declaration instead of restating it, or accept that the copy will not be checked | Documentation drift |
 | ~~C-350~~ | ~~3~~ | ~~`release-topology.yml` ran **nothing** for two days: `git branch -f main origin/main` is refused when `main` is the checked-out branch, which it always is on `release`/`schedule`. The job died at step 3 of 13, skipping the deploy gates and the step that closes the tracking issue. Its own guard asserted the step *exists* and *precedes* the gates — both true throughout | Resolved 2026-08-18: fixed in #451, promoted in #452, verified by dispatch **and** by the 06:25 scheduled run; the procedural residual is now step 0b of `publishing_to_pypi.md` §C | Test infra |
 | ~~C-351~~ | ~~3~~ | ~~`serving-freshness.yml` failed every run of its existence — ten runs, ten failures from 2026-08-03. `gh` infers the repo from the git remote and the job has no `actions/checkout`, deliberately, so every `gh issue` call died~~ | Resolved 2026-08-12 (#440): `GH_REPO: ${{ github.repository }}` supplies the input that was missing; verified by the workflow's first successful run. **Registered retroactively 2026-08-18** — the ID was cited in commit `8c8d897` and the v1.12.0 release notes but never entered here | Operational monitoring |
+| C-352 | 3 | `last_valid_month_id` is **UCDP-scoped but generally named**: computed from `ged_*` features only (`export_zarr.py:280-294`) while the grid carries ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI and GAUL. Two sibling repos read it as *the store's* frontier — views-postprocessing to decide which months are marked **fabricated in the FAO delivery**, views-models to gate liveness | **Before relying on it to mean anything other than "UCDP's observed frontier"** — and before adding a source whose coverage can outrun UCDP's. Confirm with views-postprocessing whether UCDP-scoping is what their observed/fabricated split intends | Consumer contract |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -3357,6 +3358,55 @@ Cross-ref: ~~C-341~~ (the concern #435 was closing when it introduced this), ~~C
 **Why this entry exists at all, given it was already fixed.** The ID `C-351` was cited in commit `8c8d897` and in the **published v1.12.0 release notes**, and was never registered — a dangling reference in a public artifact, found by `/falsify` on 2026-08-18. Commit messages and published releases are immutable; editing the release note would leave the commit citing a non-existent ID forever. Registering the concern the citations *meant* makes both correct retroactively, and costs one struck-through row.
 
 Cross-ref: ~~C-335~~ (the serving-path gap this workflow closes), C-338 (freshness depends on a GitHub-scheduled workflow rather than the monitoring vendor), ~~C-350~~ (the sibling workflow that also ran nothing, found the same way — by looking). Part of the **mechanisms that fail green** cluster. GitHub: #440.
+
+---
+
+### C-352: `last_valid_month_id` is UCDP-scoped but generally named, and two repos read it as the store's frontier
+
+**Source:** `/code-review medium` on #469 (2026-08-21), while answering #453 for FAO. Found as a **wrong claim in a partner-facing document before it published** — the document is fixed; this entry is the underlying fact it exposed.
+
+**Trigger:** **Before relying on `last_valid_month_id` to mean anything other than "UCDP's observed frontier"**, and before adding a source whose coverage can outrun UCDP's. Also: confirm with views-postprocessing whether UCDP-scoping is what their observed-versus-fabricated split actually intends.
+
+**Location:** `scripts/export_zarr.py:276-296`; consumed via `src/datafactory_query/defaults.py:48-86` (`get_last_valid_month_id`); read by views-postprocessing (`delivery/observed_range.py`) and views-models (`tools/liveness/datafactory_input.py`).
+
+**The mismatch.** The attribute is computed from `ged_*` features alone:
+
+```python
+ucdp_indices = [i for i, name in enumerate(feature_names) if name.startswith("ged_")]
+```
+
+The grid carries five other source families. The name says `last_valid_month_id`; the value means *last month in which UCDP has a non-zero observation*.
+
+**The code comment makes the same slip**, two lines apart:
+
+```
+# Data boundary: last month with real UCDP observations.        <- correctly scoped
+# ...only months through this boundary have observed data;      <- generalised, and false
+```
+
+**Why it matters beyond tidiness.** views-postprocessing uses this value to decide which months are labelled **fabricated in the delivery to FAO**. Months no source observed are correctly fabricated; months observed by a source other than UCDP are labelled on a UCDP-shaped boundary.
+
+**This is not hypothetical, and ADR-047 contradicts itself about it.** Rule 3 under `### Rules` states the assumption — *"Sources with **shorter** temporal coverage **than UCDP** get zeros in months outside their range"* — i.e. UCDP is both the anchor and the longest. The coverage table twelve lines later in the same ADR says otherwise:
+
+| Source | Temporal range |
+|---|---|
+| UCDP (GED) | 1989-01 – present (anchor) |
+| **GHS-POP** | 1975 – **2030** |
+| **GHS-BUILT-S** | 1975 – **2030** |
+
+Two sources extend past UCDP by design rather than by harvest lag. Whether those months reach the assembled grid depends on `--end-year`, which `scripts/refresh_pipeline.sh:288-294` does not pass — and `export_zarr.py:277` states the grid *is* pre-allocated beyond the boundary, calling the excess *"zero-filled padding"*, which holds only if no other source populated it.
+
+**A UCDP frontier may still be the intended semantics** — the delivery is conflict forecasting and UCDP is the outcome variable. Nobody in this repository can decide that, which is why the trigger asks views-postprocessing rather than asserting.
+
+**How it surfaced.** The draft answer to #453 claimed that a changed `source_digest` with an unchanged `last_valid_month_id` was *"the only unambiguous restatement signal in the system."* An ACLED-only append produces exactly that signature. Published, it would have had views-postprocessing report a history rewrite to FAO in a month where nothing was rewritten. The reviewer caught it; the document now carries a two-state table and records the error.
+
+**Tier 3, not 2.** No values are wrong and nothing is silently corrupted — the numbers in the grid are correct. What can be wrong is a **label applied to them in a partner-facing product**, and the coupling spans three repositories. Not Tier 4 because a partner sees the consequence.
+
+**One part of this survives whatever views-postprocessing answers.** Even if UCDP-scoping is exactly the intended semantics, **ADR-047 still contradicts itself** — rule 3 asserts UCDP is the longest source while the table below it lists two that are not. That is a one-line amendment to the ADR and it is owed either way. Recorded here rather than as a separate entry, because a second entry would carry the same trigger and this register was cut from 45 to 40 open precisely to stop that.
+
+**Not fixed here, deliberately.** Renaming the attribute would break `get_last_valid_month_id` in two repos — and that accessor, not `.zattrs`, is the de-facto contract surface. The cheap first move is the conversation the trigger names, not a rename.
+
+Cross-ref: C-130 (zero-filled future months, the concern this attribute was added for), C-133, ~~C-300~~ (the `first_valid_month_ids` sibling, which *is* per-source). GitHub: #469, #453.
 
 ---
 
