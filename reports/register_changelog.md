@@ -359,6 +359,46 @@ deadlock every merge.
 
 ---
 
+## Sixteen issues closed, two entries found stale, and one trigger honoured (2026-08-21)
+
+Epic #461 Story 1 (#462). The point of this entry is what the reconciliation **did not** find.
+
+**Sixteen issues closed with evidence.** Not "closing as stale" — each closing comment names the
+commit, guard test, or register row that made it safe. The mechanism was uniform: a parent closed
+and its children outlived it. Epic #170, parent of all ten `WP:` umbrellas, closed two months ago;
+`/review-rr strategic` demoted C-116 and C-117 on 2026-08-04 and #187 never noticed. Epic #376
+closed with four of five stories shipped and still open. #186 was **100% complete and never ticked**.
+
+**Two entries were fixed in code and open on paper.**
+
+- **C-329** — the register's own words: *"the highest-consequence item the sweep found."* It
+  described mutable action tags at `publish_package.yml:30,33`; those lines carry full SHAs and had
+  since #388's SHA-pin item. Struck.
+- **C-337** — stayed Tier 2 for one stated reason: *"nothing checks the other dependency floors
+  against what their locks chose."* `tests/test_dependency_floors.py` (#430) does exactly that, and
+  has since 2026-08-08. The residual closed and nobody went back to the entry it belonged to.
+
+**Three suspicions were wrong, and the probes are why.** C-346 says "four copies" of a conditional
+`xfail` — there are exactly four with `@pytest.mark.xfail(`; the fifth file has none. C-332's
+`_redact_url` still only touches `parsed.query` and returns early when there is none, so userinfo
+is still unredacted. C-328 is still true. **Two stale entries out of forty-two is not a systemic
+problem**, and saying so is the result — a reconciliation that reports "nothing further" is an
+outcome, not a failure.
+
+**C-328's trigger fired during this very edit.** It reads *"Next edit to
+`technical_risk_register.md` — replace the quoted `ls /home` output with placeholders."* This was
+that edit. All shell-account names are now gone from the file — the `ls /home` quotation the trigger
+names, and three further mentions inside permission-test evidence where "the admin account" carries
+the same finding. **The second half of that trigger — a pre-commit or CI guard so the policy is
+enforced rather than remembered — is deliberately not done here.** It is a different piece of work,
+and C-328 stays open for it.
+
+**The 1:1 guard caught a real omission.** Striking C-329's summary row without striking its full
+entry produced *"Summary table has 50 rows but active file has 51 full entries"* immediately. That
+rule exists because a struck row with a live detail section is how an entry half-disappears.
+
+---
+
 ## C-351 entered retroactively — a dangling ID in a published release note (2026-08-18)
 
 Third `/falsify` on the same session-close claim. The first two found a broken workflow and a
