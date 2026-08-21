@@ -208,3 +208,61 @@ made the swap transparent.
 ## Investigation complete
 
 All 5 phases finished. 39 tests across unit, hypothesis, integration, and splash-zone categories. ADR-039 accepted. C-149 root cause resolved.
+
+---
+
+## 2026-08-21 — Reopened: H6, projection sensitivity above 55°N (#465 / #387)
+
+**Why reopened:** #387, filed 2026-07-31 from the views-postprocessing seat, observed that
+`generate_area_majority_gaul.py` ranks candidate polygons by `cell.intersection(poly).area` in raw
+EPSG:4326 — **square degrees, not area**. The investigation that produced ADR-039 never mentions
+latitude, distortion, or equal-area anywhere. The mitigation argument (within one cell `cos(lat)`
+scales every candidate near-equally, so the *ranking* survives) was plausible and had never been
+measured.
+
+**Actions taken:**
+- Pre-registered H6 in `pre_analysis_plan.md` §3–§5, with both outcomes committed in the §4 decision
+  table, and committed it (`4cc421a`) **before** any implementation code existed
+- Wrote `scripts/verify_area_majority_projection.py` — Family-B pattern, read-only, no new dependency
+- Ran the flip-detection drill (§6 Step 6) as a hard precondition: two synthetic candidates asymmetric
+  in latitude, sized so the two rankings disagree by construction. It reports the flip, so a null
+  result from this script would have meant something
+- Ran the measurement **exhaustively**, every cell with |lat| > 55, north and south
+
+**Result — H6 is FALSIFIED.**
+
+| Quantity | Whole grid | Delivered (`land_gaul`) |
+|---|---|---|
+| Cells with \|lat\| > 55 | 100,800 | 18,601 |
+| **Border cells** (>1 candidate — only these can flip) | **3,591** | 3,581 |
+| **Flips** | **9** | **9** |
+
+The border-cell count is a finding in its own right and nothing in the repository recorded it before
+today: **3.6% of high-latitude cells have more than one candidate polygon.** The other 96.4% are
+interior and cannot be affected by any ranking change.
+
+**Which levels moved.** Eight of the nine differ at `gaul2_code` only; one (gid 214278) differs at
+`gaul1_code` and `gaul2_code`. **`gaul0_code` is identical in all nine** — no cell changes country,
+so country-month aggregation, `land_gaul` membership and the 64,742-cell delivery boundary are all
+unaffected. The §5 null-outcome paragraph anticipated exactly this shape and pre-committed that it
+must still be reported, with the level named.
+
+**All nine are in the FAO delivery.** Verified against `src/datafactory_query/land_gaul_pgids.json`
+and all seven `data/raw/gaul_admin/*.parquet`.
+
+**Full gid list with old and new codes:** `projection_sensitivity.json` (git-tracked).
+
+**Stopped here, per the pre-registered decision table.** The artifact was not corrected and FAO was
+not contacted from this repository. views-postprocessing carries `lookup_version = land_gaul@<digest>`
+and their `test_gaul_lookup_fidelity.py` breaks loudly on any correction — that alarm is theirs, and
+step 4 of their `docs/operations/correction_procedure.md`, *who contacts FAO and on what notice*, is
+still explicitly open. Registered as **C-353**; reported on #387.
+
+**What went well:** the `cos(lat)` weighting made the whole question a latitude-only scale factor, so
+the measurement needed no reprojection and no new dependency — `pyproject.toml` and `uv.lock` are
+unchanged. The detection drill was worth writing: without it "9 flips" and "0 flips" would have been
+equally unfalsifiable.
+
+**What did not:** the first draft of the drill's own fixture was wrong — the southern candidate won
+*both* rankings, so it would have passed while proving nothing. Caught by printing both scores rather
+than only the winner.

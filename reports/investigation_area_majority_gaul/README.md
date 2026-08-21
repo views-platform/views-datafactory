@@ -5,7 +5,11 @@
 **Risk register:** C-149 (Tier 2 — silent data gap)
 **Started:** 2026-06-04
 **Investigators:** Simon Polichinel von der Maase, Claude Code
-**Status:** Complete — ADR-039 accepted, pipeline integrated, all consumers verified
+**Status:** Complete — ADR-039 accepted, pipeline integrated, all consumers verified.
+**Reopened 2026-08-21** for H6 (projection sensitivity, #465/#387): **falsified**, 9 of 3,591
+high-latitude border cells rank differently under true area, all nine at `gaul2` or below, none
+at `gaul0`. Result in `projection_sensitivity.json`, narrative in `progress_log.md`, tracked as
+C-353. **The delivered artifact was deliberately not corrected** — see the §4 decision table.
 
 ---
 

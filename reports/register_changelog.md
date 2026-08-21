@@ -17,6 +17,35 @@ entry could.
 
 ---
 
+## C-353 — a plausible argument, measured for the first time, and it is 99.75% right (2026-08-21)
+
+`generate_area_majority_gaul.py` ranks candidate GAUL polygons by `cell.intersection(poly).area`
+in raw EPSG:4326 — **square degrees, not area**. #387 raised this on 2026-07-31 from the
+views-postprocessing seat and it sat for three weeks without a C-number, because the register had
+no entry to attach it to. That is the tracking failure the issue itself documents: their register
+said "resolved-relocated to views-datafactory" without an issue number.
+
+**The defence was never nonsense.** Within one 0.5° cell every candidate sits in the same latitude
+band, `cos(lat)` scales them near-equally, and the ranking survives. Measured exhaustively above
+55°N, it survives for **3,582 of 3,591 border cells**. Nine flip. The argument was right about the
+mechanism and wrong about "always" — which is the only thing a measurement could have told us and
+no amount of re-reading the code would have.
+
+**What kept the null result honest.** The script refuses to report anything until a synthetic cell
+whose two rankings disagree *by construction* is detected. Without that drill, "zero flips" and "a
+script that computes the same ranking twice" are indistinguishable outputs. The drill's first
+fixture was itself wrong — the southern candidate won both rankings — and would have passed while
+proving nothing.
+
+**Registered, deliberately not fixed.** Nine wrong `gaul2` labels are already delivered to FAO and
+served live. The one-line fix moves the artifact digest, trips views-postprocessing's
+`test_gaul_lookup_fidelity.py`, and changes data a partner is serving — while step 4 of *their*
+correction procedure, who tells FAO and on what notice, is still unwritten. The pre-analysis plan
+committed to stopping here **before** the measurement ran, which is what separates this from
+rationalising an inconvenient number.
+
+---
+
 ## C-341 RESOLVED by deleting the gate, and C-346 — four more that cannot fail (2026-08-11)
 
 Epic #421 Story 4 (#425), which also closes #363. The instruction was "delete F1". It turned out
