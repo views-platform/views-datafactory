@@ -2323,7 +2323,7 @@ in-memory; error paths name the netrc *path*, never contents).
 
 Cross-ref: C-318 (transport-layer credential exposure, sibling concern), The Appwrite Seam Contract's redaction clause (the platform-wide rule this enforces), C-321 (the real-exception-type test rule applied here).
 
-**Residual (2026-07-31):** the code fix removes the *future* leak vector only. The credential itself was never rotated and the pre-fix code is still what the server runs — tracked separately as C-324, which is open.
+**Residual (2026-07-31) — DISCHARGED.** As written, this said the code fix removed the *future* leak vector only: the credential was unrotated and the server still ran the pre-fix harvester. All three clauses are now false and the line stood stale for three weeks. The token was **rotated and the leaked one revoked** at GDL on 2026-08-01 (~~C-324~~); the server has run post-fix code since v1.11.0 and is on v1.12.0 as of 2026-08-21; and the log holding the leaked lines was destroyed under C-339. **Corrected 2026-08-22** after the stale text was repeated as live in #388's close-out — a resolved concern that goes on being described as open in a *different* entry is how a closed item gets re-reported.
 ---
 
 ### C-325: CI tests pandas 2.3.3 while a fresh consumer install resolves pandas 3 — [DEFER]
