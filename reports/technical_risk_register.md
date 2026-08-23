@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-22 — C-354 registered (#388): nine test modules patch `requests.request` directly (63 sites), which made the canonical fix for a cross-host credential leak unaffordable and shaped the one that shipped. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-23 — ~~C-323~~ resolved: the five team passwords were confirmed distributed and `~/team_passwords.txt` shredded, its identity checked without printing a value; the entry's own provisioning date was two days out. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 354 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 308 resolved-or-demoted, 43 open concerns (0 Tier 1, 3 Tier 2, 13 Tier 3, 21 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 124 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 354 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 42 open concerns (0 Tier 1, 3 Tier 2, 13 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -153,7 +153,7 @@
 | ~~C-320~~ | ~~3~~ | ~~Deploy-gate falsification tests fail in CI (shallow checkout breaks merge-base; no GH_TOKEN breaks gh) — CI red on every branch, releases merged unnoticed~~ | Resolved 2026-07-27 (gates skip with reason where the environment cannot answer; still enforce locally) | Test infra |
 | ~~C-321~~ | ~~4~~ | ~~Remote-zarr 401 escapes as raw aiohttp ClientResponseError — documented PermissionError contract broken (ClientResponseError is not an OSError)~~ | Resolved 2026-07-27 (non-OSError 401s mapped to PermissionError + netrc hint; found by TestPyPI clean-room rehearsal) | Query resilience |
 | ~~C-322~~ | ~~3~~ | ~~GDL token leaks into crash tracebacks — requests embeds the full ?token= URL in exception messages, which land in refresh.log~~ | Resolved 2026-07-28 (#369 audit: credential-redaction at the shared HTTP layer; UCDP/ACLED/netrc flows verified clean) | Credential hygiene |
-| C-323 | 4 | Five team passwords in cleartext at rest on the server (`~/team_passwords.txt`) pending out-of-band distribution | Before the next server snapshot/backup or any new shell account — confirm the file was distributed and deleted | Server hardening |
+| ~~C-323~~ | ~~4~~ | ~~Five team passwords in cleartext at rest on the server (`~/team_passwords.txt`)~~ | Resolved 2026-08-23: operator confirmed the five were distributed; file `shred -u`'d and absence verified in the same command. Identity checked before deletion — 5 lines, all five logins, **without printing any value**. Note the entry's own date was wrong: mtime was **Jul 29**, not the 2026-07-31 it claimed | Server hardening |
 | ~~C-324~~ | ~~3~~ | ~~GDL token unrotated after the C-322 leak~~ | Resolved 2026-08-01: token rotated and the leaked one **revoked** at GDL (one-token-per-account forced it), replacement verified live; server on v1.11.0 so the leaking harvester is gone; the log itself was destroyed by C-339 | Credential hygiene |
 | C-325 | 4 | CI tests pandas 2.3.3 while a fresh consumer install resolves pandas 3 (cap removed with the extra; suite verified green on 3.0.5) | Before the next release, re-run the suite under the then-current pandas 3.x | Dependency policy |
 | C-326 | 4 | The `[pandas]` extra gates nothing — xarray is the real pandas carrier; the fail-loud `ImportError` paths are unreachable until it leaves | When #381 resolves: go makes the extra real and the error paths live; no-go makes it vestigial | Dependency policy |
@@ -1218,7 +1218,7 @@ sudo tee /etc/logrotate.d/views-datafactory > /dev/null <<'EOF' /home/views-depl
 
 **Standing rule adopted:** commands given to a human to paste are one line. If content is multi-line, use an editor (`sudo nano <file>`) and describe the edit — which is what actually worked afterwards.
 
-Cross-ref: ~~C-330~~ (the work being done when this happened), C-323/C-324 (the log's contents mattered because of what had leaked into it). No GitHub issue: the fix is a rule, not a change.
+Cross-ref: ~~C-330~~ (the work being done when this happened), ~~C-323~~/~~C-324~~ (the log's contents mattered because of what had leaked into it). No GitHub issue: the fix is a rule, not a change.
 
 ---
 
@@ -1337,7 +1337,7 @@ Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). A performance 
 ### C-97: Basic auth + Caddy scalability ceiling at ~30-50 users — [DEFER]
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Note (2026-07-31):** the flat-file model is now actually in multi-user service — 6 logins (`views` + 5 colleagues), each individually revocable. The manual add/revoke recipe is written down (`docs/guides/server_operations.md`), which is what keeps this workable at this size; the audit-trail and rotation gaps the entry describes are unchanged. 6 of ~30.
-**Source:** Falsification audit 2026-04-01 (F2). Cross-ref: C-318 (transport), C-323 (provisioning residue).
+**Source:** Falsification audit 2026-04-01 (F2). Cross-ref: C-318 (transport), ~~C-323~~ (provisioning residue).
 
 ### ~~C-135: No runtime type validation for zarr `.zattrs` values~~ DEMOTED
 Demoted to tech-debt backlog 2026-05-28 (review-rr strategic curation). Only risk vector is manual server-side editing of `.zattrs`, which is unlikely. Our code writes correct types. Re-register if external consumers can write attrs.
@@ -2221,7 +2221,7 @@ The data server (`204.168.219.108`) serves the zarr/parquet endpoints over plain
 
 **Trigger partially fired (2026-07-31):** five per-user credentials were added for VIEWS colleagues (dylan, haavard, haakon, martina, sonja), taking the data server from one shared login to six. That is still the *trusted circle*, not external consumers, and the passwords were issued as throwaways precisely because of this entry — but the credential count is no longer 1, and five more people now type a cleartext-transported password on untrusted networks. The line stays where it was drawn: **onboarding anyone outside the trusted circle triggers the domain + Caddy auto-HTTPS move first** (~1 hour). Add/revoke procedure now documented in `docs/guides/server_operations.md` (PR #371).
 
-Cross-ref: C-97 (basic-auth scalability ceiling — the auth *model*; this entry is the auth *transport*), C-88 (SSH exposure — same server, same hardening cluster), C-323 (the cleartext password file the provisioning step left behind).
+Cross-ref: C-97 (basic-auth scalability ceiling — the auth *model*; this entry is the auth *transport*), C-88 (SSH exposure — same server, same hardening cluster), ~~C-323~~ (the cleartext password file the provisioning step left behind — resolved 2026-08-23).
 ---
 
 ### ~~C-319: In-process writer main() in tests holds the production pipeline lock for pytest lifetime~~ — RESOLVED
@@ -2669,10 +2669,19 @@ Remediation is cheap, independent of the release cycle, and entirely operator-si
 | Trigger | Whichever comes first: cutting the next tagged release + redeploy (fold rotation into the deploy step), or granting anyone new read access to the server's logs or `views-deploy` home |
 | Location | Server `logs/refresh.log` (pre-fix lines), server `~/.profile` (`GDL_API_TOKEN`), `src/datafactory_http/retry.py` (fix, merged 65c3f54, unreleased as of v1.9.0) |
 
-Cross-ref: C-322 (the code fix this is the residual of), C-323 (the other credential-at-rest item on the same server, same week), C-88 (who can reach that shell in the first place).
+Cross-ref: C-322 (the code fix this is the residual of), ~~C-323~~ (the other credential-at-rest item on the same server, same week), C-88 (who can reach that shell in the first place).
 ---
 
-### C-323: Five team passwords sit in cleartext at rest on the server pending out-of-band distribution — [DEFER]
+### ~~C-323: Five team passwords sit in cleartext at rest on the server pending out-of-band distribution~~ — RESOLVED
+
+**Resolved 2026-08-23.** The operator confirmed the five passwords had been distributed; `~/team_passwords.txt` was `shred -u`'d and its absence verified in the same command. The trigger read *"confirm the file was distributed and deleted"* — both halves are now confirmed, three weeks after it was written and without the snapshot or new shell account that was supposed to prompt it.
+
+**Checked before deleting, not after.** The file was confirmed to be the one this entry describes — 5 lines, all five logins present — using `wc -l` and a name-only `grep`, so **no password value was printed** into a terminal, a transcript or a log. Deleting a file you have not identified is how the wrong thing gets destroyed (~~C-339~~, the same server, three weeks earlier).
+
+**This entry had its own date wrong**, found by the same check: it says provisioning on 2026-07-31 generated the file, but the mtime was **Jul 29 02:19**. An mtime cannot precede the last write, so the passwords were generated on the 29th and only the Caddyfile lines landed on the 31st. Minor, and recorded because a register whose dates are approximate cannot be used to reconstruct a sequence.
+
+**The plaintext had no recovery value, which is what made this easy.** A colleague who loses their password is reissued one — `caddy hash-password`, replace their line, reload (`server_operations.md`, "Add a data user" / "Revoke a data user"). That costs the same whether or not the file exists. Its only capability was *re-reading a live credential*, which is precisely what this entry objected to.
+
 
 Provisioning five per-user data credentials on 2026-07-31 (dylan, haavard, haakon, martina, sonja — Caddy `basicauth`) generated the passwords into `~/team_passwords.txt` on the server (`chmod 600`, admin's home) so they could be handed out of band; only bcrypt hashes went into the Caddyfile, which is correct. The file is meant to be deleted once the passwords are distributed — until then five live credentials exist in plaintext on a multi-account machine. Exposure is genuinely bounded: `0600` means owner-plus-root only, the passwords are throwaway by design (C-318 already accepts that they cross the wire in cleartext), and they guard courtesy-protected research data. What makes it register-worthy rather than nothing is that it is a *pending* cleanup step with no automatic reminder — a file like this is exactly what survives a year unnoticed and then rides into a provider snapshot or a support session.
 
