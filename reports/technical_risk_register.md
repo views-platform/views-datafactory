@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-23 — ~~C-323~~ resolved: the five team passwords were confirmed distributed and `~/team_passwords.txt` shredded, its identity checked without printing a value; the entry's own provisioning date was two days out. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-24 — C-355 registered (#476, #420, ADR-052): the observation boundary is inferred from a run of zeros and declared the month the export ran in as fully observed; the per-source bounds it sits beside were computed every run and discarded at export until now. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 354 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 42 open concerns (0 Tier 1, 3 Tier 2, 13 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 355 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 43 open concerns (0 Tier 1, 3 Tier 2, 14 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -184,6 +184,7 @@
 | C-352 | 3 | `last_valid_month_id` is **UCDP-scoped but generally named**: computed from `ged_*` features only (`export_zarr.py:280-294`) while the grid carries ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI and GAUL. Two sibling repos read it as *the store's* frontier — views-postprocessing to decide which months are marked **fabricated in the FAO delivery**, views-models to gate liveness | **Before relying on it to mean anything other than "UCDP's observed frontier"** — and before adding a source whose coverage can outrun UCDP's. Confirm with views-postprocessing whether UCDP-scoping is what their observed/fabricated split intends | Consumer contract |
 | C-353 | 3 | **Area-majority ranks candidate GAUL polygons in square degrees, not area** (`generate_area_majority_gaul.py:157-172`). Measured 2026-08-21 over every cell above 55°N: **9 of 3,591 border cells flip** under true area. All nine are in the FAO delivery. Eight differ at `gaul2_code` only, one also at `gaul1_code`, **none at `gaul0_code`** | **Before any correction of `data/raw/gaul_admin/*.parquet`** — views-postprocessing's `test_gaul_lookup_fidelity.py` breaks loudly on a changed digest and step 4 of their correction procedure (who tells FAO, on what notice) is still open. Also when GAUL is next reharvested, which reruns the same ranking | Compilation |
 | C-354 | 4 | **Nine test modules patch `datafactory_http.retry.requests.request` directly — 63 sites, five asserting the exact kwarg set.** The mock target is an implementation detail of `request_with_retry`, so any change to *how* it issues its request (a `requests.Session` for connection pooling, urllib3-level retries, or redirect safety) breaks tests that have nothing to do with the change | **Before changing how `request_with_retry` issues its request** — introducing a `Session`, an adapter, or a transport wrapper. Budget the test churn as part of that change rather than discovering it mid-implementation, as #388 did | HTTP layer |
+| C-355 | 3 | **The published observation boundary is inferred from non-zero sums, not declared by the harvest** (`export_zarr.py:280-296`). A genuinely all-zero month reads as unobserved; a **partially-reported month reads as complete**. Measured: the 2026-08-21 export declared `last_valid_month_id = 560` — the month it ran in. views-postprocessing uses this value to mark months **fabricated in the FAO delivery** | **Before any consumer builds logic on `last_valid_month_ids`** (published by ADR-052), or when views-postprocessing answers C-352 — whichever first. The declared bounds already exist in the ingestion ledgers: `ucdp_candidate.max_date_start`, `acled.max_date`, `shdi.year_range` | Consumer contract |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -3486,6 +3487,46 @@ The shipped fix instead passes `allow_redirects=False` only when a request carri
 **Adjacent, verified, not a concern.** The same cross-host question for the *other* two credential carriers was checked: `urllib` (`datafactory_query/defaults.py`) copies every header but `content-length`/`content-type` onto a redirected request, and **was** leaking the netrc basic-auth credential — fixed in #388 with `add_unredirected_header`. `aiohttp` 3.13.5, reached via fsspec in `backends_zarr.py`, already does `if url.origin() != redirect_origin: auth = None`, so it is safe. The declared floor is `aiohttp>=3.9` and **it was not verified that 3.9 carries that strip**; `uv.lock` pins 3.13.5, so every environment built from the lock is safe.
 
 Cross-ref: C-322 (the redaction this layer performs), C-345, ADR-011 (fail-loud). GitHub: #388.
+
+### C-355: The observation boundary is inferred from a run of zeros, and says the running month is fully observed
+
+**Source:** Investigation of #476 (CRAF'd) and #420 (views-pipeline-core), 2026-08-24, while writing ADR-052. Found by reading the live store, not by a failing test.
+
+**Trigger:** **Before any consumer builds logic on the newly published `last_valid_month_ids`**, and when views-postprocessing answers C-352 — whichever comes first. Also fires if a new source is added whose reporting lag differs from UCDP's.
+
+**Location:** `scripts/export_zarr.py:280-296` (the global boundary), `scripts/assemble_grid.py:820-822` and the four sibling blocks (the per-source ones, same method). Consumed by `views-postprocessing/delivery/observed_range.py`.
+
+**The mechanism.** A month is marked observed when the source's slice sums to more than zero:
+
+```python
+has_data = ucdp_slice.sum(axis=(1, 2, 3)) > 0
+```
+
+That is an inference about the world drawn from the data alone, and it is wrong in both directions:
+
+- **A genuinely all-zero month reads as unobserved.** Globally implausible for UCDP; entirely plausible for a source with narrower scope, and this is the exact inference views-pipeline-core's ADR-040 forbids them from making. We make it for them, one layer up, and publish the result as fact.
+- **A partially-reported month reads as complete**, because *any* non-zero cell in the month satisfies the test. This is the live case.
+
+**Measured, not theorised.** The store served on 2026-08-24 was exported **2026-08-21 03:08** and declares:
+
+```
+last_valid_month_id  560
+last_valid_date      2026-08
+```
+
+Month 560 is August 2026 — **the month the export ran in**, three weeks old. It cannot have been fully reported by any source. Every consumer reading that attribute is being told a partial month is complete.
+
+**Why Tier 3 and not 4.** No stored value is wrong — the numbers in the grid are correct. What is wrong is a **label**, and views-postprocessing uses that label to decide which months are marked *fabricated* in the delivery to FAO (`crafd/managers/crafd.py:188`, `unfao/managers/unfao.py:188`). A partner-visible classification rests on it. Same tier and the same reason as C-352, which is about the same attribute's scoping.
+
+**Why Tier 3 and not 2.** Nothing is silently corrupted and the direction of the error is conservative in the case that matters most: marking a partial month *observed* means views-postprocessing ships it as history rather than dropping it — visible as thin data, not as a missing month.
+
+**The fix exists and was deliberately not taken here.** The declared bounds are already recorded at harvest: `ucdp_candidate.max_date_start` (`2026-03-31` in the local ledger), `ucdp_annual.max_date_start`, `acled.max_date`, `shdi.year_range`. Reading those instead of summing would answer the question from the source's own statement rather than from a guess about its data.
+
+It was deferred because **it changes the value of a number three repositories already read**, and ADR-052's change makes five sibling values visible for the first time. Doing both at once would confound "the value moved" with "the value appeared", and the first consumer to notice would not know which had happened. Sequencing, not reluctance.
+
+**This entry exists because of what ADR-052 was written to fix.** ADR-047 line 68 deferred a decision with no owner, no trigger and no issue; it was raised twice from outside the repository before anyone took it, the second time by a partner-facing consumer with a month of zeros they could not explain. A deferral without a C-number is the same failure in a different file.
+
+Cross-ref: C-352 (the same attribute's UCDP scoping — open, with views-postprocessing), C-130 (zero-filled future months, the concern the attribute was added for), ADR-052, ADR-047. GitHub: #476, #420.
 
 ---
 

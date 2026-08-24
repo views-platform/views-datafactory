@@ -180,6 +180,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-051** -- Two Monitoring Mechanisms, Because There Are Two Failure Modes
   The push heartbeat (healthchecks.io) answers "did the pipeline run?"; an external poll of the public `status.html` answers "can a consumer read anything?" They are not substitutes — a poller cannot see a cron that never fired, and a heartbeat cannot see a web server that died between runs. Keeps the heartbeat where it is because Better Stack heartbeats have no `/start` signal, which C-317's OOM-kill mitigation depends on. Records C-335 and an explicit revisit path; the two-vendor split is a compromise, not an end state.
 
+- **ADR-052** -- Coverage Bounds Are Published Per Source, and Extrapolation Stays Where It Is
+  Answers ADR-047's line 68, which sat unowned until two consumers raised it — views-pipeline-core (#420) as an unowned decision, CRAF'd (#476) as a delivered month of zeros a partner could not distinguish from observation. Assembly already computed every source's trailing coverage bound and the export mirror silently dropped all five; both edges are now published in the zarr attrs and the consumer manifest. States plainly that the bound is *inferred* from non-zero sums and is therefore wrong at both ends (C-355). Names the constant-hold extrapolation the repo already performs past the end of support, declines to extend it, and sets seven criteria for any future case — the load-bearing one being back-tested, published error. Also declares GHS-POP/GHS-BUILT-S 2025 and 2030 as provider projections.
+
 These must comply with the constitutional ADRs above.
 
 ---

@@ -294,6 +294,42 @@ def main() -> int:
                 compute_file_digest(pq_path)
             )
 
+    # Coverage bounds (#476). Assembly records where each source's real
+    # observation starts AND stops; the zarr publishes both in its attrs,
+    # and this manifest published neither — so a parquet consumer (FAO,
+    # CRAF'd) could not tell a zero-filled month for a source that has
+    # not reported yet from a month the source observed as zero.
+    #
+    # A deliberate local copy of export_zarr's scan rather than an import:
+    # that module pulls in xarray and zarr, which this script has no other
+    # reason to load. Second occurrence, so WET.
+    #
+    # `last_valid_month_id` (singular, UCDP) is carried under its own name,
+    # not folded into the map — two repos read it by that exact name and
+    # C-352 is open on what it means.
+    if not _is_remote(data_dir):
+        src_prov_path = Path(data_dir) / "provenance.json"
+        if src_prov_path.exists():
+            src_prov = json.loads(src_prov_path.read_text())
+            first_valid = {
+                k: v for k, v in src_prov.items()
+                if k.startswith("first_valid_") and v is not None
+            }
+            last_valid = {
+                k: v for k, v in src_prov.items()
+                if k.startswith("last_valid_")
+                and k != "last_valid_month_id"
+                and v is not None
+            }
+            if first_valid:
+                manifest["first_valid_month_ids"] = first_valid
+            if last_valid:
+                manifest["last_valid_month_ids"] = last_valid
+            if src_prov.get("last_valid_month_id") is not None:
+                manifest["last_valid_month_id"] = (
+                    src_prov["last_valid_month_id"]
+                )
+
     manifest_path = output_dir / "provenance.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
     print(f"Provenance manifest: {manifest_path}")

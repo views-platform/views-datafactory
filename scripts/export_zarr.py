@@ -39,6 +39,62 @@ from pathlib import Path
 import zarr
 
 
+def _attrs_from_provenance(prov: dict) -> dict:
+    """Coverage bounds and feature lists, mirrored from assembly provenance.
+
+    Assembly records BOTH edges of every non-anchor source's coverage —
+    ``first_valid_<source>_month_id`` and ``last_valid_<source>_month_id``
+    (the provenance block in ``assemble_grid.py``). Only the leading
+    edge used to be
+    mirrored here, so all five trailing bounds were computed and then
+    discarded one step before a consumer could read them.
+
+    That asymmetry is what #476 hit: a consumer could see when ACLED
+    starts but not when it stops, so a zero-filled month for a source
+    that has not reported yet was indistinguishable from a month the
+    source observed as zero. ADR-014 §5 already requires manufactured
+    values to be distinguishable from observed ones in provenance; this
+    applies the same rule to assembly's zero-fill.
+
+    The singular ``last_valid_month_id`` is deliberately NOT folded into
+    the per-source map. views-postprocessing reads it by that exact name
+    (``_read_historical_frame`` in ``crafd/managers/crafd.py`` and its
+    ``unfao`` twin) and
+    so does views-models; C-352 is open on what it actually means, and
+    moving it before that is answered would break two repos.
+
+    Keys with a ``None`` value are omitted rather than published as null:
+    "not recorded" and "no coverage" are different claims, and a null
+    reads as the second.
+    """
+    first_valid: dict = {}
+    last_valid: dict = {}
+    src_feats: dict = {}
+    # *_features keys nest under "sources" in real assembly provenance;
+    # scan both levels (same as the npy loader).
+    for space in (prov, prov.get("sources", {})):
+        for k, v in space.items():
+            if k.startswith("first_valid_") and v is not None:
+                first_valid[k] = v
+            elif (
+                k.startswith("last_valid_")
+                and k != "last_valid_month_id"
+                and v is not None
+            ):
+                last_valid[k] = v
+            if k.endswith("_features") and isinstance(v, list):
+                src_feats[k] = v
+
+    attrs: dict = {}
+    if first_valid:
+        attrs["first_valid_month_ids"] = first_valid
+    if last_valid:
+        attrs["last_valid_month_ids"] = last_valid
+    if src_feats:
+        attrs["source_features"] = src_feats
+    return attrs
+
+
 def main() -> int:
     """Export assembled grid to zarr."""
     sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
@@ -242,25 +298,13 @@ def main() -> int:
             datetime.now(tz=UTC).isoformat()
         )
 
-        # Source metadata (C-300): mirror the npy sidecars into
-        # zarr attrs so remote consumers get pre-coverage warnings
+        # Source metadata (C-300): mirror the npy sidecars into zarr
+        # attrs so remote consumers get coverage bounds at BOTH edges
         # and type-aware aggregation. Keys match provenance.json.
+        # The trailing edge was computed and dropped here until #476.
         if provenance_path.exists():
             prov = json.loads(provenance_path.read_text())
-            # *_features keys nest under "sources" in real assembly
-            # provenance; scan both levels (same as the npy loader).
-            first_valid: dict = {}
-            src_feats: dict = {}
-            for space in (prov, prov.get("sources", {})):
-                for k, v in space.items():
-                    if k.startswith("first_valid_") and v is not None:
-                        first_valid[k] = v
-                    if k.endswith("_features") and isinstance(v, list):
-                        src_feats[k] = v
-            if first_valid:
-                attrs["first_valid_month_ids"] = first_valid
-            if src_feats:
-                attrs["source_features"] = src_feats
+            attrs.update(_attrs_from_provenance(prov))
         agg_path = grid_path.parent / "feature_agg_types.json"
         if agg_path.exists():
             agg_list = json.loads(agg_path.read_text())
