@@ -65,7 +65,7 @@ UCDP is the declared temporal anchor for the assembled grid. This ADR documents 
 
 - **Negative:** UCDP remains a single point of failure for the temporal dimension. If UCDP changes its temporal range, all sources are affected. This is accepted — decoupling the temporal backbone from UCDP would require a separate, larger architectural change.
 
-- **Neutral:** Zero-fill remains the gap-filling strategy (not NaN-fill). NaN-fill would be more explicit but would break downstream models that assume float32 without NaN handling. A future ADR may revisit this.
+- **Neutral:** Zero-fill remains the gap-filling strategy (not NaN-fill). NaN-fill would be more explicit but would break downstream models that assume float32 without NaN handling. **Revisited by ADR-052 (2026-08-24).** That sentence sat unowned for months and the question was raised twice from outside the repository before it was taken — views-pipeline-core#420 and views-crafdapi (#476), the latter with a delivered month of zeros a partner could not distinguish from observation. ADR-052's answer: zero-fill stays, and both edges of every source's coverage are published so a consumer can tell manufactured months from observed ones. **A deferral with no owner, no trigger and no issue is not a decision postponed — it is a decision avoided, and a downstream consumer pays for it.**
 
 ---
 

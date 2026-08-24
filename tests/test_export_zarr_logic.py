@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -328,3 +329,88 @@ class TestAtomicZarrSwap:
             assert abs(sums[name] - zarr_sum) < 0.5
         del store
 
+
+class TestCoverageBoundsArePublished:
+    """A consumer must be able to see where each source STOPS.
+
+    `assemble_grid.py:1038-1078` computes `last_valid_<source>_month_id`
+    for every non-anchor source and records it in provenance.json. The
+    export mirror matched only `first_valid_`, so all five were computed
+    and discarded one step before anyone could read them: a consumer
+    could see when ACLED starts but not when it ends, and a zero-filled
+    month for a source that has not reported yet was indistinguishable
+    from an observed zero (#476, #420).
+    """
+
+    def _prov(self) -> dict:
+        """Assembly provenance in the shape export_zarr actually reads."""
+        return {
+            "last_valid_month_id": 560,
+            "first_valid_acled_month_id": 481,
+            "last_valid_acled_month_id": 559,
+            "first_valid_vdem_month_id": 109,
+            "last_valid_vdem_month_id": 547,
+            "first_valid_shdi_month_id": 109,
+            "last_valid_shdi_month_id": 527,
+            "sources": {"acled_features": ["acled_count"]},
+        }
+
+    def test_trailing_bounds_are_published_per_source(self) -> None:
+        sys.path.insert(0, str(Path("scripts")))
+        from export_zarr import _attrs_from_provenance
+
+        attrs = _attrs_from_provenance(self._prov())
+
+        assert attrs["last_valid_month_ids"] == {
+            "last_valid_acled_month_id": 559,
+            "last_valid_vdem_month_id": 547,
+            "last_valid_shdi_month_id": 527,
+        }
+
+    def test_the_singular_ucdp_bound_is_not_swallowed(self) -> None:
+        """`last_valid_month_id` is read by name in views-postprocessing
+        (`crafd/managers/crafd.py:168`) and views-models. It must stay
+        its own attribute and must not appear inside the per-source map
+        — C-352 is still open on what it means."""
+        sys.path.insert(0, str(Path("scripts")))
+        from export_zarr import _attrs_from_provenance
+
+        attrs = _attrs_from_provenance(self._prov())
+
+        assert "last_valid_month_id" not in attrs["last_valid_month_ids"]
+        assert "last_valid_month_id" not in attrs
+
+    def test_leading_bounds_still_published(self) -> None:
+        """Regression: the existing attribute must not change shape."""
+        sys.path.insert(0, str(Path("scripts")))
+        from export_zarr import _attrs_from_provenance
+
+        attrs = _attrs_from_provenance(self._prov())
+
+        assert attrs["first_valid_month_ids"] == {
+            "first_valid_acled_month_id": 481,
+            "first_valid_vdem_month_id": 109,
+            "first_valid_shdi_month_id": 109,
+        }
+
+    def test_absent_bounds_are_omitted_not_nulled(self) -> None:
+        """A source with no recorded bound must not appear at all — a
+        null entry reads as 'no coverage' rather than 'not recorded'."""
+        sys.path.insert(0, str(Path("scripts")))
+        from export_zarr import _attrs_from_provenance
+
+        attrs = _attrs_from_provenance(
+            {"last_valid_acled_month_id": None,
+             "first_valid_acled_month_id": 481},
+        )
+
+        assert "last_valid_month_ids" not in attrs
+        assert attrs["first_valid_month_ids"] == {
+            "first_valid_acled_month_id": 481,
+        }
+
+    def test_empty_provenance_yields_no_attrs(self) -> None:
+        sys.path.insert(0, str(Path("scripts")))
+        from export_zarr import _attrs_from_provenance
+
+        assert _attrs_from_provenance({}) == {}

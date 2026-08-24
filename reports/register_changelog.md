@@ -17,6 +17,53 @@ entry could.
 
 ---
 
+## C-355 — metadata computed every run and thrown away one step before anyone could read it (2026-08-24)
+
+Two consumers filed the same complaint a month apart. views-pipeline-core (#420) filed it as an
+unowned decision: ADR-047 line 68 said *"a future ADR may revisit this"* and nobody ever did. CRAF'd
+(#476) filed it as a delivered defect with a measurement — a complete, zero-filled month for a month
+nobody had reported, indistinguishable from a month with genuinely no fatalities, shipped to a
+partner as `0.0` for 2,432 units.
+
+**The fix turned out to be a filter.** `assemble_grid.py` already computes where each source's real
+observation stops and writes all five values into `provenance.json` every run. `export_zarr.py`
+mirrored provenance into the store using `k.startswith("first_valid_")`. None of the five matched.
+The work was done and discarded one step before a consumer could see it, every month, for as long as
+the mirror has existed.
+
+So a consumer could see when ACLED *starts* and not when it *stops* — and the whole ambiguity that
+#476 hit lives at the stopping end.
+
+**ADR-014 §5 had already decided this, one layer down.** It permits interpolating between a source's
+own observations on condition that *"interpolated values must be distinguishable from source-observed
+values in provenance."* Assembly's zero-fill is manufactured values under another name. The principle
+was settled; it had simply never been carried up to assembly.
+
+**What the investigation would not let us leave alone.** The boundary is *inferred* — a month counts
+as observed if its slice sums above zero. That is the exact inference #420 says a consumer must never
+make, performed by the producer and published as fact. And it is wrong right now: the store exported
+2026-08-21 declares `last_valid_month_id = 560`, the month the export ran in. A partially-reported
+month reads as complete.
+
+Registered as **C-355** rather than fixed in the same change, because fixing it moves the value of a
+number three repositories read, in the same release that makes five sibling values appear for the
+first time. The first consumer to notice would not know which had happened.
+
+**And the extrapolation question, asked by the operator, answered by the code.** Does the repo ever
+extrapolate outside a source's temporal support? It already does — both strategies in
+`datafactory_viewpoint/temporal.py` hold the last epoch's value indefinitely, and emit zero before
+the first. No ADR said so. `linear` is linear *inside* the support and constant-hold outside it.
+ADR-052 names it, declines to extend it, and sets seven criteria for any future case — of which the
+load-bearing one is *back-tested error, published: if the error cannot be measured, the value cannot
+ship*.
+
+The same question surfaced something we were already doing to a partner: GHS-POP's 2025 and 2030
+epochs are **UN WPP projections**, our own source doc says so, and they are delivered identically to
+census-derived epochs. A population value for 2026 is somebody else's forecast wearing the provenance
+of a measurement.
+
+---
+
 ## C-323 RESOLVED — identify before you destroy, and the entry's own date was wrong (2026-08-23)
 
 `~/team_passwords.txt` — five colleagues' data-server passwords in cleartext, mode 600, sitting in
