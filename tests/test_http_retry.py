@@ -366,7 +366,8 @@ class TestRequestWithRetryRed:
 
 class TestCredentialRedaction:
     """No credential may reach a log line or exception message
-    (þing-01 / PLATFORM-001 redaction clause; #369 audit).
+    (þing-01 / The Appwrite Seam Contract redaction clause;
+    #369 audit).
 
     GDL/SHDI is the one source that must carry its token as a query
     param; requests embeds the FULL url in exception text, and crash
@@ -382,6 +383,44 @@ class TestCredentialRedaction:
         )
         assert "SECRET123" not in out
         assert "format=csv" in out
+
+    def test_redact_url_masks_userinfo_without_a_query(self) -> None:
+        """A credential in the URL's userinfo, with no query string.
+
+        The redactor's outer filter only feeds parts containing "?" to
+        the per-URL pass, so this URL never reached it at all. #388
+        item 6 described this as "does not handle userinfo"; the filter
+        is the larger half.
+        """
+        from datafactory_http.retry import _redact_url
+
+        out = _redact_url("https://alice:s3cret@data.test/grid.zarr")
+        assert "s3cret" not in out
+        assert "data.test" in out
+
+    def test_redact_url_masks_userinfo_alongside_a_query(self) -> None:
+        """Userinfo survived even when the query pass DID run."""
+        from datafactory_http.retry import _redact_url
+
+        out = _redact_url(
+            "https://alice:s3cret@gdl.test/api?token=SECRET123"
+        )
+        assert "s3cret" not in out
+        assert "SECRET123" not in out
+
+    def test_redact_url_masks_userinfo_inside_an_exception_message(
+        self,
+    ) -> None:
+        """The shape that actually reaches refresh.log."""
+        from datafactory_http.retry import _redact_url
+
+        out = _redact_url(
+            "HTTPSConnectionPool(host='data.test', port=443): Max "
+            "retries exceeded with url: "
+            "https://alice:s3cret@data.test/grid.zarr"
+        )
+        assert "s3cret" not in out
+        assert "Max retries exceeded" in out
 
     def test_redact_url_no_query_unchanged(self) -> None:
         from datafactory_http.retry import _redact_url
@@ -530,3 +569,61 @@ class TestCredentialRedaction:
         assert "%2A" not in out
         # Non-sensitive parameters must survive unmangled.
         assert "format=csv" in out
+
+
+class TestCrossHostRedirectDoesNotForwardCredentials:
+    """A custom credential header must not follow a redirect off-host.
+
+    `requests` strips only the literal ``Authorization`` header when a
+    redirect changes host. ``x-ucdp-access-token`` is a custom header,
+    so a 30x from the UCDP API to any other host would hand that host
+    a working token (#388 item 7). This is egress, not a log leak: no
+    amount of redaction helps.
+    """
+
+    def test_custom_credential_header_refuses_to_follow_a_redirect(
+        self,
+    ) -> None:
+        from datafactory_http import request_with_retry
+
+        resp = MagicMock()
+        resp.status_code = 302
+        resp.headers = {"Location": "https://attacker.test/collect"}
+        resp.is_redirect = True
+        resp.raise_for_status.return_value = None
+
+        with (
+            patch(MOCK_TARGET, return_value=resp) as mock_request,
+            pytest.raises(requests.RequestException) as ei,
+        ):
+            request_with_retry(
+                "https://ucdpapi.pcr.uu.se/api/gedevents/25.1",
+                headers={"x-ucdp-access-token": "SECRET123"},
+                max_retries=1,
+                timeout=5,
+            )
+
+        assert mock_request.call_args[1]["allow_redirects"] is False
+        assert "SECRET123" not in str(ei.value)
+        assert "attacker.test" in str(ei.value)
+
+    def test_ordinary_request_still_follows_redirects(self) -> None:
+        """The guard must not disable redirects for everyone.
+
+        GHSL and GAUL downloads are exactly the kind that move to a
+        CDN. Only credential-bearing requests are constrained.
+        """
+        from datafactory_http import request_with_retry
+
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.raise_for_status.return_value = None
+
+        with patch(MOCK_TARGET, return_value=resp) as mock_request:
+            request_with_retry(
+                "https://jeodpp.jrc.ec.europa.eu/ftp/x.zip",
+                max_retries=1,
+                timeout=5,
+            )
+
+        assert "allow_redirects" not in mock_request.call_args[1]

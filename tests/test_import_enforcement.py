@@ -81,3 +81,53 @@ def test_no_forbidden_internal_imports() -> None:
     assert violations == [], (
         "ADR-012 topology violations:\n" + "\n".join(f"  - {v}" for v in violations)
     )
+
+def test_the_declared_graph_is_acyclic() -> None:
+    """ADR-012 calls the layers "independent nodes in a DAG". Check that.
+
+    The test above verifies the CODE conforms to ALLOWED_INTERNAL_IMPORTS.
+    Nothing verified that the dict itself encodes a DAG — so adding
+    ``"datafactory_provenance": {"datafactory_query"}`` would keep the suite
+    green while declaring a cycle, and the guard would endorse it.
+
+    That is C-350's shape: an assertion about conformance standing in for an
+    assertion about the property. Cheap to close, so closed (#457).
+    """
+    for package in ALLOWED_INTERNAL_IMPORTS:
+        seen: set[str] = set()
+        stack = list(ALLOWED_INTERNAL_IMPORTS[package])
+        while stack:
+            node = stack.pop()
+            assert node != package, (
+                f"{package} reaches itself through the allow-list — the "
+                f"declared graph contains a cycle. ADR-012's DAG is the "
+                f"architecture; a cycle here means the guard below would "
+                f"happily enforce a circular import topology."
+            )
+            if node not in seen:
+                seen.add(node)
+                stack.extend(ALLOWED_INTERNAL_IMPORTS.get(node, ()))
+
+
+def test_every_package_on_disk_is_declared() -> None:
+    """A package missing from the dict is silently EXEMPT, not an error.
+
+    ``test_no_forbidden_internal_imports`` iterates the dict, not the
+    filesystem, so a tenth ``src/datafactory_*`` package that nobody adds
+    here is never checked at all. Absence currently means "unconstrained"
+    when it should mean "you forgot" (#457).
+    """
+    on_disk = {
+        p.name
+        for p in SRC_DIR.iterdir()
+        if p.is_dir() and p.name.startswith("datafactory_")
+    }
+    assert on_disk == set(ALLOWED_INTERNAL_IMPORTS), (
+        f"src/ and ALLOWED_INTERNAL_IMPORTS disagree. "
+        f"On disk but undeclared (and therefore UNGUARDED): "
+        f"{sorted(on_disk - set(ALLOWED_INTERNAL_IMPORTS))}. "
+        f"Declared but absent from disk: "
+        f"{sorted(set(ALLOWED_INTERNAL_IMPORTS) - on_disk)}. "
+        f"Add the package to the dict with its allowed imports — an empty "
+        f"set if it may import no other datafactory_* package."
+    )

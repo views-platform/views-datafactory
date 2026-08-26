@@ -45,6 +45,20 @@ KNOWN_EPOCHS = (
     2000, 2005, 2010, 2015, 2020, 2025, 2030,
 )
 
+
+# The provider's last two epochs are UN WPP-based projections, not
+# census-derived estimates — stated in `docs/sources/ghspop.md`. They are
+# delivered in the grid identically to the observed epochs, so a value
+# for 2026 is somebody else's forecast wearing the provenance of a
+# measurement. Recorded in the viewpoint ledger so the distinction is at
+# least written down where the values are produced (ADR-052).
+#
+# NOT yet surfaced in the served store: doing so would make assembly read
+# viewpoint ledgers, which is new coupling for a static, documented fact
+# nobody has asked to filter on programmatically. ADR-052 carries the
+# trigger for when that changes.
+PROVIDER_PROJECTED_EPOCHS: tuple[int, ...] = (2025, 2030)
+
 PIXELS_PER_CELL = 60
 
 DEFAULT_NODATA = -200.0
@@ -436,6 +450,10 @@ def build_ghspop_v1(
         "epochs": list(config.epochs),
         "aggregation": config.aggregation,
         "temporal_interpolation": config.temporal_interpolation,
+        "provider_projected_epochs": [
+            e for e in config.epochs
+            if e in PROVIDER_PROJECTED_EPOCHS
+        ],
         "n_epochs": len(config.epochs),
         "n_cells_output": n_output,
         "output_path": str(config.output_path),

@@ -71,6 +71,39 @@ This methodology change affects 409,743 fatalities in downstream aggregations. A
 
 **Rationale:** Area-majority changes *which country code* is assigned to each cell, not *how the assignment is stored*. The output schema is `gid → gaul0_code`, `gid → gaul1_code`, `gid → gaul2_code` — same as today.
 
+### H6: Square-degree ranking does not change the winner (added 2026-08-21, #465)
+
+**Registered after ADR-039 was accepted**, because the original investigation never considered
+projection: neither this plan, `approach_evaluation.md`, nor ADR-039 contains the words *latitude*,
+*distortion*, *equal-area* or *EPSG* anywhere. This hypothesis closes that gap.
+
+**The defect.** `scripts/generate_area_majority_gaul.py` builds each cell as
+`shapely_box(lon-0.25, lat-0.25, lon+0.25, lat+0.25)` in raw EPSG:4326 (`:94`, `:148`) and ranks
+candidates by `cell.intersection(poly).area` (`:103`, `:114`, `:157`, `:165`). **That is square
+degrees, not area.** At 60°N one degree of longitude spans about half the ground distance of one
+degree of latitude, so a square-degree measure overstates east-west extent by roughly 2×.
+
+**Prediction:** **Zero** cells above 55°N change their winning polygon when intersection slivers are
+weighted by `cos(lat)`. The reasoning is that within a single 0.5° cell all candidate polygons sit
+in the same narrow latitude band, so `cos(lat)` scales them near-equally and the *ranking* survives
+even though the *magnitudes* are all wrong.
+
+**Falsification criterion:** any cell above 55°N whose winning polygon index differs between
+square-degree ranking and `cos(lat)`-weighted ranking. One flip falsifies H6.
+
+**Rationale:** the cancellation argument above is the reason nobody caught this in June, and it is
+probably right. But it weakens exactly where candidate polygons are **asymmetric in latitude within
+the cell** — one polygon occupying the northern strip and another the southern. Those are the cells
+that matter and nobody has counted them.
+
+**Risk:** the measurement could report zero flips because it cannot *detect* flips — a script that
+computes both rankings identically would be silently vacuous. **The drill in Step 6 exists solely to
+rule that out** and is a precondition for believing a null result.
+
+**Scope:** exhaustive above 55°N, not sampled. 18,585 of the 64,742 delivered `land_gaul` cells lie
+in that band (28.7%). A sample that found zero could not distinguish "no flips" from "did not look
+where the flips are".
+
 ## 4. Decision Criteria
 
 These are pre-committed. We will not revise them after seeing results.
@@ -82,6 +115,9 @@ These are pre-committed. We will not revise them after seeing results.
 | H2 fails (existing cells lose assignments) | **Do not adopt.** This indicates a bug in the implementation, not a limitation of the method. Fix the bug and re-test. |
 | H3 shows implausible redistribution | **Pause and audit.** Visual inspection of outlier cells. If the redistribution is correct (verified against map), proceed. If it reveals systematic errors, investigate. |
 | H5 fails (format changes needed) | **Acceptable if changes are minimal** (< 5 lines across all consumers). If the format change is structural, reconsider the approach. |
+| **H6 holds — zero flips above 55°N** | **Close the concern and pin the result as a test.** The cancellation argument is then measured rather than assumed, and the delivered FAO artifact is correct as shipped. No change to `generate_area_majority_gaul.py`. |
+| **H6 fails — any flips** | **Report the count and the exact gid list; stop there.** Do not correct the artifact and do not contact FAO from this repository. views-postprocessing carries `lookup_version = land_gaul@<our digest>` and their `test_gaul_lookup_fidelity.py` breaks loudly on any correction — that is the intended alarm and theirs to act on. Their `docs/operations/correction_procedure.md` step 4, *who contacts FAO and on what notice*, is **explicitly open**. Fixing before that is settled would put an inconsistent first message in front of a partner. |
+| H6's detection drill fails | **Discard the result entirely.** A measurement that cannot detect a flip has not measured anything, and "zero flips" from such a script is worse than no answer because it looks like evidence. |
 
 ## 5. Null Outcomes
 
@@ -89,6 +125,14 @@ If the investigation produces null results (the approach doesn't work or isn't w
 
 - **Area-majority is correct but too slow without Rust:** Document performance, defer to Rust implementation (Approach B in approach_evaluation.md). This is not a failure — it's a data point that informs the ADR-030 Rust migration timeline.
 - **149 cells include true ocean cells with no GAUL overlap:** Reduce the expected recovery count. Document which cells are truly unrecoverable. This is still progress — it distinguishes "unassigned because of method limitation" from "unassigned because no country claims this area."
+- **H6 holds and the answer is boring:** zero flips is the *expected* result and a complete one. It
+  converts a plausible argument into a measured fact, retires a question that has been open since
+  2026-07-31, and costs nothing further. **Recording a null result is the point of pre-registering
+  it** — without this paragraph, "we found nothing" reads like a failed investigation rather than an
+  answer.
+- **Flips exist but only at admin levels nobody consumes:** a `gaul2` flip with `gaul0` unchanged
+  does not move country totals or `land_gaul` membership. Still report it; the severity differs from
+  a `gaul0` flip and the report should say which levels moved.
 - **Redistribution reveals that centroid was more correct for some cells:** This would be surprising but must be taken seriously. Document the cases and consider a hybrid approach or manual override table.
 
 ## 6. Method
@@ -119,6 +163,29 @@ Produce a comparison artifact documenting:
 - Fatality-level: how does the country-month aggregation change
 - Geographic distribution: map of changed cells
 
+### Step 5: Measure projection sensitivity above 55°N (H6, added 2026-08-21)
+
+1. Enumerate **border cells** above 55°N — cells with more than one candidate polygon. Only these can
+   flip. **Report this count before re-ranking**; it is a finding in its own right and nothing in the
+   repository currently records it.
+2. For each, compute both rankings: square-degree `.area`, and the same slivers weighted by
+   `cos(lat)` at each sliver's centroid latitude.
+3. Count disagreements. Emit the gid list with old and new codes to a git-tracked JSON here.
+
+**No reprojection, and no new dependency.** The correction is a latitude-only scale factor, so it is
+pure numpy over geometry shapely already produces. Note that H6's own issue text proposed `pyproj`;
+`pyproj` is not a dependency and its wheels bundle PROJ — the GDAL-family chain ADR-039 rejected in
+Alternatives C and D. Using it would contradict the ADR this hypothesis is testing.
+
+### Step 6: Prove the measurement can detect a flip (precondition for Step 5's result)
+
+Construct a synthetic cell whose square-degree winner and `cos(lat)`-weighted winner **differ by
+construction** — two candidate polygons asymmetric in latitude — and confirm the script reports it.
+
+**Until this passes, Step 5's output means nothing.** The existing suite cannot substitute:
+`tests/test_area_majority.py:121-145` recomputes area-majority in square degrees inside its own
+oracles, so all 39 tests are blind to this error class by construction.
+
 ### Step 4: Document results
 
 Update this plan's deviations log. Write results into the progress log. Update the draft ADR with actual findings.
@@ -133,3 +200,5 @@ Update this plan's deviations log. Write results into the progress log. Update t
 | 2026-06-05 | Centroid baseline has 86,091 rows, not 259,200 | Centroid Parquet files only contain matched cells; unmapped cells are absent (not stored as -1). Area-majority emits all 259,200 cells. Hypothesis tests compare set membership, not array position. |
 | 2026-06-05 | H4 total runtime 17.1 min, exceeds 10-min threshold | Per-level computation averages 5.5 min (691-832 cells/sec). The script loads the 45,524-polygon GAUL L2 shapefile three times (once per level). Total wall-clock: 17.1 min. Acceptable for a batch job run once per GAUL version. Per H4 note: "Even 30 minutes would be acceptable." |
 | 2026-06-05 | H3 redistribution tested on gaul0 only (368 cells) | gaul1 (1,453) and gaul2 (4,845) redistribution counts are higher, as expected for finer admin levels. The [100, 2000] range was calibrated for gaul0. |
+| 2026-08-21 | H6 added to a plan whose investigation was marked complete on 2026-06-05 | The original plan never considered projection; #387 raised it seven weeks after ADR-039 was accepted. Adding a hypothesis to a closed plan is itself a deviation, so it is logged as one. H6 and its decision rows were committed (`4cc421a`) before any implementation code, which is the property that matters — see the commit order. |
+| 2026-08-21 | H6 measured over the whole grid above 55°N, not the `land_gaul` subset the issue sized | Restricting to the delivered subset would have made the border-cell count unverifiable against anything outside `land_gaul_pgids.json`. Both populations are reported; 3,581 of the 3,591 border cells are delivered, so the distinction changes nothing material. |

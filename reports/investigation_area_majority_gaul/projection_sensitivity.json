@@ -1,0 +1,195 @@
+{
+  "hypothesis": "H6",
+  "min_abs_lat": 55.0,
+  "cells_examined": 100800,
+  "cells_north": 50400,
+  "cells_delivered_above_lat": 18601,
+  "border_cells": 3591,
+  "border_cells_delivered": 3581,
+  "flip_count": 9,
+  "flip_count_delivered": 9,
+  "flips": [
+    {
+      "gid": 228202,
+      "lon": 160.75,
+      "lat": 68.25,
+      "candidates": 2,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 328,
+        "gaul1_code": 3817,
+        "gaul2_code": 141408
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 328,
+        "gaul1_code": 3817,
+        "gaul2_code": 141403
+      },
+      "levels_affected": [
+        "gaul2_code"
+      ]
+    },
+    {
+      "gid": 226471,
+      "lon": 15.25,
+      "lat": 67.25,
+      "candidates": 4,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 323,
+        "gaul1_code": 3687,
+        "gaul2_code": 137290
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 323,
+        "gaul1_code": 3687,
+        "gaul2_code": 137285
+      },
+      "levels_affected": [
+        "gaul2_code"
+      ]
+    },
+    {
+      "gid": 223515,
+      "lon": -22.75,
+      "lat": 65.25,
+      "candidates": 3,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 309,
+        "gaul1_code": 3521,
+        "gaul2_code": 136167
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 309,
+        "gaul1_code": 3521,
+        "gaul2_code": 136171
+      },
+      "levels_affected": [
+        "gaul2_code"
+      ]
+    },
+    {
+      "gid": 221096,
+      "lon": -152.25,
+      "lat": 63.75,
+      "candidates": 2,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 220,
+        "gaul1_code": 2303,
+        "gaul2_code": 120096
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 220,
+        "gaul1_code": 2303,
+        "gaul2_code": 120074
+      },
+      "levels_affected": [
+        "gaul2_code"
+      ]
+    },
+    {
+      "gid": 219298,
+      "lon": 28.75,
+      "lat": 62.25,
+      "candidates": 3,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 300,
+        "gaul1_code": 3426,
+        "gaul2_code": 135303
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 300,
+        "gaul1_code": 3426,
+        "gaul2_code": 135302
+      },
+      "levels_affected": [
+        "gaul2_code"
+      ]
+    },
+    {
+      "gid": 214278,
+      "lon": 38.75,
+      "lat": 58.75,
+      "candidates": 2,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 328,
+        "gaul1_code": 3819,
+        "gaul2_code": 141428
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 328,
+        "gaul1_code": 3816,
+        "gaul2_code": 141401
+      },
+      "levels_affected": [
+        "gaul1_code",
+        "gaul2_code"
+      ]
+    },
+    {
+      "gid": 212093,
+      "lon": 26.25,
+      "lat": 57.25,
+      "candidates": 5,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 314,
+        "gaul1_code": 3607,
+        "gaul2_code": 136516
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 314,
+        "gaul1_code": 3607,
+        "gaul2_code": 136511
+      },
+      "levels_affected": [
+        "gaul2_code"
+      ]
+    },
+    {
+      "gid": 210648,
+      "lon": 23.75,
+      "lat": 56.25,
+      "candidates": 5,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 316,
+        "gaul1_code": 3629,
+        "gaul2_code": 136591
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 316,
+        "gaul1_code": 3629,
+        "gaul2_code": 136593
+      },
+      "levels_affected": [
+        "gaul2_code"
+      ]
+    },
+    {
+      "gid": 209222,
+      "lon": 30.75,
+      "lat": 55.25,
+      "candidates": 3,
+      "delivered_to_fao": true,
+      "square_degree_winner": {
+        "gaul0_code": 287,
+        "gaul1_code": 3325,
+        "gaul2_code": 134187
+      },
+      "cos_weighted_winner": {
+        "gaul0_code": 287,
+        "gaul1_code": 3325,
+        "gaul2_code": 134175
+      },
+      "levels_affected": [
+        "gaul2_code"
+      ]
+    }
+  ],
+  "method": "sliver.area * cos(radians(sliver.centroid.y)) versus sliver.area; no reprojection, no new dependency"
+}

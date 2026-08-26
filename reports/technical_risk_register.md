@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-16 — C-350 registered: `release-topology.yml` had run nothing for two days because `git branch -f main` is refused on the checked-out branch, and its own guard asserted the step's presence rather than its behaviour. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-08-24 — C-355 registered (#476, #420, ADR-052): the observation boundary is inferred from a run of zeros and declared the month the export ran in as fully observed; the per-source bounds it sits beside were computed every run and discarded at export until now. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 350 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 304 resolved-or-demoted, 43 open concerns (0 Tier 1, 4 Tier 2, 13 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 120 struck-through in active register (299 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 355 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 43 open concerns (0 Tier 1, 3 Tier 2, 14 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -153,13 +153,13 @@
 | ~~C-320~~ | ~~3~~ | ~~Deploy-gate falsification tests fail in CI (shallow checkout breaks merge-base; no GH_TOKEN breaks gh) — CI red on every branch, releases merged unnoticed~~ | Resolved 2026-07-27 (gates skip with reason where the environment cannot answer; still enforce locally) | Test infra |
 | ~~C-321~~ | ~~4~~ | ~~Remote-zarr 401 escapes as raw aiohttp ClientResponseError — documented PermissionError contract broken (ClientResponseError is not an OSError)~~ | Resolved 2026-07-27 (non-OSError 401s mapped to PermissionError + netrc hint; found by TestPyPI clean-room rehearsal) | Query resilience |
 | ~~C-322~~ | ~~3~~ | ~~GDL token leaks into crash tracebacks — requests embeds the full ?token= URL in exception messages, which land in refresh.log~~ | Resolved 2026-07-28 (#369 audit: credential-redaction at the shared HTTP layer; UCDP/ACLED/netrc flows verified clean) | Credential hygiene |
-| C-323 | 4 | Five team passwords in cleartext at rest on the server (`~/team_passwords.txt`) pending out-of-band distribution | Before the next server snapshot/backup or any new shell account — confirm the file was distributed and deleted | Server hardening |
+| ~~C-323~~ | ~~4~~ | ~~Five team passwords in cleartext at rest on the server (`~/team_passwords.txt`)~~ | Resolved 2026-08-23: operator confirmed the five were distributed; file `shred -u`'d and absence verified in the same command. Identity checked before deletion — 5 lines, all five logins, **without printing any value**. Note the entry's own date was wrong: mtime was **Jul 29**, not the 2026-07-31 it claimed | Server hardening |
 | ~~C-324~~ | ~~3~~ | ~~GDL token unrotated after the C-322 leak~~ | Resolved 2026-08-01: token rotated and the leaked one **revoked** at GDL (one-token-per-account forced it), replacement verified live; server on v1.11.0 so the leaking harvester is gone; the log itself was destroyed by C-339 | Credential hygiene |
 | C-325 | 4 | CI tests pandas 2.3.3 while a fresh consumer install resolves pandas 3 (cap removed with the extra; suite verified green on 3.0.5) | Before the next release, re-run the suite under the then-current pandas 3.x | Dependency policy |
 | C-326 | 4 | The `[pandas]` extra gates nothing — xarray is the real pandas carrier; the fail-loud `ImportError` paths are unreachable until it leaves | When #381 resolves: go makes the extra real and the error paths live; no-go makes it vestigial | Dependency policy |
 | C-327 | 4 | A Caddy basic-auth password was published in git history — **credential verified dead (401)**, password pattern exposed | Next rotation of the `views` password, or retiring the shared account for per-user logins; also check future post-mortems for quoted credentials | Server hardening |
 | C-328 | 4 | HEAD re-publishes the admin username the 2026-07-27 go-public redaction removed, plus two colleagues' shell accounts | Next edit to `technical_risk_register.md` — placeholders + a pre-commit guard so the policy is enforced, not remembered | Server hardening |
-| C-329 | 3 | The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights — a poisoned wheel needs no secret to leak | Before the next release — pin `publish_package.yml` actions to full commit SHAs | Supply chain |
+| ~~C-329~~ | ~~3~~ | ~~The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights~~ | Resolved — **found stale 2026-08-21 (#462), not fixed by it**: `publish_package.yml:30,33` already carry full SHAs (`actions/checkout@11d5960a…`, `astral-sh/setup-uv@d4b2f3b6…`). The fix shipped with #388's SHA-pin item and the entry was never closed | Supply chain |
 | ~~C-330~~ | ~~4~~ | ~~Rotation undocumented; file mode inferred, not observed~~ | Resolved 2026-08-03 on the server: the config pointed at `/root/...`, a path the pipeline left months ago, and `missingok` made it exit successfully every night. Path fixed, `monthly`, `create 0640`, `su views-deploy`; verified by dry run. Mode observed: was 644, now 640 | Server hardening |
 | C-346 | 4 | Four copies of `test_version_not_already_tagged` use a conditional `xfail` that reads as rigorous and is circular — the test runs only when the version is untagged, then asserts it is untagged. Measured green in every reachable state | **Before trusting any `xfail`-marked test as a gate**: name the state that makes it fail. If none does, it is decoration | Test infra |
 | C-345 | 2 | Verification tooling reported a green suite that was red, twice in one session — a piped `pytest \| tail; echo $?` yields the pipe's status, and a task notification reported "exit code 0" for a run that exited 1 | **When capturing a long-running check's result** — piping it, backgrounding it, or reading a notification instead of an unpiped `$?`. Redirect to a file, capture `$?` unpiped, and grep `^FAILED` as a second reader | Test infra |
@@ -169,7 +169,7 @@
 | C-334 | 3 | Removing a runtime dependency from a published library breaks dependents relying on it transitively — caught pre-release (matplotlib/views-hydranet) | **Before removing any runtime dependency**, grep sibling repos for module-level imports; "nothing under src/ imports it" is not sufficient evidence | Dependency policy |
 | ~~C-335~~ | ~~2~~ | ~~Nothing watches the data-serving path — green while every consumer gets nothing~~ | Resolved 2026-08-03: Better Stack monitor live and verified (Up, ~27ms, test alert delivered) + serving-freshness.yml for the content half | Operational monitoring |
 | C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
-| C-337 | 2 | A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics (tip_mass 0.5, pre-1.2.0 HDI tower) | **Before declaring or keeping any floor**: ask what the floor *permits* and what the lock has *chosen* — not only whether our imports resolve. Check `uv.lock`, not just `pyproject.toml` | Dependency policy |
+| ~~C-337~~ | ~~2~~ | ~~A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics~~ | Resolved 2026-08-21 (#462). Floor raised to `>=1.10.2` and `uv.lock` moved; `tests/test_views_frames_floor.py` guards the declared floor; and the residual this entry stayed open for — *nothing checks the other floors against what their locks chose* — was closed by `tests/test_dependency_floors.py` (#430), which checks every runtime floor against every resolution in the lock | Dependency policy |
 | C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
 | C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Before giving any human a command to paste** — if it spans more than one line it is unsafe (terminals join wrapped lines, and the joined form is often still valid shell); if it runs as root, ask what it writes to when mis-parsed | Operational safety |
 | C-340 | 3 | Auto-merge fails silently two ways: `gh pr merge --auto --<method>` refuses to change the method on an already-armed PR (nearly put a squash on `main`), and pushing to a branch whose PR already merged orphans the commit with no error | **Before arming a non-default merge method**, read `auto_merge.merge_method` back; **before any follow-up push to a PR branch**, check `merged` first or use a new branch | Operational safety |
@@ -179,7 +179,12 @@
 | C-347 | 3 | The required CI check exercises a different raster decoder than production — since the 3.11 floor the lock forks, so `test` decodes with `imagecodecs 2026.3.6` while the server uses `2026.5.10`. `test-py313` covers the production line but is **not a required check**, and a red nobody must satisfy is ignorable | **Fired and actioned 2026-08-13.** `test-py313` reported green on `development` and on `main`, and was then added to the required-status-check lists on both (readback verified). Re-opens if the job is renamed or the requirement dropped | Test infra |
 | C-348 | 3 | Nothing asserts which Python the production server runs, and the floor now admits one that installs a **different raster line**. `preflight.py`, `check_health.py` and `refresh_pipeline.sh` contain no `sys.version_info` check of any kind. Created by #443 — this risk did not exist under `>=3.12`. **Measured 2026-08-13: the host runs Python 3.12.3 (Ubuntu 24.04's system interpreter), so it resolves `tifffile 2026.5.15` / `imagecodecs 2026.5.10` — the current fork.** Reassuring, and it is an accident: the guide said "Install Python 3.10+" and this distro happened to hand it 3.12. Still OPEN because one observation is not an assertion | **At the next server provisioning, Python upgrade on the Hetzner host, or any runbook edit that says `apt install python3`** — pin the interpreter explicitly and record which raster fork it resolves | Server hardening |
 | C-349 | 4 | A config value restated in prose has nothing binding it back — `hetzner_deployment_guide.md` said "Install Python 3.10+" for the three months `pyproject.toml` declared `>=3.12`, an instruction producing an environment where the package could not install. The #444 pin guard binds *workflow* pins to `requires-python`; nothing binds *prose* | **When writing a Python version, or any pyproject value, into a guide or ADR** — link to the declaration instead of restating it, or accept that the copy will not be checked | Documentation drift |
-| C-350 | 3 | `release-topology.yml` ran **nothing** for two days: `git branch -f main origin/main` is refused when `main` is the checked-out branch, which it always is on `release`/`schedule`. The job died at step 3 of 13, skipping the deploy gates and the step that closes the tracking issue. Its own guard asserted the step *exists* and *precedes* the gates — both true throughout | **Before changing any workflow that has no `pull_request` trigger** — dispatch it against the branch first. CI cannot verify it, and it goes live the moment it reaches the default branch | Test infra |
+| ~~C-350~~ | ~~3~~ | ~~`release-topology.yml` ran **nothing** for two days: `git branch -f main origin/main` is refused when `main` is the checked-out branch, which it always is on `release`/`schedule`. The job died at step 3 of 13, skipping the deploy gates and the step that closes the tracking issue. Its own guard asserted the step *exists* and *precedes* the gates — both true throughout | Resolved 2026-08-18: fixed in #451, promoted in #452, verified by dispatch **and** by the 06:25 scheduled run; the procedural residual is now step 0b of `publishing_to_pypi.md` §C | Test infra |
+| ~~C-351~~ | ~~3~~ | ~~`serving-freshness.yml` failed every run of its existence — ten runs, ten failures from 2026-08-03. `gh` infers the repo from the git remote and the job has no `actions/checkout`, deliberately, so every `gh issue` call died~~ | Resolved 2026-08-12 (#440): `GH_REPO: ${{ github.repository }}` supplies the input that was missing; verified by the workflow's first successful run. **Registered retroactively 2026-08-18** — the ID was cited in commit `8c8d897` and the v1.12.0 release notes but never entered here | Operational monitoring |
+| C-352 | 3 | `last_valid_month_id` is **UCDP-scoped but generally named**: computed from `ged_*` features only (`export_zarr.py:280-294`) while the grid carries ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI and GAUL. Two sibling repos read it as *the store's* frontier — views-postprocessing to decide which months are marked **fabricated in the FAO delivery**, views-models to gate liveness | **Before relying on it to mean anything other than "UCDP's observed frontier"** — and before adding a source whose coverage can outrun UCDP's. Confirm with views-postprocessing whether UCDP-scoping is what their observed/fabricated split intends | Consumer contract |
+| C-353 | 3 | **Area-majority ranks candidate GAUL polygons in square degrees, not area** (`generate_area_majority_gaul.py:157-172`). Measured 2026-08-21 over every cell above 55°N: **9 of 3,591 border cells flip** under true area. All nine are in the FAO delivery. Eight differ at `gaul2_code` only, one also at `gaul1_code`, **none at `gaul0_code`** | **Before any correction of `data/raw/gaul_admin/*.parquet`** — views-postprocessing's `test_gaul_lookup_fidelity.py` breaks loudly on a changed digest and step 4 of their correction procedure (who tells FAO, on what notice) is still open. Also when GAUL is next reharvested, which reruns the same ranking | Compilation |
+| C-354 | 4 | **Nine test modules patch `datafactory_http.retry.requests.request` directly — 63 sites, five asserting the exact kwarg set.** The mock target is an implementation detail of `request_with_retry`, so any change to *how* it issues its request (a `requests.Session` for connection pooling, urllib3-level retries, or redirect safety) breaks tests that have nothing to do with the change | **Before changing how `request_with_retry` issues its request** — introducing a `Session`, an adapter, or a transport wrapper. Budget the test churn as part of that change rather than discovering it mid-implementation, as #388 did | HTTP layer |
+| C-355 | 3 | **The published observation boundary is inferred from non-zero sums, not declared by the harvest** (`export_zarr.py:280-296`). A genuinely all-zero month reads as unobserved; a **partially-reported month reads as complete**. Measured: the 2026-08-21 export declared `last_valid_month_id = 560` — the month it ran in. views-postprocessing uses this value to mark months **fabricated in the FAO delivery** | **Before any consumer builds logic on `last_valid_month_ids`** (published by ADR-052), or when views-postprocessing answers C-352 — whichever first. The declared bounds already exist in the ingestion ledgers: `ucdp_candidate.max_date_start`, `acled.max_date`, `shdi.year_range` | Consumer contract |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -360,7 +365,7 @@ See also C-259 (missing input digests), C-261 (no `--force` flag), ADR-032 (harv
 SSH is open to all source IPs. IT head advised whitelisting PRIO and Uppsala VPN IPs via fail2ban or Hetzner firewall, requiring VPN for SSH access. **Trigger: before granting additional SSH users, or when PRIO IT provides VPN CIDR ranges for firewall rules (trigger rewritten during review-rr 2026-05-24).** Procedure documented in `hetzner_deployment_guide.md` Phase 6.4. Requires PRIO/Uppsala VPN CIDR ranges from IT.
 
 **Addendum (2026-07-27, go-public gate):** pre-public sshd audit found `PasswordAuthentication` effectively **yes** — the stock config only *comments* the directive, so the internet-open SSH port was accepting password attempts the whole time. Fixed: drop-in `/etc/ssh/sshd_config.d/99-key-only.conf` (`PasswordAuthentication no`), `sshd -t` validated, `systemctl reload ssh`; verified `sshd -T` reports `passwordauthentication no` + `kbdinteractiveauthentication no`, and a fresh key-based login succeeded before the old session closed. With password auth off, publishing the repo (server IP; admin username redacted but present in git history) no longer creates a credential-stuffing surface — key-only SSH exposed to the internet is standard practice. The IP-allowlist scope of this entry stays open/[DEFER] as defense-in-depth.
-**Addendum (2026-07-31, trigger fired — recorded, not resolved):** the trigger reads "before granting additional SSH users", and `ls /home` on the server shows `dylpin`, `simmaa_prio`, `sonja_prio`, `views-deploy` — colleagues already hold shell accounts, so the condition fired at some earlier point without the entry being updated. No IP allowlist is in place; it remains blocked on PRIO IT supplying VPN CIDR ranges (same external block as C-121). Mitigating: key-only SSH since 2026-07-27, and the accounts belong to trusted colleagues. Recording it so the entry is honest about its own trigger. Note this is a different credential from the Caddy data logins added the same week — the five HTTP users (C-318 addendum) got **no** shell accounts.
+**Addendum (2026-07-31, trigger fired — recorded, not resolved):** the trigger reads "before granting additional SSH users", and `ls /home` on the server shows **four accounts — the service account plus three named people** — so colleagues already hold shell accounts (names redacted 2026-08-21 per C-328's trigger, which reads *"next edit to `technical_risk_register.md`"*; this was that edit), so the condition fired at some earlier point without the entry being updated. No IP allowlist is in place; it remains blocked on PRIO IT supplying VPN CIDR ranges (same external block as C-121). Mitigating: key-only SSH since 2026-07-27, and the accounts belong to trusted colleagues. Recording it so the entry is honest about its own trigger. Note this is a different credential from the Caddy data logins added the same week — the five HTTP users (C-318 addendum) got **no** shell accounts.
 **Source:** PRIO IT security guidance, server setup 2026-03-28; go-public sshd audit 2026-07-27; trigger-fired reconciliation 2026-07-31. Cross-ref: C-324 (what a shell account can read in `logs/refresh.log`).
 
 
@@ -595,7 +600,7 @@ Cross-ref: ~~C-131~~ (external monitoring for cron — resolved; this is the sib
 
 ---
 
-### C-337: A loose floor froze an estimator version — and the audit that checked it asked the wrong question
+### ~~C-337: A loose floor froze an estimator version — and the audit that checked it asked the wrong question~~ — RESOLVED
 
 **Source:** views-frames floor audit (2026-08-02), corrected after operator pushback.
 
@@ -621,7 +626,7 @@ This is the same failure the base-docs audit (C-336) was written about — readi
 
 **Resolution.** Floor raised to `>=1.10.2` (1.9.0 is the strict minimum; 1.10.2 is current and the intervening releases are docs/tests). `uv.lock` moved 1.0.0 → 1.10.2. `tests/test_views_frames_floor.py` fails if the floor drops below the audited value, with a message naming what a lower floor re-admits, and separately if any estimator symbol is imported — because that reopens the question.
 
-**Still open, which is why this is Tier 2 and not resolved:** nothing checks the *other* dependency floors against what their locks chose. `numpy>=1.26,<3`, `pyarrow>=14,<20`, `zarr>=2.16,<3` and the rest have the same structure, and the same "the lock froze at the floor" failure is available to all of them.
+**That residual is now closed.** This entry stayed Tier 2 because *nothing checked the other dependency floors against what their locks chose*. `tests/test_dependency_floors.py` (#430) does exactly that — it compares every `>=` floor in `[project].dependencies` against **every** resolution in `uv.lock`, with a written-reason allow-list and a rot check on the allow-list itself. Drilled four ways before shipping. Historically: `numpy>=1.26,<3`, `pyarrow>=14,<20`, `zarr>=2.16,<3` and the rest have the same structure, and the same "the lock froze at the floor" failure is available to all of them.
 
 Cross-ref: C-336 (same failure class, one day earlier), C-334 (dependency policy — removing a runtime dep), C-325/C-326 (pandas floor evidence). GitHub: **views-frames#237** — filed upstream, not as "your floor value is wrong" (it is correct by their governance rule: the floor bumps only on *breaking* changes to the conformance surface, and the 1.9.0 MAP-containment law was additive) but as the accurate defect: `CONFORMANCE_FLOOR` reads as a safe dependency floor and is not one, with this incident as the evidence.
 
@@ -1214,7 +1219,7 @@ sudo tee /etc/logrotate.d/views-datafactory > /dev/null <<'EOF' /home/views-depl
 
 **Standing rule adopted:** commands given to a human to paste are one line. If content is multi-line, use an editor (`sudo nano <file>`) and describe the edit — which is what actually worked afterwards.
 
-Cross-ref: ~~C-330~~ (the work being done when this happened), C-323/C-324 (the log's contents mattered because of what had leaked into it). No GitHub issue: the fix is a rule, not a change.
+Cross-ref: ~~C-330~~ (the work being done when this happened), ~~C-323~~/~~C-324~~ (the log's contents mattered because of what had leaked into it). No GitHub issue: the fix is a rule, not a change.
 
 ---
 
@@ -1333,7 +1338,7 @@ Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). A performance 
 ### C-97: Basic auth + Caddy scalability ceiling at ~30-50 users — [DEFER]
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Note (2026-07-31):** the flat-file model is now actually in multi-user service — 6 logins (`views` + 5 colleagues), each individually revocable. The manual add/revoke recipe is written down (`docs/guides/server_operations.md`), which is what keeps this workable at this size; the audit-trail and rotation gaps the entry describes are unchanged. 6 of ~30.
-**Source:** Falsification audit 2026-04-01 (F2). Cross-ref: C-318 (transport), C-323 (provisioning residue).
+**Source:** Falsification audit 2026-04-01 (F2). Cross-ref: C-318 (transport), ~~C-323~~ (provisioning residue).
 
 ### ~~C-135: No runtime type validation for zarr `.zattrs` values~~ DEMOTED
 Demoted to tech-debt backlog 2026-05-28 (review-rr strategic curation). Only risk vector is manual server-side editing of `.zattrs`, which is unlikely. Our code writes correct types. Re-register if external consumers can write attrs.
@@ -2217,7 +2222,7 @@ The data server (`204.168.219.108`) serves the zarr/parquet endpoints over plain
 
 **Trigger partially fired (2026-07-31):** five per-user credentials were added for VIEWS colleagues (dylan, haavard, haakon, martina, sonja), taking the data server from one shared login to six. That is still the *trusted circle*, not external consumers, and the passwords were issued as throwaways precisely because of this entry — but the credential count is no longer 1, and five more people now type a cleartext-transported password on untrusted networks. The line stays where it was drawn: **onboarding anyone outside the trusted circle triggers the domain + Caddy auto-HTTPS move first** (~1 hour). Add/revoke procedure now documented in `docs/guides/server_operations.md` (PR #371).
 
-Cross-ref: C-97 (basic-auth scalability ceiling — the auth *model*; this entry is the auth *transport*), C-88 (SSH exposure — same server, same hardening cluster), C-323 (the cleartext password file the provisioning step left behind).
+Cross-ref: C-97 (basic-auth scalability ceiling — the auth *model*; this entry is the auth *transport*), C-88 (SSH exposure — same server, same hardening cluster), ~~C-323~~ (the cleartext password file the provisioning step left behind — resolved 2026-08-23).
 ---
 
 ### ~~C-319: In-process writer main() in tests holds the production pipeline lock for pytest lifetime~~ — RESOLVED
@@ -2317,9 +2322,9 @@ in-memory; error paths name the netrc *path*, never contents).
 | Trigger | Fired on any SHDI harvest HTTP failure since the source shipped (ADR-036) |
 | Location | `src/datafactory_http/retry.py` (fix: `_redact_url`, `_redacted_copy`), `src/datafactory_harvester/sources/shdi.py:231` (the query-param transport), `tests/test_http_retry.py:TestCredentialRedaction` |
 
-Cross-ref: C-318 (transport-layer credential exposure, sibling concern), PLATFORM-001 redaction clause (the platform-wide rule this enforces), C-321 (the real-exception-type test rule applied here).
+Cross-ref: C-318 (transport-layer credential exposure, sibling concern), The Appwrite Seam Contract's redaction clause (the platform-wide rule this enforces), C-321 (the real-exception-type test rule applied here).
 
-**Residual (2026-07-31):** the code fix removes the *future* leak vector only. The credential itself was never rotated and the pre-fix code is still what the server runs — tracked separately as C-324, which is open.
+**Residual (2026-07-31) — DISCHARGED.** As written, this said the code fix removed the *future* leak vector only: the credential was unrotated and the server still ran the pre-fix harvester. All three clauses are now false and the line stood stale for three weeks. The token was **rotated and the leaked one revoked** at GDL on 2026-08-01 (~~C-324~~); the server has run post-fix code since v1.11.0 and is on v1.12.0 as of 2026-08-21; and the log holding the leaked lines was destroyed under C-339. **Corrected 2026-08-22** after the stale text was repeated as live in #388's close-out — a resolved concern that goes on being described as open in a *different* entry is how a closed item gets re-reported.
 ---
 
 ### C-325: CI tests pandas 2.3.3 while a fresh consumer install resolves pandas 3 — [DEFER]
@@ -2403,9 +2408,11 @@ The exposure is modest — SSH has been key-only and verified since 2026-07-27 (
 Cross-ref: C-88 (key-only SSH is what makes this tolerable), C-327 (both concern the same incomplete redaction pass).
 ---
 
-### C-329: The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights
+### ~~C-329: The PyPI-publishing job runs unpinned third-party actions while holding OIDC publish rights~~ — RESOLVED
 
-`.github/workflows/publish_package.yml:30,33` uses mutable tags — `actions/checkout@v4`, `astral-sh/setup-uv@v5` — in the job that carries `id-token: write` (`:22-24`). A compromised upstream tag executes inside a job able to mint a PyPI OIDC token and publish a backdoored `views-datafactory` wheel. **No stored secret needs to leak for the artifact to be poisoned**, which is precisely why Trusted Publishing does not make this safe by itself. `ci.yml:14,16,21` has the same pattern but is unprivileged, so it is a lesser concern.
+**Resolved — found stale on 2026-08-21 (#462), not fixed by it.** Both lines now carry full SHAs: `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` and `astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86`. The fix shipped with #388's SHA-pin item and this entry was never closed — so the register carried what it called *"the highest-consequence item the sweep found"* as open for weeks after it was fixed. What follows is the original text.
+
+`.github/workflows/publish_package.yml:30,33` used mutable tags — `actions/checkout@v4`, `astral-sh/setup-uv@v5` — in the job that carries `id-token: write` (`:22-24`). A compromised upstream tag executes inside a job able to mint a PyPI OIDC token and publish a backdoored `views-datafactory` wheel. **No stored secret needs to leak for the artifact to be poisoned**, which is precisely why Trusted Publishing does not make this safe by itself. `ci.yml:14,16,21` has the same pattern but is unprivileged, so it is a lesser concern.
 
 This is the highest-consequence item the sweep found: the blast radius is every consumer who installs the package, whereas every other finding is bounded by the server or the repo.
 
@@ -2548,7 +2555,7 @@ mode `-r--------`, owner and root only). Root is out of scope by any mechanism a
 
 **The `~/.profile` residual was checked, and it was real — see C-344.** Observed 2026-08-10:
 `/home/views-deploy/.profile` was mode **644** inside a **751** home, and `test -r` from
-`simmaa_prio` returned **readable**. So the URL — and every harvest credential beside it — had been
+the admin account returned **readable**. So the URL — and every harvest credential beside it — had been
 readable by three other accounts continuously, which dwarfed the ≤10 s × 3 window this entry is
 about. Fixed the same session; registered separately because it is a different concern with a
 different blast radius.
@@ -2650,7 +2657,7 @@ Cross-ref: C-318 (plaintext scheme default), C-332 (the logging-side siblings).
 
 C-322 closed the leak *in code*. Two residues remain on the production server, and neither is fixed by that merge:
 
-1. **Historical exposure.** Any SHDI harvest HTTP failure between ADR-036 (source shipped) and the fix wrote the full `?token=<GDL_API_TOKEN>` URL into `logs/refresh.log`. Those lines are still there, carrying a still-valid credential, on a machine that now has several shell accounts (`ls /home`: `dylpin`, `simmaa_prio`, `sonja_prio`, `views-deploy`).
+1. **Historical exposure.** Any SHDI harvest HTTP failure between ADR-036 (source shipped) and the fix wrote the full `?token=<GDL_API_TOKEN>` URL into `logs/refresh.log`. Those lines are still there, carrying a still-valid credential, on a machine that now has several shell accounts (`ls /home`: the four shell accounts — the service account plus three named people).
 2. **Deployment lag.** The fix merged to `development` on 2026-07-28 (65c3f54, PR #370); the newest tag is **v1.9.0, cut 2026-07-27** — one day earlier. The server deploys tagged releases, so unless it has been pointed at `development`, the harvester running the monthly cron is still the leaking version and can append fresh token-bearing lines on the next SHDI failure. Verify the deployed ref before assuming otherwise.
 
 Remediation is cheap, independent of the release cycle, and entirely operator-side: rotate the token at globaldatalab.org (My GDL → API Access), update `GDL_API_TOKEN` in `~/.profile` on the server, then scrub the pre-fix lines from `logs/refresh.log` (rotation alone makes the logged value inert, which is the sufficient step; scrubbing is hygiene). Cutting the next release and redeploying closes residue 2 as a side effect.
@@ -2663,10 +2670,19 @@ Remediation is cheap, independent of the release cycle, and entirely operator-si
 | Trigger | Whichever comes first: cutting the next tagged release + redeploy (fold rotation into the deploy step), or granting anyone new read access to the server's logs or `views-deploy` home |
 | Location | Server `logs/refresh.log` (pre-fix lines), server `~/.profile` (`GDL_API_TOKEN`), `src/datafactory_http/retry.py` (fix, merged 65c3f54, unreleased as of v1.9.0) |
 
-Cross-ref: C-322 (the code fix this is the residual of), C-323 (the other credential-at-rest item on the same server, same week), C-88 (who can reach that shell in the first place).
+Cross-ref: C-322 (the code fix this is the residual of), ~~C-323~~ (the other credential-at-rest item on the same server, same week), C-88 (who can reach that shell in the first place).
 ---
 
-### C-323: Five team passwords sit in cleartext at rest on the server pending out-of-band distribution — [DEFER]
+### ~~C-323: Five team passwords sit in cleartext at rest on the server pending out-of-band distribution~~ — RESOLVED
+
+**Resolved 2026-08-23.** The operator confirmed the five passwords had been distributed; `~/team_passwords.txt` was `shred -u`'d and its absence verified in the same command. The trigger read *"confirm the file was distributed and deleted"* — both halves are now confirmed, three weeks after it was written and without the snapshot or new shell account that was supposed to prompt it.
+
+**Checked before deleting, not after.** The file was confirmed to be the one this entry describes — 5 lines, all five logins present — using `wc -l` and a name-only `grep`, so **no password value was printed** into a terminal, a transcript or a log. Deleting a file you have not identified is how the wrong thing gets destroyed (~~C-339~~, the same server, three weeks earlier).
+
+**This entry had its own date wrong**, found by the same check: it says provisioning on 2026-07-31 generated the file, but the mtime was **Jul 29 02:19**. An mtime cannot precede the last write, so the passwords were generated on the 29th and only the Caddyfile lines landed on the 31st. Minor, and recorded because a register whose dates are approximate cannot be used to reconstruct a sequence.
+
+**The plaintext had no recovery value, which is what made this easy.** A colleague who loses their password is reissued one — `caddy hash-password`, replace their line, reload (`server_operations.md`, "Add a data user" / "Revoke a data user"). That costs the same whether or not the file exists. Its only capability was *re-reading a live credential*, which is precisely what this entry objected to.
+
 
 Provisioning five per-user data credentials on 2026-07-31 (dylan, haavard, haakon, martina, sonja — Caddy `basicauth`) generated the passwords into `~/team_passwords.txt` on the server (`chmod 600`, admin's home) so they could be handed out of band; only bcrypt hashes went into the Caddyfile, which is correct. The file is meant to be deleted once the passwords are distributed — until then five live credentials exist in plaintext on a multi-account machine. Exposure is genuinely bounded: `0600` means owner-plus-root only, the passwords are throwaway by design (C-318 already accepts that they cross the wire in cleartext), and they guard courtesy-protected research data. What makes it register-worthy rather than nothing is that it is a *pending* cleanup step with no automatic reminder — a file like this is exactly what survives a year unnoticed and then rides into a provider snapshot or a support session.
 
@@ -3146,16 +3162,16 @@ Cross-ref: C-337 (the fix this failed to deliver), C-342 (the other lockfile-ver
 ```
 $ stat -c '%a %n' /home/views-deploy/.profile     644 /home/views-deploy/.profile
 $ stat -c '%a %n' /home/views-deploy              751 /home/views-deploy
-$ test -r /home/views-deploy/.profile && echo ... READABLE BY simmaa_prio
+$ test -r /home/views-deploy/.profile && echo ... READABLE BY THE ADMIN ACCOUNT
 ```
 
 `751` on the home lets any account traverse in by name; `644` on the file then lets it read. Confirmed by direct test from a second account, not inferred from the bits.
 
-**What was exposed.** Everything the pipeline exports: `UCDP_API_TOKEN`, `ACLED_USERNAME`, `ACLED_PASSWORD`, `GDL_API_TOKEN`, `HEARTBEAT_URL`. To `dylpin`, `simmaa_prio` and `sonja_prio`, continuously, from deployment until 2026-08-10 — not a window, a standing condition.
+**What was exposed.** Everything the pipeline exports: `UCDP_API_TOKEN`, `ACLED_USERNAME`, `ACLED_PASSWORD`, `GDL_API_TOKEN`, `HEARTBEAT_URL`. To the three named shell accounts, continuously, from deployment until 2026-08-10 — not a window, a standing condition.
 
 **Tier 2.** Broader than any single credential concern registered so far: C-331 was one capability URL for ≤10 s three times a month; C-322 was one token in one log. This was **every** credential, always. Not Tier 1 — no data was corrupted and no model output was wrong — and the readers are named colleagues on a research host rather than adversaries, which is why this is an exposure to close rather than an incident to declare.
 
-**Resolved 2026-08-10:** `chmod 600`, then verified from the account that could read it a moment earlier (`no longer readable by simmaa_prio`), then verified the owner still can (`views-deploy reads its own profile fine — pipeline path intact`). Both directions, because a permission fix that also breaks the pipeline is not a fix.
+**Resolved 2026-08-10:** `chmod 600`, then verified from the account that could read it a moment earlier (`no longer readable by the admin account`), then verified the owner still can (`views-deploy reads its own profile fine — pipeline path intact`). Both directions, because a permission fix that also breaks the pipeline is not a fix.
 
 **Swept the rest of the home rather than assuming this was the only one.** `.netrc` was already `600` — the data-server credentials were never exposed. `.ssh` `700`; `.bash_history`, `.python_history`, `.lesshst` all `600`. `.views-deploy-tag` is `644` and contains `v1.11.0`, not a secret.
 
@@ -3312,7 +3328,7 @@ Cross-ref: C-336 (the same family — docs true when written, false later; that 
 
 ---
 
-### C-350: The workflow built to run the deploy gates ran nothing for two days
+### ~~C-350: The workflow built to run the deploy gates ran nothing for two days~~ — RESOLVED
 
 **Source:** `/falsify` on the session-close claim (2026-08-16). Reproduced locally, not inferred.
 
@@ -3326,9 +3342,191 @@ Cross-ref: C-336 (the same family — docs true when written, false later; that 
 
 **The part worth carrying forward.** Its guard asserted the step *exists* and *runs before* the gates. Both were true, continuously, while the job died on that very step. **An assertion about a thing's presence is not an assertion about its behaviour** — the same shape as ~~C-346~~ (a gate that could not fail) and ~~C-330~~ (a nightly no-op reporting success). The new guard asserts the step cannot use `git branch -f` on a branch that may be checked out, and was drilled to failure both ways.
 
-**Resolution.** `git update-ref refs/heads/<b> origin/<b>`, which writes the ref regardless of what is checked out. **Residual, and it is not closed by the fix:** a workflow with no `pull_request` trigger cannot be verified before it reaches the default branch. `workflow_dispatch` was already present and could have caught this — the two dispatch runs on 08-12 both targeted `main`, whose copy lacked the step. The trigger existed; nobody aimed it at the change. The mitigation is procedural, and whether it belongs in `publishing_to_pypi.md` is an open question on #450.
+**Resolution.** `git update-ref refs/heads/<b> origin/<b>`, which writes the ref regardless of what is checked out. **Residual, and it is not closed by the fix:** a workflow with no `pull_request` trigger cannot be verified before it reaches the default branch. `workflow_dispatch` was already present and could have caught this — the two dispatch runs on 08-12 both targeted `main`, whose copy lacked the step. The trigger existed; nobody aimed it at the change. The mitigation is procedural, and whether it belongs in `publishing_to_pypi.md` is an open question.
+
+**BOTH closure conditions are now met (2026-08-18), so this entry is resolved. Kept in full because the mechanism is the useful part:**
+
+1. **A SCHEDULED run succeeds.** Everything known about the fix comes from `workflow_dispatch`. The fix reached `main` at 2026-08-17 08:07; the last scheduled run was 06:33 that morning, before it landed. Verified-in-one-context-untested-in-another is the exact shape that caused this entry — #435's step passed every PR check and was never executed where it mattered. Check with `gh run list --workflow=release-topology.yml --limit 3`; the newest `schedule` row must read `success`. **MET: the 2026-08-18 06:25 scheduled run succeeded** — the first ever on the schedule path with the fix in place.
+2. **A decision on the procedural gap** — either a line in `publishing_to_pypi.md` saying to dispatch a workflow against the branch before promoting a change to it, or an explicit note that we accept the risk. Not both, not neither. **MET: step 0b of `publishing_to_pypi.md` §C now says to dispatch such a workflow against the branch before promoting, with the reason.**
 
 Cross-ref: ~~C-341~~ (the concern #435 was closing when it introduced this), ~~C-346~~ and ~~C-330~~ (assertions true while the thing was broken), C-320 (why this workflow deliberately has no PR trigger). Part of the **mechanisms that fail green** cluster. GitHub: #450.
+
+---
+
+### ~~C-351: `serving-freshness.yml` never succeeded once in its existence~~ — RESOLVED
+
+**Source:** code review aimed at something else (2026-08-12, #440). **Entered here retroactively on 2026-08-18** — see the note at the end.
+
+**Trigger (historical):** any workflow job that calls `gh` without `actions/checkout` — `gh` infers the repository from the git remote, so the call fails hard rather than returning empty.
+
+**Location:** `.github/workflows/serving-freshness.yml`.
+
+**What was wrong.** Ten runs, ten failures, from the day the workflow was added on 2026-08-03. Every one died identically: `failed to run git: fatal: not a git repository`. The job has no `actions/checkout` — correctly, since it fetches one URL, reads it, and never touches the repo — so `gh` had nothing to infer from. Because that is a hard error rather than an empty result, it took the whole run with it.
+
+**Why it mattered.** This workflow is the half of ADR-051 §2 that Better Stack's free tier cannot do — the content check on served data, built precisely because that gap was unacceptable. **It did not work for its entire existence**, and was found nine days in by a review looking for something else.
+
+**Resolution.** `GH_REPO: ${{ github.repository }}` supplies the missing input. `actions/checkout` would also have silenced it, by giving `gh` a remote to infer from, but it clones a repository the job has no use for in order to satisfy an inference step that can be skipped outright — it works for the wrong reason. Verified by dispatch: the workflow's first successful run in its existence.
+
+**Why this entry exists at all, given it was already fixed.** The ID `C-351` was cited in commit `8c8d897` and in the **published v1.12.0 release notes**, and was never registered — a dangling reference in a public artifact, found by `/falsify` on 2026-08-18. Commit messages and published releases are immutable; editing the release note would leave the commit citing a non-existent ID forever. Registering the concern the citations *meant* makes both correct retroactively, and costs one struck-through row.
+
+Cross-ref: ~~C-335~~ (the serving-path gap this workflow closes), C-338 (freshness depends on a GitHub-scheduled workflow rather than the monitoring vendor), ~~C-350~~ (the sibling workflow that also ran nothing, found the same way — by looking). Part of the **mechanisms that fail green** cluster. GitHub: #440.
+
+---
+
+### C-352: `last_valid_month_id` is UCDP-scoped but generally named, and two repos read it as the store's frontier
+
+**Source:** `/code-review medium` on #469 (2026-08-21), while answering #453 for FAO. Found as a **wrong claim in a partner-facing document before it published** — the document is fixed; this entry is the underlying fact it exposed.
+
+**Trigger:** **Before relying on `last_valid_month_id` to mean anything other than "UCDP's observed frontier"**, and before adding a source whose coverage can outrun UCDP's. Also: confirm with views-postprocessing whether UCDP-scoping is what their observed-versus-fabricated split actually intends.
+
+**Location:** `scripts/export_zarr.py:276-296`; consumed via `src/datafactory_query/defaults.py:48-86` (`get_last_valid_month_id`); read by views-postprocessing (`delivery/observed_range.py`) and views-models (`tools/liveness/datafactory_input.py`).
+
+**The mismatch.** The attribute is computed from `ged_*` features alone:
+
+```python
+ucdp_indices = [i for i, name in enumerate(feature_names) if name.startswith("ged_")]
+```
+
+The grid carries five other source families. The name says `last_valid_month_id`; the value means *last month in which UCDP has a non-zero observation*.
+
+**The code comment makes the same slip**, two lines apart:
+
+```
+# Data boundary: last month with real UCDP observations.        <- correctly scoped
+# ...only months through this boundary have observed data;      <- generalised, and false
+```
+
+**Why it matters beyond tidiness.** views-postprocessing uses this value to decide which months are labelled **fabricated in the delivery to FAO**. Months no source observed are correctly fabricated; months observed by a source other than UCDP are labelled on a UCDP-shaped boundary.
+
+**This is not hypothetical, and ADR-047 contradicts itself about it.** Rule 3 under `### Rules` states the assumption — *"Sources with **shorter** temporal coverage **than UCDP** get zeros in months outside their range"* — i.e. UCDP is both the anchor and the longest. The coverage table twelve lines later in the same ADR says otherwise:
+
+| Source | Temporal range |
+|---|---|
+| UCDP (GED) | 1989-01 – present (anchor) |
+| **GHS-POP** | 1975 – **2030** |
+| **GHS-BUILT-S** | 1975 – **2030** |
+
+Two sources extend past UCDP by design rather than by harvest lag. Whether those months reach the assembled grid depends on `--end-year`, which `scripts/refresh_pipeline.sh:288-294` does not pass — and `export_zarr.py:277` states the grid *is* pre-allocated beyond the boundary, calling the excess *"zero-filled padding"*, which holds only if no other source populated it.
+
+**A UCDP frontier may still be the intended semantics** — the delivery is conflict forecasting and UCDP is the outcome variable. Nobody in this repository can decide that, which is why the trigger asks views-postprocessing rather than asserting.
+
+**How it surfaced.** The draft answer to #453 claimed that a changed `source_digest` with an unchanged `last_valid_month_id` was *"the only unambiguous restatement signal in the system."* An ACLED-only append produces exactly that signature. Published, it would have had views-postprocessing report a history rewrite to FAO in a month where nothing was rewritten. The reviewer caught it; the document now carries a two-state table and records the error.
+
+**Tier 3, not 2.** No values are wrong and nothing is silently corrupted — the numbers in the grid are correct. What can be wrong is a **label applied to them in a partner-facing product**, and the coupling spans three repositories. Not Tier 4 because a partner sees the consequence.
+
+**One part of this survives whatever views-postprocessing answers.** Even if UCDP-scoping is exactly the intended semantics, **ADR-047 still contradicts itself** — rule 3 asserts UCDP is the longest source while the table below it lists two that are not. That is a one-line amendment to the ADR and it is owed either way. Recorded here rather than as a separate entry, because a second entry would carry the same trigger and this register was cut from 45 to 40 open precisely to stop that.
+
+**Not fixed here, deliberately.** Renaming the attribute would break `get_last_valid_month_id` in two repos — and that accessor, not `.zattrs`, is the de-facto contract surface. The cheap first move is the conversation the trigger names, not a rename.
+
+Cross-ref: C-130 (zero-filled future months, the concern this attribute was added for), C-133, ~~C-300~~ (the `first_valid_month_ids` sibling, which *is* per-source). GitHub: #469, #453.
+
+### C-353: Area-majority ranks in square degrees, and above 55°N nine delivered cells rank differently under true area
+
+**Source:** #387, filed 2026-07-31 from the views-postprocessing seat, untracked for three weeks — the register had no C-number for it. Measured under #465 (epic #461) as pre-registered hypothesis **H6**.
+
+**Trigger:** **Before correcting `data/raw/gaul_admin/*.parquet`.** views-postprocessing pins `lookup_version = land_gaul@<our digest>` and their `test_gaul_lookup_fidelity.py` fails loudly on any change — that alarm is the intended one and it is theirs. Step 4 of their `docs/operations/correction_procedure.md`, *who contacts FAO and on what notice*, is **explicitly open**; correcting before it is settled puts an inconsistent first message in front of a partner. Also fires **when GAUL is next reharvested**, because the regeneration reruns the same ranking.
+
+**Location:** `scripts/generate_area_majority_gaul.py:157-172` (`_compute_cell_polygon_map`, the function `main()` actually calls) and `:103-126` (`area_majority_join`, its tested twin). Measurement: `scripts/verify_area_majority_projection.py`. Result: `reports/investigation_area_majority_gaul/projection_sensitivity.json`.
+
+**The defect.** Each PRIO-GRID cell is built as `shapely_box(lon-0.25, lat-0.25, lon+0.25, lat+0.25)` in raw EPSG:4326 and candidates are ranked by `cell.intersection(poly).area`. In that CRS `.area` is **square degrees**. At 60°N a degree of longitude spans about half the ground distance of a degree of latitude, so east-west extent is overstated by close to 2×.
+
+**The mitigation argument, and why it is only mostly right.** Within one 0.5° cell every candidate sits in the same narrow latitude band, so `cos(lat)` scales them near-equally and the ranking usually survives. That argument is why nobody caught this when ADR-039 was written — and it holds for 3,582 of 3,591 border cells. It fails where two candidates are asymmetric *in latitude* inside the cell and close in size: then the northern sliver's smaller `cos(lat)` is enough to move the winner.
+
+**Measured, not estimated.** Exhaustive over every cell with |lat| > 55, north and south:
+
+| | Whole grid | Delivered (`land_gaul`) |
+|---|---|---|
+| Cells above 55° | 100,800 | 18,601 |
+| **Border cells** (>1 candidate — only these can flip) | **3,591** | 3,581 |
+| **Flips** | **9** | **9** |
+
+**Severity is bounded by which level moved.** Eight flips differ at `gaul2_code` only; gid 214278 also differs at `gaul1_code`. **`gaul0_code` is identical in all nine.** No cell changes country, so country-month aggregation, `land_gaul` membership and the 64,742-cell delivery boundary are untouched. What is wrong is the admin-2 (and in one case admin-1) label on nine cells out of 64,742.
+
+**Tier 3, not 2.** The values are wrong — this is not a naming or coupling issue — but nothing that consumes the affected fields today produces a wrong number from them: the conflict aggregations run on `gaul0`. Not Tier 4 because the wrong labels are **already delivered to an external partner** and served live by views-faoapi. It rises to Tier 2 the moment a consumer aggregates on `gaul1` or `gaul2`.
+
+**The tests cannot catch this, by construction.** `tests/test_area_majority.py:121-145` recomputes area-majority in square degrees inside its own oracles, so all thirty-nine tests would agree with any square-degree implementation, right or wrong. The empirical ones are `@pytest.mark.falsification`, gated behind `--run-falsification`, and not in CI. This is why the measurement needed its own detection drill — `verify_area_majority_projection.py:_self_test` constructs a cell where the two rankings disagree by construction and refuses to report a result unless it sees the flip.
+
+**No dependency was added and none is needed.** #387's own correction comment proposed `pyproj`; `pyproj` is not a dependency and its wheels bundle PROJ — the GDAL-family chain ADR-039 rejected in Alternatives C and D. Within a cell the true-area ratio is a function of latitude alone, so ranking by `sliver.area * cos(sliver.centroid.y)` is equivalent to ranking by true area. The constant of proportionality is identical for every candidate and cancels. `pyproject.toml` and `uv.lock` are unchanged.
+
+**Deliberately not fixed here.** The fix is one line in `_compute_cell_polygon_map`, but applying it regenerates seven parquets, moves the digest, trips views-postprocessing's fidelity test, and changes data a partner is already serving — with the notification procedure for exactly that event still unwritten. The pre-analysis plan committed to this outcome before the measurement ran (§4: *"Report the count and the exact gid list; stop there"*), which is what keeps stopping here from being a rationalisation of an inconvenient result.
+
+**A second thing the measurement surfaced, not fixed:** `area_majority_join` (`:103-126`, tested) and `_compute_cell_polygon_map` (`:157-172`, called) are near-duplicates whose tie-breaking differs — lowest GAUL code versus lowest polygon index. The tested one is not the one that runs. Out of scope for #465 and recorded in its own right.
+
+Cross-ref: C-149 (the coastal gap this assignment was built to fix), ADR-039, ADR-030 (dependency floor). GitHub: #387, #465, epic #461.
+
+### C-354: The HTTP layer's tests are coupled to *how* it makes a request, not what it guarantees
+
+**Source:** #388 item 7, while designing the cross-host redirect guard (2026-08-21). Found because the obvious fix was impossible, not by reading the tests.
+
+**Trigger:** **Before changing how `request_with_retry` issues its request** — a `requests.Session` for connection pooling or urllib3-level retries, an adapter, a transport wrapper. Budget the test churn as part of that work.
+
+**Location:** `src/datafactory_http/retry.py:106` (`request_with_retry`); mocked from `tests/test_http_retry.py`, `test_acled_harvester.py`, `test_ucdp_annual.py`, `test_ucdp_dot9.py`, `test_ucdp_candidate.py`, `test_ghspop_harvester.py`, `test_gaul_admin.py`, `test_grid.py`, `test_falsification_acled_phase2.py`.
+
+**The coupling.** `MOCK_TARGET = "datafactory_http.retry.requests.request"` — 63 patch sites across nine modules name the module-level function this implementation happens to call. Five go further and assert the exact kwargs:
+
+```python
+mock_request.assert_called_once_with(
+    "GET", "http://test", headers=..., params=...,
+    data=None, json=None, timeout=10,
+)
+```
+
+**What it cost, concretely.** #388 item 7 asks that a custom credential header not survive a cross-host redirect. The canonical fix is a `requests.Session` overriding `rebuild_auth` — the hook `requests` provides for exactly this, which strips sensitive headers on host change while leaving redirects working. **All 63 sites would have broken**, because `Session().request` is not `requests.request`.
+
+The shipped fix instead passes `allow_redirects=False` only when a request carries a header from a named set, and fails loudly on a 3xx. It is a good fix on its merits — narrower blast radius, fails loud per ADR-011, and does not disable redirects for the eleven sources that share the function. **But it was chosen partly because the better-known one was unaffordable, and that is worth recording.**
+
+**Two details that make this sharper than "tests use mocks".**
+
+1. **`Authorization` was deliberately excluded** from the sensitive-header set. It is genuinely unnecessary — `requests` already strips it on host change — but it is *also* the header those five exact-kwarg assertions pass. The right answer and the cheap answer coincided here. They will not always.
+2. **The guard checks `status_code`, not `resp.is_redirect`**, because a bare `MagicMock` has a truthy `is_redirect` and would have made every UCDP test raise. The production code carries a comment saying so. **Test-shape has leaked into a production branch condition** — small, and exactly the kind of thing this entry exists to make visible.
+
+**Tier 4, not 3.** Nothing is wrong and no data can be corrupted; the tests pass and test what they claim. The cost is entirely future: a change that should touch one file touches ten. Not dismissed as noise because it has already redirected one design decision, on the day it was found.
+
+**Not fixed here, and possibly not worth fixing.** Rewriting 63 sites to patch at a seam of our own choosing is a large mechanical change with real risk of weakening what the tests assert, in exchange for a benefit nobody needs today. WET-before-DRY applies to test doubles too. The point of this entry is that the next person meets the constraint in writing rather than three hours into an implementation.
+
+**Adjacent, verified, not a concern.** The same cross-host question for the *other* two credential carriers was checked: `urllib` (`datafactory_query/defaults.py`) copies every header but `content-length`/`content-type` onto a redirected request, and **was** leaking the netrc basic-auth credential — fixed in #388 with `add_unredirected_header`. `aiohttp` 3.13.5, reached via fsspec in `backends_zarr.py`, already does `if url.origin() != redirect_origin: auth = None`, so it is safe. The declared floor is `aiohttp>=3.9` and **it was not verified that 3.9 carries that strip**; `uv.lock` pins 3.13.5, so every environment built from the lock is safe.
+
+Cross-ref: C-322 (the redaction this layer performs), C-345, ADR-011 (fail-loud). GitHub: #388.
+
+### C-355: The observation boundary is inferred from a run of zeros, and says the running month is fully observed
+
+**Source:** Investigation of #476 (CRAF'd) and #420 (views-pipeline-core), 2026-08-24, while writing ADR-052. Found by reading the live store, not by a failing test.
+
+**Trigger:** **Before any consumer builds logic on the newly published `last_valid_month_ids`**, and when views-postprocessing answers C-352 — whichever comes first. Also fires if a new source is added whose reporting lag differs from UCDP's.
+
+**Location:** `scripts/export_zarr.py:280-296` (the global boundary), `scripts/assemble_grid.py:820-822` and the four sibling blocks (the per-source ones, same method). Consumed by `views-postprocessing/delivery/observed_range.py`.
+
+**The mechanism.** A month is marked observed when the source's slice sums to more than zero:
+
+```python
+has_data = ucdp_slice.sum(axis=(1, 2, 3)) > 0
+```
+
+That is an inference about the world drawn from the data alone, and it is wrong in both directions:
+
+- **A genuinely all-zero month reads as unobserved.** Globally implausible for UCDP; entirely plausible for a source with narrower scope, and this is the exact inference views-pipeline-core's ADR-040 forbids them from making. We make it for them, one layer up, and publish the result as fact.
+- **A partially-reported month reads as complete**, because *any* non-zero cell in the month satisfies the test. This is the live case.
+
+**Measured, not theorised.** The store served on 2026-08-24 was exported **2026-08-21 03:08** and declares:
+
+```
+last_valid_month_id  560
+last_valid_date      2026-08
+```
+
+Month 560 is August 2026 — **the month the export ran in**, three weeks old. It cannot have been fully reported by any source. Every consumer reading that attribute is being told a partial month is complete.
+
+**Why Tier 3 and not 4.** No stored value is wrong — the numbers in the grid are correct. What is wrong is a **label**, and views-postprocessing uses that label to decide which months are marked *fabricated* in the delivery to FAO (`crafd/managers/crafd.py:188`, `unfao/managers/unfao.py:188`). A partner-visible classification rests on it. Same tier and the same reason as C-352, which is about the same attribute's scoping.
+
+**Why Tier 3 and not 2.** Nothing is silently corrupted and the direction of the error is conservative in the case that matters most: marking a partial month *observed* means views-postprocessing ships it as history rather than dropping it — visible as thin data, not as a missing month.
+
+**The fix exists and was deliberately not taken here.** The declared bounds are already recorded at harvest: `ucdp_candidate.max_date_start` (`2026-03-31` in the local ledger), `ucdp_annual.max_date_start`, `acled.max_date`, `shdi.year_range`. Reading those instead of summing would answer the question from the source's own statement rather than from a guess about its data.
+
+It was deferred because **it changes the value of a number three repositories already read**, and ADR-052's change makes five sibling values visible for the first time. Doing both at once would confound "the value moved" with "the value appeared", and the first consumer to notice would not know which had happened. Sequencing, not reluctance.
+
+**This entry exists because of what ADR-052 was written to fix.** ADR-047 line 68 deferred a decision with no owner, no trigger and no issue; it was raised twice from outside the repository before anyone took it, the second time by a partner-facing consumer with a month of zeros they could not explain. A deferral without a C-number is the same failure in a different file.
+
+Cross-ref: C-352 (the same attribute's UCDP scoping — open, with views-postprocessing), C-130 (zero-filled future months, the concern the attribute was added for), ADR-052, ADR-047. GitHub: #476, #420.
 
 ---
 

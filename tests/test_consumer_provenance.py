@@ -174,3 +174,82 @@ class TestConsumerProvenance:
             "Script should abort (rc=1) when grid digest "
             "does not match assembly provenance"
         )
+
+
+class TestConsumerManifestCarriesCoverageBounds:
+    """FAO and CRAF'd consume the parquet, not the zarr.
+
+    The zarr publishes coverage bounds in its attributes; the consumer
+    manifest carried digests and filenames and no bounds at all, so a
+    parquet consumer had no way to tell a zero-filled month for an
+    unreported source from a month the source observed as zero (#476).
+    The bounds are already in assembly provenance — the manifest just
+    never copied them.
+    """
+
+    def _assembled_with_bounds(self, data_dir: Path) -> None:
+        _make_synthetic_grid(data_dir)
+        (data_dir / "provenance.json").write_text(json.dumps({
+            "last_valid_month_id": 560,
+            "first_valid_acled_month_id": 481,
+            "last_valid_acled_month_id": 559,
+            "first_valid_vdem_month_id": 109,
+            "last_valid_vdem_month_id": 547,
+        }))
+
+    def test_manifest_carries_both_coverage_maps(
+        self, tmp_path: Path,
+    ) -> None:
+        data_dir = tmp_path / "assembled"
+        data_dir.mkdir()
+        self._assembled_with_bounds(data_dir)
+        out = tmp_path / "consumer"
+        out.mkdir()
+
+        _run_main(data_dir, out)
+        manifest = json.loads((out / "provenance.json").read_text())
+
+        assert manifest["first_valid_month_ids"] == {
+            "first_valid_acled_month_id": 481,
+            "first_valid_vdem_month_id": 109,
+        }
+        assert manifest["last_valid_month_ids"] == {
+            "last_valid_acled_month_id": 559,
+            "last_valid_vdem_month_id": 547,
+        }
+
+    def test_singular_ucdp_bound_is_carried_under_its_own_name(
+        self, tmp_path: Path,
+    ) -> None:
+        """Same compatibility rule as the zarr: consumers read
+        `last_valid_month_id` by that exact name (C-352)."""
+        data_dir = tmp_path / "assembled"
+        data_dir.mkdir()
+        self._assembled_with_bounds(data_dir)
+        out = tmp_path / "consumer"
+        out.mkdir()
+
+        _run_main(data_dir, out)
+        manifest = json.loads((out / "provenance.json").read_text())
+
+        assert manifest["last_valid_month_id"] == 560
+        assert (
+            "last_valid_month_id" not in manifest["last_valid_month_ids"]
+        )
+
+    def test_absent_bounds_leave_the_manifest_unchanged(
+        self, tmp_path: Path,
+    ) -> None:
+        """Assembly provenance without bounds must not add empty keys —
+        an empty map reads as 'no source has coverage'."""
+        data_dir = tmp_path / "assembled"
+        data_dir.mkdir()
+        _make_synthetic_grid(data_dir)
+        out = tmp_path / "consumer"
+        out.mkdir()
+
+        _run_main(data_dir, out)
+        manifest = json.loads((out / "provenance.json").read_text())
+
+        assert "first_valid_month_ids" not in manifest
+        assert "last_valid_month_ids" not in manifest

@@ -42,6 +42,41 @@ def _use_zarr_loader(data_dir: Path | str) -> bool:
 _REMOTE_TIMEOUT_SECONDS = 120
 
 
+def _safe_url(zarr_path: str) -> str:
+    """``zarr_path`` with any userinfo masked, for use in messages.
+
+    ``~/.netrc`` is the documented credential path, but nothing stops a
+    caller passing ``https://user:pass@host/grid.zarr`` — and this
+    module interpolates the store URL into seven error and warning
+    messages, any of whose tracebacks land in the caller's log.
+
+    Deliberately local rather than shared with
+    ``datafactory_http.retry._redact_url``: ``datafactory_query`` may
+    import only ``datafactory_priogrid`` and ``datafactory_adapters``
+    (``tests/test_import_enforcement.py``). Second occurrence, not
+    third — WET, and widening the allow-list to avoid nine duplicated
+    lines would be the more expensive trade.
+
+    Userinfo only. A token in the query string is not a supported way
+    to reach this store; netrc is.
+    """
+    if not _is_remote(zarr_path):
+        return zarr_path
+    try:
+        parsed = urlparse(zarr_path)
+    except ValueError:
+        # urlparse raises on a malformed authority (unbalanced "[").
+        # Return a placeholder rather than the input: a redactor that
+        # falls back to its argument emits what it exists to suppress.
+        return "<unparseable-url-redacted>"
+    if not (parsed.username or parsed.password):
+        return zarr_path
+    host = parsed.hostname or ""
+    if parsed.port:
+        host = f"{host}:{parsed.port}"
+    return parsed._replace(netloc=f"***:***@{host}").geturl()
+
+
 def _resolve_storage_options(
     zarr_path: str,
 ) -> dict | None:
@@ -78,11 +113,14 @@ def _resolve_storage_options(
                 login, password,
             )
     except (FileNotFoundError, KeyError, NetrcParseError) as exc:
+        # Type, not instance: CPython's netrc parser embeds the
+        # offending token in the message, so an unquoted password
+        # containing a space would leak fragments into the log.
         logger.warning(
             "No credentials for %s: %s. "
             "Remote access may fail with 401.",
             parsed.hostname,
-            exc,
+            type(exc).__name__,
         )
 
     return {"client_kwargs": client_kwargs}
@@ -127,18 +165,18 @@ def _load_grid_from_zarr(
     try:
         ds = xr.open_zarr(zarr_path, **kwargs)
     except (FileNotFoundError, ValueError, KeyError) as exc:
-        msg = f"Zarr store not found or invalid at {zarr_path}"
+        msg = f"Zarr store not found or invalid at {_safe_url(zarr_path)}"
         raise FileNotFoundError(msg) from exc
     except OSError as exc:
         exc_msg = str(exc)
         if "401" in exc_msg or "Unauthorized" in exc_msg:
             msg = (
-                f"Authentication failed for {zarr_path}. "
+                f"Authentication failed for {_safe_url(zarr_path)}. "
                 f"Check ~/.netrc credentials."
             )
             raise PermissionError(msg) from exc
         msg = (
-            f"Cannot open zarr store at {zarr_path}: "
+            f"Cannot open zarr store at {_safe_url(zarr_path)}: "
             f"{type(exc).__name__}: {exc_msg}"
         )
         raise FileNotFoundError(msg) from exc
@@ -151,7 +189,7 @@ def _load_grid_from_zarr(
         exc_msg = str(exc)
         if "401" in exc_msg or "Unauthorized" in exc_msg:
             msg = (
-                f"Authentication failed for {zarr_path}. "
+                f"Authentication failed for {_safe_url(zarr_path)}. "
                 f"Check ~/.netrc credentials."
             )
             raise PermissionError(msg) from exc
@@ -163,7 +201,7 @@ def _load_grid_from_zarr(
     )
     if last_valid_month_id is None:
         warnings.warn(
-            f"Zarr store at {zarr_path} lacks 'last_valid_month_id' "
+            f"Zarr store at {_safe_url(zarr_path)} lacks 'last_valid_month_id' "
             f"attribute. Zero-padding boundary unknown — consumer "
             f"cannot distinguish observed zeros from padding. "
             f"Re-export with export_zarr.py to fix.",
@@ -177,7 +215,7 @@ def _load_grid_from_zarr(
         feature_names = list(attrs["feature_order"])
     else:
         warnings.warn(
-            f"Zarr store at {zarr_path} lacks 'feature_order' "
+            f"Zarr store at {_safe_url(zarr_path)} lacks 'feature_order' "
             f"attribute. Falling back to sorted(data_vars). "
             f"Feature column order may differ from the npy "
             f"backend. Re-export with export_zarr.py to fix.",
@@ -210,7 +248,7 @@ def _load_grid_from_zarr(
             )
     else:
         warnings.warn(
-            f"Zarr store at {zarr_path} lacks source metadata "
+            f"Zarr store at {_safe_url(zarr_path)} lacks source metadata "
             f"attributes (source_features / first_valid_month_ids "
             f"/ feature_agg_types). Pre-coverage warnings and "
             f"type-aware aggregation are unavailable on this "
