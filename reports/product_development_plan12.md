@@ -1,9 +1,57 @@
-# Product Development Plan v12 — current through v1.12, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.13, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
+
+---
+
+## v1.13 Addendum (2026-08-26)
+
+**v1.13.0 (coverage bounds reach consumers; credential-carrier fixes reach the wheel).** The first
+release since v1.10.0 whose `src/` changes actually alter behaviour for someone who `pip install`s
+the package.
+
+**What a consumer gets.** Three credential carriers stopped leaking (#388). `_redact_url` handled
+query parameters and ignored URL userinfo — and its outer filter only fed it strings containing
+`?`, so `https://user:pass@host/grid.zarr` never reached the redactor at all. `backends_zarr`
+interpolated the store URL raw into seven error messages and logged a `NetrcParseError` by value,
+which embeds the offending token. And `defaults.py` added the netrc credential with urllib's
+`add_header`, which copies every header but `content-length`/`content-type` onto a redirected
+request — so the **shared** basic-auth credential followed a 30x to any host. That last one was not
+in the audit that prompted the work; it was found by reading CPython's redirect handler rather than
+assuming its behaviour.
+
+**What the pipeline gains, and why it needs a deploy.** `export_zarr.py` now publishes
+`last_valid_month_ids` — every non-anchor source's trailing coverage bound — alongside the
+`first_valid_month_ids` it always published, and `generate_consumer_data.py` copies both into the
+consumer manifest, which carried no coverage bounds at all. **Neither ships in the wheel:** the
+sdist includes `/src` only, so `scripts/` is server-side. Until the server runs this code, the
+served store gains nothing, and the next scheduled export is **2026-09-21**.
+
+*Why it was a problem worth a release.* The trailing bounds were **already being computed on every
+run** and discarded by an export filter matching `first_valid_`. A consumer could see when ACLED
+started and not when it stopped — and the entire ambiguity lives at the stopping end. CRAF'd received
+a complete, zero-filled month for a month nobody had reported and shipped `0.0` for 2,432 admin-1
+units where their own contract requires `NaN`; views-pipeline-core filed the same defect as an
+unowned decision, because ADR-047 deferred it with no owner, no trigger and no issue.
+
+**What this release does not fix, deliberately.** The boundary is *inferred* from non-zero sums, so a
+partially-reported month reads as complete — the 2026-08-21 export declares the month it ran in as
+fully observed (C-355). The declared bounds already exist in the ingestion ledgers. Deferred because
+correcting it *moves* a number three repositories read, in the same release that makes five sibling
+values *appear*; the first consumer to notice could not tell which had happened.
+
+**Minor, not patch:** new published attributes on the store and new manifest fields are additive
+features. No existing value or name changes — `last_valid_month_id` is untouched, because
+views-postprocessing and views-models read it by that name and C-352 is open on what it should mean.
+
+**Also in this release:** ADR-052 (the coverage and extrapolation policy, discharging ADR-047's line
+68), ADR-014 §5's precedent applied one layer up, the seam contract pinned at `appwrite-seam-v1.7.1`
+with its diff-read recorded beside the pin, and `PROVIDER_PROJECTED_EPOCHS` declaring that GHS-POP's
+and GHS-BUILT-S's 2025 and 2030 epochs are provider projections delivered identically to observed
+ones.
 
 ---
 
