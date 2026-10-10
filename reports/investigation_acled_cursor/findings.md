@@ -1,8 +1,8 @@
 # Do ACLED's cursor and offset pagination return the same events?
 
 **Issue:** #487 · **Pre-registered:** 2026-10-10 (`pre_analysis_plan.md`, commit `18029fe`)
-**Measured:** 2026-10-10 · **Register:** C-153 (amended), C-359 (new)
-**Status:** Complete. H1 holds — the migration is safe to ship. H4 came back negative and that is recorded as such.
+**Measured:** 2026-10-10, re-run 2026-10-11 · **Register:** C-153 (amended), C-359 (new)
+**Status:** Complete. H1 holds — the migration is safe to ship. H4 came back negative and that is recorded as such. Amended after code review; see §5.
 
 ---
 
@@ -179,19 +179,49 @@ answer.
 
 But it is a **new production failure mode introduced on a deadline**, and the evidence for it is
 one 8-page walk. A walk of 84 or 7,609 events cannot establish that the condition never arises on a
-walk of 400,000. If it fires on the 21 October run, that is a finding about ACLED and not a bug in
-this code — and the error message says what it refused to do and why, which is what makes it
-actionable rather than mysterious.
+walk of 400,000.
 
-### 3.2 Whether cursor pagination is stable across a restatement
+**There is one trigger that is benign and foreseeable, and the code review named it.** If a slice
+holds an **exact multiple of `limit`**, the final full page is followed by an empty one. Whether
+ACLED sets `next_cursor: null` on that empty page or echoes a live cursor decides whether the
+harvest completes or aborts, and we have not observed the case — in both measured walks the final
+page was short. At `page_size=5000` the odds are roughly 1-in-5,000 per year-slice, so across a
+28-year re-fetch it is around half a percent: small, but not negligible, and it would present as a
+failed year rather than a wrong one.
 
-ACLED issues retroactive corrections and the cursor appears to be a row identifier. If a
-correction inserts or deletes rows *mid-walk*, a cursor-based walk could in principle skip or
-repeat events in a way an offset walk would not — or vice versa. Not measured, and not measurable
-without catching a restatement in the act.
+A retry-once-then-raise was considered and declined. Fail-loud is the governing principle, and the
+consequence here is an *availability* failure (a year does not harvest) rather than a *correctness*
+one (a year harvests wrongly) — so the cheap answer is to make the message diagnostic rather than
+to soften the guard. The error now names the exact-multiple boundary as the most likely benign
+cause and prints the modulus to check, so whoever hits it does not begin by suspecting ACLED.
 
-This is the one place where the two mechanisms could genuinely differ in production while agreeing
-on every static slice we can test. Recorded as C-359's neighbour rather than solved.
+### 3.2 Whether cursor pagination is stable across a restatement — now guarded, still unmeasured
+
+ACLED issues retroactive corrections and the cursor appears to be a row identifier. If a correction
+inserts or deletes rows *mid-walk*, a cursor-based walk could in principle skip or repeat events in
+a way an offset walk would not — or vice versa. Not measured, and not measurable without catching a
+restatement in the act.
+
+**What has changed since the first draft of this document: the worst version of this now fails loud
+instead of looping.** The code review observed that after the migration the walk had *no
+termination bound at all* — both old terminators were gone, `page` was only a counter, and
+production never passes `max_pages` (`_fetch_single_year` passes none; only the `--proof` probe
+does). A cursor that stopped advancing, whether echoed by a bug or reset by a restatement, would
+have re-requested the same full page indefinitely: unbounded duplicates in memory, one request
+every `page_delay` seconds, against a rate-limited API, inside an unattended monthly cron.
+
+Under offset pagination `page += 1` guaranteed forward progress. Under cursor pagination **only the
+server can advance**, and nothing checked that it did. `fetch_paginated()` now keeps the set of
+cursors it has seen and raises on a repeat — a set rather than a comparison with the previous
+cursor, so a longer cycle (A→B→A) is caught too.
+
+The underlying question is still open: a restatement could still cause a cursor walk and an offset
+walk to disagree in ways no static slice reveals. What is closed is the failure mode where that
+disagreement became an infinite loop rather than an error.
+
+Worth recording plainly: the parity script had given *its own* walk a `MAX_REQUESTS` cap, with a
+comment explaining this exact risk, while production had nothing. The guard existed in the
+instrument and not in the thing being measured.
 
 ### 3.3 Whether a short harvest would be noticed
 
@@ -222,9 +252,46 @@ pagination loop cannot silently truncate**, which the mutation drill demonstrate
 
 ---
 
+## 5. What the code review changed, and one thing it found in this document's own instrument
+
+`/code-review medium` on PR #490 raised five findings. Four were real; all are fixed. Recorded here
+rather than only in the PR, because two of them change claims made above.
+
+1. **The walk had no termination bound** (medium) — §3.2. A non-advancing cursor would have looped
+   forever. Guarded.
+2. **The empty-page raise can abort a harvest on a benign boundary** (low) — §3.1. Trigger named in
+   the error message; guard deliberately kept.
+3. **The parity script could report PARITY on two truncated walks** (low). Both walks stopped
+   silently at `MAX_REQUESTS = 40` and the comparison then ran on two *prefixes*, which agree on all
+   four oracles. On a slice larger than 40 × `limit`, the script would have logged *"PARITY: both
+   walks returned identical data"* and exited 0 — the single verdict §4 of the pre-analysis plan
+   treats as licence to ship.
+
+   **This is the error class the whole investigation exists to prevent, committed by the instrument
+   measuring it.** Truncation mistaken for completion, in the tool built to detect truncation
+   mistaken for completion. The walks now report cap exhaustion, a capped run forces a non-parity
+   verdict and exits 1 as INCONCLUSIVE, and a fifth detection drill asserts the flag fires —
+   verified by sabotage like the other four. It never affected the recorded measurements: both ran
+   to natural completion in 8 and 2 requests, and `parity.json` now records
+   `walks_ran_to_completion: true` explicitly rather than leaving it inferable.
+
+4. **`parity.json`'s provenance stamp named a commit that did not contain the script.** The first
+   run recorded `git_sha: 13ddda1` — the implementation commit; the script landed later in
+   `eea3068`. For a file whose entire purpose is evidence that cannot be re-collected, a stamp that
+   does not identify the producing code is close to useless.
+
+   Both measurements were re-run at `47089fd`, which does contain the script. **The headline run
+   reproduced byte-identically** — 7,609 events, 8 requests each way, digest `ae4a6e815168e95f` —
+   and the fixture recording is unchanged (identical md5), which also confirms ACLED has not
+   restated this slice in the interim. That reproduction was not planned; it is a free
+   corroboration that fell out of fixing the stamp.
+
+5. **C-359 was filed under `## Deferred by Design`** rather than `## Tier 3`, where the header
+   counts it. Moved. An insertion anchor was chosen without checking which section contained it.
+
 ## References
 
-- `scripts/verify_acled_pagination_parity.py` — both walks, the detection drill, the comparison
+- `scripts/verify_acled_pagination_parity.py` — both walks, the five detection drills, the comparison
 - `parity.json` — the headline measurement (7,609 events, all countries)
 - `parity_fixture_slice.json` — the narrow run that produced the committed fixtures (84 events,
   Somalia); narrow because an ACLED event is ~1.4 KB, so the broad slice would have been a 10 MB
