@@ -887,13 +887,19 @@ class TestPaginationGreen:
 
         assert len(events) == 3
 
-    def test_zero_cursor_is_not_treated_as_terminal(
+    def test_echoed_zero_cursor_raises_not_terminates(
         self, tmp_path: Path
     ) -> None:
-        """next_cursor == 0 is a live cursor, not the end.
+        """next_cursor == 0 after sending cursor=0 is a stalled walk.
 
-        The cursor is an opaque integer, so 0 is falsy but meaningful.
-        Guards a `if not next_cursor: break` regression.
+        0 is falsy AND it is the starting cursor, so this single case
+        separates three behaviours:
+          - correct: raises, because the walk is not advancing
+          - `if not next_cursor: break`: returns 2 events silently
+          - no progress guard: re-requests page 1 forever
+
+        It is the reason `seen_cursors` is seeded with 0 rather than
+        left empty.
         """
         token_resp = _mock_token_response()
 
@@ -902,12 +908,6 @@ class TestPaginationGreen:
             _make_acled_events(2), next_cursor=0
         )
         first.raise_for_status = MagicMock()
-
-        final = MagicMock()
-        final.json.return_value = _make_acled_response(
-            _make_acled_events(1), next_cursor=None
-        )
-        final.raise_for_status = MagicMock()
 
         config = AcledConfig(
             start_year=2020,
@@ -920,15 +920,147 @@ class TestPaginationGreen:
         with (
             patch(
                 "datafactory_http.retry.requests.request",
-                side_effect=[token_resp, first, final],
+                side_effect=[token_resp, first],
             ),
             patch(
                 "datafactory_harvester.sources.acled.time.sleep",
             ),
+            pytest.raises(ValueError, match="a second time"),
         ):
-            events = fetch_paginated(config, "user", "pass")
+            fetch_paginated(config, "user", "pass")
 
-        assert len(events) == 3
+    def test_repeated_cursor_raises_rather_than_looping(
+        self, tmp_path: Path
+    ) -> None:
+        """A server that stops advancing the cursor is refused.
+
+        Under offset pagination `page += 1` guaranteed forward
+        progress. Under cursor pagination only ACLED can advance, so
+        without this guard the walk re-requests the same full page
+        forever -- unbounded duplicates, one request per page_delay,
+        in an unattended monthly cron. Production passes no max_pages,
+        so there is no other bound.
+
+        `findings.md` section 3.2 leaves open whether a restatement can
+        reset the cursor; this is the guard for that case.
+        """
+        token_resp = _mock_token_response()
+
+        def _page(cursor: int) -> MagicMock:
+            resp = MagicMock()
+            resp.json.return_value = _make_acled_response(
+                _make_acled_events(2), next_cursor=cursor
+            )
+            resp.raise_for_status = MagicMock()
+            return resp
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=2,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                # advances once, then hands back 500 twice
+                side_effect=[token_resp, _page(500), _page(500)],
+            ) as mock_req,
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+            pytest.raises(ValueError, match="not advancing"),
+        ):
+            fetch_paginated(config, "user", "pass")
+
+        # Raised on the SECOND sight of 500, not later: token + 2 pages.
+        assert mock_req.call_count == 3
+
+    def test_cursor_cycle_longer_than_one_is_caught(
+        self, tmp_path: Path
+    ) -> None:
+        """A → B → A is refused too, which `!=` would have missed.
+
+        This is why the guard is a set rather than a comparison with
+        the previous cursor.
+        """
+        token_resp = _mock_token_response()
+
+        def _page(cursor: int) -> MagicMock:
+            resp = MagicMock()
+            resp.json.return_value = _make_acled_response(
+                _make_acled_events(1), next_cursor=cursor
+            )
+            resp.raise_for_status = MagicMock()
+            return resp
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=1,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[
+                    token_resp, _page(10), _page(20), _page(10),
+                ],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+            pytest.raises(ValueError, match="a second time"),
+        ):
+            fetch_paginated(config, "user", "pass")
+
+    def test_empty_page_error_names_the_benign_cause(
+        self, tmp_path: Path
+    ) -> None:
+        """The raise points at the exact-multiple boundary first.
+
+        A slice holding an exact multiple of `limit` yields a final
+        full page followed by an empty one. If ACLED echoes a live
+        cursor on that empty page the harvest aborts, so the message
+        must say what to check before anyone suspects a provider fault.
+        """
+        token_resp = _mock_token_response()
+
+        full = MagicMock()
+        full.json.return_value = _make_acled_response(
+            _make_acled_events(2), next_cursor=42
+        )
+        full.raise_for_status = MagicMock()
+
+        empty = MagicMock()
+        empty.json.return_value = _make_acled_response(
+            [], next_cursor=43
+        )
+        empty.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=2,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, full, empty],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+            pytest.raises(ValueError, match="exact multiple"),
+        ):
+            fetch_paginated(config, "user", "pass")
 
 
     def test_empty_final_page_returns_what_was_fetched(

@@ -422,6 +422,9 @@ def fetch_paginated(
 
     all_events: list[dict] = []
     cursor: int | str = 0
+    # Seeded with the starting cursor: a response echoing 0 back is
+    # already a non-advancing walk. See the progress guard below.
+    seen_cursors: set[int | str] = {0}
     page = 1
 
     while True:
@@ -474,7 +477,12 @@ def fetch_paginated(
                 "ACLED returned no events while the cursor is still live "
                 f"(page {page}, cursor {cursor!r}, "
                 f"{len(all_events)} events so far). Refusing both to "
-                "continue and to treat this as the end of the series."
+                "continue and to treat this as the end of the series. "
+                "MOST LIKELY BENIGN CAUSE: the slice holds an exact "
+                f"multiple of limit={config.page_size}, so the last "
+                "full page was followed by an empty one. Check "
+                f"{len(all_events)} % {config.page_size} == 0 before "
+                "assuming a provider fault."
             )
             logger.error(err_msg)
             raise ValueError(err_msg)
@@ -490,6 +498,26 @@ def fetch_paginated(
 
         if next_cursor is None:
             break
+
+        # The SERVER must advance the cursor or the walk cannot make
+        # progress. Under offset pagination `page += 1` guaranteed
+        # forward motion; under cursor pagination only ACLED can, so a
+        # repeated cursor would re-request the same page indefinitely —
+        # accumulating duplicates one request per `page_delay` against
+        # a rate-limited API, inside an unattended monthly cron. A set
+        # rather than a `!=` check because it also catches a longer
+        # cycle, and 80 integers is nothing.
+        if next_cursor in seen_cursors:
+            err_msg = (
+                f"ACLED returned cursor {next_cursor!r} a second time "
+                f"(page {page}, {len(all_events)} events so far). The "
+                "walk is not advancing, so continuing would re-fetch "
+                "the same page indefinitely."
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        seen_cursors.add(next_cursor)
+
         if max_pages is not None and page >= max_pages:
             logger.info(
                 "Stopped after %d pages (max_pages limit)",

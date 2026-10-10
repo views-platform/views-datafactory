@@ -99,16 +99,22 @@ MAX_REQUESTS = 40
 
 def _walk_offset(
     fetch: Any, params: dict, limit: int
-) -> tuple[list[dict], list[dict]]:
+) -> tuple[list[dict], list[dict], bool]:
     """Walk by `&page=N`, terminating on an empty or short page.
 
     FROZEN COPY of the loop production ran before #487, down to the
     termination order. Do not "fix" this to match the new
     implementation -- the point is that it does not.
+
+    Returns (events, envelopes, hit_cap). `hit_cap` is True when the
+    walk stopped because of MAX_REQUESTS rather than because the series
+    ended -- see `_compare`'s caller, which must not report parity on a
+    pair of truncated prefixes.
     """
     events: list[dict] = []
     envelopes: list[dict] = []
     page = 1
+    hit_cap = True
 
     while page <= MAX_REQUESTS:
         data = fetch({**params, "limit": limit, "page": page})
@@ -116,29 +122,36 @@ def _walk_offset(
 
         results = data.get("data", [])
         if not results:
+            hit_cap = False
             break
 
         events.extend(results)
 
         if len(results) < limit:
+            hit_cap = False
             break
 
         page += 1
 
-    return events, envelopes
+    return events, envelopes, hit_cap
 
 
 def _walk_cursor(
     fetch: Any, params: dict, limit: int
-) -> tuple[list[dict], list[dict]]:
+) -> tuple[list[dict], list[dict], bool]:
     """Walk by `&cursor=X`, terminating only on `next_cursor is None`.
 
-    Mirrors the production implementation in `fetch_paginated()`.
+    Mirrors the production implementation in `fetch_paginated()`,
+    including its non-advancing-cursor guard.
+
+    Returns (events, envelopes, hit_cap); see `_walk_offset`.
     """
     events: list[dict] = []
     envelopes: list[dict] = []
     cursor: int | str = 0
+    seen: set[int | str] = {0}
     requests_made = 0
+    hit_cap = True
 
     while requests_made < MAX_REQUESTS:
         data = fetch({**params, "limit": limit, "cursor": cursor})
@@ -166,11 +179,20 @@ def _walk_cursor(
         events.extend(results)
 
         if next_cursor is None:
+            hit_cap = False
             break
+
+        if next_cursor in seen:
+            msg = (
+                f"cursor {next_cursor!r} returned twice after "
+                f"{len(events)} events -- walk is not advancing"
+            )
+            raise ValueError(msg)
+        seen.add(next_cursor)
 
         cursor = next_cursor
 
-    return events, envelopes
+    return events, envelopes, hit_cap
 
 
 # ---- Comparison ----------------------------------------------------
@@ -325,8 +347,13 @@ def _self_test() -> int:
         {"data": _ev(2, 0), "next_cursor": 1},
         {"data": _ev(2, 2), "next_cursor": None},
     ]
-    off, _ = _walk_offset(_fake_fetch(pages), {}, limit=5000)
-    cur, _ = _walk_cursor(_fake_fetch(pages), {}, limit=5000)
+    off, _, off_cap = _walk_offset(_fake_fetch(pages), {}, limit=5000)
+    cur, _, cur_cap = _walk_cursor(_fake_fetch(pages), {}, limit=5000)
+    if off_cap or cur_cap:
+        failures.append(
+            "a 2-page walk reported hitting the request cap -- the "
+            "hit_cap flag is wired backwards"
+        )
     if len(off) != 2:
         failures.append(
             f"frozen offset walk returned {len(off)} events, expected "
@@ -342,6 +369,32 @@ def _self_test() -> int:
             "separate them -- the two walks are not actually different"
         )
 
+    # Drill 5 -- a walk that exhausts the request cap must SAY so.
+    # Without this flag both walks truncate at MAX_REQUESTS, _compare
+    # agrees on the two prefixes, and the script reports PARITY on a
+    # pair of truncated walks -- the exact error class this whole
+    # investigation is about, committed by its own instrument.
+    endless = [
+        {"data": _ev(1, i), "next_cursor": i + 1}
+        for i in range(MAX_REQUESTS + 5)
+    ]
+    _, _, off_capped = _walk_offset(
+        _fake_fetch(endless), {}, limit=1
+    )
+    _, _, cur_capped = _walk_cursor(
+        _fake_fetch(endless), {}, limit=1
+    )
+    if not off_capped:
+        failures.append(
+            "offset walk exhausted the request cap without setting "
+            "hit_cap -- a truncated walk would be reported as parity"
+        )
+    if not cur_capped:
+        failures.append(
+            "cursor walk exhausted the request cap without setting "
+            "hit_cap -- a truncated walk would be reported as parity"
+        )
+
     if failures:
         log.error("DETECTION DRILL FAILED -- %d problem(s):", len(failures))
         for f in failures:
@@ -352,7 +405,7 @@ def _self_test() -> int:
         )
         return 1
 
-    log.info("detection drill passed (4 drills) -- the comparison can "
+    log.info("detection drill passed (5 drills) -- the comparison can "
              "see a difference, so a null result means something")
     return 0
 
@@ -465,7 +518,7 @@ def main() -> int:
     )
 
     log.info("walking by offset (the method ACLED removes 2026-10-27)")
-    offset_events, offset_envelopes = _walk_offset(
+    offset_events, offset_envelopes, offset_capped = _walk_offset(
         fetch, params, args.limit
     )
     log.info(
@@ -475,7 +528,7 @@ def main() -> int:
     )
 
     log.info("walking by cursor")
-    cursor_events, cursor_envelopes = _walk_cursor(
+    cursor_events, cursor_envelopes, cursor_capped = _walk_cursor(
         fetch, params, args.limit
     )
     log.info(
@@ -485,6 +538,17 @@ def main() -> int:
     )
 
     result = _compare(offset_events, cursor_events)
+
+    # A capped walk is a truncated walk. Two truncated prefixes agree
+    # on all four oracles, so without this the script would report
+    # PARITY on a measurement that proved nothing -- and section 4 of
+    # the pre-analysis plan reads a parity verdict as licence to ship.
+    capped = offset_capped or cursor_capped
+    if capped:
+        result["parity"] = False
+        result["checks"]["walks_ran_to_completion"] = False
+    else:
+        result["checks"]["walks_ran_to_completion"] = True
 
     # H4: did any page come back short while the cursor was still live?
     short_live = [
@@ -526,6 +590,9 @@ def main() -> int:
         },
         "offset_requests": len(offset_envelopes),
         "cursor_requests": len(cursor_envelopes),
+        "max_requests": MAX_REQUESTS,
+        "offset_hit_request_cap": offset_capped,
+        "cursor_hit_request_cap": cursor_capped,
         "h4_short_pages_with_live_cursor": short_live,
         "h5_count_total_count": {
             "count": cursor_envelopes[0].get("count"),
@@ -577,6 +644,18 @@ def main() -> int:
             "slice. Deleting the short-page break was correct but is "
             "not vindicated by this measurement."
         )
+
+    if capped:
+        log.error(
+            "INCONCLUSIVE -- a walk stopped at the %d-request cap "
+            "(offset=%s, cursor=%s), so both results are prefixes and "
+            "their agreement means nothing. Narrow the slice or raise "
+            "the limit and re-run. NOT a parity result.",
+            MAX_REQUESTS,
+            offset_capped,
+            cursor_capped,
+        )
+        return 1
 
     if result["parity"]:
         log.info("PARITY: both walks returned identical data")

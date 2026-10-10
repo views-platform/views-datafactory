@@ -1275,6 +1275,72 @@ Cross-ref: ~~C-320~~ (auto-merge silently degrading to a plain merge when branch
 
 ---
 
+### C-359: A short ACLED harvest is recorded as a success — `n_events` is written to the ledger and never read
+
+**Source:** Surfaced while planning the ACLED cursor migration, 2026-10-10 (#487). Found by asking
+what would detect a botched migration, not by any guard or audit.
+
+**Trigger:** **Before the next change to how any harvester terminates a fetch** — pagination,
+retry, or cache logic. That is when a shortfall becomes likely and when nothing would notice. Also
+fires if ACLED's envelope ever starts reporting `total_count`, which would make ADR-027's existing
+rule applicable and this entry largely redundant (see C-153).
+
+**Location:** `_fetch_single_year()` and `fetch_acled()` in
+`src/datafactory_harvester/sources/acled.py`; `last_digest_for_version()` in
+`src/datafactory_provenance/digests_and_ledgers.py`; `compare_snapshots()` in
+`src/datafactory_harvester/event_validation.py`. The same gap exists in every other harvester.
+
+**What is written, and what is read.** `_fetch_single_year()` records `n_events`, `min_date`,
+`max_date` and `content_digest` into the ingestion ledger on every run. **Nothing reads `n_events`
+back.** Confirmed by grep across `src/` and `scripts/`: `last_digest_for_version()` reads only
+`version`, `outcome` and `content_digest`; `report_ledger()` reads `outcome` and `timestamp` for the
+freshness SLO; `check_health.py` checks ledger freshness and the zarr digest match. The harvest
+scripts print per-snapshot row counts and compare them to nothing.
+
+`compare_snapshots()` *does* compute `n_removed`, and it is **discarded** — it survives only as an
+unthresholded warning string folded into the ledger `warnings` list, and only when a snapshot
+already exists on disk.
+
+**What is caught:** a *zero*-event year. `validate_events()` returns `valid=False` with
+`errors=["No events to validate."]` for an empty list, so the year gets a `failed` ledger entry and
+raises.
+
+**What is not caught: any non-zero shortfall.** `validate_events()` checks required-field presence,
+types and per-event values, with no minimum-count and no expected-count parameter. ACLED's three
+`validate_dgp_assumptions()` checks are per-event. No aggregate check exists anywhere on the path.
+
+**The worst case is the current year**, which is deliberately re-fetched every run because ACLED
+publishes biweekly. A truncated current-year harvest emits a `"N events removed"` warning with no
+threshold and no raise, archives the good snapshot, overwrites it with the short one, and records
+`outcome: "success"` with the new short digest. On the following run `_year_is_cached()` finds the
+short snapshot digest-consistent with the short ledger entry — **the truncation is now the cached
+truth.**
+
+**Tier 3, not 2.** Silent and reaching delivered data, which argues for 2. Held at 3 because the
+failure requires a provider-side or code-side truncation to occur first — it is a *detectability*
+gap rather than an active corruption — and because the single most likely trigger (the cursor
+migration) now has its termination logic pinned by eight mutation-tested cases. Re-tier to 2 if a
+shortfall is ever observed in practice.
+
+**This is not hypothetical, and ADR-027 is the proof.** That ADR exists because `page_size=50000`
+made the UCDP API silently return 335,918 of 384,918 events while the harvest reported success —
+it validated schema and provenance but never counted
+(`reports/post_mortems/2026-04-25_stale_zarr_store.md`). The residue of that incident is still a
+**manual** check: `server_operations.md` records the expected ACLED count (384,918) as a number an
+operator is meant to read off stdout and compare by eye.
+
+**Deliberately not fixed in #487.** A fix touches shared provenance code every source reads, and
+changing a harvest's failure behaviour in the same release that changes how it paginates would
+confound the two. #487 owns the narrower guarantee — the pagination loop cannot silently truncate —
+and says so explicitly rather than leaving the narrowing implicit. The open design questions (what
+tolerance, given legitimate retroactive corrections; raise or warn; per-source or shared) are in
+**#488**.
+
+Cross-ref: C-153 (no server-declared total — the reason ADR-027's rule cannot simply be applied),
+C-72 (429 not distinguished from 500). ADR-027, ADR-011, ADR-032. GitHub: #487, #488.
+
+---
+
 ## Tier 4 — Accept or Defer
 
 ### C-146: Assembly logic lives in script, not importable package — [DEFER]
@@ -3706,72 +3772,6 @@ Cross-ref: ~~C-328~~ (the first instance of the same mechanism — identities ra
 ---
 
 ## Deferred by Design
-
-### C-359: A short ACLED harvest is recorded as a success — `n_events` is written to the ledger and never read
-
-**Source:** Surfaced while planning the ACLED cursor migration, 2026-10-10 (#487). Found by asking
-what would detect a botched migration, not by any guard or audit.
-
-**Trigger:** **Before the next change to how any harvester terminates a fetch** — pagination,
-retry, or cache logic. That is when a shortfall becomes likely and when nothing would notice. Also
-fires if ACLED's envelope ever starts reporting `total_count`, which would make ADR-027's existing
-rule applicable and this entry largely redundant (see C-153).
-
-**Location:** `_fetch_single_year()` and `fetch_acled()` in
-`src/datafactory_harvester/sources/acled.py`; `last_digest_for_version()` in
-`src/datafactory_provenance/digests_and_ledgers.py`; `compare_snapshots()` in
-`src/datafactory_harvester/event_validation.py`. The same gap exists in every other harvester.
-
-**What is written, and what is read.** `_fetch_single_year()` records `n_events`, `min_date`,
-`max_date` and `content_digest` into the ingestion ledger on every run. **Nothing reads `n_events`
-back.** Confirmed by grep across `src/` and `scripts/`: `last_digest_for_version()` reads only
-`version`, `outcome` and `content_digest`; `report_ledger()` reads `outcome` and `timestamp` for the
-freshness SLO; `check_health.py` checks ledger freshness and the zarr digest match. The harvest
-scripts print per-snapshot row counts and compare them to nothing.
-
-`compare_snapshots()` *does* compute `n_removed`, and it is **discarded** — it survives only as an
-unthresholded warning string folded into the ledger `warnings` list, and only when a snapshot
-already exists on disk.
-
-**What is caught:** a *zero*-event year. `validate_events()` returns `valid=False` with
-`errors=["No events to validate."]` for an empty list, so the year gets a `failed` ledger entry and
-raises.
-
-**What is not caught: any non-zero shortfall.** `validate_events()` checks required-field presence,
-types and per-event values, with no minimum-count and no expected-count parameter. ACLED's three
-`validate_dgp_assumptions()` checks are per-event. No aggregate check exists anywhere on the path.
-
-**The worst case is the current year**, which is deliberately re-fetched every run because ACLED
-publishes biweekly. A truncated current-year harvest emits a `"N events removed"` warning with no
-threshold and no raise, archives the good snapshot, overwrites it with the short one, and records
-`outcome: "success"` with the new short digest. On the following run `_year_is_cached()` finds the
-short snapshot digest-consistent with the short ledger entry — **the truncation is now the cached
-truth.**
-
-**Tier 3, not 2.** Silent and reaching delivered data, which argues for 2. Held at 3 because the
-failure requires a provider-side or code-side truncation to occur first — it is a *detectability*
-gap rather than an active corruption — and because the single most likely trigger (the cursor
-migration) now has its termination logic pinned by eight mutation-tested cases. Re-tier to 2 if a
-shortfall is ever observed in practice.
-
-**This is not hypothetical, and ADR-027 is the proof.** That ADR exists because `page_size=50000`
-made the UCDP API silently return 335,918 of 384,918 events while the harvest reported success —
-it validated schema and provenance but never counted
-(`reports/post_mortems/2026-04-25_stale_zarr_store.md`). The residue of that incident is still a
-**manual** check: `server_operations.md` records the expected ACLED count (384,918) as a number an
-operator is meant to read off stdout and compare by eye.
-
-**Deliberately not fixed in #487.** A fix touches shared provenance code every source reads, and
-changing a harvest's failure behaviour in the same release that changes how it paginates would
-confound the two. #487 owns the narrower guarantee — the pagination loop cannot silently truncate —
-and says so explicitly rather than leaving the narrowing implicit. The open design questions (what
-tolerance, given legitimate retroactive corrections; raise or warn; per-source or shared) are in
-**#488**.
-
-Cross-ref: C-153 (no server-declared total — the reason ADR-027's rule cannot simply be applied),
-C-72 (429 not distinguished from 500). ADR-027, ADR-011, ADR-032. GitHub: #487, #488.
-
----
 
 ### C-10: Ontology vocabulary overhead
 Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add conceptual overhead. For a 7-package project, governance is heavy. **Accepted: governance has proven itself (ADR-008 caught bugs in 3 audits). Cost is documentation maintenance, not development velocity.**
