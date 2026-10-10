@@ -2,6 +2,12 @@
 
 F2: event_types config must actually filter API requests when
 narrowed from the default (all types).
+
+Both tests describe single-page walks, so `next_cursor: None` ends them
+on the first response -- before `time.sleep(page_delay)` is ever
+reached. That is why neither patches sleep. If the terminator ever
+moves after the sleep, these two start costing `page_delay` seconds
+each instead of failing, so the ordering is load-bearing here.
 """
 
 from __future__ import annotations
@@ -39,7 +45,10 @@ class TestEventTypesFilter:
         token_resp.raise_for_status = MagicMock()
 
         data_resp = MagicMock()
-        data_resp.json.return_value = {"data": []}
+        data_resp.json.return_value = {
+            "data": [],
+            "next_cursor": None,
+        }
         data_resp.raise_for_status = MagicMock()
 
         with patch(
@@ -73,7 +82,10 @@ class TestEventTypesFilter:
         token_resp.raise_for_status = MagicMock()
 
         data_resp = MagicMock()
-        data_resp.json.return_value = {"data": []}
+        data_resp.json.return_value = {
+            "data": [],
+            "next_cursor": None,
+        }
         data_resp.raise_for_status = MagicMock()
 
         with patch(

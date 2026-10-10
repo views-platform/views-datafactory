@@ -227,13 +227,26 @@ class TestTokenManagementBeige:
 # ---- Mock API Helpers ----
 
 
-def _make_acled_response(events: list[dict]) -> dict:
-    """Create a valid ACLED API response envelope."""
+def _make_acled_response(
+    events: list[dict], next_cursor: int | None = None
+) -> dict:
+    """Create a valid ACLED API response envelope.
+
+    next_cursor defaults to None -- the terminal page -- so a test that
+    supplies a single response describes a complete walk. Multi-page
+    tests pass an explicit cursor on every non-final response.
+
+    count is None because that is what ACLED actually sends (C-153);
+    the live envelope was re-confirmed on 2026-10-10 and still reports
+    both count and total_count as null under cursor pagination.
+    """
     return {
         "status": 200,
         "success": True,
         "data": events,
-        "count": len(events),
+        "count": None,
+        "total_count": None,
+        "next_cursor": next_cursor,
     }
 
 
@@ -688,7 +701,7 @@ class TestFetchAcledBeige:
 class TestPaginationGreen:
 
     def test_multiple_pages(self, tmp_path: Path) -> None:
-        """Page-based pagination fetches all events."""
+        """Cursor pagination fetches all events across pages."""
         page1_events = _make_acled_events(3)
         page2_events = [
             {
@@ -704,7 +717,7 @@ class TestPaginationGreen:
 
         resp1 = MagicMock()
         resp1.json.return_value = _make_acled_response(
-            page1_events
+            page1_events, next_cursor=4242
         )
         resp1.raise_for_status = MagicMock()
 
@@ -726,7 +739,7 @@ class TestPaginationGreen:
             patch(
                 "datafactory_http.retry.requests.request",
                 side_effect=[token_resp, resp1, resp2],
-            ),
+            ) as mock_req,
             patch(
                 "datafactory_harvester.sources.acled.time.sleep",
             ),
@@ -737,21 +750,209 @@ class TestPaginationGreen:
 
         assert len(events) == 5
 
+        # The second data request must carry the cursor the first
+        # response handed back -- not 0, and not a page number.
+        second_data_call = mock_req.call_args_list[2]
+        assert second_data_call[1]["params"]["cursor"] == 4242
 
-    def test_empty_page_terminates(self, tmp_path: Path) -> None:
-        """Pagination stops when API returns empty data array."""
-        page1_events = _make_acled_events(3)
+    def test_cursor_threads_through_three_pages(
+        self, tmp_path: Path
+    ) -> None:
+        """Each request sends the cursor the previous response gave.
 
+        Guards the mutant `cursor = 0` in place of
+        `cursor = next_cursor`, which would walk the first page forever.
+        The request-count assertion is what catches it -- an event-count
+        assertion alone would not, because the mock would keep handing
+        back whatever comes next in the list.
+        """
+        token_resp = _mock_token_response()
+        responses = []
+        for cursor in (111, 222, None):
+            resp = MagicMock()
+            resp.json.return_value = _make_acled_response(
+                _make_acled_events(2), next_cursor=cursor
+            )
+            resp.raise_for_status = MagicMock()
+            responses.append(resp)
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=2,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, *responses],
+            ) as mock_req,
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(config, "user", "pass")
+
+        assert len(events) == 6
+        # One token call plus exactly three data calls, no more.
+        assert mock_req.call_count == 4
+        cursors = [
+            call[1]["params"]["cursor"]
+            for call in mock_req.call_args_list[1:]
+        ]
+        assert cursors == [0, 111, 222]
+
+    def test_full_final_page_with_null_cursor_terminates(
+        self, tmp_path: Path
+    ) -> None:
+        """A FULL page ends the walk when next_cursor is null.
+
+        The old implementation could not have passed this: it broke on
+        `len(results) < page_size`, so a full page always provoked
+        another request. Under cursor pagination the server declares the
+        end, and page length says nothing about it.
+        """
+        token_resp = _mock_token_response()
+        resp = MagicMock()
+        resp.json.return_value = _make_acled_response(
+            _make_acled_events(3), next_cursor=None
+        )
+        resp.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=3,  # exactly the number of events returned
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp],
+            ) as mock_req,
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(config, "user", "pass")
+
+        assert len(events) == 3
+        assert mock_req.call_count == 2  # token + one page, no second
+
+    def test_short_page_with_live_cursor_continues(
+        self, tmp_path: Path
+    ) -> None:
+        """A SHORT page does not end the walk if the cursor lives.
+
+        This is the inverse of the test above and the reason the
+        `len(results) < page_size` break had to go: under cursor
+        pagination a short page is not evidence of anything.
+        """
+        token_resp = _mock_token_response()
+
+        short = MagicMock()
+        short.json.return_value = _make_acled_response(
+            _make_acled_events(1), next_cursor=999
+        )
+        short.raise_for_status = MagicMock()
+
+        final = MagicMock()
+        final.json.return_value = _make_acled_response(
+            _make_acled_events(2), next_cursor=None
+        )
+        final.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=5000,  # page of 1 is far short of the limit
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, short, final],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(config, "user", "pass")
+
+        assert len(events) == 3
+
+    def test_zero_cursor_is_not_treated_as_terminal(
+        self, tmp_path: Path
+    ) -> None:
+        """next_cursor == 0 is a live cursor, not the end.
+
+        The cursor is an opaque integer, so 0 is falsy but meaningful.
+        Guards a `if not next_cursor: break` regression.
+        """
+        token_resp = _mock_token_response()
+
+        first = MagicMock()
+        first.json.return_value = _make_acled_response(
+            _make_acled_events(2), next_cursor=0
+        )
+        first.raise_for_status = MagicMock()
+
+        final = MagicMock()
+        final.json.return_value = _make_acled_response(
+            _make_acled_events(1), next_cursor=None
+        )
+        final.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=2,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, first, final],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(config, "user", "pass")
+
+        assert len(events) == 3
+
+
+    def test_empty_final_page_returns_what_was_fetched(
+        self, tmp_path: Path
+    ) -> None:
+        """An empty page WITH a null cursor is a clean end of series.
+
+        Replaces the old test_empty_page_terminates, which asserted the
+        same event count but for a reason that no longer exists: the
+        walk used to stop because the page was empty. Now it stops
+        because the server said so, and the empty page is incidental.
+        """
         token_resp = _mock_token_response()
 
         resp1 = MagicMock()
         resp1.json.return_value = _make_acled_response(
-            page1_events
+            _make_acled_events(3), next_cursor=77
         )
         resp1.raise_for_status = MagicMock()
 
         resp_empty = MagicMock()
-        resp_empty.json.return_value = _make_acled_response([])
+        resp_empty.json.return_value = _make_acled_response(
+            [], next_cursor=None
+        )
         resp_empty.raise_for_status = MagicMock()
 
         config = AcledConfig(
@@ -777,6 +978,126 @@ class TestPaginationGreen:
 
         assert len(events) == 3
 
+    def test_no_events_and_null_cursor_returns_empty(
+        self, tmp_path: Path
+    ) -> None:
+        """A slice with no events at all returns [] without raising.
+
+        A year ACLED has no data for is not an error. Distinguishing
+        this from the live-cursor case below is the whole point of
+        keying on next_cursor rather than on emptiness.
+        """
+        token_resp = _mock_token_response()
+        resp = MagicMock()
+        resp.json.return_value = _make_acled_response(
+            [], next_cursor=None
+        )
+        resp.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(config, "user", "pass")
+
+        assert events == []
+
+    def test_empty_page_with_live_cursor_raises(
+        self, tmp_path: Path
+    ) -> None:
+        """No events while the cursor lives is refused, not guessed.
+
+        Continuing risks an unbounded walk against a rate-limited API;
+        breaking is the silent truncation this migration exists to
+        prevent. So it raises (ADR-011). H6 of the pre-analysis plan
+        predicts this never happens in a real walk.
+        """
+        token_resp = _mock_token_response()
+
+        resp1 = MagicMock()
+        resp1.json.return_value = _make_acled_response(
+            _make_acled_events(3), next_cursor=55
+        )
+        resp1.raise_for_status = MagicMock()
+
+        resp_empty = MagicMock()
+        resp_empty.json.return_value = _make_acled_response(
+            [], next_cursor=56
+        )
+        resp_empty.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=3,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp1, resp_empty],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+            pytest.raises(
+                ValueError, match="cursor is still live"
+            ),
+        ):
+            fetch_paginated(config, "user", "pass")
+
+    def test_missing_next_cursor_key_raises(
+        self, tmp_path: Path
+    ) -> None:
+        """An envelope without next_cursor is refused, naming the field.
+
+        ACLED reports count and total_count as null (C-153), so
+        next_cursor is the only completeness signal the response
+        carries. Its absence is unrecoverable rather than degraded.
+        """
+        token_resp = _mock_token_response()
+
+        resp = MagicMock()
+        envelope = _make_acled_response(_make_acled_events(2))
+        del envelope["next_cursor"]
+        resp.json.return_value = envelope
+        resp.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+            pytest.raises(
+                ValueError, match="missing 'next_cursor'"
+            ),
+        ):
+            fetch_paginated(config, "user", "pass")
+
     def test_token_request_includes_client_id(self) -> None:
         """Token POST body must include client_id=acled."""
         mock_resp = MagicMock()
@@ -795,8 +1116,13 @@ class TestPaginationGreen:
         call_kwargs = mock_req.call_args[1]
         assert call_kwargs["data"]["client_id"] == "acled"
 
-    def test_page_params_structure(self, tmp_path: Path) -> None:
-        """API request sends page, _format, limit, event_date."""
+    def test_cursor_params_structure(self, tmp_path: Path) -> None:
+        """Request sends cursor, _format, limit, event_date -- no page.
+
+        `page` must be absent, not merely ignored. ACLED silently lets
+        cursor win when both are supplied, so sending a stale page
+        number would be invisible here and in production alike.
+        """
         events = _make_acled_events(2)
         token_resp = _mock_token_response()
 
@@ -828,12 +1154,13 @@ class TestPaginationGreen:
         # Second call is the data request (first is token)
         data_call = mock_req.call_args_list[1]
         params = data_call[1]["params"]
-        assert params["page"] == 1
+        assert params["cursor"] == 0
         assert params["_format"] == "json"
         assert params["limit"] == 5000
         assert params["event_date"] == "2023-01-01|2024-12-31"
         assert params["event_date_where"] == "BETWEEN"
         assert "offset" not in params
+        assert "page" not in params
 
     def test_user_agent_header_sent(
         self, tmp_path: Path,
@@ -911,13 +1238,20 @@ class TestPaginationGreen:
     def test_max_pages_limits_pagination(
         self, tmp_path: Path,
     ) -> None:
-        """max_pages stops pagination after the given page count."""
+        """max_pages stops the walk even while the cursor is live.
+
+        The response carries a LIVE cursor, so only max_pages can end
+        this walk. Under the old implementation a page of exactly
+        page_size would have provoked a second request and the mock
+        would have raised StopIteration -- so this asserts the cap
+        rather than passing because the walk ended on its own.
+        """
         page_events = _make_acled_events(3)
         token_resp = _mock_token_response()
 
         resp1 = MagicMock()
         resp1.json.return_value = _make_acled_response(
-            page_events
+            page_events, next_cursor=12345
         )
         resp1.raise_for_status = MagicMock()
 
@@ -933,7 +1267,7 @@ class TestPaginationGreen:
             patch(
                 "datafactory_http.retry.requests.request",
                 side_effect=[token_resp, resp1],
-            ),
+            ) as mock_req,
             patch(
                 "datafactory_harvester.sources.acled.time.sleep",
             ),
@@ -943,11 +1277,19 @@ class TestPaginationGreen:
             )
 
         assert len(events) == 3
+        assert mock_req.call_count == 2  # token + exactly one page
 
     def test_mid_pagination_token_refresh(
         self, tmp_path: Path,
     ) -> None:
-        """Token that expires mid-pagination is refreshed."""
+        """Token that expires mid-walk is refreshed.
+
+        Still a genuine two-page CURSOR walk after the migration, not a
+        single page: this and test_401_mid_pagination_refreshes_token
+        are the only coverage of the refresh branches inside
+        pagination, so reducing either to one request would delete that
+        coverage while staying green.
+        """
         page1_events = _make_acled_events(3)
         page2_events = _make_acled_events(2)
 
@@ -967,7 +1309,7 @@ class TestPaginationGreen:
 
         resp1 = MagicMock()
         resp1.json.return_value = _make_acled_response(
-            page1_events
+            page1_events, next_cursor=8080
         )
         resp1.raise_for_status = MagicMock()
 
@@ -985,7 +1327,9 @@ class TestPaginationGreen:
             ledger_path=tmp_path / "prov" / "ledger.jsonl",
         )
 
-        # Monotonic sequence:
+        # Monotonic sequence — the list is exactly as long as the number
+        # of time.monotonic() calls the walk makes, so adding one in
+        # fetch_paginated() breaks this with StopIteration:
         # _acquire_token: expires_at = 0 + 310 = 310
         # _ensure_token (page 1): 5 < 310-300=10 → valid
         # _ensure_token (page 2): 15 < 10 → INVALID → refresh
@@ -1018,7 +1362,12 @@ class TestPaginationBeige:
         self, tmp_path: Path,
     ) -> None:
         """A 401 during pagination triggers token refresh and
-        retries the same page, recovering transparently."""
+        retries the same page, recovering transparently.
+
+        Page 1 carries a live cursor so the walk genuinely reaches a
+        second request. This is the only test of the 401 branch in
+        `_authenticated_request` inside a pagination loop.
+        """
         import requests as _requests
 
         events = _make_acled_events(3)
@@ -1026,9 +1375,11 @@ class TestPaginationBeige:
         # Initial token acquisition
         token_resp1 = _mock_token_response()
 
-        # Page 1 succeeds
+        # Page 1 succeeds and hands back a live cursor
         resp1 = MagicMock()
-        resp1.json.return_value = _make_acled_response(events)
+        resp1.json.return_value = _make_acled_response(
+            events, next_cursor=9001
+        )
         resp1.raise_for_status = MagicMock()
 
         # Page 2: server returns 401 (token invalidated)
@@ -1086,14 +1437,21 @@ class TestPaginationBeige:
         self, tmp_path: Path,
     ) -> None:
         """A 403 during pagination is not recoverable and
-        propagates immediately."""
+        propagates immediately.
+
+        Page 1 carries a live cursor so the walk reaches the 403 at
+        all; with a null cursor it would end cleanly and this would
+        pass as DID NOT RAISE.
+        """
         import requests as _requests
 
         events = _make_acled_events(3)
         token_resp = _mock_token_response()
 
         resp1 = MagicMock()
-        resp1.json.return_value = _make_acled_response(events)
+        resp1.json.return_value = _make_acled_response(
+            events, next_cursor=7007
+        )
         resp1.raise_for_status = MagicMock()
 
         resp_403 = MagicMock()
@@ -1266,6 +1624,7 @@ class TestFetchAcledRed:
         data_resp = MagicMock()
         data_resp.json.return_value = {
             "data": "abc",
+            "next_cursor": None,
         }
 
         config = AcledConfig(
@@ -1300,7 +1659,10 @@ class TestFetchAcledRed:
             "expires_in": 86400,
         }
         data_resp = MagicMock()
-        data_resp.json.return_value = {"data": bad_events}
+        data_resp.json.return_value = {
+            "data": bad_events,
+            "next_cursor": None,
+        }
 
         config = AcledConfig(
             start_year=2024,

@@ -8,8 +8,12 @@ authenticate with their own credentials — credential sharing is
 prohibited by ACLED's EULA.
 
 Source-specific concerns: OAuth token lifecycle, event type taxonomy,
-daily granularity, pagination via page parameter. Uses the shared
-harvester skeleton (validation, storage, provenance).
+daily granularity, cursor-based pagination. Uses the shared harvester
+skeleton (validation, storage, provenance).
+
+Pagination moved from offset (`&page=N`) to cursor (`&cursor=X`) in
+October 2026, because ACLED removed the offset method on 2026-10-27.
+See `fetch_paginated()` below and #487.
 """
 
 from __future__ import annotations
@@ -382,7 +386,15 @@ def fetch_paginated(
     max_pages: int | None = None,
     _token_state: _TokenState | None = None,
 ) -> list[dict]:
-    """Fetch all ACLED events with page-based pagination.
+    """Fetch all ACLED events with cursor-based pagination.
+
+    ACLED deprecated offset (``&page=N``) pagination on 2026-10-27 (#487).
+    The walk sends ``&cursor=X`` starting at 0 and advances to the
+    ``next_cursor`` each response carries. ``next_cursor: null`` is the
+    ONLY authoritative end of the series -- a short page is not, which is
+    why the old ``len(results) < page_size`` break is gone. The cursor is
+    an opaque integer and 0 is a legitimate value, so termination tests
+    ``is None`` and never falsiness.
 
     Args:
         config: Harvest configuration.
@@ -393,6 +405,12 @@ def fetch_paginated(
 
     Returns:
         List of raw event dicts.
+
+    Raises:
+        ValueError: If a response omits ``next_cursor``, or returns no
+            events while the cursor is still live. Both mean the series
+            boundary cannot be determined, and guessing it would truncate
+            a harvest silently (ADR-011).
     """
     token_state = _token_state or _acquire_token(
         username,
@@ -403,6 +421,7 @@ def fetch_paginated(
     )
 
     all_events: list[dict] = []
+    cursor: int | str = 0
     page = 1
 
     while True:
@@ -414,7 +433,7 @@ def fetch_paginated(
             ),
             "event_date_where": "BETWEEN",
             "limit": config.page_size,
-            "page": page,
+            "cursor": cursor,
         }
 
         if config.event_types != ALL_EVENT_TYPES:
@@ -433,8 +452,32 @@ def fetch_paginated(
         data = response.json()
 
         results = data.get("data", [])
-        if not results:
-            break
+
+        # The envelope must declare whether more pages exist. Without
+        # next_cursor there is no way to tell "series complete" from
+        # "page boundary", and ACLED reports count/total_count as null
+        # (C-153), so there is no second signal to fall back on.
+        if "next_cursor" not in data:
+            err_msg = (
+                "ACLED response missing 'next_cursor'. Cursor pagination "
+                "cannot determine the end of the series without it, and "
+                "guessing would truncate the harvest silently. "
+                f"Response keys: {sorted(data.keys())}"
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+
+        next_cursor = data["next_cursor"]
+
+        if not results and next_cursor is not None:
+            err_msg = (
+                "ACLED returned no events while the cursor is still live "
+                f"(page {page}, cursor {cursor!r}, "
+                f"{len(all_events)} events so far). Refusing both to "
+                "continue and to treat this as the end of the series."
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
 
         all_events.extend(results)
 
@@ -445,7 +488,7 @@ def fetch_paginated(
                 len(all_events),
             )
 
-        if len(results) < config.page_size:
+        if next_cursor is None:
             break
         if max_pages is not None and page >= max_pages:
             logger.info(
@@ -454,6 +497,7 @@ def fetch_paginated(
             )
             break
 
+        cursor = next_cursor
         page += 1
         time.sleep(config.page_delay)
 
