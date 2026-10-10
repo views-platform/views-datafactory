@@ -17,6 +17,63 @@ entry could.
 
 ---
 
+## C-359, and C-153 amended — a migration deleted the detection signal another entry named (2026-10-10)
+
+ACLED removed offset (`&page=N`) pagination on 27 October 2026. The replacement is small: one loop,
+`fetch_paginated()` in `acled.py`. What made it worth more care than its size suggests is that it
+**deletes a termination condition and installs a different one**, and a termination bug in a
+harvester does not crash — it returns fewer events and records them as a success.
+
+**C-153 was the entry that noticed first, by accident.** It has been open since May 2026 saying the
+ACLED envelope reports `count: null, total_count: null`, so there is no server total to verify a
+harvest against, and that *"the harvester terminates on empty/short pages (correct behavior for
+complete pagination)"* — with ADR-027 documenting the short-page heuristic as **the only available
+detection signal.**
+
+That sentence is what the migration deletes. Reading the register before touching the code is what
+turned two silent falsehoods into two amendments instead: C-153's narrative and ADR-027's
+Implementation Notes both now describe a mechanism that no longer exists in the code.
+
+**The migration improves C-153's risk and the entry stays open anyway**, which is the distinction
+worth recording. `next_cursor` is a *server-declared* continuation token where the short-page rule
+was a *client-side inference* — the series boundary is now stated by ACLED rather than guessed by
+us. But C-153 is not about how the walk terminates; it is about there being no total to check the
+result against. The live probe re-confirmed `count` and `total_count` as null on every page of an
+8-page cursor walk, so the rule in ADR-027 still cannot be applied to ACLED and the entry does not
+close. **Had either field carried a value it would have closed outright.** Predicting them null and
+checking anyway is why that is now known rather than assumed.
+
+**C-359 is what the planning turned up on the way past.** Asking "what would actually detect a
+botched migration?" produced the answer *nothing would*: `_fetch_single_year()` writes `n_events`
+into the ingestion ledger every run and **nothing reads it back** — `last_digest_for_version()`
+takes only `version`, `outcome` and `content_digest`. `compare_snapshots()` computes `n_removed` and
+discards it. A *zero*-event year fails loud; any non-zero shortfall is recorded as
+`outcome: "success"` with a new short digest, and on the next run `_year_is_cached()` finds the
+short snapshot digest-consistent with the short ledger entry. The truncation becomes the cached
+truth.
+
+ADR-027 exists because this already happened to UCDP — `page_size=50000` returned 335,918 of 384,918
+events and the harvest reported success. The residue is still a **manual** check: the operations
+runbook records the expected ACLED count as a number a human is supposed to read off stdout.
+
+**It was deliberately not fixed in the same change, and the narrowing was written down rather than
+left implicit.** A fix touches shared provenance code every source reads, and moving a harvest's
+failure behaviour in the same release that moves its pagination would confound the two. So #487 owns
+one sentence — *the pagination loop cannot silently truncate* — and #488 owns the real problem.
+Tier 3 rather than 2 because it is a detectability gap that needs a truncation to happen first, and
+the most likely trigger now has its termination logic pinned by eight mutation-tested cases.
+
+**What the measurement cost, and what it bought.** Parity had to be proven before the 27th, because
+after it half the comparison stops existing: 7,609 events, 8 requests each way, identical on four
+oracles. The detection drill that gates it was itself verified by sabotage — forcing
+`"parity": True` and separately making the two walks identical, both caught. H4 came back
+**negative**: no page arrived short while the cursor was live, so the deleted break would have
+agreed on this slice. That is in `findings.md` as a negative result rather than omitted, because the
+deletion is structurally right but **not vindicated** by this measurement, and the honest basis for
+believing it is mutant M1 being caught rather than H4 being positive.
+
+---
+
 ## C-353 re-tiered 3 -> 2 — the escalation condition had already fired when the entry was written (2026-09-08)
 
 C-353 set its own promotion rule: *"it rises to Tier 2 the moment a consumer aggregates on `gaul1` or

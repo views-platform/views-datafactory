@@ -5,7 +5,7 @@
 **Risk register:** C-153 (Tier 3 — no server-declared total; this change replaces the heuristic it names), C-359
 **Started:** 2026-10-10
 **Investigators:** Simon Polichinel von der Maase, Claude Code
-**Status:** In progress — pre-registered 2026-10-10, measurement not yet run
+**Status:** Complete — parity confirmed 2026-10-10. H1/H2/H3/H5/H6 resolved, H4 negative. See [`findings.md`](findings.md).
 
 ---
 
@@ -34,8 +34,11 @@ same data — and it can only be proven **before 27 October**, while both method
 - [`pre_analysis_plan.md`](pre_analysis_plan.md) — the hypotheses, the falsification criteria and
   the pre-committed decision table, registered before any implementation code
 - [`findings.md`](findings.md) — the answer, written after the measurement
-- [`parity.json`](parity.json) — the machine-readable result, emitted by
-  `scripts/verify_acled_pagination_parity.py`
+- [`parity.json`](parity.json) — the headline result: 7,609 events, all countries, identical both
+  ways
+- [`parity_fixture_slice.json`](parity_fixture_slice.json) — the narrow run (84 events, Somalia)
+  that produced the committed replay fixtures. Separate because an ACLED event is ~1.4 KB, so the
+  headline slice would have been a 10 MB fixture per walk — good evidence, bad fixture.
 
 ## Methodology Note
 

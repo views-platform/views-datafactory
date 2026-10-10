@@ -1,0 +1,33 @@
+{
+  "question": "Do ACLED's cursor and offset pagination return the same events?",
+  "pre_analysis_plan": "reports/investigation_acled_cursor/pre_analysis_plan.md",
+  "method": "Harvest one slice twice against live ACLED -- once by &page=N terminating on a short or empty page (frozen copy of the pre-#487 production loop), once by &cursor=X terminating only on next_cursor is None. Compare on four independent oracles: event count, event_id_cnty set, full-record equality over the sorted lists, and the content_digest the ingestion ledger records. A detection drill runs first as a precondition.",
+  "measured_at_utc": "2026-10-10T19:25:37.631540+00:00",
+  "git_sha": "13ddda1",
+  "slice": {
+    "event_date": "2024-03-01|2024-03-07",
+    "limit": 50,
+    "country": "Somalia",
+    "event_types": "all (no event_type filter)"
+  },
+  "offset_requests": 2,
+  "cursor_requests": 2,
+  "h4_short_pages_with_live_cursor": [],
+  "h5_count_total_count": {
+    "count": null,
+    "total_count": null
+  },
+  "offset_n_events": 84,
+  "cursor_n_events": 84,
+  "offset_content_digest": "5b73a9160f8a8256",
+  "cursor_content_digest": "5b73a9160f8a8256",
+  "only_in_offset": [],
+  "only_in_cursor": [],
+  "checks": {
+    "count_equal": true,
+    "id_sets_equal": true,
+    "records_equal": true,
+    "digests_equal": true
+  },
+  "parity": true
+}
