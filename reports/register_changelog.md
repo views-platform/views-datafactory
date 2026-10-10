@@ -17,6 +17,41 @@ entry could.
 
 ---
 
+## C-353 re-tiered 3 -> 2 — the escalation condition had already fired when the entry was written (2026-09-08)
+
+C-353 set its own promotion rule: *"it rises to Tier 2 the moment a consumer aggregates on `gaul1` or
+`gaul2`."* It then argued Tier 3 from *"nothing that consumes the affected fields today produces a
+wrong number from them: the conflict aggregations run on `gaul0`."*
+
+Both sentences were in the same entry. The first was already true when the second was written.
+
+views-faoapi serves `/gaul2/data/{historical,forecast}/subset` and
+`/gaul2/analysis/{historical,forecast}/hdi-map`, and lists `gaul2` as a first-class aggregation level
+beside country/gaul0/gaul1. **Eight of the nine wrong labels are at exactly that level.** A partner
+query against an affected unit returns a total built from the wrong cell membership, with no error
+signal.
+
+**How the mistake was made.** The tier was argued from what *this* repository's aggregation does —
+`grid_to_country_month` groups by `gaul0` — and generalised to "no consumer aggregates below
+country". The consumer is a different repository, it was on this machine, and one `grep` would have
+settled it. That is the same failure mode as C-352, where a claim about views-postprocessing's
+semantics was made from this repo's code and caught in review before it reached a partner.
+
+**It was not caught here.** The fao02 session preparing FAO Pre-Release Note 07 found it while
+reconciling Topic G's figures, pushed back on the framing rather than accepting it, and had already
+corrected the note — which had inherited the false claim from this entry. Register entries propagate;
+a wrong one propagates too.
+
+**Also settled in the same exchange:** Topic G's border-cell counts did not reconcile (3,581 + 9 =
+3,590, against a comment saying 3,591). Neither figure was wrong. **3,591 is border cells over the
+whole grid above 55 degrees; 3,581 is border cells among the delivered `land_gaul` subset**, and both
+are recorded in `projection_sensitivity.json`. The note was mixing populations — as was its 96.4%
+caption, which is the whole-grid complement (97,209/100,800); the delivered figure is 80.7%. Nine
+flips, all delivered, eight at `gaul2` only, one also at `gaul1`, none at `gaul0` — confirmed against
+the JSON.
+
+---
+
 ## C-355 — metadata computed every run and thrown away one step before anyone could read it (2026-08-24)
 
 Two consumers filed the same complaint a month apart. views-pipeline-core (#420) filed it as an
