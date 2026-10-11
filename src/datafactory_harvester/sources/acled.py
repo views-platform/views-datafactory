@@ -499,6 +499,31 @@ def fetch_paginated(
         if next_cursor is None:
             break
 
+        # Checked before the progress guard: if the walk is stopping at
+        # the cap anyway, the cursor's value is irrelevant, and raising
+        # on it would make `harvest_acled.py --proof` report a failure
+        # for a credential that plainly works.
+        if max_pages is not None and page >= max_pages:
+            logger.info(
+                "Stopped after %d pages (max_pages limit)",
+                max_pages,
+            )
+            break
+
+        # The cursor has to be hashable to be tracked, and a type
+        # change is the same class of provider drift as the missing key
+        # guarded above — so it gets the same named error rather than a
+        # bare TypeError out of the set lookup below.
+        if not isinstance(next_cursor, str | int):
+            err_msg = (
+                "ACLED returned a non-scalar 'next_cursor' of type "
+                f"{type(next_cursor).__name__} (page {page}): "
+                f"{next_cursor!r}. Cursor pagination needs a scalar "
+                "token to detect a stalled walk."
+            )
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+
         # The SERVER must advance the cursor or the walk cannot make
         # progress. Under offset pagination `page += 1` guaranteed
         # forward motion; under cursor pagination only ACLED can, so a
@@ -517,13 +542,6 @@ def fetch_paginated(
             logger.error(err_msg)
             raise ValueError(err_msg)
         seen_cursors.add(next_cursor)
-
-        if max_pages is not None and page >= max_pages:
-            logger.info(
-                "Stopped after %d pages (max_pages limit)",
-                max_pages,
-            )
-            break
 
         cursor = next_cursor
         page += 1

@@ -1018,6 +1018,88 @@ class TestPaginationGreen:
         ):
             fetch_paginated(config, "user", "pass")
 
+    def test_non_scalar_cursor_raises_named_error(
+        self, tmp_path: Path
+    ) -> None:
+        """A list cursor gets a named ValueError, not a TypeError.
+
+        The progress guard tracks cursors in a set, so an unhashable
+        cursor would otherwise crash with a bare
+        `TypeError: unhashable type: 'list'` — no mention of ACLED, the
+        envelope, or what changed. A type change is the same class of
+        provider drift as the missing `next_cursor` key, so it gets the
+        same treatment.
+        """
+        token_resp = _mock_token_response()
+
+        resp = MagicMock()
+        resp.json.return_value = _make_acled_response(
+            _make_acled_events(2),
+            next_cursor=["not", "a", "scalar"],  # type: ignore[arg-type]
+        )
+        resp.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=2,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+            pytest.raises(ValueError, match="non-scalar 'next_cursor'"),
+        ):
+            fetch_paginated(config, "user", "pass")
+
+    def test_max_pages_beats_a_stalled_cursor(
+        self, tmp_path: Path
+    ) -> None:
+        """A capped walk stops at the cap, it does not raise.
+
+        `harvest_acled.py --proof` passes max_pages=1 purely to confirm
+        credentials work. If the walk is stopping anyway the cursor's
+        value is irrelevant, and raising would report FAIL for a
+        credential that plainly works.
+        """
+        token_resp = _mock_token_response()
+
+        resp = MagicMock()
+        resp.json.return_value = _make_acled_response(
+            _make_acled_events(2), next_cursor=0  # echoed, i.e. stalled
+        )
+        resp.raise_for_status = MagicMock()
+
+        config = AcledConfig(
+            start_year=2020,
+            end_year=2020,
+            page_size=2,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "prov" / "ledger.jsonl",
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp, resp],
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.time.sleep",
+            ),
+        ):
+            events = fetch_paginated(
+                config, "user", "pass", max_pages=1
+            )
+
+        assert len(events) == 2
+
     def test_empty_page_error_names_the_benign_cause(
         self, tmp_path: Path
     ) -> None:

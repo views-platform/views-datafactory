@@ -213,9 +213,19 @@ def _sorted_records(events: list[dict]) -> list[dict]:
 
 
 def _compare(
-    offset_events: list[dict], cursor_events: list[dict]
+    offset_events: list[dict],
+    cursor_events: list[dict],
+    *,
+    walks_completed: bool = True,
 ) -> dict:
-    """Four independent oracles. Parity requires all four to agree."""
+    """Five oracles. Parity requires every one of them to hold.
+
+    `walks_completed` is one of them, not an afterthought: two walks
+    truncated at the request cap agree on all four *data* oracles, so a
+    capped run must never produce a parity verdict. Keeping it here
+    rather than letting the caller override `parity` means the verdict
+    has exactly one owner.
+    """
     offset_ids = {e.get(ID_FIELD) for e in offset_events}
     cursor_ids = {e.get(ID_FIELD) for e in cursor_events}
 
@@ -234,6 +244,7 @@ def _compare(
         "id_sets_equal": not only_offset and not only_cursor,
         "records_equal": records_equal,
         "digests_equal": offset_digest == cursor_digest,
+        "walks_ran_to_completion": walks_completed,
     }
 
     return {
@@ -294,10 +305,20 @@ def _self_test() -> int:
     ordered list without inspecting the request, so they cannot tell a
     correct walk from one handed the right answer by accident.
 
-    Three drills: identical input must report parity; a dropped event
+    Six drills: identical input must report parity; a dropped event
     must be caught by every oracle; a single changed FIELD on an event
     that both walks return must be caught by records_equal even where
-    the id sets and the counts agree.
+    the id sets and the counts agree; the two walk implementations must
+    actually diverge on input designed to separate them; and a walk
+    that exhausts the request cap must say so; and `_compare` must act
+    on that flag rather than merely receive it.
+
+    What the drills do NOT cover: `_fake_fetch` ignores the params it
+    is handed, so none of this can catch a walk that constructs the
+    wrong request. That is covered by `tests/test_acled_harvester.py`
+    and `tests/test_acled_cursor_parity_fixture.py`, which assert the
+    sent parameters. "Drill passed" means the comparison and the
+    termination logic are sound, not that the requests are right.
     """
     failures: list[str] = []
 
@@ -395,6 +416,24 @@ def _self_test() -> int:
             "hit_cap -- a truncated walk would be reported as parity"
         )
 
+    # Drill 6 -- and `_compare` must HONOUR the flag drill 5 checks.
+    # Drill 5 only proves the walks set hit_cap; it says nothing about
+    # whether the comparison acts on it. Hard-coding
+    # walks_ran_to_completion=True inside `_compare` passed drill 5
+    # cleanly, which is how this gap was found.
+    capped_result = _compare(_ev(4), _ev(4), walks_completed=False)
+    if capped_result["parity"]:
+        failures.append(
+            "identical data with walks_completed=False was reported as "
+            "parity -- _compare is ignoring the completion oracle, so a "
+            "truncated measurement would read as licence to ship"
+        )
+    if capped_result["checks"].get("walks_ran_to_completion") is not False:
+        failures.append(
+            "_compare did not record walks_ran_to_completion=False when "
+            "told the walks were truncated"
+        )
+
     if failures:
         log.error("DETECTION DRILL FAILED -- %d problem(s):", len(failures))
         for f in failures:
@@ -405,7 +444,7 @@ def _self_test() -> int:
         )
         return 1
 
-    log.info("detection drill passed (5 drills) -- the comparison can "
+    log.info("detection drill passed (6 drills) -- the comparison can "
              "see a difference, so a null result means something")
     return 0
 
@@ -537,18 +576,15 @@ def main() -> int:
         len(cursor_envelopes),
     )
 
-    result = _compare(offset_events, cursor_events)
-
-    # A capped walk is a truncated walk. Two truncated prefixes agree
-    # on all four oracles, so without this the script would report
-    # PARITY on a measurement that proved nothing -- and section 4 of
-    # the pre-analysis plan reads a parity verdict as licence to ship.
+    # A capped walk is a truncated walk, and two truncated prefixes
+    # agree on all four data oracles -- so completion is passed INTO
+    # the comparison rather than used to override its verdict
+    # afterwards. Section 4 of the pre-analysis plan reads a parity
+    # verdict as licence to ship, so it must not be reachable here.
     capped = offset_capped or cursor_capped
-    if capped:
-        result["parity"] = False
-        result["checks"]["walks_ran_to_completion"] = False
-    else:
-        result["checks"]["walks_ran_to_completion"] = True
+    result = _compare(
+        offset_events, cursor_events, walks_completed=not capped
+    )
 
     # H4: did any page come back short while the cursor was still live?
     short_live = [
