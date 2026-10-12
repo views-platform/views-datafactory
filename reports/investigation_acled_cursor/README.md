@@ -34,11 +34,19 @@ same data — and it can only be proven **before 27 October**, while both method
 - [`pre_analysis_plan.md`](pre_analysis_plan.md) — the hypotheses, the falsification criteria and
   the pre-committed decision table, registered before any implementation code
 - [`findings.md`](findings.md) — the answer, written after the measurement
-- [`parity.json`](parity.json) — the headline result: 7,609 events, all countries, identical both
-  ways
+- [`parity_quarter.json`](parity_quarter.json) — the headline result: 98,636 events, a full
+  quarter, all countries, at production's own `page_size=5000`, identical both ways
+- [`parity.json`](parity.json) — the first run: 7,609 events, one week, `limit=1000`, identical
+  both ways. Superseded as the headline but kept: it is a second independent measurement, taken
+  two days earlier at a different page size
 - [`parity_fixture_slice.json`](parity_fixture_slice.json) — the narrow run (84 events, Somalia)
   that produced the committed replay fixtures. Separate because an ACLED event is ~1.4 KB, so the
   headline slice would have been a 10 MB fixture per walk — good evidence, bad fixture.
+- [`../../notebooks/acled_cursor_parity.ipynb`](../../notebooks/acled_cursor_parity.ipynb) — the
+  human-readable argument, committed with outputs. Reads only the files above and the recorded
+  envelopes; makes no network request, so it still renders after 27 October. It recomputes the
+  content digest from the raw envelopes rather than reprinting the reported one, and section 6
+  lists what the evidence does **not** establish.
 
 ## Methodology Note
 
