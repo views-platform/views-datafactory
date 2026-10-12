@@ -1,9 +1,44 @@
-# Product Development Plan v12 — current through v1.13, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.14, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
+
+---
+
+## v1.14 Addendum (2026-10-12)
+
+**v1.14.0 (ACLED pagination walks cursors — a provider-forced mechanism change).** ACLED deprecates
+offset pagination on **27 October 2026**. Our harvester walked their API by `&page=N`; after that
+date the parameter stops working. The failure shape is what made this urgent rather than routine: a
+missed migration does not crash on the 27th, it surfaces on the **21 November** cron as a short
+harvest — quiet, a month late, and in the dataset rather than the logs. This repo has been burned by
+exactly that before (ADR-027 exists because `page_size=50000` made the UCDP API silently return
+335,918 of 384,918 events while the harvest reported success).
+
+**What a consumer gets.** `fetch_paginated()` in `acled.py` now walks `&cursor=X` and terminates on
+a server-declared `next_cursor is None`. Two inferential terminators were deleted: the empty-page
+break and the short-page break. Under cursor pagination a short page is *not* the end of the series,
+and treating it as one is precisely how this migration would have truncated a harvest silently. The
+walk is bounded by a non-advancing-cursor guard, so a stalled cursor raises instead of looping
+against a rate-limited API. `AcledConfig` is unchanged — no field added or removed.
+
+**The evidence, and why it was captured when it was.** The offset and cursor walks were compared
+live while both still worked: 7,609 events over a full-country slice, 8 requests each way, identical
+on event count, `event_id_cnty` sets, full-record equality and `content_digest`
+(`ae4a6e815168e95f`), reproduced byte-identically at a second commit. The measurement was
+pre-registered before any implementation code, and real envelopes from both walks are committed as
+fixtures — after 27 October the offset side can never be recorded again, so the fixture replay is
+the only thing that can still make the parity claim. See `reports/investigation_acled_cursor/` and
+`notebooks/acled_cursor_parity.ipynb`. One hypothesis came back **negative** and is recorded as
+such: no page arrived short while the cursor was live, so the deleted break would have agreed on the
+measured slice. The deletion is structurally right but not vindicated by the data.
+
+**What this release does *not* fix.** A harvest that returns fewer events than it should is still
+recorded as `outcome: "success"` — `n_events` goes into the ledger and nothing reads it back
+(C-359, #488). ACLED still returns `count`/`total_count` as null, so C-153 is amended, not closed.
+The loop can no longer truncate silently; the ledger still cannot notice if something else does.
 
 ---
 
