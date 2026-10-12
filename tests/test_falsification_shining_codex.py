@@ -3,8 +3,12 @@
 Claim: "I can execute (load data, train and evaluate) the new model
 shining_codex now."
 
-F1 (resolved): ModelPathManager requires config_deployment.py and
-config_sweep.py — both now exist.
+F1 (resolved): ModelPathManager requires a maturity/deployment config
+and config_sweep.py — both exist. The first was named
+config_deployment.py when this audit was written and was renamed to
+config_maturity.py in views-models (#489); the assertion follows the
+file, since what F1 tests is that the config ModelPathManager demands
+is present, not what it is called.
 
 F2 (resolved): Feature set renames ged_sb_best → lr_ged_sb
 (matching novel_heuristics column contract).
@@ -28,12 +32,16 @@ SKIP_REASON = "shining_codex not found at expected path"
     reason=SKIP_REASON,
 )
 class TestF1ConfigFiles:
-    """F1 (resolved): ModelPathManager requires config_deployment.py
-    and config_sweep.py — both are checked at init with validate=True."""
+    """F1 (resolved): ModelPathManager requires the maturity config and
+    config_sweep.py — both are checked at init with validate=True."""
 
-    def test_config_deployment_exists(self) -> None:
-        path = _SHINING_CODEX / "configs" / "config_deployment.py"
-        assert path.exists()
+    def test_config_maturity_exists(self) -> None:
+        path = _SHINING_CODEX / "configs" / "config_maturity.py"
+        assert path.exists(), (
+            "views-models renamed config_deployment.py to "
+            "config_maturity.py; if this fails, check whether it was "
+            "renamed again rather than deleted (#489)"
+        )
 
     def test_config_sweep_exists(self) -> None:
         path = _SHINING_CODEX / "configs" / "config_sweep.py"
@@ -41,7 +49,7 @@ class TestF1ConfigFiles:
 
     def test_all_required_configs_exist(self) -> None:
         required = [
-            "config_deployment.py",
+            "config_maturity.py",
             "config_hyperparameters.py",
             "config_meta.py",
             "config_partitions.py",
