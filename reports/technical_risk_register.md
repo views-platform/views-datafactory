@@ -3,7 +3,7 @@
 **Date:** 2026-03-17 (updated 2026-07-27)
 **Last update:** 2026-09-08 — C-358 registered: this register is public and nothing screens which sibling repositories it cites; 15 of 32 are private. Caught by the FAO-note session, not by us. The effective default spans three files that nothing asserts are aligned (#483). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 358 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 46 open concerns (0 Tier 1, 4 Tier 2, 14 Tier 3, 22 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 359 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 47 open concerns (0 Tier 1, 4 Tier 2, 15 Tier 3, 22 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -188,6 +188,7 @@
 | C-356 | 3 | **UCDP `where_prec >= 4` events are geocoded whole into one cell — measured live 2026-09-02.** Cell **148759 (Mekelle, Tigray) holds 121,915 in its peak month and 273,035 across the war window; 96.1% of all state-based fatalities in its 5x5 neighbourhood**, against a panel 99.99th percentile of 255. ADR-049 **did** ship the mirror strategy opt-in with parity default, and production uses parity. **The default is spread across three files that must stay aligned** — `viewpoint_config.py` says `proportional`, `profiles.py` overrides to `passthrough`, `refresh_pipeline.sh` passes no `--profile` | **Before changing any one of the three:** `spatial_distribution_strategy`'s default in `viewpoint_config.py`, the `production_parity` profile in `profiles.py`, or the `build_viewpoint.py` invocation in `refresh_pipeline.sh`. Any single edit silently changes delivered values and the digest views-postprocessing pins. Also fires when viewser parity stops being a project goal | Viewpoint |
 | C-357 | 4 | **UCDP's temporal assignment is a swappable strategy; ACLED's is a hardcoded one-liner.** `ucdp_v1.py` resolves `survivorship_fn`/`distribution_fn` from config through a registry with a `production_parity` profile; `acled_v1.py` calls a private `_assign_date_month()` inline. Correct today — ACLED events are single-day, so there is nothing to distribute — but the seam exists on one source only, and it exists because parity forced it, not because it was designed | **If ACLED gains multi-day or date-imprecise events, or a second temporal profile is wanted for ACLED** — the change lands inline in the builder rather than as a config value | Viewpoint |
 | C-358 | 4 | **This register is public and nothing screens what it cites from sibling repositories.** On 2026-09-08 a C-353 amendment published `managers/api.py` line numbers from **views-faoapi, which is private**, into this register and a public issue. Corrected the same day. **15 of the 32 views-platform repositories are private**, and this register cites siblings constantly | **Before citing a views-platform repository by file path in this register or a public issue, check it against the visibility list in the entry.** Also when any repository changes visibility, or a new private one is added | Disclosure hygiene |
+| C-359 | 3 | **A short ACLED harvest is recorded as `outcome: "success"` — `n_events` is written to the ingestion ledger and never read back.** `compare_snapshots()` computes `n_removed` and discards it; no aggregate count check exists on the path. A *zero*-event year fails loud; any non-zero shortfall does not. Worst case is the current year, re-fetched every run: the short snapshot overwrites the good one and the next run finds it digest-consistent, making the truncation the cached truth. ADR-027 exists because this happened to UCDP (335,918 of 384,918) | **Before the next change to how any harvester terminates a fetch** — pagination, retry or cache logic. Also if ACLED's envelope starts reporting `total_count`, which would make ADR-027's existing rule applicable (see C-153) | ACLED data integrity |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -782,6 +783,34 @@ The ACLED API response envelope has `"count": null, "total_count": null` — the
 
 See also C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 
+**Addendum 2026-10-10 (#487) — the detection signal this entry names no longer exists.**
+The paragraph above says the harvester *"terminates on empty/short pages (correct behavior for
+complete pagination)"* and that ADR-027 documents the **short-page heuristic as the only available
+detection signal**. ACLED deprecated offset pagination on 2026-10-27, so `fetch_paginated()` now
+walks cursors and terminates only on `next_cursor is null`. **The short-page break was deleted** —
+under cursor pagination a short page is not evidence of anything, and keeping the break is how the
+migration would have truncated harvests silently.
+
+**This is a net improvement to the risk, and the entry stays open anyway.** `next_cursor` is a
+*server-declared* continuation token where the short-page rule was a *client-side inference*, so the
+series boundary is now stated by ACLED rather than guessed by us, and two conditions that used to be
+indistinguishable from a clean finish now raise (ADR-011): a missing `next_cursor` key, and no
+events while the cursor is still live.
+
+**What has not changed is the thing this entry is actually about.** The envelope still reports
+`"count": null, "total_count": null` — re-confirmed against live cursor responses on 2026-10-10, on
+every page of an 8-page walk. There is still no server-reported total, ADR-027's tolerance rule
+still cannot be applied to ACLED, and "did I get everything?" is still unanswerable from the
+response alone. Had either field carried a value this entry would have **closed**; it did not.
+
+Tier unchanged at 3. The trigger is unchanged and still correct: it fires on server-side capping
+*within* a page, which cursor pagination does nothing to reveal.
+
+Parity between the two methods was measured before the deadline, because it could not be measured
+after: 7,609 events, 8 requests each way, identical on four oracles
+(`reports/investigation_acled_cursor/findings.md`). Cross-ref C-359 (the harvest-count gap this
+investigation surfaced), #487, #488.
+
 ### C-164: Cross-layer WET debt — 6 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
 
 | Field | Value |
@@ -1243,6 +1272,72 @@ Cross-ref: ~~C-330~~ (the work being done when this happened), ~~C-323~~/~~C-324
 **The shared property, which is the reason this is registered at all:** both fail *green*. `git push` succeeds; `gh pr merge` exits 0. Neither has a failure mode that announces itself, so neither can be caught by anything except deliberately reading state back. That is the same class as C-330 (a nightly no-op reporting success) and C-337 (a lockfile frozen with no error).
 
 Cross-ref: ~~C-320~~ (auto-merge silently degrading to a plain merge when branch protection was absent — same family, different mechanism, resolved), C-339 (the other silent-failure incident of this session). Part of work package: **Operational safety**.
+
+---
+
+### C-359: A short ACLED harvest is recorded as a success — `n_events` is written to the ledger and never read
+
+**Source:** Surfaced while planning the ACLED cursor migration, 2026-10-10 (#487). Found by asking
+what would detect a botched migration, not by any guard or audit.
+
+**Trigger:** **Before the next change to how any harvester terminates a fetch** — pagination,
+retry, or cache logic. That is when a shortfall becomes likely and when nothing would notice. Also
+fires if ACLED's envelope ever starts reporting `total_count`, which would make ADR-027's existing
+rule applicable and this entry largely redundant (see C-153).
+
+**Location:** `_fetch_single_year()` and `fetch_acled()` in
+`src/datafactory_harvester/sources/acled.py`; `last_digest_for_version()` in
+`src/datafactory_provenance/digests_and_ledgers.py`; `compare_snapshots()` in
+`src/datafactory_harvester/event_validation.py`. The same gap exists in every other harvester.
+
+**What is written, and what is read.** `_fetch_single_year()` records `n_events`, `min_date`,
+`max_date` and `content_digest` into the ingestion ledger on every run. **Nothing reads `n_events`
+back.** Confirmed by grep across `src/` and `scripts/`: `last_digest_for_version()` reads only
+`version`, `outcome` and `content_digest`; `report_ledger()` reads `outcome` and `timestamp` for the
+freshness SLO; `check_health.py` checks ledger freshness and the zarr digest match. The harvest
+scripts print per-snapshot row counts and compare them to nothing.
+
+`compare_snapshots()` *does* compute `n_removed`, and it is **discarded** — it survives only as an
+unthresholded warning string folded into the ledger `warnings` list, and only when a snapshot
+already exists on disk.
+
+**What is caught:** a *zero*-event year. `validate_events()` returns `valid=False` with
+`errors=["No events to validate."]` for an empty list, so the year gets a `failed` ledger entry and
+raises.
+
+**What is not caught: any non-zero shortfall.** `validate_events()` checks required-field presence,
+types and per-event values, with no minimum-count and no expected-count parameter. ACLED's three
+`validate_dgp_assumptions()` checks are per-event. No aggregate check exists anywhere on the path.
+
+**The worst case is the current year**, which is deliberately re-fetched every run because ACLED
+publishes biweekly. A truncated current-year harvest emits a `"N events removed"` warning with no
+threshold and no raise, archives the good snapshot, overwrites it with the short one, and records
+`outcome: "success"` with the new short digest. On the following run `_year_is_cached()` finds the
+short snapshot digest-consistent with the short ledger entry — **the truncation is now the cached
+truth.**
+
+**Tier 3, not 2.** Silent and reaching delivered data, which argues for 2. Held at 3 because the
+failure requires a provider-side or code-side truncation to occur first — it is a *detectability*
+gap rather than an active corruption — and because the single most likely trigger (the cursor
+migration) now has its termination logic pinned by eight mutation-tested cases. Re-tier to 2 if a
+shortfall is ever observed in practice.
+
+**This is not hypothetical, and ADR-027 is the proof.** That ADR exists because `page_size=50000`
+made the UCDP API silently return 335,918 of 384,918 events while the harvest reported success —
+it validated schema and provenance but never counted
+(`reports/post_mortems/2026-04-25_stale_zarr_store.md`). The residue of that incident is still a
+**manual** check: `server_operations.md` records the expected ACLED count (384,918) as a number an
+operator is meant to read off stdout and compare by eye.
+
+**Deliberately not fixed in #487.** A fix touches shared provenance code every source reads, and
+changing a harvest's failure behaviour in the same release that changes how it paginates would
+confound the two. #487 owns the narrower guarantee — the pagination loop cannot silently truncate —
+and says so explicitly rather than leaving the narrowing implicit. The open design questions (what
+tolerance, given legitimate retroactive corrections; raise or warn; per-source or shared) are in
+**#488**.
+
+Cross-ref: C-153 (no server-declared total — the reason ADR-027's rule cannot simply be applied),
+C-72 (429 not distinguished from 500). ADR-027, ADR-011, ADR-032. GitHub: #487, #488.
 
 ---
 
