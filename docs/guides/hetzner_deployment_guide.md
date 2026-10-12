@@ -852,8 +852,11 @@ fixed order:
    diverge a little further after **every** release, and
    `git log main..development` starts counting work that already shipped.
 
-5. **Deploy** = update `~/.views-deploy-tag` on the server to the
-   new tag. The pipeline checks out whatever tag that file contains.
+5. **Deploy** = three steps on the server, not one: the tag file, then
+   `git fetch --tags && git checkout <tag>`, then `uv sync`. Writing the
+   tag file alone is **not** deploying — that mistake left the host on
+   v1.10.0 for five days while every signal read v1.11.0 (C-343).
+   `docs/guides/server_quickref.md` holds the commands.
 
 **Why this order:** If you tag before bumping, the tag points at code
 with the old version string — wrong. If you tag on `development`
@@ -871,48 +874,51 @@ first, promote second, tag third, back-merge fourth.
 > corrected, because a second copy of the procedure is what let the two guides drift apart
 > in the first place (#402). One procedure, one home.
 
-**On the server** (SSH in):
+**On the server** (SSH in): run **every block** in
+`docs/guides/server_quickref.md` §"Deploy a new version" — the tag file, then
+`git fetch --tags && git checkout <tag>`, then `uv sync`, then the three
+verification commands. The commands are there and not here on purpose.
 
-```bash
-# Update the deploy tag file
-echo 'vX.Y.Z' > ~/.views-deploy-tag
-```
-
-That's it. The next cron run (21st of the month) will automatically
-use the new tag. If you want to apply it right now instead of waiting:
-
-```bash
-# Run the pipeline manually (same command cron uses)
-cd ~/views-datafactory
-bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
-```
+> **This section used to say "update `~/.views-deploy-tag`. That's it."** It was
+> wrong, and it is the sentence C-343 is about: on 2026-08-08 the tag file read
+> `v1.11.0`, `git describe` read `v1.10.0`, and the installed `views-frames` was
+> still the frozen `1.0.0` — three sources of truth disagreeing, with a green
+> status page and a pinging heartbeat and no error anywhere. The in-pipeline
+> `git checkout "$DEPLOY_TAG"` does not rescue it: bash has already buffered
+> `scripts/refresh_pipeline.sh`, so a change to that script lands one run later —
+> a month, on a monthly cron — and `uv sync` is never invoked by the pipeline at
+> all, so a dependency change never lands however many times it runs. C-343 was
+> corrected in `scripts/refresh_pipeline.sh` and `docs/guides/server_quickref.md`
+> in #431 and **this third copy was missed**, which is the same drift #402 is
+> about. The commands live in the quickref and nowhere else; if this file and the
+> quickref ever disagree, **the quickref wins.**
 
 ### How to roll back
 
-If a new version breaks the pipeline:
+If a new version breaks the pipeline, re-run the same three deploy steps with the
+previous tag — a rollback is a deploy, and skipping `uv sync` on the way back
+leaves the dependencies of the version you are abandoning. Tags are never
+deleted by git, so every previous version stays available.
+
+Then run the pipeline manually to apply it immediately rather than waiting for
+the next cron run:
 
 ```bash
-# On the server — point back to the previous version
-echo 'vPREVIOUS' > ~/.views-deploy-tag
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log'
 ```
-
-The next pipeline run will check out that tag and run its code
-instead. The old version is always available — git never deletes tags.
-
-You can also run the pipeline manually to roll back immediately
-instead of waiting for the next cron run.
 
 ### How to check what version is deployed
 
+**Three sources, and they must agree** — the tag file, the checked-out tag, and
+the installed distribution. Checking only the tag file is what C-343 was: it is a
+statement of intent, not evidence. The commands are step 4 of
+`docs/guides/server_quickref.md` §"Deploy a new version"; they are not repeated
+here, because a second copy of them is how this section came to be wrong.
+
+For when the last pipeline run happened, `tail` the refresh log:
+
 ```bash
-# What version is the server configured to run?
-cat ~/.views-deploy-tag
-
-# What version is actually checked out right now?
-git describe --tags --exact-match 2>/dev/null || git log --oneline -1
-
-# When did the last pipeline run happen?
-tail -5 logs/refresh.log
+sudo -u views-deploy tail -5 ~/views-datafactory/logs/refresh.log
 ```
 
 ### Log rotation
