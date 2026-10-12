@@ -53,7 +53,7 @@ It is now confirmed against a real response.
 
 ### 1.2 The two walks returned identical data
 
-H1 confirmed. Four independent oracles, all agreeing:
+H1 confirmed, on two slices measured two days apart. Four independent oracles, all agreeing:
 
 | Oracle | Result |
 |---|---|
@@ -64,6 +64,31 @@ H1 confirmed. Four independent oracles, all agreeing:
 
 Slice: all countries, `2024-03-01|2024-03-07`, `limit=1000`, no event-type filter. Recorded in
 `parity.json` with the UTC timestamp and git sha.
+
+**Re-measured wider, at production's real page size (2026-10-12).** The run above used
+`limit=1000`; production harvests with `page_size=5000` (`AcledConfig`). That gap meant the
+headline measurement had never exercised the page size the pipeline actually uses. Repeated over a
+full quarter at the production limit, recorded in `parity_quarter.json`:
+
+| Oracle | Result |
+|---|---|
+| Event count | 98,636 = 98,636 |
+| `event_id_cnty` set | identical, symmetric difference empty |
+| Full-record equality over sorted lists | equal |
+| `content_digest` | `af9fb35c03ac830f` = `af9fb35c03ac830f` |
+| Both walks ran to completion (neither hit the request cap) | true |
+
+Slice: all countries, `2024-01-01|2024-03-31`, `limit=5000`, no event-type filter. 20 requests per
+walk, at `git_sha` `70164d3` — the commit that becomes `v1.14.0`. Nineteen pages of exactly 5,000
+events, then a terminal page of 3,636 with `next_cursor: null`.
+
+That is **13x the events** of the headline run and the first measurement at the page size
+production uses. It does not merely add rows: `limit` is the parameter the deleted
+`len(results) < config.page_size` break compared against, so changing it changes the arithmetic of
+the terminator this migration removed. Both slices still agree on every oracle.
+
+Why a second same-session comparison rather than the end-to-end ledger check that was planned —
+see §5.1.
 
 The digest is the load-bearing oracle because it is the value the ingestion ledger records and
 `_year_is_cached()` compares against, and because `validate_events()` sorts before hashing — so a
@@ -138,6 +163,28 @@ asserting the **request count** and the **sequence of cursors sent** —
 ---
 
 ## 2. What we THINK we know (inferred from evidence)
+
+### 2.0 The decisive case never occurred live
+
+Noticed 2026-10-12 while writing the notebook, which prints the page structure
+cell-by-cell and made it visible.
+
+**The final page was short in all three measured slices** — 3,636 of `limit=5000` (quarter),
+609 of 1,000 (week), 34 of 50 (fixture). None was exactly full.
+
+That matters because a full final page is the one configuration where the deleted
+`len(results) < config.page_size` break is *unambiguously* wrong: it would have accepted a full
+final page as "more to come", asked for one more page, and then had to decide what an empty
+response meant. A short final page, by contrast, is a case the old code handled correctly.
+
+So the live measurement demonstrates that the two methods **agree**; it does not demonstrate the
+new terminator succeeding where the old one fails. That case exists only in
+`test_full_final_page_with_null_cursor_terminates`, which constructs it synthetically.
+
+This is the same gap as the negative H4 result below, approached from the other side, and the two
+should be read together: nothing ACLED returned during this investigation would have broken the
+old code. The case for the change rests on the contract (`next_cursor` is the server's own
+declaration, page length is an inference) and on the mutation drill, not on an observed failure.
 
 ### 2.1 The old short-page heuristic would probably have worked on this slice too
 
@@ -252,7 +299,40 @@ pagination loop cannot silently truncate**, which the mutation drill demonstrate
 
 ---
 
-## 5. What the code review changed, and one thing it found in this document's own instrument
+## 5. What the reviews changed, and one thing they found in this document's own instrument
+
+### 5.1 The end-to-end check the plan called the most valuable one was unsound
+
+Raised by the operator at the release gate, 2026-10-12, before publishing: had the full ritual
+actually run? The code review had (two rounds, seven findings, all fixed). What had **not** run was
+the approved plan's Verification check 9:
+
+> Live end-to-end: `harvest_acled.py` for one year against a cleared snapshot → ledger `n_events`
+> **and** `content_digest` match the pre-migration ledger entry for that year.
+
+annotated in that plan as *"the one that would actually catch a botched migration."*
+
+**On re-reading, that check cannot do the job claimed for it.** The only pre-migration per-year
+entry in `provenance/acled/ingestion_ledger.jsonl` is `version: "2025_2025"`, harvested
+2026-05-07: 411,089 events, digest `21f9337c4f795b84`. **ACLED restates history** — it backfills
+and corrects past events continuously. A re-harvest of 2025 in October 2026 would differ from the
+May figure for reasons that have nothing to do with pagination, and the comparison could not
+separate "the pagination is broken" from "the source was revised, as it always is". A mismatch
+would be uninterpretable, and — worse — a *match* would have been read as vindication it could not
+support. The flaw is in the oracle, not the execution: no run of check 9 would have been
+informative.
+
+The sound instrument for this question is the one already built: both walks in the **same session,
+minutes apart**, where restatement cannot differentially affect them. So the remedy was to widen
+*that* rather than to run check 9 — see the second table in §1.2. The planned check is withdrawn,
+not deferred.
+
+This is also the honest reason the widening happened at all: it was not in the plan. It exists
+because the plan's strongest stated check turned out to be the weakest, and that was noticed at the
+gate rather than after the deploy.
+
+### 5.2 What the code review changed
+
 
 `/code-review medium` on PR #490 raised five findings. Four were real; all are fixed. Recorded here
 rather than only in the PR, because two of them change claims made above.
