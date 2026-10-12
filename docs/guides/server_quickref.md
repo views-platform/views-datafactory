@@ -12,16 +12,27 @@ All commands below assume you are on the server.
 
 ## Deploy a new version
 
+**All four blocks. Step 1 alone is not a deploy (C-343)** — the pipeline's own
+`git checkout` lands a change to `refresh_pipeline.sh` one run later, and never
+runs `uv sync` at all.
+
 ```bash
-# Set version
+# 1. Set version
 sudo -u views-deploy bash -c 'source ~/.profile && echo v1.2.6 > ~/.views-deploy-tag'
 
-# Pull and checkout (git checkout -- uv.lock discards platform-local lock changes)
+# 2. Pull and checkout (git checkout -- uv.lock discards platform-local lock changes)
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && git fetch --tags && git checkout -- uv.lock && git checkout v1.2.6'
 
-# Sync dependencies
+# 3. Sync dependencies
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv sync'
+
+# 4. Verify — all three must name the same version
+sudo -u views-deploy cat ~/.views-deploy-tag
+sudo -u views-deploy bash -c 'cd ~/views-datafactory && git describe --tags --exact-match 2>/dev/null || git log --oneline -1'
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python -c "import importlib.metadata as m; print(m.version(\"views-datafactory\"))"'
 ```
+
+A **rollback is a deploy**: same four blocks, previous tag.
 
 ## Run the pipeline
 
@@ -77,7 +88,8 @@ sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv 
 ## Check status
 
 ```bash
-# Current deployed version
+# Version the server is CONFIGURED to run (intent, not evidence —
+# use all three checks in §"Deploy a new version" step 4 to confirm)
 sudo -u views-deploy cat ~/.views-deploy-tag
 
 # Last run duration

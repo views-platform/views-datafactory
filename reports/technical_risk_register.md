@@ -3241,6 +3241,20 @@ Bash buffers the script and does not re-read it; git writes in place (inode unch
 
 **Remediated 2026-08-08** by running the three documented steps; `uv sync` moved views-frames 1.0.0 → 1.10.2 and views-datafactory 1.10.0 → 1.11.0, and `FeatureFrame` was imported on the host afterwards to confirm the ten-minor-version jump is clean. The entry stays **open** because nothing prevents recurrence.
 
+
+**Update 2026-10-13 — the fix reached two of six copies, and the four it missed are the ones an operator reads.** Found by the operator asking, before deploying v1.14.0, whether a one-line tag write was really the procedure. It was not, and the reason the question had to be asked is that #431 corrected `scripts/refresh_pipeline.sh` and `docs/guides/server_quickref.md` and stopped there. Four further copies of the one-step claim were still live:
+
+| Document | What it said |
+|---|---|
+| `docs/guides/hetzner_deployment_guide.md` §"How to deploy a new version" | the tag file, then *"That's it."* — **and this is the file `refresh_pipeline.sh` itself points to "for full detail"** |
+| `docs/guides/server_operations.md` §"Deploy a new version" + the summary table | local `git tag && git push`, then the tag file, then run the pipeline |
+| `docs/ADRs/022_tag_based_deployment_gate.md` §Consequences + §Deployment Procedure | *"One-line rollback"* as a claimed **benefit**; three-step deploy with no checkout and no `uv sync`; a Verify block listing the tag file and `git describe` but **not the installed distribution** — the one of the three that was actually wrong in August |
+| `docs/guides/data_serving_guide.md` §9 | *"If the new version breaks, you write the old tag name back and you're running known-good code again."* |
+
+All four corrected, each pointing at `server_quickref.md` as the single operational home with "if they disagree, the quickref wins", and `server_quickref.md` grew the verification block it was missing (step 4: tag file, checked-out tag, **installed distribution version**). ADR-022 carries a dated amendment in the ADR-027 style rather than a rewrite — the Decision it records is sound; what was wrong was the inference that the gate's own `git checkout` makes the tag file sufficient.
+
+**What this update changes about the entry's severity, honestly.** It does not raise the tier, but it does weaken the "corrected in the same PR as this entry" claim above: the correction was partial, and the stale copies outlived it by two months and one release. The pattern is #402's — *one procedure, one home* — and C-343 is an instance of it as much as it is a deployment risk. The entry stays **open**, and the still-unbuilt instrument below is now the only thing that would catch a sixth copy appearing.
+
 **The instrument, not yet built.** A pre-flight check in `refresh_pipeline.sh` comparing `$DEPLOY_TAG` against the HEAD the script *started* from, and refusing to run when they disagree — fail-loud per ADR-011, rather than silently self-correcting one run late. Proposed for #424; deliberately not built here, because this PR is a register entry and a comment fix.
 
 Cross-ref: C-337 (the fix this failed to deliver), C-342 (the other lockfile-versus-reality entry from the same day), C-341 (gates that run nowhere), C-98/ADR-022 (the deployment gate this undermines). Part of the **mechanisms that fail green** cluster. GitHub: #421.

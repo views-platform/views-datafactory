@@ -250,13 +250,22 @@ notice for days.
 
 With the tag system: the server keeps running the old working version
 until you *explicitly* tell it to switch. You test the new version,
-tag it, and only then update the server. If the new version breaks,
-you write the old tag name back and you're running known-good code
-again.
+release it, and only then deploy it. If the new version breaks, you
+deploy the previous tag and you're running known-good code again.
 
-**The full deployment procedure** (create a tag, push it, update the
-server file, rollback if needed) is documented in
-`hetzner_deployment_guide.md` under "Deployment and releases".
+**One thing this explanation makes tempting, and it is wrong.** Because
+the pipeline checks the tag out for you, it looks as though changing the
+tag file *is* deploying. It is not. The script is already running when it
+does that checkout, so a change to the script itself only takes effect
+the run after — a month, on a monthly cron — and the script never
+installs dependencies, so a dependency change never lands at all. That
+misreading left the server on v1.10.0 for five days with every signal
+reading v1.11.0 (C-343, August 2026).
+
+**The deployment procedure** — tag file, checkout, `uv sync`, then verify
+three sources agree — lives in `server_quickref.md` under "Deploy a new
+version", and only there. A rollback is the same procedure with the
+earlier tag.
 
 The architectural rationale (why tags instead of branch tracking,
 Docker, or CI/CD) is in **ADR-022**.
