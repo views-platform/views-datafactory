@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-08-24 — C-355 registered (#476, #420, ADR-052): the observation boundary is inferred from a run of zeros and declared the month the export ran in as fully observed; the per-source bounds it sits beside were computed every run and discarded at export until now. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-09-08 — C-358 registered: this register is public and nothing screens which sibling repositories it cites; 15 of 32 are private. Caught by the FAO-note session, not by us. The effective default spans three files that nothing asserts are aligned (#483). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 355 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 43 open concerns (0 Tier 1, 3 Tier 2, 14 Tier 3, 20 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 359 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 47 open concerns (0 Tier 1, 4 Tier 2, 15 Tier 3, 22 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -182,9 +182,13 @@
 | ~~C-350~~ | ~~3~~ | ~~`release-topology.yml` ran **nothing** for two days: `git branch -f main origin/main` is refused when `main` is the checked-out branch, which it always is on `release`/`schedule`. The job died at step 3 of 13, skipping the deploy gates and the step that closes the tracking issue. Its own guard asserted the step *exists* and *precedes* the gates — both true throughout | Resolved 2026-08-18: fixed in #451, promoted in #452, verified by dispatch **and** by the 06:25 scheduled run; the procedural residual is now step 0b of `publishing_to_pypi.md` §C | Test infra |
 | ~~C-351~~ | ~~3~~ | ~~`serving-freshness.yml` failed every run of its existence — ten runs, ten failures from 2026-08-03. `gh` infers the repo from the git remote and the job has no `actions/checkout`, deliberately, so every `gh issue` call died~~ | Resolved 2026-08-12 (#440): `GH_REPO: ${{ github.repository }}` supplies the input that was missing; verified by the workflow's first successful run. **Registered retroactively 2026-08-18** — the ID was cited in commit `8c8d897` and the v1.12.0 release notes but never entered here | Operational monitoring |
 | C-352 | 3 | `last_valid_month_id` is **UCDP-scoped but generally named**: computed from `ged_*` features only (`export_zarr.py:280-294`) while the grid carries ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI and GAUL. Two sibling repos read it as *the store's* frontier — views-postprocessing to decide which months are marked **fabricated in the FAO delivery**, views-models to gate liveness | **Before relying on it to mean anything other than "UCDP's observed frontier"** — and before adding a source whose coverage can outrun UCDP's. Confirm with views-postprocessing whether UCDP-scoping is what their observed/fabricated split intends | Consumer contract |
-| C-353 | 3 | **Area-majority ranks candidate GAUL polygons in square degrees, not area** (`generate_area_majority_gaul.py:157-172`). Measured 2026-08-21 over every cell above 55°N: **9 of 3,591 border cells flip** under true area. All nine are in the FAO delivery. Eight differ at `gaul2_code` only, one also at `gaul1_code`, **none at `gaul0_code`** | **Before any correction of `data/raw/gaul_admin/*.parquet`** — views-postprocessing's `test_gaul_lookup_fidelity.py` breaks loudly on a changed digest and step 4 of their correction procedure (who tells FAO, on what notice) is still open. Also when GAUL is next reharvested, which reruns the same ranking | Compilation |
+| C-353 | 2 | **Area-majority ranks candidate GAUL polygons in square degrees, not area** (`generate_area_majority_gaul.py:157-172`). Measured 2026-08-21 over every cell above 55°N: **9 of 3,591 border cells flip** under true area. All nine are in the FAO delivery. Eight differ at `gaul2_code` only, one also at `gaul1_code`, **none at `gaul0_code`** | **Before any correction of `data/raw/gaul_admin/*.parquet`** — views-postprocessing's `test_gaul_lookup_fidelity.py` breaks loudly on a changed digest and step 4 of their correction procedure (who tells FAO, on what notice) is still open. Also when GAUL is next reharvested, which reruns the same ranking | Compilation |
 | C-354 | 4 | **Nine test modules patch `datafactory_http.retry.requests.request` directly — 63 sites, five asserting the exact kwarg set.** The mock target is an implementation detail of `request_with_retry`, so any change to *how* it issues its request (a `requests.Session` for connection pooling, urllib3-level retries, or redirect safety) breaks tests that have nothing to do with the change | **Before changing how `request_with_retry` issues its request** — introducing a `Session`, an adapter, or a transport wrapper. Budget the test churn as part of that change rather than discovering it mid-implementation, as #388 did | HTTP layer |
 | C-355 | 3 | **The published observation boundary is inferred from non-zero sums, not declared by the harvest** (`export_zarr.py:280-296`). A genuinely all-zero month reads as unobserved; a **partially-reported month reads as complete**. Measured: the 2026-08-21 export declared `last_valid_month_id = 560` — the month it ran in. views-postprocessing uses this value to mark months **fabricated in the FAO delivery** | **Before any consumer builds logic on `last_valid_month_ids`** (published by ADR-052), or when views-postprocessing answers C-352 — whichever first. The declared bounds already exist in the ingestion ledgers: `ucdp_candidate.max_date_start`, `acled.max_date`, `shdi.year_range` | Consumer contract |
+| C-356 | 3 | **UCDP `where_prec >= 4` events are geocoded whole into one cell — measured live 2026-09-02.** Cell **148759 (Mekelle, Tigray) holds 121,915 in its peak month and 273,035 across the war window; 96.1% of all state-based fatalities in its 5x5 neighbourhood**, against a panel 99.99th percentile of 255. ADR-049 **did** ship the mirror strategy opt-in with parity default, and production uses parity. **The default is spread across three files that must stay aligned** — `viewpoint_config.py` says `proportional`, `profiles.py` overrides to `passthrough`, `refresh_pipeline.sh` passes no `--profile` | **Before changing any one of the three:** `spatial_distribution_strategy`'s default in `viewpoint_config.py`, the `production_parity` profile in `profiles.py`, or the `build_viewpoint.py` invocation in `refresh_pipeline.sh`. Any single edit silently changes delivered values and the digest views-postprocessing pins. Also fires when viewser parity stops being a project goal | Viewpoint |
+| C-357 | 4 | **UCDP's temporal assignment is a swappable strategy; ACLED's is a hardcoded one-liner.** `ucdp_v1.py` resolves `survivorship_fn`/`distribution_fn` from config through a registry with a `production_parity` profile; `acled_v1.py` calls a private `_assign_date_month()` inline. Correct today — ACLED events are single-day, so there is nothing to distribute — but the seam exists on one source only, and it exists because parity forced it, not because it was designed | **If ACLED gains multi-day or date-imprecise events, or a second temporal profile is wanted for ACLED** — the change lands inline in the builder rather than as a config value | Viewpoint |
+| C-358 | 4 | **This register is public and nothing screens what it cites from sibling repositories.** On 2026-09-08 a C-353 amendment published `managers/api.py` line numbers from **views-faoapi, which is private**, into this register and a public issue. Corrected the same day. **15 of the 32 views-platform repositories are private**, and this register cites siblings constantly | **Before citing a views-platform repository by file path in this register or a public issue, check it against the visibility list in the entry.** Also when any repository changes visibility, or a new private one is added | Disclosure hygiene |
+| C-359 | 3 | **A short ACLED harvest is recorded as `outcome: "success"` — `n_events` is written to the ingestion ledger and never read back.** `compare_snapshots()` computes `n_removed` and discards it; no aggregate count check exists on the path. A *zero*-event year fails loud; any non-zero shortfall does not. Worst case is the current year, re-fetched every run: the short snapshot overwrites the good one and the next run finds it digest-consistent, making the truncation the cached truth. ADR-027 exists because this happened to UCDP (335,918 of 384,918) | **Before the next change to how any harvester terminates a fetch** — pagination, retry or cache logic. Also if ACLED's envelope starts reporting `total_count`, which would make ADR-027's existing rule applicable (see C-153) | ACLED data integrity |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
@@ -779,6 +783,34 @@ The ACLED API response envelope has `"count": null, "total_count": null` — the
 
 See also C-72 (HTTP 429 not distinguished), C-45 (no schema evolution strategy).
 
+**Addendum 2026-10-10 (#487) — the detection signal this entry names no longer exists.**
+The paragraph above says the harvester *"terminates on empty/short pages (correct behavior for
+complete pagination)"* and that ADR-027 documents the **short-page heuristic as the only available
+detection signal**. ACLED deprecated offset pagination on 2026-10-27, so `fetch_paginated()` now
+walks cursors and terminates only on `next_cursor is null`. **The short-page break was deleted** —
+under cursor pagination a short page is not evidence of anything, and keeping the break is how the
+migration would have truncated harvests silently.
+
+**This is a net improvement to the risk, and the entry stays open anyway.** `next_cursor` is a
+*server-declared* continuation token where the short-page rule was a *client-side inference*, so the
+series boundary is now stated by ACLED rather than guessed by us, and two conditions that used to be
+indistinguishable from a clean finish now raise (ADR-011): a missing `next_cursor` key, and no
+events while the cursor is still live.
+
+**What has not changed is the thing this entry is actually about.** The envelope still reports
+`"count": null, "total_count": null` — re-confirmed against live cursor responses on 2026-10-10, on
+every page of an 8-page walk. There is still no server-reported total, ADR-027's tolerance rule
+still cannot be applied to ACLED, and "did I get everything?" is still unanswerable from the
+response alone. Had either field carried a value this entry would have **closed**; it did not.
+
+Tier unchanged at 3. The trigger is unchanged and still correct: it fires on server-side capping
+*within* a page, which cursor pagination does nothing to reveal.
+
+Parity between the two methods was measured before the deadline, because it could not be measured
+after: 7,609 events, 8 requests each way, identical on four oracles
+(`reports/investigation_acled_cursor/findings.md`). Cross-ref C-359 (the harvest-count gap this
+investigation surfaced), #487, #488.
+
 ### C-164: Cross-layer WET debt — 6 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
 
 | Field | Value |
@@ -1240,6 +1272,72 @@ Cross-ref: ~~C-330~~ (the work being done when this happened), ~~C-323~~/~~C-324
 **The shared property, which is the reason this is registered at all:** both fail *green*. `git push` succeeds; `gh pr merge` exits 0. Neither has a failure mode that announces itself, so neither can be caught by anything except deliberately reading state back. That is the same class as C-330 (a nightly no-op reporting success) and C-337 (a lockfile frozen with no error).
 
 Cross-ref: ~~C-320~~ (auto-merge silently degrading to a plain merge when branch protection was absent — same family, different mechanism, resolved), C-339 (the other silent-failure incident of this session). Part of work package: **Operational safety**.
+
+---
+
+### C-359: A short ACLED harvest is recorded as a success — `n_events` is written to the ledger and never read
+
+**Source:** Surfaced while planning the ACLED cursor migration, 2026-10-10 (#487). Found by asking
+what would detect a botched migration, not by any guard or audit.
+
+**Trigger:** **Before the next change to how any harvester terminates a fetch** — pagination,
+retry, or cache logic. That is when a shortfall becomes likely and when nothing would notice. Also
+fires if ACLED's envelope ever starts reporting `total_count`, which would make ADR-027's existing
+rule applicable and this entry largely redundant (see C-153).
+
+**Location:** `_fetch_single_year()` and `fetch_acled()` in
+`src/datafactory_harvester/sources/acled.py`; `last_digest_for_version()` in
+`src/datafactory_provenance/digests_and_ledgers.py`; `compare_snapshots()` in
+`src/datafactory_harvester/event_validation.py`. The same gap exists in every other harvester.
+
+**What is written, and what is read.** `_fetch_single_year()` records `n_events`, `min_date`,
+`max_date` and `content_digest` into the ingestion ledger on every run. **Nothing reads `n_events`
+back.** Confirmed by grep across `src/` and `scripts/`: `last_digest_for_version()` reads only
+`version`, `outcome` and `content_digest`; `report_ledger()` reads `outcome` and `timestamp` for the
+freshness SLO; `check_health.py` checks ledger freshness and the zarr digest match. The harvest
+scripts print per-snapshot row counts and compare them to nothing.
+
+`compare_snapshots()` *does* compute `n_removed`, and it is **discarded** — it survives only as an
+unthresholded warning string folded into the ledger `warnings` list, and only when a snapshot
+already exists on disk.
+
+**What is caught:** a *zero*-event year. `validate_events()` returns `valid=False` with
+`errors=["No events to validate."]` for an empty list, so the year gets a `failed` ledger entry and
+raises.
+
+**What is not caught: any non-zero shortfall.** `validate_events()` checks required-field presence,
+types and per-event values, with no minimum-count and no expected-count parameter. ACLED's three
+`validate_dgp_assumptions()` checks are per-event. No aggregate check exists anywhere on the path.
+
+**The worst case is the current year**, which is deliberately re-fetched every run because ACLED
+publishes biweekly. A truncated current-year harvest emits a `"N events removed"` warning with no
+threshold and no raise, archives the good snapshot, overwrites it with the short one, and records
+`outcome: "success"` with the new short digest. On the following run `_year_is_cached()` finds the
+short snapshot digest-consistent with the short ledger entry — **the truncation is now the cached
+truth.**
+
+**Tier 3, not 2.** Silent and reaching delivered data, which argues for 2. Held at 3 because the
+failure requires a provider-side or code-side truncation to occur first — it is a *detectability*
+gap rather than an active corruption — and because the single most likely trigger (the cursor
+migration) now has its termination logic pinned by eight mutation-tested cases. Re-tier to 2 if a
+shortfall is ever observed in practice.
+
+**This is not hypothetical, and ADR-027 is the proof.** That ADR exists because `page_size=50000`
+made the UCDP API silently return 335,918 of 384,918 events while the harvest reported success —
+it validated schema and provenance but never counted
+(`reports/post_mortems/2026-04-25_stale_zarr_store.md`). The residue of that incident is still a
+**manual** check: `server_operations.md` records the expected ACLED count (384,918) as a number an
+operator is meant to read off stdout and compare by eye.
+
+**Deliberately not fixed in #487.** A fix touches shared provenance code every source reads, and
+changing a harvest's failure behaviour in the same release that changes how it paginates would
+confound the two. #487 owns the narrower guarantee — the pagination loop cannot silently truncate —
+and says so explicitly rather than leaving the narrowing implicit. The open design questions (what
+tolerance, given legitimate retroactive corrections; raise or warn; per-source or shared) are in
+**#488**.
+
+Cross-ref: C-153 (no server-declared total — the reason ADR-027's rule cannot simply be applied),
+C-72 (429 not distinguished from 500). ADR-027, ADR-011, ADR-032. GitHub: #487, #488.
 
 ---
 
@@ -3442,7 +3540,36 @@ Cross-ref: C-130 (zero-filled future months, the concern this attribute was adde
 
 **Severity is bounded by which level moved.** Eight flips differ at `gaul2_code` only; gid 214278 also differs at `gaul1_code`. **`gaul0_code` is identical in all nine.** No cell changes country, so country-month aggregation, `land_gaul` membership and the 64,742-cell delivery boundary are untouched. What is wrong is the admin-2 (and in one case admin-1) label on nine cells out of 64,742.
 
-**Tier 3, not 2.** The values are wrong — this is not a naming or coupling issue — but nothing that consumes the affected fields today produces a wrong number from them: the conflict aggregations run on `gaul0`. Not Tier 4 because the wrong labels are **already delivered to an external partner** and served live by views-faoapi. It rises to Tier 2 the moment a consumer aggregates on `gaul1` or `gaul2`.
+**RE-TIERED TO 2 — 2026-09-08. The original tier rested on a claim I did not check.**
+
+The entry read: *"nothing that consumes the affected fields today produces a wrong number from them: the conflict aggregations run on `gaul0`"*, and set the escalation condition as *"it rises to Tier 2 the moment a consumer aggregates on `gaul1` or `gaul2`."*
+
+**That condition was already met on the day this entry was written.** views-faoapi serves:
+
+views-faoapi exposes **second-level subset and HDI-map endpoints** for both historical and forecast
+data, and enumerates `gaul2` alongside `country`/`gaul0`/`gaul1` as a selectable aggregation level.
+
+*(Verified in the views-faoapi source 2026-09-08. That repository is **private**, so the capability is
+recorded here and the file paths and line numbers are not — this register is public. An earlier
+revision of this entry cited them; that was a disclosure error of mine, corrected the same day.)*
+
+Second-level totals are retrievable by the partner, and **eight of the nine wrong labels are at exactly that level**. A `gaul2` subset or HDI-map query touching an affected unit returns a total assembled from the wrong cell membership, with no error signal.
+
+**How the error was made, since it is the instructive part.** The tier was argued from what *this repository's* aggregation does (`grid_to_country_month` groups by `gaul0`) and generalised to "no consumer aggregates below country". The consumer is a different repository, it was on this machine, and checking it would have cost one `grep`. The same failure mode as C-352 — reasoning about a downstream repo's behaviour from this one's code — caught there by review, and here by the FAO-note session pushing back rather than accepting the framing.
+
+**Source of the correction:** the fao02 Pre-Release Note 07 session, 2026-09-08, while reconciling Topic G's figures. It also corrected the note, which had inherited the same false claim from this entry.
+
+**What the tier now rests on, and what would settle it.** That the *capability* exists is verified.
+That FAO *uses* it is not — and it is being asked directly: Pre-Release Note 07 gained a decision
+point **G.1** asking FAO-FSFC whether any of their processing retrieves or joins on the second-level
+unit. A "yes" makes this a live partner-facing defect; a "no" makes it reachable-in-principle and the
+tier is arguable again. **The fao02 session will report the answer.** Recording the dependency rather
+than leaving the tier resting on an inference from route definitions — inferring a consumer's
+behaviour from a producer's code is the error that put this entry at Tier 3 in the first place.
+
+**Still not Tier 1.** No fatality value is wrong and nothing is corrupted — the counts are correct, the grouping label on nine of 64,742 cells is not. A country-level query is unaffected. Tier 2 is right: structural, a clear consumer path exists, and it is live in served data.
+
+**Tier 3, not 2.** ~~The values are wrong~~ *(superseded by the re-tiering above; the original reasoning is kept rather than deleted so the correction is legible.)* The values are wrong — this is not a naming or coupling issue — but nothing that consumes the affected fields today produces a wrong number from them: the conflict aggregations run on `gaul0`. Not Tier 4 because the wrong labels are **already delivered to an external partner** and served live by views-faoapi. It rises to Tier 2 the moment a consumer aggregates on `gaul1` or `gaul2`.
 
 **The tests cannot catch this, by construction.** `tests/test_area_majority.py:121-145` recomputes area-majority in square degrees inside its own oracles, so all thirty-nine tests would agree with any square-degree implementation, right or wrong. The empirical ones are `@pytest.mark.falsification`, gated behind `--run-falsification`, and not in CI. This is why the measurement needed its own detection drill — `verify_area_majority_projection.py:_self_test` constructs a cell where the two rankings disagree by construction and refuses to report a result unless it sees the flip.
 
@@ -3527,6 +3654,120 @@ It was deferred because **it changes the value of a number three repositories al
 **This entry exists because of what ADR-052 was written to fix.** ADR-047 line 68 deferred a decision with no owner, no trigger and no issue; it was raised twice from outside the repository before anyone took it, the second time by a partner-facing consumer with a month of zeros they could not explain. A deferral without a C-number is the same failure in a different file.
 
 Cross-ref: C-352 (the same attribute's UCDP scoping — open, with views-postprocessing), C-130 (zero-filled future months, the concern the attribute was added for), ADR-052, ADR-047. GitHub: #476, #420.
+
+### C-356: A quarter of a million deaths in one cell, kept there on purpose, tracked by nothing
+
+**Source:** `/graphify` knowledge-graph traversal (2026-09-02), following an AMBIGUOUS edge between two rationale nodes — *"Clean-room design: no legacy system to match"* (ADR-028) and *"VIEWSER GedLoader parity as the primary constraint"* (ADR-023). The graph connected a design stance to its cost across three documents that never cite each other.
+
+**Trigger:** **Before the next consumer trains on or reports cell-level UCDP fatalities**, confirm which `spatial_distribution` strategy built the delivered store. Also fires the moment viewser parity stops being a project goal — at which point the parity default is no longer a reason, only a habit.
+
+**Location:** `src/datafactory_viewpoint/spatial_distribution.py`, `src/datafactory_viewpoint/builders/ucdp_v1.py` (strategy resolution), `docs/ADRs/049_spatial_distribution_of_imprecise_ucdp_events.md`, `reports/2026-06-28_ucdp_spatial_distribution_of_low_precision_summary_events.md`.
+
+**The measurement.** UCDP records events with `where_prec >= 4` — location known only to admin-1 or coarser — and must still attach one lat/lon, so it uses a regional centroid. For the Tigray war that centroid lands in **cell 148759**:
+
+| | |
+|---|---|
+| Cell 148759 (Mekelle, Tigray) | **273,076 fatalities** |
+| Panel 99.99th percentile | 255 |
+| Panel median | 0 |
+| Ratio to next-worst African cell | **3.4x** |
+
+**Systemic, not one bad record.** Cell 150919 (79,841 deaths) is the 1999–2000 Eritrea–Ethiopia border war, same `where_prec=5` mechanism, twenty years apart.
+
+**Why it is still there.** The repository already does the *temporal* version of the right thing — `even_split` in `temporal_distribution.py` spreads date-imprecise events across their months. There is no spatial analogue, and the report says why in terms this entry exists to make trackable: *"Today datafactory deliberately reproduces this (it targets viewser production-parity)."*
+
+So one axis of the same imprecision is corrected and the other is not, for fidelity to a system being migrated away from.
+
+**What is actually unverified, and why that is the concern.** ADR-049 proposes the mirror strategy and recommends it ship **opt-in, with parity as the default**. Whether that is what shipped — and therefore whether the delivered store contains the concentration today — **has not been confirmed by anyone**. ~~C-304~~ tracked ADR-049's §2 table drifting from its code and was resolved; the far larger question of which mode is live was never registered.
+
+**AMENDED 2026-09-02 — investigated, and the answer is yes on both counts.**
+
+ADR-049 shipped **exactly as it recommended**: the mirror strategy exists (`proportional`), it is opt-in, and parity (`passthrough`) is the default. Production uses parity, so **the concentration is in the served store today.** Four checks, agreeing:
+
+| Check | Finding |
+|---|---|
+| `spatial_distribution.py` | exists; registers `proportional` and `passthrough` |
+| `viewpoint_config.py` | class default is **`proportional`** — the fix, ON |
+| `profiles.py` | `production_parity` overrides it to **`passthrough`** — parity, OFF |
+| `refresh_pipeline.sh` | calls `build_viewpoint.py` with **no `--profile`**, so the parity profile wins |
+| **live store, read 2026-09-02** | **confirmed** |
+
+```
+cell 148759 (13.25N, 39.25E)     peak month           121,915
+                                 sum 2020-11..2022-12 273,035
+5x5 neighbourhood sum                                 284,062
+share held by that one cell                             96.1%
+```
+
+The peak-month figure matches the 2026-06-28 report's raw value **to the digit**, twenty-six months read from the store the models train on.
+
+**The sharper concern, which the investigation found and the original entry did not state.** The effective default is spread across **three files that must stay aligned**, and nothing asserts that they are:
+
+1. `viewpoint_config.py` declares `spatial_distribution_strategy: str = "proportional"` — read this file alone and you would conclude the fix is on;
+2. `profiles.py` overrides it to `passthrough` in the `production_parity` profile;
+3. `refresh_pipeline.sh` passes no `--profile`, so the CLI default selects that profile.
+
+**Flip any one and the delivered values change silently** — including the artifact digest that views-postprocessing's `test_gaul_lookup_fidelity.py` pins and that FAO is served against. The intended behaviour holds by the coincidence of three independent defaults, not by any assertion.
+
+That is why the trigger is now written against the three files rather than against a consumer's future behaviour: a consumer cannot cause this, and an ordinary edit to any of the three can.
+
+**What is NOT in doubt any more:** whether the fix shipped (it did), whether it is opt-in (it is), whether parity is the default (it is), and whether the concentration is live (it is). What remains open is only the question ADR-049 deliberately left to the operator — whether to keep parity now that viewser is being retired.
+
+**Tier 3, not 2.** The values are not silently wrong: they are what viewser produces, deliberately, and a loud report describes them. Not Tier 4 because these are model *training inputs*, the artifact is 3.4x the next worst cell, and a consumer reading cell-level fatalities without knowing about `where_prec` will draw a conclusion about Mekelle that the data does not support.
+
+**The pattern, stated because it keeps recurring.** ADR-047 line 68 deferred a decision with no owner and was raised twice from outside before anyone took it (ADR-052, C-355). This is the same shape: a deliberate choice, well documented in prose, with **no register entry, no trigger and no owner** — so nothing makes anyone revisit it when the reason for it expires. The reason here is viewser parity, and viewser is being retired.
+
+GitHub: #483. Cross-ref: ~~C-304~~ (ADR-049's table drift — the small half that *was* registered), C-357 (the same parity constraint's effect on the ACLED builder), C-355 and ADR-052 (the same unowned-deferral pattern), ADR-049, ADR-023, ADR-040 (count conservation, which the mirror strategy must preserve).
+
+---
+
+### C-357: The parity constraint gave UCDP a configuration seam and ACLED none
+
+**Source:** `/graphify` traversal (2026-09-02), comparing the two builders' shapes after the graph flagged their rationales as related-but-unresolved.
+
+**Trigger:** **If ACLED gains multi-day or date-imprecise events, or a second temporal profile is wanted for ACLED.** Then the change lands inline in the builder, where UCDP would absorb the same change as a config value.
+
+**Location:** `src/datafactory_viewpoint/builders/ucdp_v1.py` (strategy resolution from config), `src/datafactory_viewpoint/builders/acled_v1.py` (`_assign_date_month`), `src/datafactory_viewpoint/temporal_distribution.py`.
+
+**The asymmetry.** UCDP resolves `survivorship_fn` and `distribution_fn` from config through a registry, with a `production_parity` profile selecting `date_end_only`. ACLED calls a private one-liner inline in a list comprehension.
+
+**Correct today, and correct for a reason that is written down.** `docs/sources/acled.md` states it: *"Events are single-day atomic records — no multi-day spanning — which simplifies temporal assignment compared to UCDP."* With `date_start == date_end`, "assign from `date_end`" and "extract the month" are the same operation. Adding a strategy registry for one call site would fail the repository's own WET-before-DRY rule.
+
+**What is worth recording is the cause, not the shape.** UCDP has the seam **because a legacy system had to be matched**; ACLED lacks it because clean-room design gave no reason to build one. The extensibility difference between the two sources is a side effect of a migration constraint, not a design decision anyone took — and it will outlive the constraint.
+
+**Tier 4.** Nothing is wrong, no data is affected, and the current shape is the right one under WET-before-DRY. The cost is entirely future and entirely bounded: one source's temporal policy is configurable and the other's is not.
+
+Cross-ref: C-356 (the same parity constraint, where it costs something now), C-164 (cross-layer WET debt — the rule that makes ACLED's inline form correct), ADR-023, ADR-028.
+
+### C-358: The register is public, cites sibling repositories constantly, and nothing checks which of them are private
+
+**Source:** Self-inflicted, 2026-09-08. Caught by a visibility check run for an unrelated reason — confirming whether views-postprocessing's fidelity test could be named in a partner-facing document — not by any guard.
+
+**Trigger:** **Before citing a views-platform repository by file path in this register or in a public issue**, check it against the list below. Also fires when a repository changes visibility, or a new private one appears.
+
+**Location:** `reports/technical_risk_register.md` (public), and every public issue in this repository.
+
+**What happened.** A C-353 amendment cited views-faoapi's route definitions as `managers/api.py:600,613,620,627` and `:1095`. The finding was correct and load-bearing — it re-tiered C-353 from 3 to 2. But **views-faoapi is private**, and those line numbers were published into this register and into public issue #471. Both were corrected within the hour; the register keeps the correction visible rather than overwriting it.
+
+**Why it is worth an entry rather than just a fix.** This is the second instance of the same mechanism. ~~C-328~~ is the first: the go-public redaction removed the admin username, and a register edit four days later re-published it. Different content — identities there, private-repo internals here — but the same shape: **a public artifact, edited constantly, with no screening step.** Two instances make it a pattern rather than an accident.
+
+**The check is a lookup, not a judgement.** Recorded so the trigger is answerable in seconds. As of 2026-09-08, of 32 `views-platform` repositories:
+
+**PRIVATE (15)** — `views-faoapi`, `views-bayesian`, `views-impact`, `views-lab00`, `views-transforms`, `views-uncertainty`, `views-activelearning`, `views-markov`, `views-ingester`, `views-nowcasting`\*, `views-dashboard-v1`, `views-dashboard-v2`, `views-predcomp-dashboard`, `ensemble-updater`, `internal-documentation`, `demo-repository`
+
+**PUBLIC (17)** — `views-datafactory`, `views-postprocessing`, `views-pipeline-core`, `views-models`, `views-frames`, `views-appwrite`, `views-crafdapi`, `views-evaluation`, `views-reporting`, `views-baseline`, `views-stepshifter`, `views-hydranet`, `views-r2darts2`, `views-impact-results`, `docs`, `.github`, `ideas-fastforward-2025`
+
+\*Re-check before relying on this list; it is a snapshot and visibility changes without notice.
+
+**The surprising members are the ones that matter.** `views-postprocessing` and `views-appwrite` are **public** — so citing their tests and contracts, as this register does throughout, is fine. `views-faoapi` is **private** despite being the FAO-facing delivery service, which is exactly why it was the one to get wrong.
+
+**Tier 4.** No credential, no correctness impact, and the specific exposure was route names FAO already uses plus line numbers worthless to anyone outside. It stays on the register because the *mechanism* will recur — the next edit that cites a private sibling will look exactly as reasonable as this one did.
+
+**A guard was considered and not built.** A pre-commit or CI check could grep register diffs for `<repo>/<path>.py:<line>` and fail on a private repo. It was declined for the same reason the equivalent username guard was declined under ~~C-328~~: 14 test files already read this register, and each new gate sits on the path of every future edit. The lookup table above is the cheaper instrument, and unlike a guard it also helps the person who is *about* to write the citation rather than only the one who already did.
+
+**A better reason not to cite privately than "it is private".** The fao02 session, told the fidelity test *was* safe to name, declined to name it anyway: naming a repository as the thing whose test fails reads as attribution however carefully it is phrased. That is a stronger standard than visibility, and it also caught an inconsistency inside their own document — a note whose Topic C asks FAO whether a private repository may be published should not, in Topic G, casually cite that repository's internals. **Visibility is the floor, not the test.**
+
+Cross-ref: ~~C-328~~ (the first instance of the same mechanism — identities rather than repositories), C-353 (the amendment that carried the disclosure), C-323 (the same "public artifact, unscreened content" family on the server side). GitHub: #471.
 
 ---
 

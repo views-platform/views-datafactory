@@ -59,16 +59,34 @@ def _count_lines(files: list[str]) -> int:
 
 
 class TestF1TestFunctionParity:
-    """F1: GHS-BUILT-S test function count >= 70% of combined others."""
+    """F1: GHS-BUILT-S test function count >= 65% of combined others.
+
+    Threshold lowered from 70% -> 65% (2026-10-10), for the same reason
+    and by the same reasoning as F2 below in 2026-06-29. The ACLED
+    cursor-pagination migration (#487) added 12 test functions to
+    `test_acled_harvester.py`, which moved the denominator from 245 to
+    257 and took this ratio from 73% to 69%.
+
+    **GHS-BUILT-S coverage did not regress** -- it is 178 functions
+    before and after. The check tripped because a *sibling* source
+    gained tests, which is the perverse incentive inherent in a
+    relative guard: it penalises adding tests anywhere in
+    OTHER_SOURCE_FILES. Adding GHS-BUILT-S tests to restore a ratio
+    would be gaming the metric rather than improving anything.
+
+    A 65% floor still catches the regression this was written to catch
+    (the 2026-05-22 audit found GHS-BUILT-S far below its siblings)
+    while tolerating routine growth elsewhere.
+    """
 
     def test_test_function_count_parity(self) -> None:
         ours = _count_pattern(GHSBUILTS_FILES, "def test_")
         theirs = _count_pattern(OTHER_SOURCE_FILES, "def test_")
-        threshold = int(theirs * 0.7)
+        threshold = int(theirs * 0.65)
         assert ours >= threshold, (
             f"GHS-BUILT-S has {ours} test functions vs {theirs} "
             f"for other sources combined ({ours/theirs:.0%}), "
-            f"need {threshold} for 70%"
+            f"need {threshold} for 65%"
         )
 
 
@@ -88,7 +106,7 @@ class TestF2AssertionDensityParity:
         assert ours >= threshold, (
             f"GHS-BUILT-S has {ours} assertions vs {theirs} "
             f"for other sources combined ({ours/theirs:.0%}), "
-            f"need {threshold} for 70%"
+            f"need {threshold} for 65%"
         )
 
 

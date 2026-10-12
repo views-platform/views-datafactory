@@ -77,7 +77,38 @@ The UCDP API has a fixed ~1000-event inconsistency between TotalCount and actual
 - Dual threshold added in v1.2.7.
 - `harvest_ucdp.py` reverted from `page_size=50000` to default `page_size=1000` in v1.2.6.
 - All three UCDP harvesters (annual, candidate, dot9) share `fetch_paginated()` and inherit these protections.
-- ACLED `fetch_paginated()` in `datafactory_harvester/sources/acled.py` does not implement TotalCount verification — the ACLED API does not expose a total count in its response envelope. Pagination terminates when a page returns fewer results than `page_size`. This "short page" heuristic detects complete pagination but cannot detect server-side truncation within a page. Downstream `validate_events()` catches schema violations but not silent count shortfalls.
+- ACLED `fetch_paginated()` in `datafactory_harvester/sources/acled.py` does not implement TotalCount verification — the ACLED API does not expose a total count in its response envelope. Downstream `validate_events()` catches schema violations but not silent count shortfalls.
+
+### Amendment 2026-10-10 — ACLED's detection signal changed (#487)
+
+The paragraph above used to end: *"Pagination terminates when a page returns fewer results than
+`page_size`. This 'short page' heuristic detects complete pagination but cannot detect server-side
+truncation within a page."* **That heuristic no longer exists.**
+
+ACLED deprecated offset pagination on 2026-10-27, and `fetch_paginated()` now walks cursors and
+terminates only on `next_cursor is null`. A short page is not evidence of anything under cursor
+pagination, so the break that keyed on page length was deleted — keeping it would have truncated
+harvests silently.
+
+**The replacement is strictly better on this ADR's own terms.** `next_cursor` is a *server-declared*
+continuation token, where the short-page rule was a *client-side inference*. The series boundary is
+now stated by ACLED rather than guessed by us, and two conditions that previously could not be
+distinguished from a clean finish now raise (ADR-011): a response missing `next_cursor`, and a
+response with no events while the cursor is still live.
+
+**What has NOT changed, and is the part that still matters here:** the envelope still reports
+`count: null` and `total_count: null` — re-confirmed against a live cursor response on 2026-10-10,
+on every page of an 8-page walk. So ACLED still has no server-declared total, this ADR's
+`len(fetched) >= TotalCount * (1 - tolerance)` rule still cannot be applied to it, and the exemption
+stands. Register entry C-153 is amended rather than closed for exactly this reason.
+
+That leaves a gap this ADR should name explicitly, because it is the gap that produced this ADR in
+the first place: nothing compares an ACLED harvest's event count against the previous harvest of the
+same year. `n_events` is written to the ingestion ledger and never read back. A zero-event year
+fails loud via `validate_events()`; **any non-zero shortfall is recorded as `outcome: "success"`
+with a new, short content digest.** Tracked as #488 with register entry C-359. Parity between the
+two pagination methods was measured before the deadline and the recording retained, since the
+comparison can never be repeated — `reports/investigation_acled_cursor/findings.md`.
 
 ---
 
