@@ -38,10 +38,33 @@ A **rollback is a deploy**: same four blocks, previous tag.
 
 ## Run the pipeline
 
+**Start tmux first. Not optional.** The run takes 3-4 hours and SSH will drop
+inside that window; without a multiplexer the drop sends SIGHUP and kills the
+run. This is not hypothetical — see the note below.
+
 ```bash
-# Normal run (output streams to terminal + logs to file)
+# 1. ALWAYS start tmux first
+tmux new -s pipeline
+
+# 2. Then run, INSIDE tmux (output streams to terminal + logs to file)
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log'
 
+# Detach:   Ctrl-b then d          Reattach: tmux attach -t pipeline
+# Confirm you are inside tmux: a status bar sits at the BOTTOM of the
+# terminal, e.g. "[pipeline] 0:sudo*". The shell prompt does NOT change,
+# so the prompt alone never tells you.
+```
+
+> **2026-10-16: a run was killed this way.** `client_loop: send disconnect:
+> Broken pipe` ended a foreground run after the 37 GB assembly had completed
+> but before the zarr export. Nothing was corrupted — assembly renames from
+> `grid.npy.tmp`, so `grid.npy` was whole, and `.exports_required` recorded the
+> owed export — but `grid.zarr` was left three weeks stale while `grid.npy` was
+> current, and the work had to be re-run. The lock needs no cleanup (`flock` is
+> released by the kernel when the process dies), but the `/start` heartbeat ping
+> is left dangling and healthchecks.io will flag it at the ~24h grace timeout.
+
+```bash
 # Force re-fetch: delete data first, then run normally
 # (there is no --force flag; the pipeline skips existing data by default)
 ```

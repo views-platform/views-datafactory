@@ -12,7 +12,7 @@ For initial setup, see `hetzner_deployment_guide.md`.
 | SSH in | `ssh <your-user>@204.168.219.108` |
 | Check current version | three commands — see `server_quickref.md` §"Deploy a new version" step 4; the tag file alone is intent, not evidence (C-343) |
 | Deploy a version | four blocks — see `server_quickref.md` §"Deploy a new version"; writing the tag file is **not** deploying (C-343) |
-| Run pipeline | `sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh'` |
+| Run pipeline | **start `tmux` first** — see `server_quickref.md` §"Run the pipeline" |
 | Check pipeline logs | `sudo -u views-deploy cat /home/views-deploy/views-datafactory/logs/refresh.log` |
 | Check last failure | `sudo -u views-deploy cat /home/views-deploy/views-datafactory/logs/pipeline_failure.json` |
 | List raw data | `sudo -u views-deploy ls -la /home/views-deploy/views-datafactory/data/raw/ucdp_annual/` |
@@ -261,7 +261,10 @@ For JSON output (monitoring integration): add `--json` flag.
 
 If you suspect stale data, delete the assembled output and re-run:
 
+> **Run this inside `tmux`.** SSH drops kill a foreground run (SIGHUP). See `server_quickref.md` §"Run the pipeline" — `tmux new -s pipeline` first, every time.
+
 ```bash
+tmux new -s pipeline
 sudo -u views-deploy bash -c 'cd ~/views-datafactory && rm -rf data/assembled data/compiled data/viewpoint data/consolidated'
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh'
 ```
