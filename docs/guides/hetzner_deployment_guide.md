@@ -181,7 +181,10 @@ source ~/.profile
 
 ### 2.1 Run the full pipeline
 
+> **Run this inside `tmux`.** SSH drops kill a foreground run (SIGHUP). See `server_quickref.md` §"Run the pipeline" — `tmux new -s pipeline` first, every time.
+
 ```bash
+tmux new -s pipeline
 cd ~/views-datafactory
 bash scripts/refresh_pipeline.sh
 ```
@@ -434,7 +437,10 @@ crontab -l
 
 ### 4.5 Test manually
 
+> **Run this inside `tmux`.** SSH drops kill a foreground run (SIGHUP). See `server_quickref.md` §"Run the pipeline" — `tmux new -s pipeline` first, every time.
+
 ```bash
+tmux new -s pipeline
 cd ~/views-datafactory
 bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 ```
@@ -901,9 +907,12 @@ leaves the dependencies of the version you are abandoning. Tags are never
 deleted by git, so every previous version stays available.
 
 Then run the pipeline manually to apply it immediately rather than waiting for
-the next cron run:
+the next cron run.
+
+> **Run this inside `tmux`.** SSH drops kill a foreground run (SIGHUP). See `server_quickref.md` §"Run the pipeline" — `tmux new -s pipeline` first, every time.
 
 ```bash
+tmux new -s pipeline
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log'
 ```
 
