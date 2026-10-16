@@ -3253,6 +3253,27 @@ Bash buffers the script and does not re-read it; git writes in place (inode unch
 
 All four corrected, each pointing at `server_quickref.md` as the single operational home with "if they disagree, the quickref wins", and `server_quickref.md` grew the verification block it was missing (step 4: tag file, checked-out tag, **installed distribution version**). ADR-022 carries a dated amendment in the ADR-027 style rather than a rewrite — the Decision it records is sound; what was wrong was the inference that the gate's own `git checkout` makes the tag file sufficient.
 
+**Update 2026-10-16 — the corrected procedure was run, and the verification step did not work.** v1.14.0 deployed cleanly: `git checkout` moved HEAD from `10c4d24` (v1.13.0) to `2b22a64` (v1.14.0), and `uv sync` reported `- views-datafactory==1.13.0` / `+ views-datafactory==1.14.0` — direct confirmation, on the box, that step 3 is load-bearing and that the tag file alone would have left 1.13.0 installed.
+
+Then step 4's first command failed:
+
+```
+$ sudo -u views-deploy cat ~/.views-deploy-tag
+cat: /home/simmaa_prio/.views-deploy-tag: Permission denied
+```
+
+**`~` is expanded by the calling shell, before `sudo` runs.** Every such command reads the *operator's* home, not `views-deploy`'s. Six were live in the guides, two of them added by the 2026-10-13 correction above. All now wrapped in `bash -c '...'`, where the inner shell expands `~` as the target user.
+
+One of the six failed green rather than loud, which is why this is recorded here rather than left as a typo:
+
+```
+sudo -u views-deploy cat ~/.../pipeline_failure.json 2>/dev/null || echo "No recent failure"
+```
+
+The `||` sat **outside** `bash -c`, so a permission error on the wrong home directory printed **"No recent failure"** — an unreadable path reported as good news, in the command an operator runs to ask whether the last pipeline run broke. Belongs to the **mechanisms that fail green** cluster alongside the rest of this entry. The fallback is now inside the quoted command.
+
+**The shape worth noticing.** C-343 is now on its third round of correction, and each round fixed the written procedure while the *instrument that would have caught it* stayed unbuilt. A documented verification step that nobody has executed is not evidence, and this one had been in the quickref §"Check status" since before the entry existed.
+
 **What this update changes about the entry's severity, honestly.** It does not raise the tier, but it does weaken the "corrected in the same PR as this entry" claim above: the correction was partial, and the stale copies outlived it by two months and one release. The pattern is #402's — *one procedure, one home* — and C-343 is an instance of it as much as it is a deployment risk. The entry stays **open**, and the still-unbuilt instrument below is now the only thing that would catch a sixth copy appearing.
 
 **The instrument, not yet built.** A pre-flight check in `refresh_pipeline.sh` comparing `$DEPLOY_TAG` against the HEAD the script *started* from, and refusing to run when they disagree — fail-loud per ADR-011, rather than silently self-correcting one run late. Proposed for #424; deliberately not built here, because this PR is a register entry and a comment fix.
