@@ -26,10 +26,12 @@ sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && git
 # 3. Sync dependencies
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv sync'
 
-# 4. Verify — all three must name the same version
-sudo -u views-deploy cat ~/.views-deploy-tag
+# 4. Verify — all three must name the same version.
+#    Every path goes inside bash -c: a bare ~ is expanded by YOUR shell
+#    before sudo runs, so it reads your home, not views-deploy's.
+sudo -u views-deploy bash -c 'cat ~/.views-deploy-tag'
 sudo -u views-deploy bash -c 'cd ~/views-datafactory && git describe --tags --exact-match 2>/dev/null || git log --oneline -1'
-sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python -c "import importlib.metadata as m; print(m.version(\"views-datafactory\"))"'
+sudo -u views-deploy bash -c 'ls ~/views-datafactory/.venv/lib/python*/site-packages | grep views_datafactory'
 ```
 
 A **rollback is a deploy**: same four blocks, previous tag.
@@ -88,18 +90,22 @@ sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv 
 ## Check status
 
 ```bash
+# Every path goes inside bash -c — see the note in step 4 above.
+
 # Version the server is CONFIGURED to run (intent, not evidence —
 # use all three checks in §"Deploy a new version" step 4 to confirm)
-sudo -u views-deploy cat ~/.views-deploy-tag
+sudo -u views-deploy bash -c 'cat ~/.views-deploy-tag'
 
 # Last run duration
-sudo -u views-deploy cat ~/views-datafactory/logs/pipeline_duration.json
+sudo -u views-deploy bash -c 'cat ~/views-datafactory/logs/pipeline_duration.json'
 
-# Last failure
-sudo -u views-deploy cat ~/views-datafactory/logs/pipeline_failure.json 2>/dev/null || echo "No recent failure"
+# Last failure. The fallback is INSIDE bash -c on purpose: outside it, an
+# unreadable path makes `cat` fail and the || branch print "No recent
+# failure" — a permission error reported as good news.
+sudo -u views-deploy bash -c 'cat ~/views-datafactory/logs/pipeline_failure.json 2>/dev/null || echo "No recent failure"'
 
 # Raw data size
-sudo -u views-deploy du -sh ~/views-datafactory/data/raw/*/
+sudo -u views-deploy bash -c 'du -sh ~/views-datafactory/data/raw/*/'
 
 # Zarr metadata (from laptop)
 curl -s http://204.168.219.108/grid.zarr/.zattrs | python3 -m json.tool

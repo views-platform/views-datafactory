@@ -918,7 +918,7 @@ here, because a second copy of them is how this section came to be wrong.
 For when the last pipeline run happened, `tail` the refresh log:
 
 ```bash
-sudo -u views-deploy tail -5 ~/views-datafactory/logs/refresh.log
+sudo -u views-deploy bash -c 'tail -5 ~/views-datafactory/logs/refresh.log'
 ```
 
 ### Log rotation
