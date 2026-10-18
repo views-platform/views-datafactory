@@ -107,3 +107,18 @@ This ADR covers assembly and export only. It does not cover:
 - **Output integrity is verified on every skip:** a corrupt grid.npy triggers a rebuild, not silent serving.
 - **Source set changes are detected:** adding or removing a source (e.g., adding SHDI) prevents false skips.
 - **Operator override exists:** `--force` provides an escape hatch when data hasn't changed but code has.
+
+---
+
+### Amendment 2026-10-18 — the export cost in Context is 5× low, and the skip is worth more than claimed
+
+**Context** states that assembly is ~46 min and export ~57 min, and **Consequences** derives "no-change deploys drop from ~103 min to ~30 sec" from that pair. The 2026-10-16 production run measured the export at **18,427s (5h07m)** for a 3.1 GB store — roughly **5× the figure above**, and 88% of a 21,007s (5h50m) run.
+
+Nothing in this ADR's decision is affected. The skip mechanism works as specified, and the digest gates behave as described. Two statements derived from the stale timings are wrong:
+
+1. **The export is not comparable in cost to assembly. It dominates the pipeline.** Any future reasoning that treats the two as peers — a decision about which to optimise, which to parallelise, or which to make skippable — starts from a false premise.
+2. **This ADR understates its own benefit by about 3.4×.** A no-change deploy avoids roughly **~350 min**, not ~103. The skip is the single largest runtime saving in the pipeline.
+
+**The cause of the 5× is not established and is deliberately not guessed at here.** The store grew from 1.8 GB (2026-03) to 3.1 GB, which accounts for some of it but not a factor of five. Candidates worth measuring: disk I/O on the CPX32, the `12 × 360 × 720` chunking against a larger store, and compression settings. Tracked as a separate investigation in **#501**, which asks for the three export phases to be timed separately before anything is changed.
+
+The per-step operational figures live in `docs/guides/server_quickref.md`, which owns them. The numbers in **Context** above are left as written — they were measured in June 2026 and this amendment dates the correction rather than rewriting the record.

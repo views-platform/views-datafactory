@@ -38,9 +38,26 @@ A **rollback is a deploy**: same four blocks, previous tag.
 
 ## Run the pipeline
 
-**Start tmux first. Not optional.** The run takes 3-4 hours and SSH will drop
-inside that window; without a multiplexer the drop sends SIGHUP and kills the
-run. This is not hypothetical — see the note below.
+**Start tmux first. Not optional.** The run takes about six hours and SSH will
+drop inside that window; without a multiplexer the drop sends SIGHUP and kills
+the run. This is not hypothetical — see the note below.
+
+**Expect ~6 hours, and do not kill a run for "taking too long".** Measured
+2026-10-16: **5h50m** (21,007s) with the assembly cached. The zarr export alone
+runs for roughly five hours and prints nothing at all while it works — a silent
+terminal is the normal state, not a hang.
+
+| Step | Time | Note |
+|------|------|------|
+| Harvest → consolidate → viewpoint → compile | ~43 min | all sources, most cached |
+| Assemble grid | ~45 min | skipped when inputs are unchanged (ADR-041) |
+| **Export zarr** | **~5h07m** | 18,427s for a 3.1 GB store — **88% of the run** |
+| Export parquet | ~12 s | 29.5M rows |
+| Health check + consumer contract | <1 min | |
+
+The assembly figure is ADR-041's; every other figure is from the 2026-10-16 run,
+which had the assembly cached. A cold run that must rebuild the 37 GB grid is
+therefore longer than 5h50m, not shorter.
 
 ```bash
 # 1. ALWAYS start tmux first
