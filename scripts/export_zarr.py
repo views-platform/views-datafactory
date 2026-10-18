@@ -208,6 +208,12 @@ def main() -> int:
 
         t0 = time.monotonic()
 
+        # Where the export's wall time actually goes (#501). The total
+        # below has never been broken down, so the 5h07m measured on
+        # 2026-10-16 could not be attributed to a phase. One dict so the
+        # printed table and the ledger entry cannot drift apart.
+        phase_seconds: dict[str, float] = {}
+
         # Load grid and metadata
         grid = np.load(grid_path, mmap_mode="r")
         pgids = np.load(pgids_path)
@@ -235,7 +241,15 @@ def main() -> int:
             n_w,
         )
 
-        # Build xarray Dataset — one variable per feature
+        # Build xarray Dataset — one variable per feature.
+        #
+        # Timed separately because this loop reads the whole grid once per
+        # feature. grid is [T, H, W, F] in C order, so grid[:, :, :, i] is a
+        # last-axis slice: it touches every page of the file while using
+        # 1/F of each page. With the grid larger than RAM the page cache
+        # cannot absorb that, and the sums here are computed only to be
+        # compared against the zarr read-back further down.
+        _t_scan = time.monotonic()
         data_vars = {}
         source_sums: dict[str, float] = {}
         for i, name in enumerate(feature_names):
@@ -246,6 +260,7 @@ def main() -> int:
                 feature_slice,
             )
             print(f"  {i:2d}: {name}")
+        phase_seconds["scan"] = time.monotonic() - _t_scan
 
         coords = {
             "time": time_steps,
@@ -370,15 +385,22 @@ def main() -> int:
             shutil.rmtree(tmp_output)
 
         try:
+            # Second traversal of the grid: xarray pulls each feature_slice
+            # again to compress and write it.
+            _t_write = time.monotonic()
             ds.to_zarr(
                 tmp_output,
                 mode="w",
                 encoding=encoding,
             )
             zarr.consolidate_metadata(str(tmp_output))
+            phase_seconds["write"] = time.monotonic() - _t_write
 
             print()
             print("Round-trip integrity check...")
+            # Reads back from the zarr store, not the memmap — fully
+            # decompresses every feature to re-sum it.
+            _t_verify = time.monotonic()
             store = zarr.open(str(tmp_output), mode="r")
             n_checked = 0
             for name in feature_names:
@@ -394,8 +416,12 @@ def main() -> int:
                     return 1
                 n_checked += 1
             del store
+            phase_seconds["verify"] = time.monotonic() - _t_verify
             print(f"  {n_checked} features verified (sums match)")
 
+            # The C-144 atomic swap. Measured so it can be ruled out
+            # rather than assumed cheap.
+            _t_swap = time.monotonic()
             old_output = output.parent / (output.name + ".old")
             if old_output.exists():
                 shutil.rmtree(old_output)
@@ -404,6 +430,7 @@ def main() -> int:
             os.rename(str(tmp_output), str(output))
             if old_output.exists():
                 shutil.rmtree(old_output)
+            phase_seconds["swap"] = time.monotonic() - _t_swap
         except Exception:
             if tmp_output.exists():
                 shutil.rmtree(tmp_output)
@@ -431,12 +458,27 @@ def main() -> int:
               f"{n_h} lat x {n_w} lon")
         print(f"Time: {elapsed:.1f}s")
 
+        # Phase breakdown (#501). "other" is whatever the named phases do
+        # not cover — grid load, coordinate construction, digests, the
+        # sentinel — and is reported rather than omitted so the columns
+        # always account for the whole of Time above.
+        print("Phases:")
+        _denom = max(elapsed, 1e-9)
+        for _label, _secs in phase_seconds.items():
+            print(f"  {_label:<7}{_secs:>10.1f}s  {100 * _secs / _denom:>5.1f}%")
+        _other = elapsed - sum(phase_seconds.values())
+        print(f"  {'other':<7}{_other:>10.1f}s  {100 * _other / _denom:>5.1f}%")
+
         append_ledger_entry(_ledger_path, {
             "stage": "export",
             "outcome": "success",
             "source_digest": grid_digest,
             "ledger_version": LEDGER_VERSION,
             "digest_algorithm": DIGEST_SCHEME,
+            "elapsed_seconds": round(elapsed, 1),
+            "phase_seconds": {
+                k: round(v, 1) for k, v in phase_seconds.items()
+            },
         })
         _ledger_written = True
 

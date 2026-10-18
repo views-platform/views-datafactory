@@ -226,6 +226,60 @@ class TestZarrExport:
     def test_sentinel_cleared(self, pipeline: dict) -> None:
         assert not (pipeline["assembled"] / ".exports_required").exists()
 
+    # ── #501: the export's phase breakdown ─────────────────
+
+    @staticmethod
+    def _export_entry(pipeline: dict) -> dict:
+        """The successful export entry from the run's own ledger."""
+        ledger = pipeline["assembled"] / "export_ledger.jsonl"
+        assert ledger.exists(), "export wrote no ledger"
+        entries = [
+            json.loads(line)
+            for line in ledger.read_text().splitlines()
+            if line.strip()
+        ]
+        successes = [
+            e for e in entries
+            if e.get("stage") == "export" and e.get("outcome") == "success"
+        ]
+        assert successes, f"no successful export entry in {entries}"
+        return successes[-1]
+
+    def test_phase_timings_recorded(self, pipeline: dict) -> None:
+        """Every phase #501 asks about reaches the ledger, by name.
+
+        The export took 5h07m on 2026-10-16 with no breakdown, so the
+        cost could not be attributed. If a phase label is dropped here,
+        that blindness returns silently — hence an exact-set assertion
+        rather than a subset one.
+        """
+        entry = self._export_entry(pipeline)
+        assert "phase_seconds" in entry, entry
+        assert set(entry["phase_seconds"]) == {
+            "scan", "write", "verify", "swap"
+        }, entry["phase_seconds"]
+
+    def test_phase_timings_are_nonnegative(self, pipeline: dict) -> None:
+        phases = self._export_entry(pipeline)["phase_seconds"]
+        assert all(v >= 0 for v in phases.values()), phases
+
+    def test_phases_do_not_exceed_the_total(self, pipeline: dict) -> None:
+        """The phases must fit inside the reported total.
+
+        They need not sum to it — 'other' covers load, coordinates and
+        digests. But a sum ABOVE the total means a timer spans work it
+        does not own, which would misattribute exactly the cost #501
+        exists to locate.
+        """
+        entry = self._export_entry(pipeline)
+        elapsed = entry["elapsed_seconds"]
+        assert elapsed > 0, entry
+        total = sum(entry["phase_seconds"].values())
+        assert total <= elapsed + 0.5, (
+            f"phases sum to {total}s but total is {elapsed}s: "
+            f"{entry['phase_seconds']}"
+        )
+
 
 # ── Consumer data loading ──────────────────────────────────
 
