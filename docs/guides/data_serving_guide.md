@@ -174,10 +174,14 @@ Example: "Run the data pipeline on the 21st of every month at midnight"
 That line means: minute 0, hour 0, day 21, every month, every
 day-of-week. Run the script.
 
-Your pipeline takes about 15-30 minutes (harvesting is the slow
-part — it calls the UCDP and ACLED APIs). After it finishes, the new zarr
-and parquet files are in the same directory the web server serves.
-Consumers automatically get the new data on their next request.
+Your pipeline takes about **six hours**. Harvesting is *not* the slow part,
+despite being the part that calls external APIs: harvest through compile is
+~43 minutes, and the zarr export alone is ~5 hours. Per-step timings live in
+[`server_quickref.md`](server_quickref.md#run-the-pipeline).
+
+After it finishes, the new zarr and parquet files are in the same directory the
+web server serves. Consumers automatically get the new data on their next
+request.
 
 **No restart needed.** The web server serves whatever files are
 in the directory. When the pipeline replaces them, the next

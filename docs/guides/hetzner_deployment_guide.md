@@ -27,7 +27,7 @@ If the server is already set up and you're just deploying a tag that **already e
 # 1. SSH into the server (replace <your-user> with your username)
 ssh <your-user>@204.168.219.108
 
-# 2. Start tmux (pipeline runs 3-4 hours; SSH will drop without a multiplexer)
+# 2. Start tmux (the run takes ~6 hours; SSH will drop without a multiplexer)
 tmux new -s deploy
 
 # 3. Deploy and run
@@ -189,8 +189,15 @@ cd ~/views-datafactory
 bash scripts/refresh_pipeline.sh
 ```
 
-This takes 25-45 minutes (harvesting calls external APIs and downloads
-large raster files). Watch the output — each step prints PASS or FAIL.
+This takes about **six hours**. Watch the output — each step prints PASS or
+FAIL. Per-step timings are in
+[`server_quickref.md`](server_quickref.md#run-the-pipeline), which owns them.
+
+> **This figure said "25-45 minutes" until 2026-10-18, and that was the
+> dangerous direction to be wrong in.** A run at the two-hour mark looks hung
+> against a 45-minute estimate, and the reasonable response to a hung run is to
+> kill it. The cost is not harvesting — harvest through compile is ~43 minutes.
+> **The zarr export alone is ~5 hours and prints nothing while it works.**
 
 **Note:** The pipeline includes ACLED (8 features), GHS-POP
 population data (1 feature), GHS-BUILT-S built-up surface data
@@ -463,8 +470,8 @@ See ADR-018 for the rationale.
 2. Create a check (or verify the existing one):
    - **Name:** `views-datafactory pipeline refresh`
    - **Period:** 30 days (matches the `0 0 21 * *` cron)
-   - **Grace period:** 48 hours (pipeline runs 2-3 hours; 48h covers
-     delays, restarts, and weekend non-response)
+   - **Grace period:** 48 hours (the run takes ~6 hours; 48h still leaves
+     room for delays, restarts, and weekend non-response)
    - **Tags:** `views`, `datafactory`, `hetzner`
 3. Copy the ping URL: `https://hc-ping.com/<uuid>`
 

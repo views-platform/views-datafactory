@@ -3280,7 +3280,32 @@ Every interactive `refresh_pipeline.sh` invocation in the guides now starts with
 
 **No new register entry.** The failure is loud, the defences worked, and the trigger would be perpetual ("whenever someone runs the pipeline"), which the trigger-quality gate rejects. What is registrable is the pattern above, and it belongs to this entry: a consolidation is only safe if the authority absorbs everything the demoted copies knew. Checking that was not part of the 2026-10-13 work and should have been.
 
-**The shape worth noticing.** C-343 is now on its third round of correction, and each round fixed the written procedure while the *instrument that would have caught it* stayed unbuilt. A documented verification step that nobody has executed is not evidence, and this one had been in the quickref §"Check status" since before the entry existed.
+**Addendum 2026-10-18 — the new authority carried a number nobody had measured.** The 2026-10-16 addendum above records that consolidation can move content *out* of reach. This one records the complement, which is worse: **consolidation concentrates error as effectively as it concentrates authority.** When `server_quickref.md` was promoted on 2026-10-13 it was given "the run takes 3-4 hours." That figure was a guess. No measurement existed for it in the repo, and the document that stated it had just been declared the winner over every document that disagreed.
+
+Seven places claimed a pipeline duration, and they spanned a factor of 24:
+
+| Location | Claimed | Kind of document |
+|---|---|---|
+| `data_serving_guide.md:177` | 15-30 min | live guide |
+| `hetzner_deployment_guide.md:192` | 25-45 min | live guide |
+| `hetzner_deployment_log.md:296` | ~2.5 h | dated log (March 2026) |
+| `hetzner_deployment_guide.md:466` | 2-3 h | live guide (justifies the 48h healthcheck grace) |
+| `server_quickref.md:41` | 3-4 h | **the authority, set 2026-10-13** |
+| `hetzner_deployment_guide.md:30` | 3-4 h | live guide |
+| `ADR-041:12` | ~6 h | ADR |
+| **2026-10-16 run, measured** | **5h50m** | — |
+
+The closest figure was in an **ADR about something else**. ADR-041 got it right incidentally, while arguing for content-addressed skipping. The document whose job is to be correct about it was wrong by 40%, and it was wrong because the correction that created its authority did not come with a measurement.
+
+**The direction of the error is the operational hazard, not the magnitude.** An over-estimate is harmless; an under-estimate licenses intervention on a healthy run. "25-45 minutes" tells an operator two hours in that the run is hung, and the reasonable response to a hung run is to kill it — reproducing the 2026-10-16 outage from a document instead of a dropped connection. Every stale figure also mis-attributed the cost to harvesting; harvest through compile is ~43 min, and the zarr export alone is ~5h07m, 88% of the run.
+
+Corrected by kind rather than uniformly, which is the part worth keeping: the four live guides now carry the measured figure and point at the quickref; **ADR-041 and the March deployment log were not rewritten** but carry dated amendments, because both are records of what was true when written and falsifying a record to make it current is a different defect from the one being fixed.
+
+**No new register entry, again.** The trigger would be perpetual. What is registrable belongs here: a consolidation must verify what it promotes, not only absorb what it demotes. Two rounds of this entry have now found that the 2026-10-13 work was sound in mechanism and unverified in content.
+
+**One finding escapes this entry and is not a documentation problem.** ADR-041 measured the zarr export at ~57 min in June 2026; it measured **18,427s (5h07m)** on 2026-10-16, a ~5x increase against a store that grew 1.8 GB → 3.1 GB. The cause is unestablished and deliberately not guessed at. Filed as **#501**, because it is a performance question requiring instrumentation rather than a figure requiring correction, and because ADR-041 consequently understates its own benefit by ~3.4x — a no-change deploy avoids ~350 min, not the ~103 min it claims.
+
+**The shape worth noticing.** C-343 is now on its fourth round of correction, and each round fixed the written procedure while the *instrument that would have caught it* stayed unbuilt. A documented verification step that nobody has executed is not evidence, and this one had been in the quickref §"Check status" since before the entry existed.
 
 **What this update changes about the entry's severity, honestly.** It does not raise the tier, but it does weaken the "corrected in the same PR as this entry" claim above: the correction was partial, and the stale copies outlived it by two months and one release. The pattern is #402's — *one procedure, one home* — and C-343 is an instance of it as much as it is a deployment risk. The entry stays **open**, and the still-unbuilt instrument below is now the only thing that would catch a sixth copy appearing.
 
