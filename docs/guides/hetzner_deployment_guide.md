@@ -27,7 +27,7 @@ If the server is already set up and you're just deploying a tag that **already e
 # 1. SSH into the server (replace <your-user> with your username)
 ssh <your-user>@204.168.219.108
 
-# 2. Start tmux (pipeline runs 3-4 hours; SSH will drop without a multiplexer)
+# 2. Start tmux (the run takes ~6 hours; SSH will drop without a multiplexer)
 tmux new -s deploy
 
 # 3. Deploy and run
@@ -181,13 +181,23 @@ source ~/.profile
 
 ### 2.1 Run the full pipeline
 
+> **Run this inside `tmux`.** SSH drops kill a foreground run (SIGHUP). See `server_quickref.md` §"Run the pipeline" — `tmux new -s pipeline` first, every time.
+
 ```bash
+tmux new -s pipeline
 cd ~/views-datafactory
 bash scripts/refresh_pipeline.sh
 ```
 
-This takes 25-45 minutes (harvesting calls external APIs and downloads
-large raster files). Watch the output — each step prints PASS or FAIL.
+This takes about **six hours**. Watch the output — each step prints PASS or
+FAIL. Per-step timings are in
+[`server_quickref.md`](server_quickref.md#run-the-pipeline), which owns them.
+
+> **This figure said "25-45 minutes" until 2026-10-18, and that was the
+> dangerous direction to be wrong in.** A run at the two-hour mark looks hung
+> against a 45-minute estimate, and the reasonable response to a hung run is to
+> kill it. The cost is not harvesting — harvest through compile is ~43 minutes.
+> **The zarr export alone is ~5 hours and prints nothing while it works.**
 
 **Note:** The pipeline includes ACLED (8 features), GHS-POP
 population data (1 feature), GHS-BUILT-S built-up surface data
@@ -434,7 +444,10 @@ crontab -l
 
 ### 4.5 Test manually
 
+> **Run this inside `tmux`.** SSH drops kill a foreground run (SIGHUP). See `server_quickref.md` §"Run the pipeline" — `tmux new -s pipeline` first, every time.
+
 ```bash
+tmux new -s pipeline
 cd ~/views-datafactory
 bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
 ```
@@ -457,8 +470,8 @@ See ADR-018 for the rationale.
 2. Create a check (or verify the existing one):
    - **Name:** `views-datafactory pipeline refresh`
    - **Period:** 30 days (matches the `0 0 21 * *` cron)
-   - **Grace period:** 48 hours (pipeline runs 2-3 hours; 48h covers
-     delays, restarts, and weekend non-response)
+   - **Grace period:** 48 hours (the run takes ~6 hours; 48h still leaves
+     room for delays, restarts, and weekend non-response)
    - **Tags:** `views`, `datafactory`, `hetzner`
 3. Copy the ping URL: `https://hc-ping.com/<uuid>`
 
@@ -852,8 +865,11 @@ fixed order:
    diverge a little further after **every** release, and
    `git log main..development` starts counting work that already shipped.
 
-5. **Deploy** = update `~/.views-deploy-tag` on the server to the
-   new tag. The pipeline checks out whatever tag that file contains.
+5. **Deploy** = three steps on the server, not one: the tag file, then
+   `git fetch --tags && git checkout <tag>`, then `uv sync`. Writing the
+   tag file alone is **not** deploying — that mistake left the host on
+   v1.10.0 for five days while every signal read v1.11.0 (C-343).
+   `docs/guides/server_quickref.md` holds the commands.
 
 **Why this order:** If you tag before bumping, the tag points at code
 with the old version string — wrong. If you tag on `development`
@@ -871,48 +887,54 @@ first, promote second, tag third, back-merge fourth.
 > corrected, because a second copy of the procedure is what let the two guides drift apart
 > in the first place (#402). One procedure, one home.
 
-**On the server** (SSH in):
+**On the server** (SSH in): run **every block** in
+`docs/guides/server_quickref.md` §"Deploy a new version" — the tag file, then
+`git fetch --tags && git checkout <tag>`, then `uv sync`, then the three
+verification commands. The commands are there and not here on purpose.
 
-```bash
-# Update the deploy tag file
-echo 'vX.Y.Z' > ~/.views-deploy-tag
-```
-
-That's it. The next cron run (21st of the month) will automatically
-use the new tag. If you want to apply it right now instead of waiting:
-
-```bash
-# Run the pipeline manually (same command cron uses)
-cd ~/views-datafactory
-bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log
-```
+> **This section used to say "update `~/.views-deploy-tag`. That's it."** It was
+> wrong, and it is the sentence C-343 is about: on 2026-08-08 the tag file read
+> `v1.11.0`, `git describe` read `v1.10.0`, and the installed `views-frames` was
+> still the frozen `1.0.0` — three sources of truth disagreeing, with a green
+> status page and a pinging heartbeat and no error anywhere. The in-pipeline
+> `git checkout "$DEPLOY_TAG"` does not rescue it: bash has already buffered
+> `scripts/refresh_pipeline.sh`, so a change to that script lands one run later —
+> a month, on a monthly cron — and `uv sync` is never invoked by the pipeline at
+> all, so a dependency change never lands however many times it runs. C-343 was
+> corrected in `scripts/refresh_pipeline.sh` and `docs/guides/server_quickref.md`
+> in #431 and **this third copy was missed**, which is the same drift #402 is
+> about. The commands live in the quickref and nowhere else; if this file and the
+> quickref ever disagree, **the quickref wins.**
 
 ### How to roll back
 
-If a new version breaks the pipeline:
+If a new version breaks the pipeline, re-run the same three deploy steps with the
+previous tag — a rollback is a deploy, and skipping `uv sync` on the way back
+leaves the dependencies of the version you are abandoning. Tags are never
+deleted by git, so every previous version stays available.
+
+Then run the pipeline manually to apply it immediately rather than waiting for
+the next cron run.
+
+> **Run this inside `tmux`.** SSH drops kill a foreground run (SIGHUP). See `server_quickref.md` §"Run the pipeline" — `tmux new -s pipeline` first, every time.
 
 ```bash
-# On the server — point back to the previous version
-echo 'vPREVIOUS' > ~/.views-deploy-tag
+tmux new -s pipeline
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh 2>&1 | tee -a logs/refresh.log'
 ```
-
-The next pipeline run will check out that tag and run its code
-instead. The old version is always available — git never deletes tags.
-
-You can also run the pipeline manually to roll back immediately
-instead of waiting for the next cron run.
 
 ### How to check what version is deployed
 
+**Three sources, and they must agree** — the tag file, the checked-out tag, and
+the installed distribution. Checking only the tag file is what C-343 was: it is a
+statement of intent, not evidence. The commands are step 4 of
+`docs/guides/server_quickref.md` §"Deploy a new version"; they are not repeated
+here, because a second copy of them is how this section came to be wrong.
+
+For when the last pipeline run happened, `tail` the refresh log:
+
 ```bash
-# What version is the server configured to run?
-cat ~/.views-deploy-tag
-
-# What version is actually checked out right now?
-git describe --tags --exact-match 2>/dev/null || git log --oneline -1
-
-# When did the last pipeline run happen?
-tail -5 logs/refresh.log
+sudo -u views-deploy bash -c 'tail -5 ~/views-datafactory/logs/refresh.log'
 ```
 
 ### Log rotation

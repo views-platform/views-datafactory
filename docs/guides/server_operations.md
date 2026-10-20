@@ -10,9 +10,9 @@ For initial setup, see `hetzner_deployment_guide.md`.
 | What | Command |
 |------|---------|
 | SSH in | `ssh <your-user>@204.168.219.108` |
-| Check current version | `cat /home/views-deploy/.views-deploy-tag` |
-| Set version to deploy | `echo "v1.2.3" \| sudo tee /home/views-deploy/.views-deploy-tag` |
-| Run pipeline | `sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh'` |
+| Check current version | three commands — see `server_quickref.md` §"Deploy a new version" step 4; the tag file alone is intent, not evidence (C-343) |
+| Deploy a version | four blocks — see `server_quickref.md` §"Deploy a new version"; writing the tag file is **not** deploying (C-343) |
+| Run pipeline | **start `tmux` first** — see `server_quickref.md` §"Run the pipeline" |
 | Check pipeline logs | `sudo -u views-deploy cat /home/views-deploy/views-datafactory/logs/refresh.log` |
 | Check last failure | `sudo -u views-deploy cat /home/views-deploy/views-datafactory/logs/pipeline_failure.json` |
 | List raw data | `sudo -u views-deploy ls -la /home/views-deploy/views-datafactory/data/raw/ucdp_annual/` |
@@ -113,24 +113,24 @@ GitHub tag
 
 ### Deploy a new version
 
-On your laptop:
-```bash
-# 1. Tag the release (from main branch)
-git tag v1.2.4
-git push origin v1.2.4
-```
+**On your laptop:** the release ritual in `publishing_to_pypi.md` — bump,
+promote to `main`, then cut a **GitHub Release**, which is what triggers the
+publish workflow. A local `git tag && git push` does not, and both branches have
+required pull requests since 2026-07-31, so the sequence that used to sit here
+cannot be run any more.
 
-On the server:
-```bash
-# 2. SSH in
-ssh <your-user>@204.168.219.108
+**On the server:** every block in `server_quickref.md` §"Deploy a new version" —
+the tag file, `git fetch --tags && git checkout <tag>`, `uv sync`, then the three
+verification commands.
 
-# 3. Set the new version
-echo "v1.2.4" | sudo tee /home/views-deploy/.views-deploy-tag
-
-# 4. Run the pipeline
-sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh'
-```
+> **This section used to stop at the tag file**, and that is C-343: on 2026-08-08
+> the host ran v1.10.0 for five days while the tag file, and therefore every
+> signal an operator checked, read v1.11.0. The pipeline's own `git checkout`
+> does not rescue it — bash has already buffered `scripts/refresh_pipeline.sh`,
+> so a change to that script lands one run later (a month, on a monthly cron),
+> and `uv sync` is never invoked by the pipeline at all. The commands live in the
+> quickref and nowhere else; **if this file and the quickref disagree, the
+> quickref wins.**
 
 ### Run individual pipeline steps manually
 
@@ -261,7 +261,10 @@ For JSON output (monitoring integration): add `--json` flag.
 
 If you suspect stale data, delete the assembled output and re-run:
 
+> **Run this inside `tmux`.** SSH drops kill a foreground run (SIGHUP). See `server_quickref.md` §"Run the pipeline" — `tmux new -s pipeline` first, every time.
+
 ```bash
+tmux new -s pipeline
 sudo -u views-deploy bash -c 'cd ~/views-datafactory && rm -rf data/assembled data/compiled data/viewpoint data/consolidated'
 sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && bash scripts/refresh_pipeline.sh'
 ```

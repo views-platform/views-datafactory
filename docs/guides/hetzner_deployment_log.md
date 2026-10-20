@@ -295,6 +295,12 @@ or mismatched path.
 
 **Total: approximately 2.5 hours for a clean run.**
 
+> **These are March 2026 measurements and are no longer current.** The
+> 2026-10-16 run took **5h50m**, with the zarr export alone at ~5h07m against a
+> 3.1 GB store (this table has it at ~14 min against 1.8 GB). This is a dated
+> log and the figures above are left as measured; current per-step timings live
+> in [`server_quickref.md`](server_quickref.md#run-the-pipeline).
+
 Subsequent runs are much faster because most data is cached (only new
 UCDP versions are fetched).
 

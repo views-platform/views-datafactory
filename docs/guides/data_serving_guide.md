@@ -174,10 +174,14 @@ Example: "Run the data pipeline on the 21st of every month at midnight"
 That line means: minute 0, hour 0, day 21, every month, every
 day-of-week. Run the script.
 
-Your pipeline takes about 15-30 minutes (harvesting is the slow
-part — it calls the UCDP and ACLED APIs). After it finishes, the new zarr
-and parquet files are in the same directory the web server serves.
-Consumers automatically get the new data on their next request.
+Your pipeline takes about **six hours**. Harvesting is *not* the slow part,
+despite being the part that calls external APIs: harvest through compile is
+~43 minutes, and the zarr export alone is ~5 hours. Per-step timings live in
+[`server_quickref.md`](server_quickref.md#run-the-pipeline).
+
+After it finishes, the new zarr and parquet files are in the same directory the
+web server serves. Consumers automatically get the new data on their next
+request.
 
 **No restart needed.** The web server serves whatever files are
 in the directory. When the pipeline replaces them, the next
@@ -250,13 +254,22 @@ notice for days.
 
 With the tag system: the server keeps running the old working version
 until you *explicitly* tell it to switch. You test the new version,
-tag it, and only then update the server. If the new version breaks,
-you write the old tag name back and you're running known-good code
-again.
+release it, and only then deploy it. If the new version breaks, you
+deploy the previous tag and you're running known-good code again.
 
-**The full deployment procedure** (create a tag, push it, update the
-server file, rollback if needed) is documented in
-`hetzner_deployment_guide.md` under "Deployment and releases".
+**One thing this explanation makes tempting, and it is wrong.** Because
+the pipeline checks the tag out for you, it looks as though changing the
+tag file *is* deploying. It is not. The script is already running when it
+does that checkout, so a change to the script itself only takes effect
+the run after — a month, on a monthly cron — and the script never
+installs dependencies, so a dependency change never lands at all. That
+misreading left the server on v1.10.0 for five days with every signal
+reading v1.11.0 (C-343, August 2026).
+
+**The deployment procedure** — tag file, checkout, `uv sync`, then verify
+three sources agree — lives in `server_quickref.md` under "Deploy a new
+version", and only there. A rollback is the same procedure with the
+earlier tag.
 
 The architectural rationale (why tags instead of branch tracking,
 Docker, or CI/CD) is in **ADR-022**.

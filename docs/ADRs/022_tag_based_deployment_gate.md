@@ -51,7 +51,7 @@ Normally, `HEAD` points to a branch (e.g., `main`), and the branch points to a c
 This is **normal and expected on the server**. It means:
 - The server is looking at a frozen snapshot, not a moving branch.
 - No `git pull` or `git push` can accidentally change what's checked out.
-- The only way to change the running version is to update `~/.views-deploy-tag`.
+- Nothing changes the running version except an operator deploying — and deploying is the whole procedure below, not just the tag file.
 
 On developer machines, you work on branches as usual. Detached HEAD is only relevant on the deployment server.
 
@@ -112,7 +112,7 @@ Per ADR-011: the system should crash visibly rather than silently run unknown co
 ### Positive
 
 - **Explicit version control.** The operator decides exactly what runs. No surprises from pushed commits.
-- **One-line rollback.** `echo 'v1.0.0' > ~/.views-deploy-tag` reverts to the previous release.
+- **Cheap rollback.** The previous release is always available — git never deletes tags — so reverting is the same short procedure as deploying, run with the earlier tag. (It is **not** one line; see the amendment below.)
 - **Audit trail.** The deploy tag file, git log, and provenance ledger together show what version produced what data.
 - **Safe for multiple maintainers.** Two people can push to `development` without affecting the server.
 - **No infrastructure dependencies.** No Docker registry, no CI/CD pipeline, no deployment service. Just git tags and a text file.
@@ -127,26 +127,24 @@ Per ADR-011: the system should crash visibly rather than silently run unknown co
 
 ## Deployment Procedure
 
-**Deploy a new version:**
+**On your laptop:** the release ritual in `docs/guides/publishing_to_pypi.md` — bump, promote to `main`, cut a **GitHub Release** (a local `git tag && git push` does not trigger the publish workflow, and both branches have required pull requests since 2026-07-31).
 
-1. On your laptop: `git tag v1.2.0 && git push --tags`
-2. On the server: `echo 'v1.2.0' > ~/.views-deploy-tag`
-3. Wait for cron (21st of month) or run manually
+**On the server:** every block of `docs/guides/server_quickref.md` §"Deploy a new version" — the tag file, `git fetch --tags && git checkout <tag>`, `uv sync`, then verification against three sources: the tag file, the checked-out tag, and the **installed distribution version**. A rollback is the same procedure with the earlier tag.
 
-**Roll back:**
+The commands are deliberately not reproduced here. This ADR records *why* the gate exists; the quickref is its single operational home, and **if they disagree, the quickref wins.**
 
-1. On the server: `echo 'v1.0.0' > ~/.views-deploy-tag`
-2. Run the pipeline manually or wait for cron
+### Amendment 2026-10-13 — writing the tag file is not deploying (C-343)
 
-**Verify:**
+This section previously gave deploying as three steps — local tag, tag file, wait for cron — and rollback as one. Both were wrong, and the error was not theoretical: on 2026-08-08 the production host ran v1.10.0 for five days while the tag file read v1.11.0, with a green status page, a pinging heartbeat, and no error at any point. v1.11.0 existed solely to raise the `views-frames` floor, and the floor on the box was still the frozen 1.0.0.
 
-```bash
-cat ~/.views-deploy-tag                    # configured version
-git describe --tags --exact-match          # checked-out version
-tail -5 logs/refresh.log                   # last run output
-```
+The gate described in **Decision** is unaffected and still does what it claims: the pipeline refuses to start without a valid tag, and checks that tag out. What was wrong was the inference that the checkout makes the tag file sufficient. It does not, for two reasons established by experiment rather than by reading:
 
-Full operational procedures are in `docs/guides/hetzner_deployment_guide.md`, section "Deployment and releases."
+1. Bash buffers `scripts/refresh_pipeline.sh` before the gate's `git checkout` runs, so a change to that script takes effect on the **next** run — one month, on a monthly cron.
+2. The pipeline never invokes `uv sync`, so a dependency change never lands at all, however many times it runs.
+
+The **Verify** block was also incomplete in the way that mattered: it listed the tag file and `git describe` but not the installed distribution, which is the only one of the three that reflects `uv sync`. In August it was the installed version that was wrong.
+
+C-343 is **open**: the three guides and this ADR now agree, but nothing mechanically prevents the procedure from being skipped. The proposed instrument — a pre-flight check comparing the deploy tag against the HEAD the script *started* from, failing loud per ADR-011 rather than self-correcting one run late — is tracked in #424 and not built.
 
 ---
 
@@ -154,7 +152,7 @@ Full operational procedures are in `docs/guides/hetzner_deployment_guide.md`, se
 
 - ADR-011 (Fail Loud, No Stale Data Serving) — justifies fail-loud on misconfiguration
 - ADR-018 (Operational Resilience Policy) — operator-mediated bounded staleness
-- `scripts/refresh_pipeline.sh` lines 76-98 — implementation
+- `scripts/refresh_pipeline.sh`, the "Deployment gate" block — implementation
 - `reports/archive/technical_risk_register_resolved.md` C-98 — risk that motivated this ADR
 - `docs/guides/hetzner_deployment_guide.md` — operational procedures
 - `docs/guides/data_serving_guide.md` section 9 — conceptual explanation

@@ -1,9 +1,56 @@
-# Product Development Plan v12 — current through v1.14, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.15, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
+
+---
+
+## v1.15 Addendum (2026-10-19)
+
+**v1.15.0 (the export's 5h07m gets a breakdown, and four rounds of C-343 land).** This release
+contains **no library code at all** — `git diff --name-only v1.14.0 development -- src/` is empty,
+so the wheel is byte-identical to v1.14.0 apart from its version metadata. That is not an oversight
+and it is worth stating plainly, because it explains what the release is *for*: the server deploys
+by **git tag** (ADR-022), and the two things this release carries — a script and a set of guides —
+reach production no other way. A consumer installing from PyPI gets nothing new. The server gets
+the only instrument that can answer #501.
+
+**What the server gets.** `scripts/export_zarr.py` now times four phases — `scan` (the `source_sums`
+loop, one strided traversal of `grid.npy` per feature), `write` (`to_zarr` plus metadata
+consolidation), `verify` (the ADR-011/C-144 round-trip integrity read) and `swap` (the `.tmp`
+rename) — plus an explicit `other`, so the printed columns account for the whole of the `Time:`
+line rather than a selected part of it. The breakdown prints to `logs/refresh.log` **and** persists
+as `phase_seconds` in `data/assembled/export_ledger.jsonl`, which is the half that matters: logs
+rotate, the ledger does not, and one measurement in a rotating log is not a trend.
+
+**Why it exists.** The 2026-10-16 production run took **21,007s (5h50m)**, of which the zarr export
+alone was **18,427s (5h07m) — 88% of the pipeline**. ADR-041's Context had the export at ~57
+minutes. Nothing in the repo could attribute the other four hours to a phase, so nothing could be
+optimised without guessing. The candidate explanation is pre-registered on #501 with a falsification
+criterion committed **before** any production figure exists: `grid.npy` is C-contiguous with
+features on the last axis, so `grid[:, :, :, i]` strides 316 bytes at F=79 and a 4 KB page yields
+~13 useful float32s out of 1024 — **if `scan` comes in under ~25% of the export, that explanation is
+refuted and abandoned.** The synthetic baseline, where 0.1 GB fits in RAM, puts `scan` at 10.1% —
+the smallest named phase. The entire claim is that crossing the RAM boundary inverts that.
+
+**What else lands.** Four rounds of C-343 ("writing the deploy tag is not deploying"), each a
+correction to the previous one's blind spot: #497 found four more copies of the one-step claim;
+#498 found that `~` after `sudo` expands as the caller, so six verification commands read the wrong
+home; #499 gave the procedure one home and added the tmux rule; #500 found that the authority
+established in #499 carried a duration figure **nobody had ever measured** — seven places claimed a
+pipeline duration, spanning 24×, and two of the wrong ones had been written two days earlier as the
+fix. The through-line, now recorded: *a consolidation concentrates error as effectively as it
+concentrates authority, so it must verify what it promotes, not merely absorb what it demotes.*
+
+**What this release does *not* fix.** The phase breakdown is *recorded* but nothing *compares* it
+across runs — `check_health.py` has freshness SLOs and no duration SLO, so a second 5× regression
+would still be invisible until someone read a log by hand. Flagged rather than built: one datapoint
+does not justify a trend watcher, and the instrument that would have caught the first regression is
+what this release ships. No change was made to chunking, compression, the slicing pattern or the
+integrity check — each is a plausible remedy for a cause that is **not yet established**, and the
+integrity check is an ADR-011/C-144 guarantee that must not be weakened to buy time.
 
 ---
 

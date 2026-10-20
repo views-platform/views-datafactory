@@ -3241,6 +3241,74 @@ Bash buffers the script and does not re-read it; git writes in place (inode unch
 
 **Remediated 2026-08-08** by running the three documented steps; `uv sync` moved views-frames 1.0.0 → 1.10.2 and views-datafactory 1.10.0 → 1.11.0, and `FeatureFrame` was imported on the host afterwards to confirm the ten-minor-version jump is clean. The entry stays **open** because nothing prevents recurrence.
 
+
+**Update 2026-10-13 — the fix reached two of six copies, and the four it missed are the ones an operator reads.** Found by the operator asking, before deploying v1.14.0, whether a one-line tag write was really the procedure. It was not, and the reason the question had to be asked is that #431 corrected `scripts/refresh_pipeline.sh` and `docs/guides/server_quickref.md` and stopped there. Four further copies of the one-step claim were still live:
+
+| Document | What it said |
+|---|---|
+| `docs/guides/hetzner_deployment_guide.md` §"How to deploy a new version" | the tag file, then *"That's it."* — **and this is the file `refresh_pipeline.sh` itself points to "for full detail"** |
+| `docs/guides/server_operations.md` §"Deploy a new version" + the summary table | local `git tag && git push`, then the tag file, then run the pipeline |
+| `docs/ADRs/022_tag_based_deployment_gate.md` §Consequences + §Deployment Procedure | *"One-line rollback"* as a claimed **benefit**; three-step deploy with no checkout and no `uv sync`; a Verify block listing the tag file and `git describe` but **not the installed distribution** — the one of the three that was actually wrong in August |
+| `docs/guides/data_serving_guide.md` §9 | *"If the new version breaks, you write the old tag name back and you're running known-good code again."* |
+
+All four corrected, each pointing at `server_quickref.md` as the single operational home with "if they disagree, the quickref wins", and `server_quickref.md` grew the verification block it was missing (step 4: tag file, checked-out tag, **installed distribution version**). ADR-022 carries a dated amendment in the ADR-027 style rather than a rewrite — the Decision it records is sound; what was wrong was the inference that the gate's own `git checkout` makes the tag file sufficient.
+
+**Update 2026-10-16 — the corrected procedure was run, and the verification step did not work.** v1.14.0 deployed cleanly: `git checkout` moved HEAD from `10c4d24` (v1.13.0) to `2b22a64` (v1.14.0), and `uv sync` reported `- views-datafactory==1.13.0` / `+ views-datafactory==1.14.0` — direct confirmation, on the box, that step 3 is load-bearing and that the tag file alone would have left 1.13.0 installed.
+
+Then step 4's first command failed:
+
+```
+$ sudo -u views-deploy cat ~/.views-deploy-tag
+cat: /home/simmaa_prio/.views-deploy-tag: Permission denied
+```
+
+**`~` is expanded by the calling shell, before `sudo` runs.** Every such command reads the *operator's* home, not `views-deploy`'s. Six were live in the guides, two of them added by the 2026-10-13 correction above. All now wrapped in `bash -c '...'`, where the inner shell expands `~` as the target user.
+
+One of the six failed green rather than loud, which is why this is recorded here rather than left as a typo:
+
+```
+sudo -u views-deploy cat ~/.../pipeline_failure.json 2>/dev/null || echo "No recent failure"
+```
+
+The `||` sat **outside** `bash -c`, so a permission error on the wrong home directory printed **"No recent failure"** — an unreadable path reported as good news, in the command an operator runs to ask whether the last pipeline run broke. Belongs to the **mechanisms that fail green** cluster alongside the rest of this entry. The fallback is now inside the quoted command.
+
+**Addendum 2026-10-16 — consolidating onto one authority moved content *out* of reach, not just into it.** The 2026-10-13 correction made `server_quickref.md` the single operational home and told every other document "if they disagree, the quickref wins." `hetzner_deployment_guide.md` carried a rule the quickref did not: **start `tmux` before a pipeline run**, stated at its line 30 with the reason ("pipeline runs 3-4 hours; SSH will drop without a multiplexer") and backed by a post-mortem section titled *"tmux saved us from the SSH drop"* (`2026-05-25_deployment_v1221.md`). Promoting the quickref silently demoted that rule.
+
+It cost a run the same day. `client_loop: send disconnect: Broken pipe` killed a foreground pipeline after the 37 GB assembly completed but before the zarr export, leaving `grid.npy` current and `grid.zarr` three weeks stale. **Every designed defence held** — `assemble_grid.py` renames from `grid.npy.tmp` so the grid was whole, `.exports_required` recorded the owed export, `flock` released with the process, and `check_health.py` reports the sentinel as PENDING. Nothing was corrupted and nothing was silent. The cost was a re-run and a window in which served data lagged the grid.
+
+Every interactive `refresh_pipeline.sh` invocation in the guides now starts with `tmux new -s pipeline`, and the quickref carries the rule, the dated evidence and the detail that catches people out: **tmux does not change the shell prompt**, so only the status bar tells you whether you are inside it. Cron invocations are deliberately left alone — cron has no controlling terminal and no SIGHUP to receive.
+
+**No new register entry.** The failure is loud, the defences worked, and the trigger would be perpetual ("whenever someone runs the pipeline"), which the trigger-quality gate rejects. What is registrable is the pattern above, and it belongs to this entry: a consolidation is only safe if the authority absorbs everything the demoted copies knew. Checking that was not part of the 2026-10-13 work and should have been.
+
+**Addendum 2026-10-18 — the new authority carried a number nobody had measured.** The 2026-10-16 addendum above records that consolidation can move content *out* of reach. This one records the complement, which is worse: **consolidation concentrates error as effectively as it concentrates authority.** When `server_quickref.md` was promoted on 2026-10-13 it was given "the run takes 3-4 hours." That figure was a guess. No measurement existed for it in the repo, and the document that stated it had just been declared the winner over every document that disagreed.
+
+Seven places claimed a pipeline duration, and they spanned a factor of 24:
+
+| Location | Claimed | Kind of document |
+|---|---|---|
+| `data_serving_guide.md:177` | 15-30 min | live guide |
+| `hetzner_deployment_guide.md:192` | 25-45 min | live guide |
+| `hetzner_deployment_log.md:296` | ~2.5 h | dated log (March 2026) |
+| `hetzner_deployment_guide.md:466` | 2-3 h | live guide (justifies the 48h healthcheck grace) |
+| `server_quickref.md:41` | 3-4 h | **the authority, set 2026-10-13** |
+| `hetzner_deployment_guide.md:30` | 3-4 h | live guide |
+| `ADR-041:12` | ~6 h | ADR |
+| **2026-10-16 run, measured** | **5h50m** | — |
+
+The closest figure was in an **ADR about something else**. ADR-041 got it right incidentally, while arguing for content-addressed skipping. The document whose job is to be correct about it was wrong by 40%, and it was wrong because the correction that created its authority did not come with a measurement.
+
+**The direction of the error is the operational hazard, not the magnitude.** An over-estimate is harmless; an under-estimate licenses intervention on a healthy run. "25-45 minutes" tells an operator two hours in that the run is hung, and the reasonable response to a hung run is to kill it — reproducing the 2026-10-16 outage from a document instead of a dropped connection. Every stale figure also mis-attributed the cost to harvesting; harvest through compile is ~43 min, and the zarr export alone is ~5h07m, 88% of the run.
+
+Corrected by kind rather than uniformly, which is the part worth keeping: the four live guides now carry the measured figure and point at the quickref; **ADR-041 and the March deployment log were not rewritten** but carry dated amendments, because both are records of what was true when written and falsifying a record to make it current is a different defect from the one being fixed.
+
+**No new register entry, again.** The trigger would be perpetual. What is registrable belongs here: a consolidation must verify what it promotes, not only absorb what it demotes. Two rounds of this entry have now found that the 2026-10-13 work was sound in mechanism and unverified in content.
+
+**One finding escapes this entry and is not a documentation problem.** ADR-041 measured the zarr export at ~57 min in June 2026; it measured **18,427s (5h07m)** on 2026-10-16, a ~5x increase against a store that grew 1.8 GB → 3.1 GB. The cause is unestablished and deliberately not guessed at. Filed as **#501**, because it is a performance question requiring instrumentation rather than a figure requiring correction, and because ADR-041 consequently understates its own benefit by ~3.4x — a no-change deploy avoids ~350 min, not the ~103 min it claims.
+
+**The shape worth noticing.** C-343 is now on its fourth round of correction, and each round fixed the written procedure while the *instrument that would have caught it* stayed unbuilt. A documented verification step that nobody has executed is not evidence, and this one had been in the quickref §"Check status" since before the entry existed.
+
+**What this update changes about the entry's severity, honestly.** It does not raise the tier, but it does weaken the "corrected in the same PR as this entry" claim above: the correction was partial, and the stale copies outlived it by two months and one release. The pattern is #402's — *one procedure, one home* — and C-343 is an instance of it as much as it is a deployment risk. The entry stays **open**, and the still-unbuilt instrument below is now the only thing that would catch a sixth copy appearing.
+
 **The instrument, not yet built.** A pre-flight check in `refresh_pipeline.sh` comparing `$DEPLOY_TAG` against the HEAD the script *started* from, and refusing to run when they disagree — fail-loud per ADR-011, rather than silently self-correcting one run late. Proposed for #424; deliberately not built here, because this PR is a register entry and a comment fix.
 
 Cross-ref: C-337 (the fix this failed to deliver), C-342 (the other lockfile-versus-reality entry from the same day), C-341 (gates that run nowhere), C-98/ADR-022 (the deployment gate this undermines). Part of the **mechanisms that fail green** cluster. GitHub: #421.
