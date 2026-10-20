@@ -865,11 +865,15 @@ fixed order:
    diverge a little further after **every** release, and
    `git log main..development` starts counting work that already shipped.
 
-5. **Deploy** = three steps on the server, not one: the tag file, then
-   `git fetch --tags && git checkout <tag>`, then `uv sync`. Writing the
-   tag file alone is **not** deploying — that mistake left the host on
-   v1.10.0 for five days while every signal read v1.11.0 (C-343).
-   `docs/guides/server_quickref.md` holds the commands.
+5. **Deploy** = four blocks on the server, not one: the tag file, then
+   `git fetch --tags && git checkout <tag>`, then `uv sync`, then the
+   verification that the tag file, the checked-out tag and the installed
+   distribution all name the same version. Writing the tag file alone is
+   **not** deploying — that mistake left the host on v1.10.0 for five days
+   while every signal read v1.11.0 (C-343), and the fourth block is what
+   would have caught it. `docs/guides/server_quickref.md` holds the
+   commands; if this count and the quickref ever disagree, the quickref
+   wins.
 
 **Why this order:** If you tag before bumping, the tag points at code
 with the old version string — wrong. If you tag on `development`
