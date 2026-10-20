@@ -48,11 +48,15 @@
 #     2. `uv sync` never runs, so a dependency change never lands at
 #        all, no matter how many times the pipeline runs.
 #
-#   Deploy — and roll back — with ALL THREE steps in
+#   Deploy — and roll back — with ALL FOUR BLOCKS in
 #   docs/guides/server_quickref.md §"Deploy a new version": the tag
-#   file, then the git fetch/checkout, then `uv sync`. Deliberately not
+#   file, then the git fetch/checkout, then `uv sync`, then the
+#   verification that all three name the same version. Deliberately not
 #   repeated here: two copies of a procedure drifting apart is what
 #   C-343 IS, and a fix that adds a third copy would be the same bug.
+#   This comment said THREE until 2026-10-20, five weeks after the
+#   fourth block was added — a count is a copy too, which is exactly
+#   the drift the sentence above warns about.
 #   **If this comment and the quickref ever disagree, the quickref
 #   wins.** See docs/guides/hetzner_deployment_guide.md for full detail.
 #
