@@ -157,12 +157,29 @@ The existing 9-archive rotation cap in `_rotate_ledger()` (`digests_and_ledgers.
 `gaul_admin.py:_download_shapefile_zip()` now uses `request_with_retry` from `datafactory_http`, gaining exponential backoff retry consistent with all other downloaders.
 **Source:** Tech debt cleanup 2026-03-27
 
+### C-72: ~~HTTP 429 not distinguished from 500~~ RESOLVED 2026-10-21
+**Registered 2026-04-26 at Tier 4 with the trigger *"if UCDP or ACLED starts returning 429s during multi-page harvest (not observed to date)"*. The trigger fired on 2026-10-21 and the entry was resolved the same day.**
+
+**What it predicted.** `request_with_retry` failed fast on all 4xx, so a 429 rate-limit terminated a harvest immediately, `max_retries` was structurally dead for it, and no `Retry-After` was parsed. The entry noted impact would be *"higher for ACLED because multi-page pagination can be long-running and all in-memory events are lost on failure"*.
+
+**What happened.** The monthly cron (`0 0 21 * *`) aborted at `2026-10-21T00:07:44+00:00`, step 1/14, exit 1, on its first run under v1.15.0 — ACLED returned 429 at request ~71 of a cursor walk paced at 2s per page. Nothing was written, no export ran, and the dead-man heartbeat fired as designed. A manual re-run at 04:27 UTC succeeded end to end (363,161 events in 230.0s), confirming the condition was transient — which is the whole argument for retrying it.
+
+**How it was fixed (#511).** 429 is carved out of the 4xx fail-fast branch in `datafactory_http.retry` and retried on a rate-limit-scale backoff — 30s base, doubling, 120s ceiling, 5s jitter — honouring `Retry-After` when present. A `Retry-After` above the ceiling fails loud naming the value, because a wait that long is a quota block rather than a burst and sleeping it off would stall an unattended cron (ADR-011). Every other 4xx still fails fast. 408 was considered and excluded explicitly. Eleven call sites inherit the fix.
+
+**Governance.** ADR-027 had decided the opposite in writing — *"The HTTP retry layer should continue to fail fast on 4xx"* — and was narrowed by inline amendment rather than reversed: its justification (*"the pagination context is what makes the retry safe"*) is about **ambiguous** statuses, and UCDP's 400 rate-limit signal is the ambiguous case it was written for. 429 is never ambiguous, so the premise does not transfer. UCDP's 400 handling stays at the pagination layer, unchanged. ADR-018's Timeout Policy gained the classification rule.
+
+**What the fix does not establish, recorded because the gap is real.** ACLED's rate-limit window is still **unmeasured** — the 30s base is borrowed from UCDP's observed ~1 minute — and it is **unknown whether ACLED sends `Retry-After` at all**, because the branch this replaced logged only the status code. The new WARNING logs the header value or `absent` precisely to calibrate this on the next 429. Nor is it proven the incident was rate limiting rather than the cursor API degrading under load; 429 is what the server said.
+
+**Lineage.** Created by ~~C-83~~'s own fix (2026-05), which narrowed retries to exclude all 4xx and swept up the one transient member. Successor: **C-360** (no pipeline-wide retry budget).
+**Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 p.281. Updated: ACLED test review 2026-05-03. Resolved: production incident 2026-10-21, #511.
+**Location (at resolution):** `src/datafactory_http/retry.py`, `tests/test_http_retry.py::TestRateLimitRetry`.
+
 ### C-82: ~~No GAUL retry integration test~~ RESOLVED
 Added `test_gaul_admin.py` with `test_retries_on_transient_failure` (verifies `_download_shapefile_zip` retries via `request_with_retry`) and `test_skips_download_when_cached` (verifies cache-hit path).
 **Source:** Feathers, Beck, Nygard (expert review #7)
 
 ### C-83: ~~Retry retries on 4xx client errors~~ RESOLVED
-`request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.
+`request_with_retry` now catches `HTTPError` separately. 4xx responses (401, 404, etc.) raise immediately without retry. 5xx responses and connection errors still retry with backoff + jitter. ~~C-72 (429 specifically) remains — `Retry-After` header parsing not yet implemented.~~ **Corrected 2026-10-21:** C-72 is resolved (see below) — 429 is now carved out of this fail-fast branch and `Retry-After` is parsed. **This fix is also what created C-72**: narrowing the retry to exclude all 4xx swept up the one 4xx that means *later*, and the entry recording that residual then sat open for seven months until the trigger fired in production.
 **Source:** Nygard, Hickey (expert review #7)
 
 ### C-90: ~~Pipeline runs as interactive session, not a service~~ RESOLVED

@@ -10,6 +10,7 @@ import logging
 import random
 import time
 import urllib.parse
+from collections.abc import Mapping
 from typing import Any
 
 import requests
@@ -32,6 +33,54 @@ _SENSITIVE_QUERY_KEYS: frozenset[str] = frozenset({
 # original text: a redactor that returns its input on failure emits exactly
 # what it exists to suppress.
 _UNPARSEABLE_URL = "<unparseable-url-redacted>"
+
+# The one 4xx that means "later", not "never". A rate limiter is the server
+# asking us to slow down; the request itself was valid, which is why ACLED
+# returned seventy pages before the one that failed (#511, 2026-10-21).
+#
+# A frozenset rather than `== 429` so the neighbouring answers live next to
+# the data instead of in a commit message:
+#   408 is OUT. It means the server stopped waiting for OUR request; the
+#       client-side form of that fault already arrives as requests.Timeout
+#       and is already retried. No 408 has ever been observed here, so a
+#       408 test could only stand in for a hypothesis — and the rate-limit
+#       delay below would be the wrong delay for it.
+#   403 is OUT. Some providers rate-limit with 403, but here a 403 is a
+#       credential or scope fault, and retrying one burns the wait twice
+#       over to re-learn it.
+#
+# Members are rate-limit statuses specifically: the delay policy below is
+# sized to a rate-limit window. A status that is retryable for some other
+# reason would need its own delay, not this one.
+_RETRYABLE_CLIENT_STATUSES: frozenset[int] = frozenset({429})
+
+# Fallback wait when the server does not say how long. BORROWED, NOT
+# MEASURED: the only rate window observed anywhere in this repo is UCDP's
+# ~1 minute (sources/ucdp_annual.py). ACLED's is unknown, because the
+# fail-fast branch this change replaces logged only the status code, so the
+# 2026-10-21 incident never recorded whether a Retry-After header arrived.
+# The WARNING in _rate_limit_delay exists to capture that on the next 429,
+# which is what makes this number self-correcting rather than folklore.
+_RATE_LIMIT_BASE_DELAY_S: float = 30.0
+
+# Mirrors UCDP's window-scale jitter. At concurrency 1 this decorrelates
+# nothing; it is here because ADR-018's Timeout Policy states
+# backoff-with-jitter as doctrine, and a reader comparing the two paths
+# should not have to wonder why one of them lacks it.
+_RATE_LIMIT_JITTER_S: float = 5.0
+
+# Two readings of one number, both deliberate. It is the longest wait this
+# layer will ever perform, so the computed backoff is clamped to it. And a
+# server asking for MORE than our maximum wait is declaring a quota block
+# rather than a burst — Cloudflare-fronted 429s routinely carry 3600 or
+# 86400, and honouring one would stall an unattended monthly cron for a
+# day, which ADR-011 forbids far more clearly than it forbids retrying. So
+# a larger Retry-After fails loud, naming the value, which makes raising
+# this ceiling later a one-line change with evidence behind it.
+#
+# 120s is twice the only rate window measured in this repo (UCDP, ~1 min)
+# and twice ACLED's own 60s read timeout.
+_RATE_LIMIT_MAX_WAIT_S: float = 120.0
 
 
 def _redact_url(text: str) -> str:
@@ -197,21 +246,42 @@ def request_with_retry(
             resp.raise_for_status()
             return resp
         except requests.HTTPError as exc:
-            # 4xx client errors will never succeed on retry — fail fast
-            if (
-                exc.response is not None
-                and 400 <= exc.response.status_code < 500
-            ):
+            # getattr + isinstance rather than `exc.response is not None`
+            # and a bare comparison, for the reason _refuse_redirect gives
+            # below: a bare MagicMock is truthy everywhere, nine test
+            # modules patch this call site, and a non-int status would
+            # raise TypeError here — inside the except block, where
+            # `from None` cannot run and the chained token-bearing message
+            # prints.
+            code = getattr(exc.response, "status_code", None)
+            if isinstance(code, int) and code in _RETRYABLE_CLIENT_STATUSES:
+                # Rate limiting is the one 4xx worth waiting out. See
+                # _RETRYABLE_CLIENT_STATUSES for why this set has one
+                # member, and ADR-027's 2026-10-21 amendment for why this
+                # lives here rather than at each pagination layer: the
+                # pagination-context argument holds for AMBIGUOUS statuses
+                # (UCDP signals rate limits as 400, which could mean
+                # anything), and 429 is never ambiguous.
+                _retry_or_raise(
+                    attempt,
+                    max_retries,
+                    url,
+                    exc,
+                    delay=_rate_limit_delay(exc, url, attempt),
+                )
+            # Every other 4xx will never succeed on retry — fail fast
+            elif isinstance(code, int) and 400 <= code < 500:
                 logger.error(
                     "Client error %d (not retryable): %s",
-                    exc.response.status_code,
+                    code,
                     _redact_url(url),
                 )
                 # from None: the original message (and any chained
                 # context requests attached) embeds the full url with
                 # query credentials — it must not print in tracebacks.
                 raise _redacted_copy(exc) from None
-            _retry_or_raise(attempt, max_retries, url, exc)
+            else:
+                _retry_or_raise(attempt, max_retries, url, exc)
         except requests.RequestException as exc:
             _retry_or_raise(attempt, max_retries, url, exc)
     msg = "Unreachable"
@@ -248,17 +318,126 @@ def _refuse_redirect(resp: requests.Response, url: str) -> None:
     raise requests.RequestException(msg, response=resp)
 
 
+def _retry_after_seconds(resp: requests.Response | None) -> int | None:
+    """Parse ``Retry-After`` as delta-seconds, or None if unusable.
+
+    None for absent, non-mapping headers, non-numeric text, an HTTP-date,
+    or a value <= 0. Every one of those falls back to the computed backoff
+    rather than failing, because a slightly wrong wait is recoverable and
+    an exception raised from inside an ``except`` block is not.
+
+    ``Mapping``, not ``dict``: every real ``requests`` response carries a
+    ``CaseInsensitiveDict``, which subclasses ``MutableMapping`` and is
+    *not* a ``dict`` — an ``isinstance(headers, dict)`` guard here would be
+    False in production while every unit test passed on a plain dict, i.e.
+    a guard that cannot fire. A bare ``MagicMock`` is not a ``Mapping``
+    either, so this still refuses one. That matters because
+    ``int(MagicMock())`` raises ``TypeError`` from inside the ``except``
+    block, where ``from None`` cannot run and the chained, token-bearing
+    original message would print — the same hazard ``_refuse_redirect``
+    guards against, and every response in tests/test_http_retry.py is a
+    ``MagicMock``.
+
+    RFC 9110 §10.2.3 also permits an HTTP-date, which is deliberately not
+    parsed: that means reasoning about the provider's clock against ours
+    inside an error path, and a skewed date yields an absurd sleep. An
+    unparsed date costs nothing — it falls back to a real wait. If a
+    capture ever shows a provider sending dates, ``parsedate_to_datetime``
+    is a two-line change with evidence behind it.
+    """
+    headers = getattr(resp, "headers", None)
+    if not isinstance(headers, Mapping):
+        return None
+    raw = headers.get("Retry-After")
+    if not isinstance(raw, str):
+        return None
+    try:
+        # int, not float: rejects nan, inf and 1e9999 by construction
+        # rather than by three more comparisons. "45.5" falling back to
+        # the computed backoff is an acceptable loss.
+        seconds = int(raw.strip())
+    except (TypeError, ValueError):
+        return None
+    # Retry-After: 0 is legal but means an instant retry into a rate
+    # limiter, and a negative value would make time.sleep raise.
+    return seconds if seconds > 0 else None
+
+
+def _rate_limit_delay(
+    exc: requests.HTTPError,
+    url: str,
+    attempt: int,
+) -> float:
+    """Seconds to wait before retrying a rate-limited request.
+
+    Honours ``Retry-After`` when usable, falls back to a
+    rate-limit-scale backoff when it is not, and raises when the server
+    asks for longer than this layer will ever wait.
+
+    Raises:
+        requests.HTTPError: Redacted, when the requested wait exceeds
+            ``_RATE_LIMIT_MAX_WAIT_S``.
+    """
+    requested = _retry_after_seconds(exc.response)
+    # The measurement this change exists to start collecting. The branch
+    # it replaces logged only the status code, so we still do not know
+    # whether ACLED sends this header at all.
+    logger.warning(
+        "Rate limited (429) on attempt %d, Retry-After: %s",
+        attempt + 1,
+        "absent" if requested is None else f"{requested}s",
+    )
+    if requested is None:
+        # 2.0, not 2: mypy types `int ** int` as Any, because a negative
+        # exponent returns a float.
+        return min(
+            _RATE_LIMIT_BASE_DELAY_S * 2.0**attempt,
+            _RATE_LIMIT_MAX_WAIT_S,
+        ) + random.uniform(0, _RATE_LIMIT_JITTER_S)
+    if requested > _RATE_LIMIT_MAX_WAIT_S:
+        logger.error(
+            "Rate limited, Retry-After %ds exceeds the %.0fs ceiling "
+            "(not retryable): %s",
+            requested,
+            _RATE_LIMIT_MAX_WAIT_S,
+            _redact_url(url),
+        )
+        # Same redaction contract as _redacted_copy — same type, response
+        # and request preserved, message passed through _redact_url — with
+        # the refused value appended so raising the ceiling later is an
+        # evidence-backed change rather than a guess.
+        msg = (
+            f"{_redact_url(str(exc))} (Retry-After: {requested}s exceeds "
+            f"the {_RATE_LIMIT_MAX_WAIT_S:.0f}s ceiling)"
+        )
+        raise type(exc)(
+            msg, response=exc.response, request=exc.request
+        ) from None
+    # No jitter: the server named a time, so wait exactly that long.
+    return float(requested)
+
+
 def _retry_or_raise(
     attempt: int,
     max_retries: int,
     url: str,
     exc: requests.RequestException,
+    *,
+    delay: float | None = None,
 ) -> None:
     """Log and sleep for retry, or raise on final attempt.
 
     Raises a credential-redacted copy of ``exc`` (same type,
     response/request preserved) rather than re-raising the original,
     whose message may embed the full url with query credentials.
+
+    Args:
+        delay: Seconds to wait, for callers whose wait is set by policy
+            rather than by transport backoff (rate limiting). None means
+            use the transport backoff below. Parameterised rather than
+            duplicated because the part that would be duplicated is the
+            terminal raise above — the one block in this module where a
+            divergent copy leaks a credential.
     """
     if attempt == max_retries - 1:
         logger.error(
@@ -267,7 +446,8 @@ def _retry_or_raise(
             _redact_url(url),
         )
         raise _redacted_copy(exc) from None
-    delay = 2**attempt + random.uniform(0, 1)
+    if delay is None:
+        delay = 2**attempt + random.uniform(0, 1)
     logger.warning(
         "Request attempt %d/%d failed, retrying in %.1fs",
         attempt + 1,
