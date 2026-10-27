@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-09-08 — C-358 registered: this register is public and nothing screens which sibling repositories it cites; 15 of 32 are private. Caught by the FAO-note session, not by us. The effective default spans three files that nothing asserts are aligned (#483). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-10-26 — C-153's premise corrected (ACLED *does* report `total_count`, with a flag we never sent, #510) and C-364 registered: a UCDP annual event's whole span is booked to its `date_end` month, so one event holds 113,368 of a single cell-month and C-356's claim that the temporal axis was corrected is false. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 359 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 309 resolved-or-demoted, 47 open concerns (0 Tier 1, 4 Tier 2, 15 Tier 3, 22 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 167 resolved concerns as full entries + 19 early-archive reference rows + 125 struck-through in active register (300 unique after dedup — 5 appear in both archive and active) + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 364 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 51 open concerns (0 Tier 1, 4 Tier 2, 17 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -26,7 +26,7 @@
 | C-32 | — | Source registry returns `Any` | Accepted by design | — |
 | C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Before WDI integration (10th source) or multi-target deployment | Test infra |
 | C-70 | 4 | No circuit breaker for UCDP API | Before a second operator runs harvests concurrently, or before harvest concurrency is raised above 1 | UCDP resilience |
-| C-72 | 4 | HTTP 429 not distinguished from 500 | The first time a harvest fails with HTTP 429, or before raising harvest concurrency | UCDP resilience |
+| ~~C-72~~ | ~~4~~ | ~~HTTP 429 not distinguished from 500~~ | Trigger fired 2026-10-21; **RESOLVED** 2026-10-21 (#511) | — |
 | ~~C-74~~ | ~~4~~ | ~~CompilationConfig leaks strategy vocabulary~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-78~~ | ~~4~~ | ~~`_place_events` hard to test in isolation~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-79~~ | ~~4~~ | ~~Compilation/consolidation require real Parquet I/O~~ | Demoted to tech-debt backlog 2026-06-14 (trigger permanently fired — suite at 6m38s, functioning normally) | — |
@@ -89,14 +89,14 @@
 | D-38 | — | Script extraction timing — when does WET in scripts/ cross the extraction threshold | Deferred by design — WDI sprint provides 3rd pipeline script instance to validate abstraction | WET-before-DRY |
 | D-39 | — | Viewpoint builder abstraction — Protocol extraction vs explicit repetition | Open | Viewpoint architecture |
 | D-40 | — | DGP check module placement — source-agnostic `event_validation.py` vs per-source definitions | Open | Data soundness |
-| D-41 | — | OutputFormat vocabulary home: datafactory (chosen, ADR-050) vs views-frames (rejected: wrong dependency direction) | Resolved 2026-07-21 by ADR-050; revisit only if the vocabulary becomes multi-producer | Consumer contract |
-| D-42 | — | Pandas adapters home: stay in datafactory (chosen) vs relocate to views-pipeline-core (rejected: breaks the published ADR-050 contract; ADR-040/048 semantics belong beside the registry) | Resolved 2026-07-31; end state is deletion, not relocation. Revisit if the contract breaks for unrelated reasons | Dependency policy |
+| ~~D-41~~ | — | ~~OutputFormat vocabulary home: datafactory (chosen, ADR-050) vs views-frames (rejected: wrong dependency direction)~~ | Resolved 2026-07-21 by ADR-050; revisit only if the vocabulary becomes multi-producer | Consumer contract |
+| ~~D-42~~ | — | ~~Pandas adapters home: stay in datafactory (chosen) vs relocate to views-pipeline-core (rejected: breaks the published ADR-050 contract; ADR-040/048 semantics belong beside the registry)~~ | Resolved 2026-07-31; end state is deletion, not relocation. Revisit if the contract breaks for unrelated reasons | Dependency policy |
 | ~~C-144~~ | ~~3~~ | ~~Compilation `to_pydict()` materializes millions of Python objects~~ | Resolved 2026-06-26 (columnar `.to_numpy()` extraction + row-index bins, #275) | Scaling headroom |
 | ~~C-145~~ | ~~3~~ | ~~Viewpoint builder loads full consolidated store into memory~~ | Resolved 2026-06-26 (column-selective `pq.read_table()` in UCDP + ACLED builders, #276) | Scaling headroom |
 | C-146 | 4 | Assembly logic lives in script, not importable package | Assembly orchestration refactored or new assembly path added | Testability |
 | ~~C-147~~ | ~~4~~ | ~~No pipeline orchestrator in repository~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): wants a tool this project does not need at one monthly cron; carried since v1.2.x with a perpetual trigger and no incident. Re-register if the trigger becomes concrete. | Operations |
 | ~~C-148~~ | ~~4~~ | ~~Hardcoded Hetzner server IP in `defaults.py`~~ | Demoted to tech-debt backlog 2026-06-16 (mechanical fix, single-file, perpetual, Tier 4) | — |
-| C-153 | 3 | ACLED API has no TotalCount — silent truncation undetectable | ACLED enforces server-side result caps within a page | ACLED data integrity |
+| C-153 | 3 | **ACLED completeness is unverified because we never sent `with_total=true` — not because ACLED has no total.** The entry asserted "there is no server-reported total" and closed the question on it; #510 measured the same slice twice on 2026-10-20 and the flag returns `total_count`, constant across a full walk and equal to events collected. The string `with_total` appears nowhere in this repo | **Before the next change to ACLED fetch or pagination logic, or when #510 lands** — sending the flag makes ADR-027's tolerance rule applicable and closes this entry. Superseded trigger (unobservable, kept for the record): "ACLED enforces server-side result caps within a page" | ACLED data integrity |
 | C-154 | 4 | ACLED_FEATURES config duplicated between script and tests | Feature filter values changed in script but not tests | ACLED test quality |
 | ~~C-155~~ | ~~4~~ | ~~No shared visual audit framework — per-source scripts are idiosyncratic~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): a nice-to-have framework for per-source audit scripts; five sources shipped without it and none of them needed it. Re-register if the trigger becomes concrete. | Visual audit |
 | ~~C-195~~ | ~~4~~ | ~~37 falsification test files accumulated without curation (3,129 lines)~~ | Demoted to tech-debt backlog 2026-06-19 (no correctness risk, single-developer scope) | — |
@@ -190,6 +190,11 @@
 | C-358 | 4 | **This register is public and nothing screens what it cites from sibling repositories.** On 2026-09-08 a C-353 amendment published `managers/api.py` line numbers from **views-faoapi, which is private**, into this register and a public issue. Corrected the same day. **15 of the 32 views-platform repositories are private**, and this register cites siblings constantly | **Before citing a views-platform repository by file path in this register or a public issue, check it against the visibility list in the entry.** Also when any repository changes visibility, or a new private one is added | Disclosure hygiene |
 | C-359 | 3 | **A short ACLED harvest is recorded as `outcome: "success"` — `n_events` is written to the ingestion ledger and never read back.** `compare_snapshots()` computes `n_removed` and discards it; no aggregate count check exists on the path. A *zero*-event year fails loud; any non-zero shortfall does not. Worst case is the current year, re-fetched every run: the short snapshot overwrites the good one and the next run finds it digest-consistent, making the truncation the cached truth. ADR-027 exists because this happened to UCDP (335,918 of 384,918) | **Before the next change to how any harvester terminates a fetch** — pagination, retry or cache logic. Also if ACLED's envelope starts reporting `total_count`, which would make ADR-027's existing rule applicable (see C-153) | ACLED data integrity |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
+| C-360 | 4 | **A 429 is now waited out per request, but nothing bounds the wait across a run.** The per-request wait is capped (≤100s, two attempts), so a single request cannot stall. The pipeline-wide total is linear in request count and bounded only by the healthchecks.io grace window — ACLED alone walks ~30 years. Successor to resolved C-72, which fixed the classification without adding a budget | **Before harvest concurrency is raised above 1**, or the first run whose wall clock exceeds the monitoring grace window. Same family as C-70 — decide whether the two merge rather than both staying deferred | HTTP resilience |
+| C-361 | 3 | **The export's `scan` phase reads the whole 37.355 GB grid once per feature — 79 passes, 2.951 TB from the block device — to collect 1/79 of it each time.** The feature axis is contiguous, so `grid[:, :, :, i]` strides 316 bytes and uses 51.9 of every 4096-byte page (**1.27%**). Measured 8,434.2s, 47.5% of the export; `utime/wall = 0.0198`, so 98% of the phase is moving bytes and 2% is arithmetic. Cost is **O(F²)** in feature count. This is #501's missing *why* for `scan`; the remedy (traverse once, ~165s projected) is deliberately not implemented | **Before the 10th source's features enter the grid** (WDI, 20–50 features — same trigger as C-29): at ~120 features this code reads ~6.8 TB and `scan` alone passes 5 hours. Also before any RAM purchase is costed against export time | Export cost |
+| C-362 | 4 | **The server was rescaled on 2026-05-28 and the rescale was never recorded, so two ADRs reason from a hardware premise that is false.** Measured 8 vCPU / 16 GB RAM / 16 GB swap against a documented 4 vCPU / 8 GB. ADR-030:82 justifies the Rust raster path on *"memory predictability. The production server has 8 GB RAM"*; ADR-035:140 concludes *"No OOM risk"* for V-Dem's ~4.1 GB from the same figure. Neither conclusion is shown wrong — only its stated premise. Demonstrated cost: #516's hypothesis was written against 8 GB and would have answered a RAM-purchase question from a 4.7× overcommit that is really 1.17× | **Before any analysis, ADR or purchase decision rests on the server's RAM or vCPU figure**, and at the next rescale. Re-check ADR-030 and ADR-035 on their merits rather than assuming they survive | Hardware premise |
+| C-364 | 3 | **A UCDP annual event's whole date span is booked to its `date_end` month, so a 365-day episode becomes one cell-month.** `profiles.py:103` sets `source_distribution_map={"annual": "date_end_only"}`; the `even_split` default never applies to this source. Measured: cell 148759 month-id 504 holds **113,395**, of which **113,368 is a single event** spanning all of 2021 (UCDP 463131, `where_prec=5`, `date_prec=5`). In a 457–504 window, **4 cell-months carry 37.4% of all `ged_sb_best` mass** and no feature distinguishes them — the 79 delivered features carry no `date_prec`/`where_prec`. C-356 asserted the temporal axis *was* corrected; it is not | **When the delivered partition is extended past month-id 504** — UCDP 463137 (**121,848**, Aug–Oct 2022) lands in the same cell at month-id 512–514, larger than the one already there. Also before any change to the three-file distribution default (see C-356) | UCDP imprecision |
+| C-363 | 4 | **`logs/pipeline_duration.json` is written only on the success path, so after a failed run it still reports the previous success.** `refresh_pipeline.sh:336-341` writes it after the failure sentinel is cleared; a failure leaves the last good file untouched. Two operator-facing guides send an operator to it by name. The embedded `finished` timestamp is the only thing separating stale from fresh, and nothing prompts the reader to check it | **Before the duration record is used to answer whether a run got slower, or how far a failed run got** — the 21 October abort left the September duration standing as the newest answer | Operational observability |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -223,7 +228,7 @@ the table below rather than removed, so the table has ten rows. C-331 closed 202
 | **C-346** | A conditional `xfail` that asserts the very condition selecting it — green in every state |
 | ~~**C-331**~~ | ~~`HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice~~ — **closed 2026-08-10, drilled with a negative control** |
 | **C-336** | Governance docs true when written, false later, nothing failing in between |
-| **C-337** | `views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever |
+| ~~**C-337**~~ | ~~`views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever~~ — **closed 2026-08-21 (#462)** |
 | **C-338** | Freshness detection that runs daily-and-by-issue rather than alerting |
 | **C-339** | `tee` wrote to an unintended path as root and exited 0 |
 | **C-340** | `git push` succeeds onto a merged branch; `gh pr merge` exits 0 without changing the method |
@@ -257,22 +262,22 @@ Items that should be resolved together:
 | Package | Items | Trigger |
 |---------|-------|---------|
 | **Server hardening** | C-88, C-97, ~~C-148~~, C-173, C-224, C-318 (C-84, C-85, C-86, C-87 resolved; C-173 recalibrated 3→4; C-121 demoted 2026-06-10; C-97, C-148 added 2026-06-12; C-148 demoted 2026-06-16; C-318 added 2026-07-27) | Before production deployment or server migration |
-| **UCDP API resilience** | C-70, C-72, ~~C-181~~ (C-181 added 2026-06-12; C-181 demoted 2026-06-24) | Multi-operator deployment or UCDP rate-limiting observed |
+| **UCDP API resilience** | C-70, ~~C-72~~, C-360, ~~C-181~~ (C-181 added 2026-06-12; C-181 demoted 2026-06-24; C-72 resolved 2026-10-21 and succeeded by C-360) | Multi-operator deployment, or harvest concurrency raised above 1 — the rate-limiting half of this package is no longer hypothetical: it was observed 2026-10-21 |
 | ~~**UCDP schema defense**~~ | ~~C-36~~, ~~C-37~~, ~~C-45~~, ~~C-175~~ | Resolved 2026-06-19 (ADR-046 + DGP validation, #209/#212) |
 | **Test infrastructure** | C-29, ~~C-79~~, C-146, ~~C-267~~, ~~C-270~~ (C-60, C-169 resolved; C-78 demoted; C-79 demoted 2026-06-14; C-146 recalibrated 3→4; C-267, C-270 resolved 2026-06-18) | Test suite growth |
-| **Operational monitoring** | ~~C-131~~, ~~C-136~~, C-147, ~~C-237~~ (C-132, C-191 resolved; C-238, C-239 resolved 2026-06-06; C-265 resolved 2026-06-10; C-136 demoted 2026-06-16; C-237 resolved 2026-06-18; C-131 resolved 2026-06-24 #258) | Before relying on Hetzner pipeline without manual checks |
+| ~~**Operational monitoring**~~ | ~~C-131~~, ~~C-136~~, ~~C-147~~, ~~C-237~~ (C-132, C-191 resolved; C-238, C-239 resolved 2026-06-06; C-265 resolved 2026-06-10; C-136 demoted 2026-06-16; C-237 resolved 2026-06-18; C-131 resolved 2026-06-24 #258; C-147 demoted 2026-08-04 — package now empty) | Before relying on Hetzner pipeline without manual checks |
 | **Source registry integrity** | ~~C-236~~, ~~C-293~~, D-33 (C-235, D-32 resolved #105; C-293 resolved 2026-06-19 #208) | Before next data source integration (WDI) |
 | ~~**Scaling headroom**~~ | ~~C-144~~, ~~C-145~~, ~~C-179~~, ~~C-223~~ (C-179 demoted 2026-06-24; C-223 resolved 2026-06-24 — memmap, ADR-037; C-144 resolved 2026-06-26 — columnar extraction #275; C-145 resolved 2026-06-26 — column-selective reads #276) | Resolved 2026-06-26 (all items resolved) |
 | ~~**Harvest correctness**~~ | ~~C-185~~ (C-182, C-184, C-186, C-188 resolved; C-185 demoted 2026-06-24) | All items resolved or demoted |
 | ~~**Count conservation**~~ | ~~C-241~~, ~~C-249~~, ~~C-291~~, C-301 (C-242, C-243, C-244 resolved PR #135; C-291 resolved #260, C-249 resolved #261, C-241 resolved #262 — sprint #258; C-301 added 2026-06-28 — ADR-048 regression, conservation no-op for direct callers) | C-301: new consumer calls `grid_to_country_month()` directly without `feature_agg_types` |
 | ~~**GAUL data integrity**~~ | ~~C-247~~, ~~C-250~~, ~~C-268~~ (C-246, C-248 resolved #136) | Resolved 2026-06-19 (#211) |
-| **WET-before-DRY refactor** | C-07, C-154, C-155, C-164, ~~C-195~~, ~~C-230~~, C-287, D-38, D-39 (C-44 merged into C-164; C-230 resolved 2026-06-18; C-154 added 2026-06-12; C-287 added 2026-06-14; C-195 demoted 2026-06-19; D-38, D-39 added 2026-06-19) | Before WDI or next refactor sprint |
+| **WET-before-DRY refactor** | C-07, C-154, ~~C-155~~, C-164, ~~C-195~~, ~~C-230~~, C-287, D-38, D-39 (C-44 merged into C-164; C-230 resolved 2026-06-18; C-154 added 2026-06-12; C-287 added 2026-06-14; C-195 demoted 2026-06-19; D-38, D-39 added 2026-06-19; C-155 demoted 2026-08-04) | Before WDI or next refactor sprint |
 | ~~**V-Dem test & doc gaps**~~ | ~~C-203~~, ~~C-204~~, ~~C-205~~, ~~C-206~~, ~~C-207~~, ~~C-208~~, ~~C-209~~, ~~C-210~~, ~~C-211~~, ~~C-212~~, ~~C-213~~, ~~C-214~~, ~~C-215~~, ~~C-216~~ | Resolved 2026-05-26: all items resolved in V-Dem sprint |
 | **Artifact consistency** | ~~C-253~~, ~~C-254~~, ~~C-255~~, ~~C-259~~, ~~C-260~~, ~~C-261~~, ~~C-262~~, ~~C-231~~, ~~C-280~~, ~~D-34~~, ~~D-36~~, D-37 (C-231 demoted 2026-06-24; C-280 resolved 2026-06-26 #282) | Before expanding consumer bridge beyond UCDP-only features |
 | **Data soundness** | ~~C-256~~, ~~C-257~~, ~~C-258~~, ~~C-269~~, D-35 | Before next data source integration (WDI) or next consolidation/viewpoint change |
 | ~~**Infrastructure test coverage**~~ | ~~C-189~~, ~~C-271~~, ~~C-273~~, ~~C-276~~, ~~C-280~~, ~~C-296~~, ~~C-297~~, ~~C-289~~ (C-272, C-277, C-278 demoted 2026-06-10; C-274, C-275, C-279 demoted 2026-06-12; C-281 resolved 2026-06-11; C-189 added 2026-06-12; C-289 added 2026-06-14; C-289 resolved 2026-06-18; C-296, C-297 added 2026-06-24; C-273 demoted 2026-06-24; C-296, C-297 resolved 2026-06-24 #235, #236; C-189, C-271, C-276, C-280 resolved 2026-06-26 #281-#284) | Resolved 2026-06-26 (all items resolved or demoted) |
-| **Provenance resilience** | C-46, ~~C-136~~, ~~C-270~~, ~~C-271~~ (C-270 resolved 2026-06-18; C-271 resolved 2026-06-26 #281) | Before production ledger exceeds 10MB or next provenance refactor |
-| **Query layer resilience** | C-116, C-117, C-300, ~~C-290~~ (C-290 added 2026-06-14; C-290 resolved 2026-06-24 #237; C-300 added 2026-06-28) | Consumer reports transient failures or slow remote queries |
+| ~~**Provenance resilience**~~ | ~~C-46~~, ~~C-136~~, ~~C-270~~, ~~C-271~~ (C-270 resolved 2026-06-18; C-271 resolved 2026-06-26 #281; C-46 demoted 2026-08-04 — package now empty) | Before production ledger exceeds 10MB or next provenance refactor |
+| ~~**Query layer resilience**~~ | ~~C-116~~, ~~C-117~~, ~~C-300~~, ~~C-290~~ (C-290 added 2026-06-14; C-290 resolved 2026-06-24 #237; C-300 added 2026-06-28; C-300 resolved 2026-07-15 #325; C-116, C-117 demoted 2026-08-04 — package now empty) | Consumer reports transient failures or slow remote queries |
 | ~~**Cross-layer verification**~~ | ~~C-288~~ | Resolved 2026-06-15 (tests/test_cross_layer_contracts.py: 24 tests covering all 6 sources) |
 | ~~**Cross-repo alignment**~~ | ~~C-264~~ | Resolved 2026-06-14 (partition boundaries updated in defaults.py) |
 | ~~**Doc/code consistency**~~ | ~~C-282~~, ~~C-283~~, ~~C-284~~ | Resolved 2026-06-14 (PR #169: temporal routing, ADR-014 P6, ADR-028 event_type_filter) |
@@ -769,14 +774,14 @@ Cross-ref: C-242 (resolved same PR), C-241 (intensive feature gap, still open), 
 
 See also C-130 (zero-filled future months), C-133 (zero-padding warning bypass), C-286 (temporal anchor).
 
-### C-153: ACLED API has no TotalCount — silent truncation undetectable — [OPEN]
+### C-153: ACLED API has no TotalCount — silent truncation undetectable — [OPEN — PREMISE CORRECTED 2026-10-20]
 
 | Field | Value |
 |-------|-------|
 | ID | C-153 |
 | Tier | 3 |
 | Source | ACLED test review (2026-05-03) |
-| Trigger | ACLED API starts enforcing server-side result caps or query complexity limits that return partial data within a single page |
+| Trigger | ~~ACLED API starts enforcing server-side result caps or query complexity limits that return partial data within a single page~~ — **rewritten 2026-10-25:** the original fires on a world event we have no instrument to observe, which on a *detectability* concern means it can never be known to have fired. **Before the next change to ACLED fetch or pagination logic, or when #510 lands.** |
 | Location | `src/datafactory_harvester/sources/acled.py:fetch_paginated()`, `docs/ADRs/027_harvest_count_verification.md` |
 
 The ACLED API response envelope has `"count": null, "total_count": null` — there is no server-reported total to verify pagination completeness. The harvester terminates on empty/short pages (correct behavior for complete pagination) but cannot detect if the API silently caps results within a page. Unlike UCDP (which provides `TotalCount`), there is no way to verify "did I get everything?" without an independent count source. ADR-027 documents this as an accepted limitation with the short-page heuristic as the only available detection signal. Not Tier 1/2 because: (a) short-page heuristic catches most truncation, (b) documented in ADR-027, (c) no evidence truncation occurs in practice. Medium because: if it does occur, downstream models train on incomplete data with no error signal.
@@ -810,6 +815,42 @@ Parity between the two methods was measured before the deadline, because it coul
 after: 7,609 events, 8 requests each way, identical on four oracles
 (`reports/investigation_acled_cursor/findings.md`). Cross-ref C-359 (the harvest-count gap this
 investigation surfaced), #487, #488.
+
+**Amendment 2026-10-20 (#510) — the premise is false. ACLED does report a total; we never asked for one.**
+
+The paragraph above states *"There is still no server-reported total"* and closes with *"Had either
+field carried a value this entry would have **closed**; it did not."* **It does, with one query
+parameter.** #510 measured the same slice twice, identical but for the flag:
+
+```
+without with_total   ->  count: None   total_count: None
+with with_total=true ->  count: 5      total_count: 2340
+```
+
+`next_cursor` was unchanged by the flag, so it composes with cursor pagination rather than replacing
+it. A full three-page walk then reported `total_count: 2340` on **every** page — constant across the
+walk, and exactly equal to the events collected. The string **`with_total` appears nowhere in this
+repository** — not in code, not in docs, not in this register.
+
+**Why this entry got it wrong, which is the part worth keeping.** The 2026-10-10 addendum above
+re-confirmed `total_count: null` *"on every page of an 8-page walk"* and treated that as settling
+the question. It did not, because it measured the **default** envelope — and a field that requires
+an opt-in flag cannot appear in a response that never requested it. The measurement was sound and
+the inference from it was circular: it confirmed the absence of something we were not asking for.
+Five months of this entry, and ADR-027's ACLED exemption, rest on that inference.
+
+**What changes.** Tier stays 3 — the severity is unchanged, and nothing about the delivered data is
+known to be wrong. What changes is cost and closability: this was an accepted permanent limitation
+and is now a one-parameter fix that closes this entry, makes ADR-027's existing tolerance rule
+applicable to ACLED, and renders C-359 largely redundant by its own stated condition. It also
+removes the reason ACLED is exempt from a rule every other source follows.
+
+**Not fixed here.** Sending the flag is #510's work, and ADR-027's ACLED exemption needs amending
+when it lands. This amendment only stops the register asserting the opposite.
+
+Cross-ref: **#510** (the measurement and the fix), C-359 (whose redundancy condition this
+satisfies), ADR-027 (the exemption that rests on the false premise), C-362 and C-336 (the same
+failure shape: a premise measured once and never re-derived).
 
 ### C-164: Cross-layer WET debt — 6 sources replicate patterns across all 4 layers — [TRIGGER FIRED]
 
@@ -1285,6 +1326,15 @@ retry, or cache logic. That is when a shortfall becomes likely and when nothing 
 fires if ACLED's envelope ever starts reporting `total_count`, which would make ADR-027's existing
 rule applicable and this entry largely redundant (see C-153).
 
+**Update 2026-10-20 (#510): that condition is satisfied, and this entry is now waiting on a fix
+rather than on a provider.** ACLED reports `total_count` when `with_total=true` is sent — measured,
+constant across a full walk, equal to events collected. The clause above was written as a
+hypothetical about ACLED changing; it was in fact a parameter we had never sent (see C-153's
+2026-10-20 amendment). Once #510 sends it, `n_events` has something to be checked against and this
+entry largely closes. **It does not close on its own** — the ledger-write-never-read gap is this
+entry's actual subject, and a total that arrives in the envelope is only useful if something
+compares the two.
+
 **Location:** `_fetch_single_year()` and `fetch_acled()` in
 `src/datafactory_harvester/sources/acled.py`; `last_digest_for_version()` in
 `src/datafactory_provenance/digests_and_ledgers.py`; `compare_snapshots()` in
@@ -1397,7 +1447,10 @@ Partially addressed by `test_integration.py` (100 events, realistic pipeline). F
 After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. Kleppmann (Ch.7 p.231) warns that retrying overload "will make the problem worse, not better" and recommends exponential backoff with distinct handling for overload vs transient errors. Ch.8 pp.281-283 discusses timeout-based fault detection and network congestion amplification. **Trigger: implement before multi-operator or automated deployment.**
 **Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 pp.281-283.
 
-### C-72: HTTP 429 not distinguished from 500 — [DEFER]
+### ~~C-72: HTTP 429 not distinguished from 500~~ RESOLVED 2026-10-21
+**Trigger fired 2026-10-21 and the deferral expired the same day.** The monthly cron aborted at 00:07 UTC, step 1/14, when ACLED returned 429 partway through a 71-request cursor walk — exactly the condition this entry predicted on 2026-04-26 and deferred as *"not observed to date"*. Resolved in #511: `request_with_retry` retries 429 on a rate-limit-scale backoff honouring `Retry-After` under a 120s ceiling, every other 4xx still fails fast, and ADR-027's "fail fast on 4xx" sentence was narrowed by inline amendment. Full entry in `archive/technical_risk_register_resolved.md`. Successor: **C-360** (no pipeline-wide budget). Original text below, unedited.
+
+~~[DEFER]~~
 Rate-limit responses get the same retry treatment as server errors. No `Retry-After` header parsing. `request_with_retry` fails fast on all 4xx (no retry), meaning a 429 rate-limit terminates the harvest immediately. Kleppmann (Ch.7 p.231) explicitly argues "it is only worth retrying after transient errors (e.g., deadlock, network interruption); after a permanent error, a retry would be pointless" and that overload errors need distinct handling. Ch.8 p.281 notes short timeouts risk declaring healthy services dead during load spikes. **Trigger: if UCDP or ACLED starts returning 429s during multi-page harvest (not observed to date). Impact is higher for ACLED because multi-page pagination can be long-running and all in-memory events are lost on failure.**
 **Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 p.281. Updated: ACLED test review 2026-05-03.
 **Location:** `src/datafactory_http/retry.py` (4xx fail-fast logic), `src/datafactory_harvester/sources/acled.py:fetch_paginated()`.
@@ -2689,7 +2742,7 @@ Also noted: `_redacted_copy` preserves `response`/`request` by design (callers d
 | Tier | 3 — same class as C-322, which was tiered 3; not currently reachable, but the sinks are ordinary log lines and the guarantee is not structural |
 | Source | Five-angle security sweep, credential-carrier audit of `src/` (2026-07-31) |
 | Trigger | Any change to `backends_zarr.py` or `datafactory_http/retry.py` — extend `_redact_url` to strip userinfo, export it, apply it to `zarr_path`, and log the netrc *path* and exception *type* rather than the exception |
-| Location | `src/datafactory_http/retry.py:31-62`, `src/datafactory_query/backends_zarr.py:80-86,130-213`, `src/datafactory_harvester/sources/acled.py:244-249` |
+| Location | `src/datafactory_http/retry.py:31-62`, `src/datafactory_query/backends_zarr.py:80-86,130-213`, `src/datafactory_harvester/sources/acled.py:244-249`, `src/datafactory_harvester/harvest_runner.py:58` (added 2026-10-21, #513 — see addendum) |
 
 Cross-ref: C-322 (the partial fix this completes), C-324 (the live instance), C-318 (why a userinfo URL is tempting for consumers in the first place).
 
@@ -2698,6 +2751,18 @@ Cross-ref: C-322 (the partial fix this completes), C-324 (the live instance), C-
 Fixed by wrapping `_redact_one` in `try/except ValueError` returning `<unparseable-url-redacted>` — deliberately *not* the input, since returning the input on failure is what made this a leak. Also fixed: the mask rendered as `%2A%2A%2A` because `urlencode` escapes `*`, so an operator grepping `refresh.log` for `token=***` to confirm redaction was running would find nothing; now `urlencode(..., safe="*")`. Four regression tests added, including a parametrized "never raises" table and a positive `token=***` assertion — the pre-existing tests asserted only that the secret was *absent*, which is how the encoded form shipped unnoticed.
 
 **Still open:** gaps 1 (userinfo), the `;`-separator variant, gap 2 (`zarr_path` interpolated raw into seven messages), gap 3 (netrc exception contents), gap 4 (credential reprs). Trigger unchanged.
+
+**Addendum 2026-10-21 (#513) — the trigger's "export it" is done, the "still open" line above is stale on gap 1, and a fifth sibling turned up.**
+
+Three corrections and one addition, from the ACLED failed-fetch work. The trigger fired in the ordinary way: a change touched `datafactory_http/retry.py` and needed the redactor somewhere new.
+
+1. **"Export it" — done.** The trigger's remedy list said to export `_redact_url`. It is now `datafactory_http.redact_url` (`src/datafactory_http/__init__.py`), re-exported under `__all__` while the implementation stays module-private. The consumer is the new ACLED failed-fetch ledger entry, which writes an exception message to a world-readable file. Note what the export did *not* do: it cannot serve `datafactory_query`, which `tests/test_import_enforcement.py` forbids from importing `datafactory_http` at all — which is why gap 2's fix is the local `_safe_url` (`backends_zarr.py:45`) and not a shared call. The trigger's phrasing assumed one remedy would cover both consumers; it does not, and that is a property of the dependency rules rather than an oversight.
+
+2. **Gap 1 is fixed, and the "Still open" line above is wrong.** Verified empirically on 2026-10-21 against the project interpreter: `https://user:PASSWORD@host/p?token=SECRET` → `https://***:***@host/p?token=***`, and the no-query form `https://user:PASSWORD@host/p` → `https://***:***@host/p`. Both the userinfo masking and the widened `("?" in part or "@" in part)` filter are in `retry.py`, pinned by `test_redact_url_masks_userinfo_without_a_query` and two siblings. The line above was written 2026-07-31 and the fix landed later without it being revisited — **the same failure mode as C-72**, where a deferral note kept reading as current long after the system under it had changed. Gaps 2, 3, 4 and the `;`-separator variant were **not** re-audited here and are not claimed either way.
+
+3. **A fifth sibling, not previously listed: the shared harvest runner prints the raw exception.** `src/datafactory_harvester/harvest_runner.py:58` is `print(f"FAIL: {e}")`, on the failure path of **all nine** harvest scripts, and the caller tees stdout into `logs/refresh.log` — the exact sink of C-322. Today it is not a live leak: every source's HTTP goes through `request_with_retry`, which hands back messages already passed through `_redacted_copy`. It is listed because the guarantee is the caller's rather than the sink's, so any future error path that raises without the HTTP layer — a parse error quoting a URL, a credentialed path in an `OSError` — reaches that `print` unmasked. Deliberately **not** fixed in #513: it is one shared line on nine scripts' failure path, which is a permanent guard in a shared file and the wrong thing to attach to a bug fix. The ACLED call site that this story owns does redact (`scripts/harvest_acled.py`).
+
+The Location row above carries it.
 ---
 
 ### C-334: Removing a runtime dependency from a published library breaks dependents that relied on it transitively
@@ -3021,7 +3086,7 @@ Cross-ref: C-257 (no input data validation), D-35 (test scope). Part of work pac
 
 ---
 
-### D-41: OutputFormat vocabulary home — datafactory (chosen) vs views-frames (rejected)
+### ~~D-41: OutputFormat vocabulary home — datafactory (chosen) vs views-frames (rejected)~~ — RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -3032,7 +3097,7 @@ Cross-ref: C-257 (no input data validation), D-35 (test scope). Part of work pac
 
 Cross-ref: ADR-050, #116, epic #342, views-frames#200. Part of work package: **Consumer contract**.
 
-### D-42: Home of the pandas adapters — stay in datafactory (chosen) vs relocate to views-pipeline-core (rejected)
+### ~~D-42: Home of the pandas adapters — stay in datafactory (chosen) vs relocate to views-pipeline-core (rejected)~~ — RESOLVED
 
 | Field | Value |
 |-------|-------|
@@ -3779,6 +3844,10 @@ Cross-ref: C-352 (the same attribute's UCDP scoping — open, with views-postpro
 
 So one axis of the same imprecision is corrected and the other is not, for fidelity to a system being migrated away from.
 
+**Correction 2026-10-26 — the paragraph above is wrong about production, and the error ran for four months.** `even_split` is the dataclass default but **not what production uses for the UCDP annual source.** `profiles.py:103` sets `source_distribution_map={"annual": "date_end_only"}`, so an annual event receives **no temporal distribution at all** — its whole span is booked to its `date_end` month. Measured in `data/viewpoint/production_parity.parquet`: cell 148759's peak month-id 504 (2021-12) holds **113,395**, of which **113,368 is one event** (UCDP id 463131, `where_prec=5`, `date_prec=5`, 2021-01-01 → 2021-12-31). Not ~9,447 x 12.
+
+**So neither axis is corrected in production, and this entry claimed one was.** The `121,915` peak-month figure quoted above and in the June report is from the `even_split`/gold path, which production does not take for this source — the number everyone cites was produced by a different strategy than the pipeline runs. The spatial half is tracked here; the temporal half was tracked nowhere until **C-364**, which carries it. See C-364 for the mechanism, the affected cell-months and the modelling consequence.
+
 **What is actually unverified, and why that is the concern.** ADR-049 proposes the mirror strategy and recommends it ship **opt-in, with parity as the default**. Whether that is what shipped — and therefore whether the delivered store contains the concentration today — **has not been confirmed by anyone**. ~~C-304~~ tracked ADR-049's §2 table drifting from its code and was resolved; the far larger question of which mode is live was never registered.
 
 **AMENDED 2026-09-02 — investigated, and the answer is yes on both counts.**
@@ -3869,6 +3938,264 @@ Cross-ref: C-356 (the same parity constraint, where it costs something now), C-1
 **A better reason not to cite privately than "it is private".** The fao02 session, told the fidelity test *was* safe to name, declined to name it anyway: naming a repository as the thing whose test fails reads as attribution however carefully it is phrased. That is a stronger standard than visibility, and it also caught an inconsistency inside their own document — a note whose Topic C asks FAO whether a private repository may be published should not, in Topic G, casually cite that repository's internals. **Visibility is the floor, not the test.**
 
 Cross-ref: ~~C-328~~ (the first instance of the same mechanism — identities rather than repositories), C-353 (the amendment that carried the disclosure), C-323 (the same "public artifact, unscreened content" family on the server side). GitHub: #471.
+
+### C-360: A 429 is waited out per request; nothing bounds the waiting across a run
+
+Successor to ~~C-72~~, registered on its resolution rather than discovered separately: #511 fixed the *classification* (429 is retryable) and deliberately did **not** add a budget.
+
+**What is bounded.** Per request, a 429 costs at most two sleeps. With no `Retry-After` that is 30s then 60s, plus up to 5s jitter each — **≤100s, then the request fails loud.** A `Retry-After` above the 120s ceiling fails immediately. So no single request can stall a run.
+
+**What is not bounded.** The pipeline-wide total, which is linear in request count. ACLED alone walks roughly thirty years of data; a world where every request is rate-limited once and then succeeds adds ~30s per request, which is hours on top of an already ~7-hour run. The pipeline's only global bound is the healthchecks.io `/start` ping and its grace window (`scripts/refresh_pipeline.sh`), which converts a stalled run into an alert rather than silence.
+
+**Why no budget was built.** A global retry budget is a permanent guard in shared code, on the path of every future change to every source — the exact cost this project has measured elsewhere (one sibling repo's config validator grew 303 → 1,167 lines and 17 → 111 guards). The out-of-band grace window is pre-existing machinery already doing the job, and ADR-051 established out-of-band alerting that does not block the pipeline as the preferred instrument. Adding a second, in-code budget would duplicate it with worse failure behaviour.
+
+**Tier 4.** No correctness impact and no silent failure: the outcome is a longer run or a loud abort, both visible. It is on the register because the trigger is specific and foreseeable rather than hypothetical.
+
+**Trigger: before harvest concurrency is raised above 1, or the first run whose wall clock exceeds the monitoring grace window.** At concurrency 1 the arithmetic above holds; at concurrency *n* it does not, and the jitter that currently decorrelates nothing starts to matter.
+
+**Location:** `src/datafactory_http/retry.py` (`_rate_limit_delay`, `_RATE_LIMIT_MAX_WAIT_S`), `scripts/refresh_pipeline.sh` (the `/start` heartbeat that is the de facto bound).
+**Source:** #511 implementation, 2026-10-21. Registered as the named residual of a fix rather than found by an audit.
+Cross-ref: **C-70** (no circuit breaker for the UCDP API — same family, also Tier 4, also deferred; a reviewer should decide whether these two merge rather than both sitting open), ~~C-72~~ (resolved predecessor), ADR-018 Timeout Policy, ADR-027's 2026-10-21 amendment.
+### C-361: `scan` reads the grid once per feature because the feature axis is the contiguous one
+
+The residual of #501 and the finding of #516. #501 established *where* the export's five hours go; it
+could not say *why*, and the honest statement in its report was "something is non-linear and we do not
+know what". For `scan`, we now do.
+
+**The mechanism, arithmetic first.** `grid.npy` is **37,349,683,328 bytes** — shape `(456, 360, 720, 79)`
+`float32`, C-order, strides `(81907200, 227520, 316, 4)`, read from the file header rather than inferred.
+F is the last and therefore contiguous axis, so `grid[:, :, :, i]` steps 316 bytes between wanted
+elements. A 4096-byte page yields `4096 / 316 = 12.96` of them — **51.9 useful bytes per page, 1.27%
+utilisation.** One pass must therefore touch every page in the file to collect 1/79 of it, and
+`export_zarr.py:252-263` does that 79 times. The code's own comment already said this; what did not
+exist was the number.
+
+**Measured, 2026-10-22, `views-datafactory-00`, production numpy 2.4.3** (`e1_raw_2026-10-22.jsonl`):
+
+| F | wall/pass | `read_bytes`/pass | amplification | MB/s |
+|---:|---:|---:|---:|---:|
+| 1 | 122.35s | 37,351,559,168 | 1.000× | 305.3 |
+| 2 | 126.05s | 37,355,397,120 | 2.000× | 296.4 |
+| 4 | 125.63s | 37,355,213,824 | 4.001× | 297.3 |
+| 8 | 109.76s | 37,355,058,176 | **8.001×** | 340.3 |
+
+Amplification was measured from `/proc/self/io` `read_bytes` — bytes fetched from the block device —
+not inferred from a clock, which is what makes it a measurement of the mechanism rather than a model
+fitted to a duration. Production's 79 passes therefore move **2.951 TB** to traverse a 37.35 GB file.
+
+**It is not CPU.** At F=8, `utime/wall = 0.0198` and `stime/wall = 0.3648`. Extrapolated to 79 passes:
+**171.5s** of arithmetic, **3,163.1s** of kernel fault servicing, ~5,336s blocked on disk. **98% of the
+phase is moving bytes.** Validity check: `79 × 109.76 = 8,671.0s` against the measured 8,434.2s —
+**1.028×**, so the account covers the phase rather than merely being consistent with it.
+
+**Why this is Tier 3 and not Tier 2.** Nothing is silently wrong and nothing fails: the outcome is a
+slow run, visible in the ledger, inside the monitoring grace window. But the cost is quadratic in
+feature count — 43 features cost ~14 min in June, 79 cost 2h20m — and the next source is the 10th
+(C-29's trigger) with 20–50 features. That is a scheduled change, not a hypothetical one, which is
+what lifts it above Tier 4.
+
+**The remedy, and what it does not fix.** Three rows, with the labels kept honest:
+
+| | export `scan` | basis |
+|---|---:|---|
+| today | 8,434.2s | **measured** |
+| enough RAM to cache the grid | ~3,400s | inferred — removes the wait, keeps the mapping |
+| traverse the grid once | ~165s | inferred from the F=1 pass and the utime split |
+
+Both collapse disk reads to 37.355 GB; only the second removes the 79 mappings. **This is why 64 GB of
+RAM is not the remedy** — it buys ~1.4h of a 7.4h pipeline, recurring, expiring as the grid grows by a
+feature, and is beaten roughly 20× by a code change that costs nothing. Recorded here because the
+purchase question will be asked again.
+
+**Not implemented, deliberately.** `reports/post_mortems/2026-10-20_release_v1150.md:339-341` forbids
+optimising the export before a production number exists; the number exists, and #516 was a measurement
+spike whose own terms excluded optimisation. Whether `scan` needs to exist at all is open:
+`source_sums` serves the ADR-011 / C-144 per-feature verification, and whether that check needs a
+strided traversal per feature or could read the same bytes once is the question the fix would answer.
+
+**What this does not touch.** `write` is **8,558.9s, 48.2% of the export** — larger than `scan`, wholly
+unexplained, and untouched by either remedy above. It is the largest open question about the export and
+is recorded in `reports/investigation_zarr_export_cost/findings.md` §5 item 3, not here, because an
+unexplained duration yields no trigger that passes the quality gate. Registering it would add a row
+that says only "we do not know".
+
+**Trigger: before the 10th source's features enter the grid, or before export time is used to justify
+hardware spend.**
+
+**Location:** `scripts/export_zarr.py:252-263`.
+**Evidence:** `reports/investigation_zarr_export_cost/pre_analysis_plan.md` (pre-registered 2026-10-22,
+before any timing, with four refutation criteria), `e1_results.md`, `e1_raw_2026-10-22.jsonl`,
+`findings.md` §1.1 and §5.
+**Source:** #516 (SPIKE, epic #518 S5), measurement on production hardware.
+Cross-ref: **C-343** (which filed the 5× export regression as #501), C-29 (10th source), C-144
+(`source_sums`' reason for existing), C-362 (the hardware premise this spike had to correct before it
+could run), ~~C-223~~ (memmap in compilation — the same access-pattern family, resolved).
+
+### C-362: The server was rescaled and the rescale was never recorded, so two ADRs reason from a false premise
+
+Found while filling in the machine slot that #515 insisted on — *a production measurement without the
+machine it ran on is not reproducible* — and it immediately falsified the premise of the next story in
+the same epic.
+
+| | documented | measured 2026-10-21 |
+|---|---|---|
+| vCPU | 4 | **8** (AMD EPYC-Genoa) |
+| RAM | 8 GB | **16 GB** (`MemTotal: 15982924 kB`) |
+| swap | 2–4 GB, "added as a fix" | **16 GB** swapfile |
+| root disk | 160 GB | 150 GB usable |
+
+The repo documents the procedure that produces exactly this machine
+(`docs/guides/server_operations.md:534-536`, Rescale to CPX42), and the box has been up since
+**2026-05-28 08:50 UTC**, consistent with that power-off. The rescale was performed, it worked, and
+nothing wrote it down.
+
+**The registrable part is not the figure — it is that conclusions were drawn from it.**
+
+- `docs/ADRs/030_raster_tooling.md:82` justifies the Rust raster path on *"memory predictability. The
+  production server has 8 GB RAM."*
+- `docs/ADRs/035_vdem_as_democracy_source.md:140` concludes *"No OOM risk"* for V-Dem's ~4.1 GB from the
+  same premise.
+- `docs/guides/server_operations.md:499` tells an operator *"The CPX32 has 8 GB RAM"* and derives swap
+  advice from it.
+
+Neither ADR is shown to be wrong. A 37.3 GB grid exceeds 32 GB addressable either way. What is
+established is that **their stated premise is false**, which is enough to require re-checking and not
+enough to overturn anything.
+
+**The demonstrated cost, which is why this is on the register rather than only in a report.** #516's
+hypothesis was that *crossing the RAM boundary* inverts `scan`'s share of the export. Written against
+8 GB, the overcommit under test was 4.7×; measured, it is **1.17×** (16 GB RAM + 16 GB swap against a
+37.35 GB grid). The spike had to be re-premised before it ran. Had it not been, it would have produced
+a confident answer to a hardware-purchase question from a premise off by a factor of four.
+
+**A confound that outlives the premise, and will be re-derived by anyone who does not read this.** The
+comparison that motivated the spike — June's 43 features at ~14 min against October's 79 at 2h20m —
+moved two variables at once. The June laptop had 32 GB RAM + 2 GB swap = **34 GB addressable against
+the server's 32 GB, within 6%**, so the hardware barely differed; the feature count nearly doubled.
+Only a feature-count sweep at fixed hardware separates them. That experiment (E2) was
+**pre-registered and then recorded as superseded** rather than pending, because its purpose was sizing
+a RAM purchase that C-361 says not to make. **If the RAM option is ever revived, E2 is the only
+experiment that answers it**, and the June/October delta on its own is not evidence.
+
+**A correction to this entry's own occurrence count.** `findings.md` §4.4 counts *13 occurrences across
+11 files* from `grep -rn "4 vCPU\|8 GB RAM" docs/ reports/`. One of those hits is
+`reports/technical_risk_register.md:1571` — C-173's **original** text, preserved beneath its dated
+2026-05-28 update, which already records the rescale correctly. That is the register's own convention
+for records, not a stale copy, so the actionable set is smaller than the grep suggests. The remainder
+splits the way C-343 established: live guides get edited, dated records (the deployment log, the
+post-mortems, the two sprint plans) get dated amendments, and ADR-030 and ADR-035 get dated amendments
+because both are decisions that reasoned from the figure.
+
+**Tier 4.** No correctness or reliability impact: the server is *better* than documented, so every
+conclusion drawn from the pessimistic figure is conservative rather than unsafe. The cost is analytical
+— wrong premises in two ADRs and one near-miss on a spending recommendation. Consistent with C-343,
+where stale duration figures that could license killing a healthy run also stayed low-tier.
+
+**Trigger: before any analysis, ADR or purchase decision rests on the server's RAM or vCPU figure, and
+at the next rescale.**
+
+**Location:** `docs/ADRs/030_raster_tooling.md:82`, `docs/ADRs/035_vdem_as_democracy_source.md:140`,
+`docs/guides/server_operations.md:499`, `docs/guides/hetzner_deployment_log.md:22,370`,
+`reports/rd_plan_bounded_memory_compilation.md:51,310`, `reports/sprint_plan_bounded_memory.md:223`,
+`reports/sprint_plan_s3_hetzner_deployment.md:16,40`, and three post-mortems.
+Correct figures: `reports/pipeline_performance_profile.md:155`,
+`reports/investigation_zarr_export_cost/findings.md` §4.4.
+**Source:** #515 (S4), confirmed by direct measurement on the box 2026-10-21/22.
+Cross-ref: **C-343** (same family — a figure duplicated into many documents and derived from none;
+that entry's rule *"a consolidation must verify what it promotes"* is this one's mechanism in the
+other direction), **C-361** (the spike whose premise this corrected), C-173 (server memory headroom,
+whose dated update already carries the right numbers), C-345 (exit 137 is not green).
+GitHub: #518.
+
+### C-363: `pipeline_duration.json` is written only on success, so after a failure it reports the last good run
+
+`scripts/refresh_pipeline.sh:336-341` writes the duration record *after* the success path has already
+cleared the failure sentinel. A run that aborts therefore leaves the previous success's file in place,
+unchanged and newest. The 21 October ACLED 429 abort is the worked example: the file an operator would
+have read that morning described the September run.
+
+**Why it is not merely absent.** Absence would be informative. A stale file is not: two operator-facing
+documents send the reader to it by name (`docs/guides/server_operations.md:278,295`,
+`docs/guides/server_quickref.md:153`), and the only thing distinguishing stale from fresh is the
+embedded `finished` timestamp, which nothing prompts the reader to compare against the run they are
+diagnosing.
+
+**Tier 4.** Detectable — the timestamp is right there in the file — and it corrupts no data. It costs
+diagnosis time at exactly the moment diagnosis time is expensive, which is the same cost C-343 measured
+for stale duration *estimates*; this is the same defect in the measured record.
+
+**Also the reason a failed run contributes nothing to the duration series.** Every abort is a gap, and
+a gap is indistinguishable from a month that was skipped under ADR-041. So the series cannot answer
+"did this get slower" across any period containing a failure — which, given C-361's quadratic growth,
+is the question most likely to be asked of it.
+
+**Trigger: before the duration record is used to answer whether a run got slower, or how far a failed
+run got.**
+
+**Location:** `scripts/refresh_pipeline.sh:336-341` (success-path write), `on_failure()` (no
+corresponding write); read per `docs/guides/server_operations.md:278,295` and
+`docs/guides/server_quickref.md:153`.
+**Source:** #518 follow-up list; sharpened from "not written on failure" to "reports the previous run"
+during the #516 spike, 2026-10-25.
+Cross-ref: C-91 (the concern the duration record was built for), **C-343** (stale figures licensing
+wrong operator action), C-345 (a failed run's record must not read as a successful one), **C-361** (the
+growth this series would be used to watch).
+
+---
+
+### C-364: A UCDP annual event's whole span is booked to one month — `date_end_only`, not `even_split` — [OPEN]
+
+| Field | Value |
+|-------|-------|
+| ID | C-364 |
+| Tier | 3 |
+| Source | Reached this repository 2026-10-26 as a confirmation request from a downstream modelling session, relayed from **finding O-12 of a delivery-note joint review**, where it was raised by that review's *opponent* seat — not by the modelling session itself, and not by any guard or audit here. O-12's own form is worth keeping: it observed that an earlier note had asked the recipient to settle the 113,395-fatality cell *before* producing numbers from it, and that the later note produced them without mentioning it. The cell was in a delivered MCR denominator either way. |
+| Trigger | **When the delivered partition is extended past month-id 504.** UCDP 463137 (121,848, 2022-08-24 → 2022-10-24) lands in cell 148759 at month-id 512–514, larger than the artifact already present. Also before any change to the three-file distribution default (see C-356). |
+| Location | `src/datafactory_viewpoint/profiles.py:103`; `src/datafactory_viewpoint/temporal_distribution.py:103` (`date_end_only`) and `:116` (`even_split`); `src/datafactory_compilation/pregridded_compilation.py` |
+
+**The mechanism.** `date_end_only` assigns every event to its `date_end` month regardless of span. The `production_parity` profile applies it to the UCDP **annual** source via `source_distribution_map={"annual": "date_end_only"}`, so a UCDP summary event with `date_prec=5` — a date known only to a range longer than a month — has its entire toll placed in a single cell-month. `even_split`, which would divide the span across its months, is the `ViewpointConfig` default and is **never reached for this source**.
+
+**The measurement.** From `data/viewpoint/production_parity.parquet`, `type_of_violence=1`, cell 148759:
+
+| month-id | UCDP id | best | where_prec | date_prec | span |
+|---|---|---:|---:|---:|---|
+| 504 (2021-12) | **463131** | **113,368** | 5 | 5 | 2021-01-01 → 2021-12-31 |
+| 504 | 425658 | 24 | 2 | 1 | single day |
+| 504 | 500797 | 2 | 1 | 1 | single day |
+| 504 | 425755 | 1 | 1 | 1 | single day |
+
+113,368 + 27 = **113,395**, which is the delivered `ged_sb_best` for that cell-month. One event, one year, one month.
+
+**Scope, in a 457–504 window.** Four cell-months are imprecision-driven, out of 26 at or above 500:
+
+| gid | month-id | date | total | driver |
+|---|---|---|---:|---|
+| 148759 | 504 | 2021-12 | 113,395 | `date_prec=5` **and** `where_prec=5` |
+| 187654 | 491 | 2020-11 | 5,503 | `date_prec=5` **and** `where_prec=5` |
+| 187655 | 490 | 2020-10 | 1,370 | `where_prec=5` only (~45 exact-day events on one centroid) |
+| 146599 | 502 | 2021-10 | 604 | `where_prec=5`, `date_prec=4` |
+
+Those four carry **120,872 of 323,343** total mass — **37.4%**. The other 22 have no imprecise mass at all. Two sanity checks came out clean and are worth recording because they bound the claim: cell 148759 at month-id 494 (1,934) is a precisely-located single-day village strike (UCDP 510583, `where_prec=2`, `date_prec=1`) and is **real**; so is 148758 at month-id 498.
+
+**The distinction that matters, and it is not the one C-356 draws.** Only the first two rows are *temporal* artifacts — an episode that is not a monthly observation of anything. Row three is ~45 genuinely exact-day events whose *location* is coarse: a correct time series in the wrong place, which belongs in a placement diagnostic rather than being excluded.
+
+**Why this is worse than the spatial half it was mistaken for.** The spatial defect is in principle reversible — ADR-049 shipped a `spatial_distribution` strategy and it is merely off. The temporal defect **destroys information**: twelve months are collapsed into one with no record of which, and no amount of downstream work recovers the distribution. The half nobody had written down is the half that cannot be undone.
+
+**The modelling consequence**, in the words of the consumer that found it: a 365-day episode booked to one month is not a monthly observation of anything, and a monthly model is being asked to fit it. It cannot and should not. With no flag reaching the model — the 79 delivered features carry `ged_{sb,ns,os}_{best,count}` and `acled_*`, and no `date_prec`, `where_prec` or aggregation marker — these cell-months are indistinguishable from real massacres, and they are among the largest values in the target. The loss sees them as the most important cells in the data. A measured consequence: on that consumer's scored window, excluding the four changes the `500+` bin's predicted-per-actual ratio from 0.4 to 1.0 and leaves every bin below 100 byte-identical.
+
+**Tier 3, not 2.** Consistent with C-356, which adjudicated the same question for the spatial half: the values are not *silently* wrong in the sense Tier 2 requires — they are what viewser deliberately produces under production parity, the behaviour is a configured strategy rather than a defect, and nothing about the delivered pipeline is broken. Not Tier 4 because these are model *training inputs*, four cell-months hold 37.4% of the target's mass in a real scored window, and a consumer reading cell-level fatalities without knowing about `date_prec` will draw a conclusion the data does not support — which is exactly what happened, and it took a cross-session query to resolve.
+
+**Not fixed, and not to be fixed from here.** `source_distribution_map={"annual": "date_end_only"}` is **under a formal hold with Håvard** and must not be changed on this entry's authority. C-356's trigger states the reason in general terms: the distribution default is spread across `viewpoint_config.py`, `profiles.py` and the `build_viewpoint.py` invocation in `refresh_pipeline.sh`, and any single edit silently changes delivered values and the digest views-postprocessing pins. This entry records the defect; it does not license the change.
+
+**What this does not touch.** Whether `even_split` is the *right* correction is a separate question this entry takes no position on — dividing a year's toll evenly across twelve months asserts a uniformity UCDP does not claim either. Both strategies are encodings of an unknown; only one of them is currently invisible.
+
+**Independent verification.** The affected set was derived from a 2026-06-01 viewpoint parquet; the same 26 cell-months at or above 500 were reproduced downstream from a live 2026-10-25 pull, and the 113,368 + 27 identity holds in both. The relevant GED records are unchanged across four months and two releases.
+
+**Blast radius, as far as it has been checked (2026-10-26).** The modelling session that relayed O-12 reports that its calibration partition is train 121–456 / test 457–504 and its ladder and drift work ran on 421–456 in-sample and 457–469 out-of-sample, so UCDP 463137 at month-id 512–514 is outside everything it currently measures. It also searched its own artifacts for `121,915` and `121,848` — the figures produced by the `even_split`/gold path that production does not take — and found neither in markdown, code or TeX. So the wrong peak-month number has not propagated into that consumer, which bounds this entry's demonstrated reach to this repository's own documents. Not checked elsewhere.
+
+**Source:** `reports/2026-06-28_ucdp_spatial_distribution_of_low_precision_summary_events.md` documents the spatial half and the UCDP precision-code semantics; its §4 reconstruction (~9,447/month) describes the `even_split` path and **not** production, which is how the temporal half stayed hidden.
+
+Cross-ref: **C-356** (the spatial half, whose claim that the temporal axis was corrected this entry falsifies), C-37 (`date_prec=5` semantics — resolved, fail-loud on *unknown* values, which these are not), ADR-049 (the spatial strategy that exists and is off), ADR-023 (summary-event detection), C-153 and C-362 (the same failure shape: a premise asserted once, never re-derived).
 
 ---
 
