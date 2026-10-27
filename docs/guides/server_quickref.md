@@ -42,8 +42,9 @@ A **rollback is a deploy**: same four blocks, previous tag.
 drop inside that window; without a multiplexer the drop sends SIGHUP and kills
 the run. This is not hypothetical — see the note below.
 
-**Expect ~6 hours, and do not kill a run for "taking too long".** Measured
-2026-10-16: **5h50m** (21,007s) with the assembly cached. The zarr export alone
+**Expect ~7.5 hours, and do not kill a run for "taking too long".** Two
+measured runs: **7h25m** (26,708s) on 2026-10-21 with assembly running, and
+**5h50m** (21,007s) on 2026-10-16 with assembly cached. The zarr export alone
 runs for roughly five hours and prints nothing at all while it works — a silent
 terminal is the normal state, not a hang.
 
@@ -51,13 +52,25 @@ terminal is the normal state, not a hang.
 |------|------|------|
 | Harvest → consolidate → viewpoint → compile | ~43 min | all sources, most cached |
 | Assemble grid | ~45 min | skipped when inputs are unchanged (ADR-041) |
-| **Export zarr** | **~5h07m** | 18,427s for a 3.1 GB store — **88% of the run** |
+| **Export zarr** | **4h56m–5h07m** | 17,774s / 18,427s for a 3.1 GB store — two runs |
 | Export parquet | ~12 s | 29.5M rows |
 | Health check + consumer contract | <1 min | |
 
-The assembly figure is ADR-041's; every other figure is from the 2026-10-16 run,
-which had the assembly cached. A cold run that must rebuild the 37 GB grid is
-therefore longer than 5h50m, not shorter.
+**The export's share of the run is not a constant — do not plan with one.** It
+depends entirely on whether assembly ran:
+
+| Run | Export | Pipeline | Export share | Assembly |
+|---|---|---|---|---|
+| 2026-10-21 | 17,774s | 26,708s | **67%** | ran |
+| 2026-10-16 | 18,427s | 21,007s | **88%** | skipped (ADR-041) |
+
+The earlier "88% of the run" described the cached-assembly case only. The export
+cost itself is stable: 3.5% apart across the two runs.
+
+The assembly figure is ADR-041's; the rest are measured. **Plan with the larger
+duration**, not the smaller — an under-estimate is what tells you a healthy run
+is hung. Breakdown and what it does *not* explain:
+`reports/investigation_zarr_export_cost/findings.md`.
 
 ```bash
 # 1. ALWAYS start tmux first

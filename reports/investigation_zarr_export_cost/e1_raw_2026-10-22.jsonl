@@ -1,0 +1,7 @@
+numpy 2.4.3
+file_bytes 37349683328
+budget_s 5400
+{"F": 1, "wall_s": 122.35, "wall_per_pass_s": 122.35, "cpu_s": 40.36, "cpu_over_wall": 0.3299, "read_bytes": 37351559168, "read_bytes_per_pass": 37351559168, "amplification_vs_filesize": 1.0, "disk_MBps": 305.3, "maxrss_mb": 15089.1, "cached_mb_before": 1040, "cached_mb_after": 15009, "first_sum": 264038.0}
+{"F": 2, "wall_s": 252.1, "wall_per_pass_s": 126.05, "cpu_s": 84.53, "cpu_over_wall": 0.3353, "read_bytes": 74710794240, "read_bytes_per_pass": 37355397120, "amplification_vs_filesize": 2.0, "disk_MBps": 296.4, "maxrss_mb": 15153.1, "cached_mb_before": 37, "cached_mb_after": 15006, "first_sum": 264038.0}
+{"F": 4, "wall_s": 502.53, "wall_per_pass_s": 125.63, "cpu_s": 164.53, "cpu_over_wall": 0.3274, "read_bytes": 149420855296, "read_bytes_per_pass": 37355213824, "amplification_vs_filesize": 4.001, "disk_MBps": 297.3, "maxrss_mb": 15170.7, "cached_mb_before": 44, "cached_mb_after": 15000, "first_sum": 264038.0}
+{"F": 8, "wall_s": 878.06, "wall_per_pass_s": 109.76, "cpu_s": 337.68, "utime_s": 17.37, "stime_s": 320.31, "cpu_over_wall": 0.3846, "utime_over_wall": 0.0198, "stime_over_wall": 0.3648, "read_bytes": 298840465408, "read_bytes_per_pass": 37355058176, "amplification_vs_filesize": 8.001, "disk_MBps": 340.3, "maxrss_mb": 15119.6, "cached_mb_before": 110, "cached_mb_after": 14973, "minflt": 4845001, "majflt": 1622, "first_sum": 264038.0}

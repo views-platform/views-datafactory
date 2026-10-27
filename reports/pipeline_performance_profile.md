@@ -118,3 +118,53 @@ The source-digest gates added in this session catch the symptom immediately (fai
 
 7. **Parallel compilation** — UCDP, ACLED, GHS-POP, GHS-BUILT-S, V-Dem compilations are independent. Run them concurrently (limited by memory).
 8. **Parallel digest** — compute grid.npy digest during assembly write (hash-as-you-write) instead of as a separate pass.
+
+---
+
+## Amendment 2026-10-21 (#515) — every figure above is a laptop figure, and the export is ~5× low
+
+**Nothing above is rewritten.** This is a record of what was measured on 2026-06-08, on the
+machine named in the header, and it stays that way. What it needs is the warning it never had:
+the October 2026 documentation sweep corrected the live guides, ADR-041 and the March
+deployment log, and **missed this file** — which is the upstream source the others inherited
+their numbers from.
+
+### The two headline figures, against production
+
+| | here (2026-06-08) | production (2026-10-21) | ratio |
+|---|---:|---:|---:|
+| Zarr export (`:26`) | **57 min** | **296.2 min** (17,773.8s) | **5.2×** |
+| Assembly (`:25`) | 46 min | ~45 min | ≈1× |
+| "The Two Dominant Costs" (`:89`) | 103 min, 70% of non-harvest | export alone is 296 min | — |
+
+The claim at `:89` that assembly and export "account for 103 minutes" and are "bottlenecked on
+the same root cause" does not survive. **They are not peers.** The export dominates: on
+2026-10-21 it was 66.5% of the whole 26,708s pipeline, and on 2026-10-16 — where assembly was
+skipped under ADR-041 — it was 87.7% of 21,007s.
+
+### The part that is easy to miss: this was never a server measurement
+
+The header says it plainly — **13th Gen Intel i9-13900H, 32 GB RAM, 2 GB swap**. A laptop. Yet
+`docs/ADRs/041_content_addressed_skip.md:12` inherited the 46/57 pair into its Context and
+derived a production benefit from it, and that derivation stood for four months.
+
+So the 5.2× is not simply drift. It is a laptop figure used as a production figure, and the
+drift accumulated on top of that.
+
+**And the production machine is not what this repo says either.** Measured 2026-10-21,
+`views-datafactory-00` is **8 vCPU / 16 GB RAM / 16 GB swap**, not the documented 4 vCPU / 8 GB.
+So the comparison between this laptop and the server is 34 GB addressable against 32 GB —
+within 6%, not the 4× the documents imply. See
+`reports/investigation_zarr_export_cost/findings.md` §4.4; correcting that premise across the
+13 places that state it is tracked on #518, not done here.
+
+### What replaces this file for current figures
+
+| Need | Go to |
+|---|---|
+| Operator-facing per-step timings | `docs/guides/server_quickref.md` — **owns them** |
+| The export's phase breakdown and what it does/doesn't explain | `reports/investigation_zarr_export_cost/findings.md` |
+| Why the export's cost is still unexplained | #501, #516 |
+
+**Still accurate and worth keeping:** the data-flow column, the output sizes, the digest-gate
+analysis, and the optimisation list — none of which depends on the wall-clock numbers.
