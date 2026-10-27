@@ -36,8 +36,50 @@ Per ADR-012 (topology and dependency direction):
 | `append_ledger_entry` | JSONL append-only writer. Auto-generates UTC timestamp. Caller defines entry structure. |
 | `last_digest` / `last_digest_for_version` | Ledger readers for digest lookup. Tolerate malformed trailing lines. |
 | `compute_content_digest` | SHA-256 digest computation, truncated to 16 hex chars by default. Deterministic: same bytes = same digest. |
-| `LEDGER_VERSION` | Centralized constant for ledger schema version. Bump when ledger entry format changes. |
+| `LEDGER_VERSION` | Centralized constant for ledger schema version. Bump when an existing key's name, type, units or meaning changes — **not** when a key is added. See [Ledger schema versioning](#ledger-schema-versioning). |
 | `DIGEST_SCHEME` | Centralized constant (`"sha256_16"`) recorded in every ledger entry for forward compatibility. |
+
+## Ledger schema versioning
+
+Settled 2026-10-21 (#514). Until then the only written rule was *"bump when ledger entry
+format changes"*, which did not say whether **adding** a key counts — so anyone adding one
+had to guess, and the guesses were not recorded.
+
+**Bump `LEDGER_VERSION`** when an existing key changes such that a reader could
+misinterpret an entry it can already parse:
+
+- a key is renamed or removed
+- a key's type changes (`"n_events": "12"` → `"n_events": 12`)
+- a key's units or meaning change (seconds → milliseconds; rows → files)
+- a nested structure is reshaped
+
+**Do not bump it** when a key is added.
+
+Five reasons that line sits there and not somewhere stricter:
+
+1. **Readers already tolerate unknown keys.** `_read_ledger_entries` is `json.loads` per
+   line, and every reader (`last_digest`, `last_digest_for_version`) reaches fields with
+   `.get()`. An added key cannot change how an existing entry is read.
+2. **The constant is shared by 28 modules** across ~30 ledger files. A version that ticks on
+   every additive feature stops being a compatibility signal and becomes a release counter.
+3. **No production code reads `ledger_version`.** Its only consumer is a human, or a future
+   migration, asking *"can I trust my reading of this entry?"* — exactly the question an added
+   key does not change and a renamed key does.
+4. **A bump is not free.** `tests/test_integration.py` asserts `entry["ledger_version"] == 1`
+   exactly. So a bump is a deliberate, multi-file change: the right weight for a breaking
+   schema change, the wrong weight for adding a field.
+5. **The precedent already pointed this way.** `phase_seconds` was added in v1.15.0 without a
+   bump. Under an additive-bumps rule, entries of identical shape would carry different
+   versions depending only on when they were written — the version would describe the release
+   rather than the format.
+
+**The cost of this rule, stated so it is chosen rather than discovered.** An entry's version
+tells you that the keys present mean what they say; it does **not** tell you which keys to
+expect. A reader that needs a key must check for it. That is the trade: `.get()` at the
+reader instead of a version ladder.
+
+**Applied to #514:** `other` was added to `phase_seconds`. Additive, so `LEDGER_VERSION`
+stays `1`.
 
 ## Invariants
 - **Single-writer access assumed.** No concurrent operations supported (see technical_risk_register_resolved.md C-16)

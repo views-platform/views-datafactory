@@ -460,14 +460,34 @@ def main() -> int:
 
         # Phase breakdown (#501). "other" is whatever the named phases do
         # not cover — grid load, coordinate construction, digests, the
-        # sentinel — and is reported rather than omitted so the columns
-        # always account for the whole of Time above.
+        # sentinel.
+        #
+        # Folded into phase_seconds HERE, before anything reads the dict,
+        # so the printed table and the ledger entry are the same five
+        # numbers by construction. They were not: until this change
+        # "other" was printed and never persisted, so the 2026-10-21
+        # production entry accounted for 17,017.2s of a 17,773.8s export
+        # and a reader had to subtract to find the 756.6s hole — in the
+        # artifact that exists precisely because logs rotate monthly
+        # (keeping 12) and the ledger does not. The surviving copy was
+        # the incomplete one (#514).
+        #
+        # This assignment must stay AFTER the last named phase is
+        # recorded: it is a residual, so a phase added below it would be
+        # double-counted and push the sum past the total.
+        # test_phases_account_for_the_total is what catches that.
+        #
+        # Deliberately not clamped at zero. The named phases are disjoint
+        # sub-intervals of the same [t0, now] window, so a negative
+        # residual means a timer spans work it does not own — a real
+        # defect, and test_phase_timings_are_nonnegative exists to catch
+        # it. max(0.0, ...) would hide exactly that.
+        phase_seconds["other"] = elapsed - sum(phase_seconds.values())
+
         print("Phases:")
         _denom = max(elapsed, 1e-9)
         for _label, _secs in phase_seconds.items():
             print(f"  {_label:<7}{_secs:>10.1f}s  {100 * _secs / _denom:>5.1f}%")
-        _other = elapsed - sum(phase_seconds.values())
-        print(f"  {'other':<7}{_other:>10.1f}s  {100 * _other / _denom:>5.1f}%")
 
         append_ledger_entry(_ledger_path, {
             "stage": "export",
@@ -475,9 +495,20 @@ def main() -> int:
             "source_digest": grid_digest,
             "ledger_version": LEDGER_VERSION,
             "digest_algorithm": DIGEST_SCHEME,
-            "elapsed_seconds": round(elapsed, 1),
+            # Two decimals, not one. The printed table above stays at
+            # 0.1s because it is read by a human; the ledger is read by
+            # arithmetic. At 0.1s the stored values cannot support a sum
+            # check on a fast run: the synthetic export takes 0.4s total,
+            # and six values rounded to 0.1s admit 0.30s of disagreement
+            # — more than the whole run — so
+            # test_phases_account_for_the_total passed on every wrong
+            # value it was given (measured, #514). At 0.01s the bound is
+            # 0.03s and the guard bites. Units and meaning are unchanged,
+            # so by the rule in datafactory_provenance/ARCHITECTURE.md
+            # this is not a LEDGER_VERSION bump.
+            "elapsed_seconds": round(elapsed, 2),
             "phase_seconds": {
-                k: round(v, 1) for k, v in phase_seconds.items()
+                k: round(v, 2) for k, v in phase_seconds.items()
             },
         })
         _ledger_written = True
