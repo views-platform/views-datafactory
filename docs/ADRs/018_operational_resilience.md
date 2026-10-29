@@ -146,6 +146,8 @@ HTTP timeouts are sized by expected payload and upstream behavior:
 
 All timeouts are per-request (connect + read). Retries use exponential backoff with jitter (`datafactory_http.retry`). When adding a new source, choose a timeout proportional to the expected payload size. Document the choice in the config class.
 
+**Retry classification (added 2026-10-21, #511).** 5xx and transport faults retry on the transport backoff. 4xx fails fast — **except 429**, which retries on a rate-limit-scale backoff (30s base, doubling, 120s ceiling) and honours `Retry-After` when present. A `Retry-After` larger than the ceiling fails loud naming the value, because a wait that long is a quota block rather than a burst and sleeping it off would stall an unattended cron (ADR-011). This is **not** the retry-storm failure mode cited in the References below: we are waiting out a limit the server itself declared, at concurrency 1, with a bounded number of attempts — the opposite of retrying into an overload. See ADR-027's 2026-10-21 amendment for why 429 belongs at this layer while UCDP's 400 rate-limit signal stays at the pagination layer.
+
 ---
 
 ## References

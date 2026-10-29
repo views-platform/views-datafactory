@@ -116,7 +116,14 @@ class TestRequestWithRetryGreen:
         )
 
     def test_4xx_not_retried(self) -> None:
-        """Client errors (4xx) fail immediately without retry (C-83)."""
+        """A 401 fails immediately without retry (C-83).
+
+        Narrowed 2026-10-21: this pins 401, not all of 4xx. 429 is now
+        retried (#511, C-72) — see TestRateLimitRetry. The assertions
+        below are unchanged; only the claim was too wide, and a reader
+        trusting the general version is the drift that let C-72 sit open
+        for seven months.
+        """
         from datafactory_http import request_with_retry
 
         mock_resp = MagicMock()
@@ -242,7 +249,11 @@ class TestRequestWithRetryPost:
         )
 
     def test_post_4xx_not_retried(self) -> None:
-        """POST 4xx errors fail immediately, same as GET."""
+        """A POST 400 fails immediately, same as GET.
+
+        Narrowed 2026-10-21 for the same reason as test_4xx_not_retried:
+        this pins 400, not all of 4xx.
+        """
         from datafactory_http import request_with_retry
 
         mock_resp = MagicMock()
@@ -627,3 +638,366 @@ class TestCrossHostRedirectDoesNotForwardCredentials:
             )
 
         assert "allow_redirects" not in mock_request.call_args[1]
+
+
+def _response(status: int, headers: dict[str, str] | None = None) -> MagicMock:
+    """A failing response whose .headers is a real mapping when given.
+
+    When ``headers`` is None, ``.headers`` is left as the bare MagicMock
+    attribute every other test in this file relies on — that is the shape
+    that would make ``int(headers.get(...))`` raise TypeError inside the
+    except block, so it is a case worth testing rather than avoiding.
+    """
+    resp = MagicMock()
+    resp.status_code = status
+    if headers is not None:
+        resp.headers = headers
+    resp.raise_for_status.side_effect = requests.HTTPError(response=resp)
+    return resp
+
+
+class TestRateLimitRetry:
+    """429 is retried; every other 4xx still fails fast (#511, C-72).
+
+    Production incident 2026-10-21 00:07 UTC: the monthly cron aborted at
+    step 1/14 when ACLED returned 429 partway through a 71-request cursor
+    walk, because request_with_retry classified all of [400, 500) as
+    permanent and raised before the retry path was ever reached.
+    """
+
+    def test_429_is_retried_then_succeeds(self) -> None:
+        """A 429 followed by a 200 completes the request."""
+        from datafactory_http import request_with_retry
+
+        ok = MagicMock()
+        ok.raise_for_status = MagicMock()
+
+        with (
+            patch(MOCK_TARGET) as mock_request,
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+        ):
+            mock_request.side_effect = [_response(429), ok]
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        assert mock_request.call_count == 2
+        assert mock_sleep.call_count == 1
+
+    def test_429_waits_the_rate_limit_delay_not_the_transport_backoff(
+        self,
+    ) -> None:
+        """A 429 waits a rate-limit window, not the ~1s transport backoff.
+
+        This is the assertion that catches a 429 routed into the generic
+        delay. The transport backoff totals ~3s across max_retries=3,
+        which would not clear any real burst limit — so a carve-out that
+        reached the wrong delay would close C-72 on paper while changing
+        nothing in production.
+        """
+        from datafactory_http import request_with_retry
+
+        with (
+            patch(MOCK_TARGET, return_value=_response(429)),
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+            pytest.raises(requests.HTTPError),
+        ):
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        mock_sleep.assert_any_call(30.0)  # base * 2^0
+        mock_sleep.assert_any_call(60.0)  # base * 2^1
+        for call in mock_sleep.call_args_list:
+            assert call.args[0] >= 30.0, mock_sleep.call_args_list
+
+    def test_429_exhausted_raises_redacted_error_preserving_response(
+        self,
+    ) -> None:
+        """Exhausting 429 retries still fails loud, with .response intact.
+
+        sources/acled.py dispatches on exc.response.status_code == 401 to
+        force a token refresh, so dropping .response here would break
+        token renewal, not just a log line.
+        """
+        from datafactory_http import request_with_retry
+
+        resp = _response(429)
+        with (
+            patch(MOCK_TARGET, return_value=resp) as mock_request,
+            patch("datafactory_http.retry.time.sleep"),
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+            pytest.raises(requests.HTTPError) as exc_info,
+        ):
+            request_with_retry(
+                "http://test?token=SECRET", max_retries=3, timeout=5
+            )
+
+        assert mock_request.call_count == 3
+        assert exc_info.value.response is resp
+        assert exc_info.value.__suppress_context__
+        assert "SECRET" not in str(exc_info.value)
+
+    def test_retry_after_seconds_is_honoured(self) -> None:
+        """A usable Retry-After overrides the computed backoff exactly."""
+        from datafactory_http import request_with_retry
+
+        ok = MagicMock()
+        ok.raise_for_status = MagicMock()
+
+        with (
+            patch(MOCK_TARGET) as mock_request,
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+        ):
+            mock_request.side_effect = [
+                _response(429, {"Retry-After": "45"}),
+                ok,
+            ]
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        # 45, not 30: the server named a time, so no jitter is added.
+        mock_sleep.assert_any_call(45.0)
+        assert 30.0 not in [c.args[0] for c in mock_sleep.call_args_list]
+
+    def test_retry_after_is_read_from_a_case_insensitive_dict(self) -> None:
+        """The header is read off the type requests actually supplies.
+
+        A real response carries a CaseInsensitiveDict, which subclasses
+        MutableMapping and is NOT a dict. A `isinstance(headers, dict)`
+        guard would be False in production while passing every test that
+        uses a plain dict — a guard that cannot fire. This test pins the
+        production type and lowercases the key to prove the lookup is
+        case-insensitive, as HTTP headers are.
+        """
+        from datafactory_http import request_with_retry
+
+        ok = MagicMock()
+        ok.raise_for_status = MagicMock()
+        headers = requests.structures.CaseInsensitiveDict(
+            {"retry-after": "45"}
+        )
+
+        with (
+            patch(MOCK_TARGET) as mock_request,
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+        ):
+            mock_request.side_effect = [_response(429, headers), ok]
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        mock_sleep.assert_any_call(45.0)
+
+    def test_retry_after_above_the_ceiling_fails_fast(self) -> None:
+        """A quota-scale Retry-After is refused, not slept through.
+
+        Cloudflare-fronted 429s routinely carry 3600 or 86400. Honouring
+        one stalls an unattended monthly cron for a day, which ADR-011
+        forbids more clearly than it forbids retrying. The refusal names
+        the value so raising the ceiling later is evidence-backed.
+        """
+        from datafactory_http import request_with_retry
+
+        with (
+            patch(
+                MOCK_TARGET,
+                return_value=_response(429, {"Retry-After": "3600"}),
+            ) as mock_request,
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            pytest.raises(requests.HTTPError) as exc_info,
+        ):
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        assert mock_request.call_count == 1
+        mock_sleep.assert_not_called()
+        assert "3600" in str(exc_info.value)
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "soon",
+            "",
+            "-5",
+            "0",
+            "45.5",
+            "Wed, 21 Oct 2026 07:28:00 GMT",
+            "nan",
+            "1e9999",
+        ],
+    )
+    def test_unusable_retry_after_falls_back_to_backoff(
+        self, raw: str
+    ) -> None:
+        """Nothing in a hostile header reaches time.sleep or escapes.
+
+        "-5" would make time.sleep raise ValueError; "nan"/"1e9999" would
+        sleep for a nonsense duration if parsed as float; the HTTP-date
+        form is legal per RFC 9110 and deliberately unparsed. All fall
+        back to the computed wait, and the call still fails loud.
+        """
+        from datafactory_http import request_with_retry
+
+        with (
+            patch(
+                MOCK_TARGET,
+                return_value=_response(429, {"Retry-After": raw}),
+            ),
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+            pytest.raises(requests.HTTPError),
+        ):
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        mock_sleep.assert_any_call(30.0)
+
+    def test_429_with_mock_headers_does_not_crash(self) -> None:
+        """A non-mapping .headers must not raise from inside except.
+
+        int(MagicMock()) raises TypeError. Raised from the except block it
+        would escape where `from None` cannot run, printing the chained
+        original message — which embeds the full url including query
+        credentials. Every other response in this file has exactly this
+        shape, which is why it is the likeliest real failure here.
+        """
+        from datafactory_http import request_with_retry
+
+        with (
+            patch(MOCK_TARGET, return_value=_response(429)),
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+            pytest.raises(requests.HTTPError) as exc_info,
+        ):
+            request_with_retry(
+                "http://test?token=SECRET", max_retries=3, timeout=5
+            )
+
+        assert not isinstance(exc_info.value, TypeError)
+        assert "SECRET" not in str(exc_info.value)
+        mock_sleep.assert_any_call(30.0)
+
+    def test_429_with_headers_lacking_get_does_not_crash(self) -> None:
+        """The mapping guard's own job, isolated.
+
+        test_429_with_mock_headers_does_not_crash does not isolate it: a
+        MagicMock has .get, so the `isinstance(raw, str)` check downstream
+        already stops int() from seeing a MagicMock. What the mapping
+        check independently prevents is a .headers with no .get at all —
+        an AttributeError raised from inside the except block, which
+        escapes where `from None` cannot run and prints the chained
+        original message with the url's query credentials in it.
+
+        Drilled: removing the mapping check turns this red, and nothing
+        else in the suite notices.
+        """
+        from datafactory_http import request_with_retry
+
+        resp = _response(429)
+        resp.headers = []  # has no .get
+
+        with (
+            patch(MOCK_TARGET, return_value=resp),
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+            pytest.raises(requests.HTTPError) as exc_info,
+        ):
+            request_with_retry(
+                "http://test?token=SECRET", max_retries=3, timeout=5
+            )
+
+        assert "SECRET" not in str(exc_info.value)
+        mock_sleep.assert_any_call(30.0)
+
+    def test_403_still_fails_fast(self) -> None:
+        """The carve-out is exactly one status wide.
+
+        No pre-existing test pinned 403 or 404, so nothing stopped the
+        retryable set widening. Some providers do rate-limit with 403;
+        here a 403 is a credential or scope fault and retrying one only
+        burns the wait to re-learn it.
+        """
+        from datafactory_http import request_with_retry
+
+        with (
+            patch(MOCK_TARGET, return_value=_response(403)) as mock_request,
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            pytest.raises(requests.HTTPError),
+        ):
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        assert mock_request.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_404_still_fails_fast(self) -> None:
+        """Companion to the 403 case; also previously unpinned."""
+        from datafactory_http import request_with_retry
+
+        with (
+            patch(MOCK_TARGET, return_value=_response(404)) as mock_request,
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            pytest.raises(requests.HTTPError),
+        ):
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        assert mock_request.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_429_log_line_names_the_retry_after_value(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """The measurement hook gets a guard of its own.
+
+        ACLED's rate-limit window is unmeasured and the fallback constant
+        is borrowed from UCDP, because the branch this change replaced
+        logged only the status code. This log line is what will calibrate
+        it on the next real 429, so it must not be silently dropped.
+        """
+        import logging
+
+        from datafactory_http import request_with_retry
+
+        ok = MagicMock()
+        ok.raise_for_status = MagicMock()
+
+        with (
+            caplog.at_level(logging.WARNING, logger="datafactory_http.retry"),
+            patch(MOCK_TARGET) as mock_request,
+            patch("datafactory_http.retry.time.sleep"),
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+        ):
+            mock_request.side_effect = [
+                _response(429, {"Retry-After": "45"}),
+                ok,
+            ]
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        assert "45s" in caplog.text, caplog.text
+
+        caplog.clear()
+        with (
+            caplog.at_level(logging.WARNING, logger="datafactory_http.retry"),
+            patch(MOCK_TARGET) as mock_request,
+            patch("datafactory_http.retry.time.sleep"),
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+        ):
+            mock_request.side_effect = [_response(429), ok]
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        assert "absent" in caplog.text, caplog.text

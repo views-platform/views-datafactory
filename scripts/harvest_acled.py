@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 
 from datafactory_harvester.harvest_runner import run_harvest
+from datafactory_http import redact_url
 
 
 def main() -> int:
@@ -151,6 +152,28 @@ def _full_harvest(
     )
 
     if result.outcome == "failed":
+        # `result.error` used to be dropped on the floor here. run_harvest
+        # has already printed `FAIL: <exc>` to stdout, so under cron the
+        # reason reaches logs/refresh.log and nowhere else — mode
+        # rw-r-----, which is why the 2026-10-21 abort cost an hour and a
+        # sudo (#513). The durable fix is the ledger entry the source now
+        # writes; these two lines serve the OTHER way this script runs,
+        # by hand during diagnosis, where stdout is the operator's
+        # terminal: say the reason, then say which world-readable file
+        # holds it for next time.
+        #
+        # Redacted even though run_harvest already printed it raw. Not a
+        # fix for that path (it is shared by nine harvest scripts and
+        # out of scope here — noted on #518); simply the correct thing to
+        # do at a line this story owns.
+        print(
+            "[harvest] reason: "
+            + redact_url(result.error or "<none recorded>")
+        )
+        print(
+            f"[harvest] recorded in {config.ledger_path} "
+            "(outcome: failed) — world-readable, no sudo needed"
+        )
         return 1
 
     import pyarrow.parquet as pq

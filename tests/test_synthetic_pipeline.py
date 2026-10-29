@@ -252,31 +252,74 @@ class TestZarrExport:
         cost could not be attributed. If a phase label is dropped here,
         that blindness returns silently — hence an exact-set assertion
         rather than a subset one.
+
+        ``other`` is in the set as of 2026-10-21 (#514), and it is the
+        member most worth asserting. The four named phases were already
+        persisted; ``other`` was printed to the log and dropped, so the
+        production entry for the 17,773.8s export accounted for
+        17,017.2s. A reader had to sum four numbers and subtract to
+        discover 756.6s was missing. Logs rotate monthly keeping 12 and
+        the ledger does not, so the durable copy was the lossy one —
+        which inverts the reason the ledger carries timings at all.
+
+        Exact-set still, and for a second reason now: ``other`` is a
+        residual, so a *new* phase added to the dict after it would be
+        counted twice. An exact set makes that addition fail here, where
+        the fix is obvious, rather than only in
+        ``test_phases_account_for_the_total``, where the symptom is an
+        arithmetic mismatch.
         """
         entry = self._export_entry(pipeline)
         assert "phase_seconds" in entry, entry
         assert set(entry["phase_seconds"]) == {
-            "scan", "write", "verify", "swap"
+            "scan", "write", "verify", "swap", "other"
         }, entry["phase_seconds"]
 
     def test_phase_timings_are_nonnegative(self, pipeline: dict) -> None:
         phases = self._export_entry(pipeline)["phase_seconds"]
         assert all(v >= 0 for v in phases.values()), phases
 
-    def test_phases_do_not_exceed_the_total(self, pipeline: dict) -> None:
-        """The phases must fit inside the reported total.
+    def test_phases_account_for_the_total(self, pipeline: dict) -> None:
+        """The phases must account for the whole reported total.
 
-        They need not sum to it — 'other' covers load, coordinates and
-        digests. But a sum ABOVE the total means a timer spans work it
-        does not own, which would misattribute exactly the cost #501
-        exists to locate.
+        Was ``test_phases_do_not_exceed_the_total``, a one-sided
+        ``sum <= elapsed + 0.5``. That form was right while ``other``
+        sat outside ``phase_seconds`` and the phases genuinely need not
+        have summed to the total. Since #514 ``other`` is the residual
+        *inside* the dict, so the sum should equal the total and the
+        one-sided check would pass on an entry that silently lost a
+        phase. Two-sided is now the honest assertion, and the rename
+        says what it checks.
+
+        The tolerance is derived, not picked, and the derivation is why
+        the ledger stores two decimals. Every value goes through
+        ``round(v, 2)``: five phases contribute at most 0.005s of
+        rounding each and ``elapsed_seconds`` another 0.005s, so the
+        worst-case disagreement is 0.03s. 0.05 leaves headroom.
+
+        At the previous ``round(v, 1)`` that bound was **0.30s**, and the
+        synthetic export this fixture runs takes **0.4s end to end** — so
+        the tolerance exceeded the entire runtime and this assertion
+        passed on every wrong value it was handed. Measured, not
+        suspected: with ``other`` forced to ``0.0`` the sum was 0.2s
+        against an elapsed of 0.4s, a 0.2s gap, comfortably inside 0.5.
+        A guard that cannot fail on the only fixture that runs it is
+        decoration, which is what the drill in #514 exposed.
+
+        What this still catches, which is why it is not a tautology
+        despite ``other`` being defined as the residual: a phase
+        recorded *after* the residual is computed. That addition would
+        be double-counted and push the sum past the total. A negative
+        residual — a timer spanning work it does not own, the original
+        worry #501 had — is caught by the nonnegativity test next door.
         """
         entry = self._export_entry(pipeline)
         elapsed = entry["elapsed_seconds"]
         assert elapsed > 0, entry
         total = sum(entry["phase_seconds"].values())
-        assert total <= elapsed + 0.5, (
-            f"phases sum to {total}s but total is {elapsed}s: "
+        assert abs(total - elapsed) <= 0.05, (
+            f"phases sum to {total}s but total is {elapsed}s "
+            f"(worst case from rounding is 0.03s): "
             f"{entry['phase_seconds']}"
         )
 
