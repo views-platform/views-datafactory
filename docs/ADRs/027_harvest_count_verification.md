@@ -36,7 +36,43 @@ Current implementation for UCDP: shortfall must exceed both 1% AND 1100 events. 
 
 ### Rate-limit recovery at the pagination layer
 
-When an API uses non-standard HTTP status codes for rate limiting (e.g., UCDP uses 400 instead of 429), handle rate-limit retry at the pagination layer rather than the HTTP retry layer. The pagination context (the request was valid for earlier pages) is what makes the retry safe. The HTTP retry layer should continue to fail fast on 4xx, since most client errors are not retryable.
+When an API uses non-standard HTTP status codes for rate limiting (e.g., UCDP uses 400 instead of 429), handle rate-limit retry at the pagination layer rather than the HTTP retry layer. The pagination context (the request was valid for earlier pages) is what makes the retry safe. ~~The HTTP retry layer should continue to fail fast on 4xx, since most client errors are not retryable.~~ **Amended 2026-10-21 — see below.**
+
+### Amendment 2026-10-21 — 429 is retried at the HTTP layer (#511, C-72)
+
+The struck sentence above read: *"The HTTP retry layer should continue to fail fast on 4xx, since
+most client errors are not retryable."* It is **narrowed**, not reversed, to:
+
+> The HTTP retry layer should continue to fail fast on 4xx **except the statuses whose meaning is
+> "later" rather than "never" — currently 429 alone.**
+
+**Why the original rule does not cover 429.** This section's own justification is *"the pagination
+context is what makes the retry safe"*, and it is written about **ambiguous** status codes — the
+parenthetical names the case exactly: UCDP signals a rate limit as **400**, which could equally mean
+a malformed request. Only the knowledge that earlier pages succeeded makes retrying a 400 safe, and
+only the pagination layer has that knowledge. **429 is never ambiguous.** RFC 6585 §4 gives it one
+meaning, for every caller, with no context required — so the premise that confined the decision to
+the pagination layer does not apply to it.
+
+**What this changes.** `datafactory_http.retry.request_with_retry` now retries 429 using a
+rate-limit-scale backoff (30s base, doubling, 120s ceiling) that honours `Retry-After` when present.
+Every other 4xx still fails fast and loud. All eleven call sites inherit it, which was the point:
+the 2026-10-21 production abort was ACLED, but UCDP, SHDI, V-Dem, GHS-POP, GHS-BUILT-S, GAUL and the
+shapefile harvester shared the defect.
+
+**What this does not change.** **UCDP's 400 handling stays exactly where it is**, at the pagination
+layer in `fetch_paginated()` (`sources/ucdp_annual.py`), unchanged. That is this section's actual
+content and it remains correct. A 400 must not be retried by a layer that cannot tell a rate limit
+from a bad request.
+
+**Why it was not already caught.** C-72 recorded this defect on 2026-04-26 — the same day as this
+ADR — and deferred it at Tier 4 with the note *"not observed to date"*. The 2026-10-21 00:07 UTC
+monthly cron abort fired that trigger.
+
+**A larger `Retry-After` fails loud rather than being honoured.** A server asking for longer than the
+120s ceiling is declaring a quota block, not a burst; Cloudflare-fronted 429s routinely carry 3600 or
+86400, and sleeping one off would stall an unattended monthly cron for a day. ADR-011 forbids that
+more clearly than it forbids retrying. The refusal names the requested value.
 
 ---
 

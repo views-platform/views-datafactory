@@ -695,7 +695,383 @@ class TestFetchAcledBeige:
         assert entry["version"] == "2024_2024"
 
 
+class TestFailedFetchLedgerEntry:
+    """ADR-011 consequence #2 on the path that never reached validation.
+
+    A harvest that dies before it has data used to write nothing to
+    ``provenance/acled/ingestion_ledger.jsonl``. On 2026-10-21 the
+    monthly cron hit a 429 at request ~71 of a cursor walk and the only
+    artifact naming the cause was ``logs/refresh.log``, mode
+    ``rw-r-----`` (#513).
+
+    Every test here reads the ledger file off disk rather than inspecting
+    a mock. The claim is "an operator can read the reason", and only the
+    bytes on disk can support that.
+    """
+
+    @staticmethod
+    def _config(tmp_path: Path) -> AcledConfig:
+        return AcledConfig(
+            start_year=2024,
+            end_year=2024,
+            data_dir=tmp_path / "data",
+            ledger_path=tmp_path / "provenance" / "ledger.jsonl",
+        )
+
+    @staticmethod
+    def _entries(config: AcledConfig) -> list[dict]:
+        return [
+            json.loads(line)
+            for line in config.ledger_path.read_text().splitlines()
+            if line.strip()
+        ]
+
+    def test_http_failure_during_the_walk_records_one_entry(
+        self, tmp_path: Path,
+    ) -> None:
+        """A 400 mid-walk writes exactly one failed entry.
+
+        Mutation: drop the try/except around ``fetch_paginated`` in
+        ``_fetch_single_year`` and the ledger file does not exist.
+        """
+        import requests
+
+        config = self._config(tmp_path)
+        err_response = MagicMock()
+        err_response.status_code = 400
+
+        data_resp = MagicMock()
+        data_resp.raise_for_status.side_effect = requests.HTTPError(
+            "400 Client Error: Bad Request for url: "
+            "https://api.acleddata.com/acled/read?limit=5000",
+            response=err_response,
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[_mock_token_response(), data_resp],
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+            pytest.raises(requests.HTTPError),
+        ):
+            fetch_acled(config)
+
+        entries = self._entries(config)
+        assert len(entries) == 1
+        entry = entries[0]
+        assert entry["outcome"] == "failed"
+        assert entry["version"] == "2024_2024"
+        assert entry["start_year"] == 2024
+        assert "400" in entry["error"]
+
+    def test_the_failed_entry_fabricates_no_counts(
+        self, tmp_path: Path,
+    ) -> None:
+        """Nothing was fetched, so no count or digest is claimed.
+
+        ``n_events: 0`` would read as "we fetched and found nothing",
+        which is a different and much worse statement than "we never
+        fetched" — that conflation is #488's open defect. Absent keys say
+        the right thing.
+        """
+        import requests
+
+        config = self._config(tmp_path)
+        err_response = MagicMock()
+        err_response.status_code = 400
+        data_resp = MagicMock()
+        data_resp.raise_for_status.side_effect = requests.HTTPError(
+            "400 Client Error: Bad Request", response=err_response,
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[_mock_token_response(), data_resp],
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+            pytest.raises(requests.HTTPError),
+        ):
+            fetch_acled(config)
+
+        entry = self._entries(config)[0]
+        for fabricated in (
+            "n_events", "content_digest", "min_date", "max_date",
+        ):
+            assert fabricated not in entry, (
+                f"{fabricated} claims knowledge of data never fetched"
+            )
+
+    def test_a_credential_in_the_reason_never_reaches_the_ledger(
+        self, tmp_path: Path,
+    ) -> None:
+        """The redaction guard. THIS is the one that must be seen to fail.
+
+        The exception is raised by ``fetch_paginated`` itself rather than
+        by the HTTP layer, and that is the whole point: an HTTPError from
+        ``request_with_retry`` arrives already redacted by
+        ``_redacted_copy``, so a test driven through that path would pass
+        with the masking removed — a guard that cannot fire. This models
+        the case the masking actually exists for: an error path that never
+        touches the HTTP layer.
+
+        Mutation: in ``_append_failed_fetch_entry``, change
+        ``redact_url(f"{type(exc).__name__}: {exc}")`` to the unredacted
+        f-string. This test goes red; the three above stay green.
+        """
+        config = self._config(tmp_path)
+        leaky = ValueError(
+            "cursor walk failed at "
+            "https://api.acleddata.com/acled/read"
+            "?limit=5000&token=SHOULD_NOT_APPEAR"
+        )
+
+        with (
+            patch(
+                "datafactory_harvester.sources.acled.fetch_paginated",
+                side_effect=leaky,
+            ),
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[_mock_token_response()],
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+            pytest.raises(ValueError, match="cursor walk failed"),
+        ):
+            fetch_acled(config)
+
+        raw = config.ledger_path.read_text()
+        assert "SHOULD_NOT_APPEAR" not in raw, (
+            "a credential reached a world-readable provenance file "
+            "(C-322 class)"
+        )
+        assert "token=***" in raw, (
+            "the masked form should be present and greppable, so an "
+            "operator can confirm redaction ran rather than infer it "
+            "from an absence"
+        )
+
+    def test_authentication_failure_records_an_entry_too(
+        self, tmp_path: Path,
+    ) -> None:
+        """A failure on the token POST is a failed harvest as well.
+
+        Covering the walk but not the authentication in front of it would
+        leave the ledger silent for a 429 on the token endpoint — same
+        provider, same rate limiter.
+
+        Mutation: drop the try/except around the token block in
+        ``fetch_acled`` and the ledger file does not exist.
+        """
+        import requests
+
+        config = self._config(tmp_path)
+        err_response = MagicMock()
+        err_response.status_code = 400
+        token_resp = MagicMock()
+        token_resp.raise_for_status.side_effect = requests.HTTPError(
+            "400 Client Error: Bad Request for url: "
+            "https://acleddata.com/oauth/token",
+            response=err_response,
+        )
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[token_resp],
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+            pytest.raises(requests.HTTPError),
+        ):
+            fetch_acled(config)
+
+        entries = self._entries(config)
+        assert len(entries) == 1
+        assert entries[0]["outcome"] == "failed"
+        assert entries[0]["version"] == "2024_2024"
+
+    def test_a_pagination_fault_is_recorded_not_only_http_errors(
+        self, tmp_path: Path,
+    ) -> None:
+        """A repeated cursor raises ValueError, and that is recorded.
+
+        This is why the ``except`` is broad rather than
+        ``requests.RequestException``. The cursor guards (#487) raise
+        ValueError, and a stalled walk is harder to diagnose from a step
+        number than a status code is — exactly the case where the ledger
+        earns its keep.
+
+        Mutation: narrow the except to ``requests.RequestException`` and
+        this test goes red while the HTTP ones stay green.
+        """
+        events = _make_acled_events(3)
+        page = MagicMock()
+        page.json.return_value = _make_acled_response(
+            events, next_cursor=7
+        )
+        page.raise_for_status = MagicMock()
+        repeat = MagicMock()
+        repeat.json.return_value = _make_acled_response(
+            events, next_cursor=7
+        )
+        repeat.raise_for_status = MagicMock()
+
+        config = self._config(tmp_path)
+
+        with (
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[_mock_token_response(), page, repeat],
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+            pytest.raises(ValueError),
+        ):
+            fetch_acled(config)
+
+        entries = self._entries(config)
+        assert len(entries) == 1
+        assert entries[0]["outcome"] == "failed"
+        assert "ValueError" in entries[0]["error"]
+
+
 # ---- Pagination ----
+
+
+    def test_a_ledger_write_failure_does_not_replace_the_fetch_reason(
+        self, tmp_path: Path,
+    ) -> None:
+        """The recorder must never become the thing that hides the reason.
+
+        ``_append_failed_fetch_entry`` is called from inside ``except``
+        before a bare ``raise``. ``append_ledger_entry`` re-raises
+        ``OSError`` on a write failure, so an unguarded call replaces the
+        fetch error with a write error and the real reason survives only
+        in ``__context__`` — which nothing prints. The operator then gets
+        no ledger entry AND no reason, strictly worse than the gap this
+        function was added to close.
+
+        Not hypothetical: a full disk is a plausible SHARED cause of the
+        harvest failing in the first place, with a 37 GB grid and a 3.1 GB
+        zarr store on the same host. So the one scenario this fires in is
+        a scenario it is likely to fire in.
+
+        Mutation: remove the ``try``/``except Exception`` around
+        ``append_ledger_entry`` in ``_append_failed_fetch_entry``. This
+        test goes red — it raises OSError instead of ValueError.
+
+        Found by independent review of PR #521, not by the author.
+        """
+        config = self._config(tmp_path)
+
+        with (
+            patch(
+                "datafactory_harvester.sources.acled.fetch_paginated",
+                side_effect=ValueError("the reason that matters"),
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.append_ledger_entry",
+                side_effect=OSError(28, "No space left on device"),
+            ),
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[_mock_token_response()],
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+            pytest.raises(ValueError, match="the reason that matters"),
+        ):
+            fetch_acled(config)
+
+    def test_the_operator_line_does_not_promise_an_entry_exists(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Several failure paths write no entry at all.
+
+        ``get_acled_credentials`` raises before the loop when
+        ACLED_USERNAME/ACLED_PASSWORD is missing — the most common
+        operator error — and a snapshot write can fail after a successful
+        fetch. Both reach the failure branch with no ledger entry. The
+        runbook then tells the operator to grep the last few ``outcome:
+        failed`` entries, and the ledger is append-only, so a claim that
+        this run's reason is in there can hand back a PREVIOUS run's
+        failure. A confident wrong reason is worse than no reason, which
+        is the defect #513 exists to fix.
+
+        Mutation: restore the wording to ``recorded in {path} (outcome:
+        failed)``. This test goes red.
+
+        Found by independent review of PR #521, not by the author.
+        """
+        import importlib.util
+
+        scripts_dir = Path(__file__).resolve().parent.parent / "scripts"
+        spec = importlib.util.spec_from_file_location(
+            "harvest_acled_under_test", scripts_dir / "harvest_acled.py",
+        )
+        assert spec is not None and spec.loader is not None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        from datafactory_harvester.harvest_runner import HarvestResult
+
+        failed = HarvestResult(
+            source_name="ACLED",
+            outcome="failed",
+            elapsed=0.1,
+            error="ValueError: ACLED_USERNAME not set",
+        )
+
+        with patch.object(mod, "run_harvest", return_value=failed):
+            rc = mod._full_harvest(2024, 2024, force=False)
+
+        assert rc == 1
+        out = capsys.readouterr().out
+        assert "ACLED_USERNAME not set" in out, (
+            "the reason itself must still be printed — it is the "
+            "authority for this run"
+        )
+        for claim in ("recorded in", "is recorded", "was recorded"):
+            assert claim not in out, (
+                f"the line claims an entry exists ({claim!r}); several "
+                "failure paths write none, and the ledger is "
+                "append-only, so this sends the operator to a stale entry"
+            )
 
 
 class TestPaginationGreen:

@@ -439,12 +439,43 @@ here. See C-331 and `docs/guides/monitoring.md` §7.
 
 ### What an alert means
 
-The pipeline failed or never ran. First response:
+The pipeline failed or never ran. First response, **no `sudo` needed**
+(added 2026-10-21, #513):
+
+```bash
+# Which source failed, and why. The harvest ledgers are world-readable.
+grep -h '"outcome": *"failed"' \
+  /home/views-deploy/views-datafactory/provenance/*/ingestion_ledger.jsonl \
+  | tail -5
+```
+
+A failed harvest appends one entry carrying `outcome: "failed"`, the
+`version` it was working on, and an `error` string. Credentials are
+masked at the write, so the line is safe to paste into an issue.
+
+Start here rather than with the sentinel below. `logs/pipeline_failure.json`
+records the *step number*, and the `1/14: Harvest raw data` step in
+`scripts/refresh_pipeline.sh` runs **nine** separate harvest scripts — it
+can tell you harvesting failed but never which source. The per-source
+ledger can.
+
+Caveat worth knowing before you trust an absence: ACLED is the only
+source whose fetch path is covered so far. For the others, a fetch that
+never returns may still leave no entry — audit tracked on #518. An empty
+result above therefore means "no source recorded a failure", not "no
+source failed".
+
+Then, if the ledgers are silent or you need the surrounding context:
 
 ```bash
 sudo -u views-deploy cat /home/views-deploy/views-datafactory/logs/pipeline_failure.json
 sudo -u views-deploy tail -50 /home/views-deploy/views-datafactory/logs/refresh.log
 ```
+
+The `sudo` is not optional for those two: `refresh.log` is mode
+`rw-r-----` owned by `views-deploy`. Needing it was the whole cost of
+the 2026-10-21 abort — about an hour to find a one-line cause — which is
+why the ledger check now comes first.
 
 Then check the status page: http://204.168.219.108/status.html
 (regenerates on every pipeline exit, success or failure).

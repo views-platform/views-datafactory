@@ -48,7 +48,7 @@ from datafactory_harvester.validation import (
     validate_positive_int,
     validate_year_range,
 )
-from datafactory_http import request_with_retry
+from datafactory_http import redact_url, request_with_retry
 from datafactory_provenance import (
     DIGEST_SCHEME,
     LEDGER_VERSION,
@@ -626,6 +626,75 @@ def _year_is_cached(year: int, config: AcledConfig) -> bool:
     return True
 
 
+def _append_failed_fetch_entry(
+    config: AcledConfig,
+    year: int,
+    exc: BaseException,
+) -> None:
+    """Record ADR-011's failed-harvest entry for a year that never fetched.
+
+    ADR-011 consequence #2 requires a provenance ledger entry with
+    ``outcome: "failed"`` when a harvest fails. The validation path below
+    has always written one; the fetch path never did. So when the monthly
+    cron hit a 429 mid-walk on 2026-10-21, ``ingestion_ledger.jsonl``
+    stayed silent and the only artifact naming the cause was
+    ``logs/refresh.log`` — mode ``rw-r-----``, owner ``views-deploy``.
+    Diagnosing one line took about an hour and a ``sudo`` (#513).
+
+    The entry is deliberately thin. ``n_events``, ``content_digest``,
+    ``min_date`` and ``max_date`` cannot be filled in: nothing was
+    fetched. What an operator needs at 02:00 is which year, and why.
+
+    ``error`` is singular and a string, where the validation entries carry
+    a plural ``errors`` list. That is the distinction, not an
+    inconsistency: those hold a list of per-field validation problems,
+    this holds one exception. Nothing reads either key programmatically.
+
+    Credential masking is applied HERE rather than trusted from upstream.
+    It is belt-and-braces today — every ACLED request goes through
+    ``request_with_retry``, whose messages are already redacted, and ACLED
+    sends its password in a POST body and its token in a header, never in
+    a query string. It is applied anyway because this function writes to a
+    world-readable file, which makes it a publication rather than a log
+    line, and C-322 was a credential reaching disk through exactly this
+    carrier: a ``requests`` exception message. Masking at the write means
+    an error path added later, one that never touches the HTTP layer,
+    cannot leak through this one.
+
+    Never raises. Both callers invoke this from inside ``except`` before a
+    bare ``raise``, so an exception escaping here would replace the fetch
+    error with a write error and the real reason would survive only in
+    ``__context__``, which nothing prints — no ledger entry AND no reason,
+    which is worse than the gap this function was added to close. The
+    scenario is not hypothetical: ``append_ledger_entry`` re-raises
+    ``OSError`` (``digests_and_ledgers.py``), and a full disk is a
+    plausible *shared* cause of the harvest failing in the first place,
+    with a 37 GB grid and a 3.1 GB zarr store on the same host. Broad
+    rather than ``OSError`` alone because a best-effort recorder on an
+    error path has nothing to gain from being selective. The failure is
+    logged, so ``refresh.log`` still says the ledger could not be written.
+    Same decision as ``scripts/export_zarr.py``'s ``finally`` block.
+    """
+    try:
+        append_ledger_entry(config.ledger_path, {
+            "dataset": DATASET_ID,
+            "version": f"{year}_{year}",
+            "start_year": year,
+            "end_year": year,
+            "outcome": "failed",
+            "error": redact_url(f"{type(exc).__name__}: {exc}"),
+            "ledger_version": LEDGER_VERSION,
+            "digest_algorithm": DIGEST_SCHEME,
+        })
+    except Exception:
+        logger.exception(
+            "Could not write the failed-harvest ledger entry for year "
+            "%d to %s — the fetch error below is the one that matters",
+            year,
+            config.ledger_path,
+        )
+
+
 def _fetch_single_year(
     year: int,
     config: AcledConfig,
@@ -654,12 +723,25 @@ def _fetch_single_year(
     snap_path = _snapshot_path(year_config)
 
     t0 = time.monotonic()
-    events = fetch_paginated(
-        year_config,
-        resolved_user,
-        resolved_pass,
-        _token_state=token_state,
-    )
+    try:
+        events = fetch_paginated(
+            year_config,
+            resolved_user,
+            resolved_pass,
+            _token_state=token_state,
+        )
+    except Exception as exc:
+        # Broad on purpose, and it re-raises rather than handling.
+        # fetch_paginated raises requests exceptions for transport and
+        # status faults AND ValueError for the cursor guards (a repeated
+        # cursor, a non-scalar cursor, an empty page with a live cursor).
+        # An operator needs the ledger to name any of those; narrowing to
+        # RequestException would record the 429 that prompted this and
+        # silently drop the pagination faults, which are the harder ones
+        # to diagnose from a step number alone.
+        logger.error("ACLED fetch failed for year %d", year)
+        _append_failed_fetch_entry(config, year, exc)
+        raise
     fetch_duration = time.monotonic() - t0
 
     validation = validate_events(
@@ -789,23 +871,36 @@ def fetch_acled(
             })
             continue
 
-        if token_state is None:
-            token_state = _acquire_token(
-                resolved_user,
-                resolved_pass,
-                config.token_url,
-                config.timeout,
-                config.max_retries,
+        # Guarded for the same reason the fetch below is: a 429 or a
+        # transport fault on the token POST is a failed ACLED harvest
+        # that the ledger would otherwise not record. Same provider,
+        # same rate limiter, and the year is in hand here — covering the
+        # walk but not the authentication in front of it would draw the
+        # line in an arbitrary place.
+        try:
+            if token_state is None:
+                token_state = _acquire_token(
+                    resolved_user,
+                    resolved_pass,
+                    config.token_url,
+                    config.timeout,
+                    config.max_retries,
+                )
+            else:
+                token_state = _ensure_token(
+                    token_state,
+                    resolved_user,
+                    resolved_pass,
+                    config.token_url,
+                    config.timeout,
+                    config.max_retries,
+                )
+        except Exception as exc:
+            logger.error(
+                "ACLED authentication failed before year %d", year,
             )
-        else:
-            token_state = _ensure_token(
-                token_state,
-                resolved_user,
-                resolved_pass,
-                config.token_url,
-                config.timeout,
-                config.max_retries,
-            )
+            _append_failed_fetch_entry(config, year, exc)
+            raise
 
         result = _fetch_single_year(
             year,

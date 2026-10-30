@@ -1,9 +1,133 @@
-# Product Development Plan v12 — current through v1.15, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.16, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
+
+---
+
+## v1.16 Addendum (2026-10-29)
+
+**v1.16.0 (the one 4xx that means *later* is now waited out, and a failed harvest says why).** This
+release exists because the monthly cron aborted. At **2026-10-21T00:07:44Z**, on its first ever run
+under v1.15.0, the pipeline died at step 1/14 when ACLED returned **429 Too Many Requests** partway
+through a 71-request cursor walk. Nothing was written, no export ran, and the dead-man heartbeat
+fired as designed. A manual re-run at 04:27 UTC succeeded end to end — 7h25m, ACLED 363,161 events
+in 230.0s — so the condition was transient, which is the whole argument for waiting it out.
+
+**What consumers get.** Unlike v1.15.0, this release carries real library code: `datafactory_http`
+and `datafactory_harvester` both changed, so the wheel is not a metadata-only bump. `request_with_retry`
+no longer classifies **429** with the rest of the 4xx range. All **eleven call sites** inherit the
+fix, so every source gains it, not just the one that failed.
+
+**Why marking it retryable would have fixed nothing.** The generic backoff is `2**attempt + jitter`
+and every call site passes `max_retries=3`, so the total wait before giving up is **~3 seconds**. A
+429 routed into that would still have died, and would have *looked* like a fix. 429 therefore gets a
+policy sized to a real rate-limit window — 30s base, doubling, **120s ceiling**, 5s jitter, named
+constants each carrying the reason for its value. `Retry-After` is honoured, delta-seconds only,
+`int()`-parsed so `nan`/`inf`/`1e9999`/`45.5` are rejected by construction. A value **above** the
+ceiling **fails loud naming the number**, because Cloudflare-fronted 429s routinely carry 3600 and
+sleeping that off would stall an unattended cron — which ADR-011 forbids more clearly than it forbids
+retrying. Worst case added wall-clock is two sleeps per request, **≤100s**.
+
+**What the server gets.** A failed ACLED fetch now writes the ADR-011-mandated ledger entry with
+`outcome: "failed"` and a **redacted** reason. Diagnosing the 21 October abort cost about an hour and
+required `sudo`, because the only artifact holding the reason was `logs/refresh.log` (mode
+`rw-r-----`, owner `views-deploy`); everything an operator is *told* to read was world-readable and
+said nothing. `vdem`, `shdi`, `ghspop` and `ghsbuilts` already complied — ACLED did not, and
+`harvest_acled.py` was discarding the captured message. The redaction is applied **at the write**,
+not assumed from the source: this is the C-322 class exactly, where a token reached `refresh.log`
+through a `requests` exception message while the repo was public. Also: the export ledger now
+persists `other`, so its phases account for the whole elapsed time rather than 17,017.2s of 17,773.8s.
+
+**What the measurement settled.** #501's second box closes. The production export breaks down as
+`scan` 8,434.2s (47.5%), `write` 8,558.9s (48.2%), `other` 756.6s, `verify` 23.8s, `swap` 0.3s. The
+criterion pre-registered **before** any production figure existed was *"if `scan` comes in under ~25%
+of the export, the strided-memmap explanation is refuted and abandoned"* — it came in at 47.5%, so
+the explanation **survived**, and the predicted inversion from the 10.1% synthetic baseline occurred.
+Surviving a refutation test is not confirmation, so E1 then measured the mechanism rather than
+inferring it: `scan` re-reads the whole 37.355 GB grid **once per feature** — 79 passes, **2.951 TB**
+from disk — because F is the contiguous axis and `grid[:, :, :, i]` strides 316 bytes, giving **1.27%
+page utilisation**. `utime/wall = 0.0198`, and read amplification measured **8.001×** at F=8. The
+cost is **O(F²)**, so it worsens with every feature added.
+
+**Two premises falsified before they could mislead.** The docs asserted 4 vCPU / 8 GB in 13
+occurrences across 11 files; the box measures **8 vCPU EPYC-Genoa / 15 GiB**. The original
+RAM-boundary hypothesis rested on that 8 GB figure and would have produced a confidently wrong answer
+had the spike not been re-premised first. Separately, the June-vs-October comparison that motivated
+the spike moved **two variables at once** — 34 GB addressable vs 32 GB (within 6%), but 43 features
+vs 79.
+
+**And one the register had been wrong about for four months.** C-356 asserted that the temporal axis
+of UCDP imprecision was already handled by `even_split`. It is not: `profiles.py` sets
+`source_distribution_map={"annual": "date_end_only"}` for `production_parity`, so a UCDP *annual*
+event receives **no temporal distribution at all** — its whole span books to its `date_end` month.
+Measured, not estimated: cell 148759 (Mekelle, Tigray) at month_id 504 holds four events, and
+113,368 + 24 + 2 + 1 = **113,395** is a twelve-month episode booked entirely to December 2021. Four
+cell-months in the scored window carry **37.4%** of all `ged_sb_best` mass this way. The widely-quoted
+**121,915** peak-month figure was produced by the `even_split` path the pipeline **does not take**.
+Registered as C-364.
+
+**What an independent review found, after every gate was already green.** A `/code-review` pass
+over the promotion PR found **four defects**, all of them in code written for this epic, and all
+four had survived the full suite on two Python versions, `ruff`, `mypy`, a secret scan and five
+mutation drills administered by the author. The repo's own `falsify` skill already gave the reason —
+*the auditor may not be the author, because an author cannot test what they did not imagine* — and
+cites guards that cannot fire in 9 of 18 repositories. That is now demonstrated here rather than
+quoted, and it is the most transferable thing this release produced.
+
+Two of the four broke the thing this release exists to deliver. **The failed-fetch ledger entry
+could swallow the reason it was added to record:** `_append_failed_fetch_entry` runs inside `except`
+before a bare `raise`, and `append_ledger_entry` re-raises `OSError`, so a write failure replaced the
+fetch error and left the real one only in `__context__`, which nothing prints — no entry *and* no
+reason, strictly worse than the gap #513 was opened to close. A full disk is a plausible **shared**
+cause of the harvest failing in the first place, with a 37 GB grid and a 3.1 GB zarr store on one
+host, so the scenario it fires in is one it is likely to fire in. And **the operator line claimed an
+entry that may not exist:** it printed `recorded in {path}` unconditionally, though a missing
+`ACLED_USERNAME`/`ACLED_PASSWORD` raises before the loop and writes nothing — sending the operator to
+grep an *append-only* ledger, where the answer may be a previous run's failure. A confident wrong
+reason is worse than no reason, which is this epic's subject reappearing inside its own remedy.
+
+**One of the four was over-stated when it was fixed, and the correction belongs here.** The third
+finding — jitter added outside the 120s clamp, so the layer could sleep 125s — is real as a property
+of the function, but **it was unreachable at every call site.** Reaching it needs attempt >= 2, which
+needs `max_retries >= 4`, and every `max_retries` in this repository is 3: the sleeps are 35s and 65s
+and the clamp never binds. It is therefore a consistency fix, not a behavioural one, and the commit
+that landed it describes it without that qualification. The `<=100s` worst case stated above is
+unaffected, and remains boundary-true at exactly 100s.
+
+**A procedural finding, recorded because it undermines a practice this repository depends on.** The
+first mutation drill on those fixes reported all four guards "caught", and then the full suite failed
+on one of the new tests. The cause was **stale bytecode**: the drill restored each source file within
+the same *second* that pytest had compiled the mutant, and Python's staleness check compares whole
+seconds, so it kept executing the mutant. The fix had been correct the whole time; the evidence had
+not. A mutation drill here can therefore report "caught" while measuring a mutant no longer on disk,
+or "survived" while measuring one that is — which is a hole in the sabotage-the-guard discipline this
+repo relies on, not in any one change. The drill was redone with `__pycache__` cleared around every
+step and all four were genuinely caught.
+
+**What this release does *not* fix.** `write` at **48.2%** is larger than `scan` and wholly
+unexplained; no remedy identified for `scan` touches it, and the named candidates — compression
+settings, and the 12×360×720 chunking against a 3.1 GB store — are untested. ACLED's rate-limit
+window is **unmeasured** (the 30s base is borrowed from UCDP's observed ~1 minute), and it is
+**unknown whether ACLED sends `Retry-After` at all**, because the branch this replaced logged only
+the status code — the new WARNING logs the header value or the literal `absent` precisely to
+calibrate that on the next 429. Nor is it proven the incident was rate limiting rather than the
+cursor API degrading under load; 429 is what the server said. **C-364 is recorded, not fixed**:
+`profiles.py` is under a formal hold, and the entry does not license the change — nor does it assert
+that `even_split` is the right correction. The F1/F2 coverage-parity ratios mis-fired a third time
+here and remain the wrong instrument; converting them to absolute floors is a governance decision,
+tracked on #518 rather than smuggled into a bug fix.
+
+**Governance.** ADR-027 had decided the opposite in writing — *"the HTTP retry layer should continue
+to fail fast on 4xx"* — and is **narrowed by inline amendment, not reversed**: its justification is
+about *ambiguous* statuses, which is what UCDP's 400 rate-limit signal is, and 429 is never
+ambiguous. UCDP's 400 handling stays at the pagination layer, untouched. ADR-018's Timeout Policy
+gained the classification rule. No new ADR. **C-72 resolved** after sitting open seven months behind
+a trigger that read *"not observed to date"*; **C-153's premise corrected** (ACLED does report a
+total — with `with_total=true`, which we never sent); **C-356 corrected**. The register stands at 51
+open concerns, 364 IDs assigned.
 
 ---
 

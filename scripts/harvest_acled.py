@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 
 from datafactory_harvester.harvest_runner import run_harvest
+from datafactory_http import redact_url
 
 
 def main() -> int:
@@ -151,6 +152,41 @@ def _full_harvest(
     )
 
     if result.outcome == "failed":
+        # `result.error` used to be dropped on the floor here. run_harvest
+        # has already printed `FAIL: <exc>` to stdout, so under cron the
+        # reason reaches logs/refresh.log and nowhere else — mode
+        # rw-r-----, which is why the 2026-10-21 abort cost an hour and a
+        # sudo (#513). The durable fix is the ledger entry the source now
+        # writes; these two lines serve the OTHER way this script runs,
+        # by hand during diagnosis, where stdout is the operator's
+        # terminal: say the reason, then say which world-readable file
+        # holds it for next time.
+        #
+        # Redacted even though run_harvest already printed it raw. Not a
+        # fix for that path (it is shared by nine harvest scripts and
+        # out of scope here — noted on #518); simply the correct thing to
+        # do at a line this story owns.
+        print(
+            "[harvest] reason: "
+            + redact_url(result.error or "<none recorded>")
+        )
+        # "look in" rather than "recorded in". This script cannot know
+        # whether an entry was written: the source writes one on a fetch,
+        # auth or validation failure, but `get_acled_credentials` raises
+        # before the loop when ACLED_USERNAME/ACLED_PASSWORD is missing —
+        # the most common operator error — and a snapshot write can fail
+        # after a successful fetch. Both reach here with outcome
+        # "failed" and no entry. Claiming one exists would send the
+        # operator to grep a ledger that, being append-only, may answer
+        # with a PREVIOUS run's failure. A confident wrong reason is
+        # worse than no reason, which is the defect this story exists to
+        # fix, so the line says where to look and the reason above is
+        # the authority for this run.
+        print(
+            f"[harvest] look in {config.ledger_path} for an entry with "
+            "outcome: failed — world-readable, no sudo needed; check its "
+            "timestamp, the ledger is append-only"
+        )
         return 1
 
     import pyarrow.parquet as pq
