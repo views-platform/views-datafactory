@@ -267,7 +267,7 @@ def request_with_retry(
                     max_retries,
                     url,
                     exc,
-                    delay=_rate_limit_delay(exc, url, attempt),
+                    rate_limited=True,
                 )
             # Every other 4xx will never succeed on retry — fail fast
             elif isinstance(code, int) and 400 <= code < 500:
@@ -364,7 +364,7 @@ def _retry_after_seconds(resp: requests.Response | None) -> int | None:
 
 
 def _rate_limit_delay(
-    exc: requests.HTTPError,
+    exc: requests.RequestException,
     url: str,
     attempt: int,
 ) -> float:
@@ -390,10 +390,16 @@ def _rate_limit_delay(
     if requested is None:
         # 2.0, not 2: mypy types `int ** int` as Any, because a negative
         # exponent returns a float.
+        # Jitter inside the clamp, not after it. Added after, the ceiling
+        # was 125s while its own comment called itself "the longest wait
+        # this layer will ever perform" — and a server asking for 121s was
+        # refused as a quota block while the layer would sleep 125s of its
+        # own accord. The ceiling now bounds both readings.
         return min(
-            _RATE_LIMIT_BASE_DELAY_S * 2.0**attempt,
+            _RATE_LIMIT_BASE_DELAY_S * 2.0**attempt
+            + random.uniform(0, _RATE_LIMIT_JITTER_S),
             _RATE_LIMIT_MAX_WAIT_S,
-        ) + random.uniform(0, _RATE_LIMIT_JITTER_S)
+        )
     if requested > _RATE_LIMIT_MAX_WAIT_S:
         logger.error(
             "Rate limited, Retry-After %ds exceeds the %.0fs ceiling "
@@ -423,7 +429,7 @@ def _retry_or_raise(
     url: str,
     exc: requests.RequestException,
     *,
-    delay: float | None = None,
+    rate_limited: bool = False,
 ) -> None:
     """Log and sleep for retry, or raise on final attempt.
 
@@ -432,12 +438,25 @@ def _retry_or_raise(
     whose message may embed the full url with query credentials.
 
     Args:
-        delay: Seconds to wait, for callers whose wait is set by policy
-            rather than by transport backoff (rate limiting). None means
-            use the transport backoff below. Parameterised rather than
-            duplicated because the part that would be duplicated is the
-            terminal raise above — the one block in this module where a
-            divergent copy leaks a credential.
+        rate_limited: True when the wait is set by rate-limit policy
+            rather than by transport backoff. The policy wait is computed
+            HERE, after the exhaustion check, rather than passed in by the
+            caller, because computing it has two side effects that must
+            not happen on an attempt that will not retry: it logs the
+            Retry-After it observed, and it raises when the server asks
+            for longer than the ceiling.
+
+            Passed in eagerly, as it was before 2026-10-30, the 429 path
+            logged "Rate limited (429) on attempt 3, Retry-After: ..." on
+            the FINAL attempt — implying a retry that never happened — and
+            a Retry-After above the ceiling raised the ceiling error
+            instead of reaching the exhaustion raise below, so the log
+            never named retry exhaustion as the cause. A flag rather than
+            a callable because the closure would capture ``exc``, which
+            Python deletes at the end of the ``except`` block that binds
+            it, and ``attempt``, a loop variable with late binding; ruff
+            flags both (F821, B023). This function already receives all
+            three arguments the policy needs.
     """
     if attempt == max_retries - 1:
         logger.error(
@@ -446,8 +465,11 @@ def _retry_or_raise(
             _redact_url(url),
         )
         raise _redacted_copy(exc) from None
-    if delay is None:
-        delay = 2**attempt + random.uniform(0, 1)
+    delay = (
+        _rate_limit_delay(exc, url, attempt)
+        if rate_limited
+        else 2**attempt + random.uniform(0, 1)
+    )
     logger.warning(
         "Request attempt %d/%d failed, retrying in %.1fs",
         attempt + 1,

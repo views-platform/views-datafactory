@@ -968,6 +968,112 @@ class TestFailedFetchLedgerEntry:
 # ---- Pagination ----
 
 
+    def test_a_ledger_write_failure_does_not_replace_the_fetch_reason(
+        self, tmp_path: Path,
+    ) -> None:
+        """The recorder must never become the thing that hides the reason.
+
+        ``_append_failed_fetch_entry`` is called from inside ``except``
+        before a bare ``raise``. ``append_ledger_entry`` re-raises
+        ``OSError`` on a write failure, so an unguarded call replaces the
+        fetch error with a write error and the real reason survives only
+        in ``__context__`` — which nothing prints. The operator then gets
+        no ledger entry AND no reason, strictly worse than the gap this
+        function was added to close.
+
+        Not hypothetical: a full disk is a plausible SHARED cause of the
+        harvest failing in the first place, with a 37 GB grid and a 3.1 GB
+        zarr store on the same host. So the one scenario this fires in is
+        a scenario it is likely to fire in.
+
+        Mutation: remove the ``try``/``except Exception`` around
+        ``append_ledger_entry`` in ``_append_failed_fetch_entry``. This
+        test goes red — it raises OSError instead of ValueError.
+
+        Found by independent review of PR #521, not by the author.
+        """
+        config = self._config(tmp_path)
+
+        with (
+            patch(
+                "datafactory_harvester.sources.acled.fetch_paginated",
+                side_effect=ValueError("the reason that matters"),
+            ),
+            patch(
+                "datafactory_harvester.sources.acled.append_ledger_entry",
+                side_effect=OSError(28, "No space left on device"),
+            ),
+            patch(
+                "datafactory_http.retry.requests.request",
+                side_effect=[_mock_token_response()],
+            ),
+            patch.dict(
+                "os.environ",
+                {
+                    "ACLED_USERNAME": "testuser",
+                    "ACLED_PASSWORD": "testpass",
+                },
+            ),
+            pytest.raises(ValueError, match="the reason that matters"),
+        ):
+            fetch_acled(config)
+
+    def test_the_operator_line_does_not_promise_an_entry_exists(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Several failure paths write no entry at all.
+
+        ``get_acled_credentials`` raises before the loop when
+        ACLED_USERNAME/ACLED_PASSWORD is missing — the most common
+        operator error — and a snapshot write can fail after a successful
+        fetch. Both reach the failure branch with no ledger entry. The
+        runbook then tells the operator to grep the last few ``outcome:
+        failed`` entries, and the ledger is append-only, so a claim that
+        this run's reason is in there can hand back a PREVIOUS run's
+        failure. A confident wrong reason is worse than no reason, which
+        is the defect #513 exists to fix.
+
+        Mutation: restore the wording to ``recorded in {path} (outcome:
+        failed)``. This test goes red.
+
+        Found by independent review of PR #521, not by the author.
+        """
+        import importlib.util
+
+        scripts_dir = Path(__file__).resolve().parent.parent / "scripts"
+        spec = importlib.util.spec_from_file_location(
+            "harvest_acled_under_test", scripts_dir / "harvest_acled.py",
+        )
+        assert spec is not None and spec.loader is not None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        from datafactory_harvester.harvest_runner import HarvestResult
+
+        failed = HarvestResult(
+            source_name="ACLED",
+            outcome="failed",
+            elapsed=0.1,
+            error="ValueError: ACLED_USERNAME not set",
+        )
+
+        with patch.object(mod, "run_harvest", return_value=failed):
+            rc = mod._full_harvest(2024, 2024, force=False)
+
+        assert rc == 1
+        out = capsys.readouterr().out
+        assert "ACLED_USERNAME not set" in out, (
+            "the reason itself must still be printed — it is the "
+            "authority for this run"
+        )
+        for claim in ("recorded in", "is recorded", "was recorded"):
+            assert claim not in out, (
+                f"the line claims an entry exists ({claim!r}); several "
+                "failure paths write none, and the ledger is "
+                "append-only, so this sends the operator to a stale entry"
+            )
+
+
 class TestPaginationGreen:
 
     def test_multiple_pages(self, tmp_path: Path) -> None:

@@ -921,6 +921,101 @@ class TestRateLimitRetry:
         assert "SECRET" not in str(exc_info.value)
         mock_sleep.assert_any_call(30.0)
 
+    def test_the_ceiling_bounds_the_wait_jitter_included(self) -> None:
+        """120s is the ceiling, so nothing may sleep 125s.
+
+        Jitter was added AFTER the clamp, so the real bound was
+        ``_RATE_LIMIT_MAX_WAIT_S + _RATE_LIMIT_JITTER_S`` = 125s, while
+        the constant's own comment called itself "the longest wait this
+        layer will ever perform". Worse, the number was being read two
+        ways at once: a server asking for 121s was REFUSED as a quota
+        block while the layer would sleep 125s of its own accord.
+
+        Driven at the maximum jitter rather than a random draw, because a
+        bound is not tested by a sample from inside it.
+
+        Mutation: move ``random.uniform`` back outside ``min(...)``. This
+        test goes red at 125.0 > 120.0.
+
+        Found by independent review of PR #521, not by the author.
+        """
+        from datafactory_http import request_with_retry
+        from datafactory_http.retry import _RATE_LIMIT_MAX_WAIT_S
+
+        with (
+            patch(MOCK_TARGET, return_value=_response(429)),
+            patch("datafactory_http.retry.time.sleep") as mock_sleep,
+            # The top of the jitter range, not a sample from inside it.
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=5.0
+            ),
+            pytest.raises(requests.HTTPError),
+        ):
+            request_with_retry("http://test", max_retries=8, timeout=5)
+
+        assert mock_sleep.call_args_list, "nothing slept; test is vacuous"
+        for call in mock_sleep.call_args_list:
+            assert call.args[0] <= _RATE_LIMIT_MAX_WAIT_S, (
+                f"slept {call.args[0]}s against a "
+                f"{_RATE_LIMIT_MAX_WAIT_S}s ceiling: "
+                f"{mock_sleep.call_args_list}"
+            )
+
+    def test_no_rate_limit_wait_is_computed_on_the_final_attempt(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """The last attempt retries nothing, so it must claim nothing.
+
+        ``_rate_limit_delay`` has two side effects — it logs the
+        Retry-After it observed, and it raises when the server asks for
+        more than the ceiling. Passed eagerly as an argument to
+        ``_retry_or_raise``, both fired on the FINAL attempt, where no
+        retry follows. Two consequences, in a release whose whole subject
+        is making a failure say why: a WARNING announcing a retry that
+        never happened, and — when Retry-After exceeded the ceiling — the
+        ceiling error raised INSTEAD of the exhaustion path, so the log
+        never named retry exhaustion as the cause.
+
+        Asserted on the log rather than on a call count because the log
+        line is what an operator reads at 02:00.
+
+        Mutation: pass ``delay=_rate_limit_delay(exc, url, attempt)``
+        eagerly again instead of ``rate_limited=True``. This test goes
+        red — a third "Rate limited" line appears for max_retries=3.
+
+        Found by independent review of PR #521, not by the author.
+        """
+        import logging
+
+        from datafactory_http import request_with_retry
+
+        with (
+            patch(MOCK_TARGET, return_value=_response(429)),
+            patch("datafactory_http.retry.time.sleep"),
+            patch(
+                "datafactory_http.retry.random.uniform", return_value=0.0
+            ),
+            caplog.at_level(logging.WARNING, logger="datafactory_http"),
+            pytest.raises(requests.HTTPError),
+        ):
+            request_with_retry("http://test", max_retries=3, timeout=5)
+
+        rate_limited = [
+            r for r in caplog.records if "Rate limited" in r.getMessage()
+        ]
+        assert len(rate_limited) == 2, (
+            "expected one Rate-limited line per attempt that actually "
+            "retries (2 of 3), got "
+            f"{[r.getMessage() for r in rate_limited]}"
+        )
+        assert any(
+            "failed after 3 attempts" in r.getMessage()
+            for r in caplog.records
+        ), (
+            "the final attempt must name retry exhaustion as the cause: "
+            f"{[r.getMessage() for r in caplog.records]}"
+        )
+
     def test_403_still_fails_fast(self) -> None:
         """The carve-out is exactly one status wide.
 
