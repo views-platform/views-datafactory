@@ -69,6 +69,44 @@ cell-months in the scored window carry **37.4%** of all `ged_sb_best` mass this 
 **121,915** peak-month figure was produced by the `even_split` path the pipeline **does not take**.
 Registered as C-364.
 
+**What an independent review found, after every gate was already green.** A `/code-review` pass
+over the promotion PR found **four defects**, all of them in code written for this epic, and all
+four had survived the full suite on two Python versions, `ruff`, `mypy`, a secret scan and five
+mutation drills administered by the author. The repo's own `falsify` skill already gave the reason —
+*the auditor may not be the author, because an author cannot test what they did not imagine* — and
+cites guards that cannot fire in 9 of 18 repositories. That is now demonstrated here rather than
+quoted, and it is the most transferable thing this release produced.
+
+Two of the four broke the thing this release exists to deliver. **The failed-fetch ledger entry
+could swallow the reason it was added to record:** `_append_failed_fetch_entry` runs inside `except`
+before a bare `raise`, and `append_ledger_entry` re-raises `OSError`, so a write failure replaced the
+fetch error and left the real one only in `__context__`, which nothing prints — no entry *and* no
+reason, strictly worse than the gap #513 was opened to close. A full disk is a plausible **shared**
+cause of the harvest failing in the first place, with a 37 GB grid and a 3.1 GB zarr store on one
+host, so the scenario it fires in is one it is likely to fire in. And **the operator line claimed an
+entry that may not exist:** it printed `recorded in {path}` unconditionally, though a missing
+`ACLED_USERNAME`/`ACLED_PASSWORD` raises before the loop and writes nothing — sending the operator to
+grep an *append-only* ledger, where the answer may be a previous run's failure. A confident wrong
+reason is worse than no reason, which is this epic's subject reappearing inside its own remedy.
+
+**One of the four was over-stated when it was fixed, and the correction belongs here.** The third
+finding — jitter added outside the 120s clamp, so the layer could sleep 125s — is real as a property
+of the function, but **it was unreachable at every call site.** Reaching it needs attempt >= 2, which
+needs `max_retries >= 4`, and every `max_retries` in this repository is 3: the sleeps are 35s and 65s
+and the clamp never binds. It is therefore a consistency fix, not a behavioural one, and the commit
+that landed it describes it without that qualification. The `<=100s` worst case stated above is
+unaffected, and remains boundary-true at exactly 100s.
+
+**A procedural finding, recorded because it undermines a practice this repository depends on.** The
+first mutation drill on those fixes reported all four guards "caught", and then the full suite failed
+on one of the new tests. The cause was **stale bytecode**: the drill restored each source file within
+the same *second* that pytest had compiled the mutant, and Python's staleness check compares whole
+seconds, so it kept executing the mutant. The fix had been correct the whole time; the evidence had
+not. A mutation drill here can therefore report "caught" while measuring a mutant no longer on disk,
+or "survived" while measuring one that is — which is a hole in the sabotage-the-guard discipline this
+repo relies on, not in any one change. The drill was redone with `__pycache__` cleared around every
+step and all four were genuinely caught.
+
 **What this release does *not* fix.** `write` at **48.2%** is larger than `scan` and wholly
 unexplained; no remedy identified for `scan` touches it, and the named candidates — compression
 settings, and the 12×360×720 chunking against a 3.1 GB store — are untested. ACLED's rate-limit
