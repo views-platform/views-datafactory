@@ -170,9 +170,22 @@ def _full_harvest(
             "[harvest] reason: "
             + redact_url(result.error or "<none recorded>")
         )
+        # "look in" rather than "recorded in". This script cannot know
+        # whether an entry was written: the source writes one on a fetch,
+        # auth or validation failure, but `get_acled_credentials` raises
+        # before the loop when ACLED_USERNAME/ACLED_PASSWORD is missing —
+        # the most common operator error — and a snapshot write can fail
+        # after a successful fetch. Both reach here with outcome
+        # "failed" and no entry. Claiming one exists would send the
+        # operator to grep a ledger that, being append-only, may answer
+        # with a PREVIOUS run's failure. A confident wrong reason is
+        # worse than no reason, which is the defect this story exists to
+        # fix, so the line says where to look and the reason above is
+        # the authority for this run.
         print(
-            f"[harvest] recorded in {config.ledger_path} "
-            "(outcome: failed) — world-readable, no sudo needed"
+            f"[harvest] look in {config.ledger_path} for an entry with "
+            "outcome: failed — world-readable, no sudo needed; check its "
+            "timestamp, the ledger is append-only"
         )
         return 1
 

@@ -660,17 +660,39 @@ def _append_failed_fetch_entry(
     carrier: a ``requests`` exception message. Masking at the write means
     an error path added later, one that never touches the HTTP layer,
     cannot leak through this one.
+
+    Never raises. Both callers invoke this from inside ``except`` before a
+    bare ``raise``, so an exception escaping here would replace the fetch
+    error with a write error and the real reason would survive only in
+    ``__context__``, which nothing prints — no ledger entry AND no reason,
+    which is worse than the gap this function was added to close. The
+    scenario is not hypothetical: ``append_ledger_entry`` re-raises
+    ``OSError`` (``digests_and_ledgers.py``), and a full disk is a
+    plausible *shared* cause of the harvest failing in the first place,
+    with a 37 GB grid and a 3.1 GB zarr store on the same host. Broad
+    rather than ``OSError`` alone because a best-effort recorder on an
+    error path has nothing to gain from being selective. The failure is
+    logged, so ``refresh.log`` still says the ledger could not be written.
+    Same decision as ``scripts/export_zarr.py``'s ``finally`` block.
     """
-    append_ledger_entry(config.ledger_path, {
-        "dataset": DATASET_ID,
-        "version": f"{year}_{year}",
-        "start_year": year,
-        "end_year": year,
-        "outcome": "failed",
-        "error": redact_url(f"{type(exc).__name__}: {exc}"),
-        "ledger_version": LEDGER_VERSION,
-        "digest_algorithm": DIGEST_SCHEME,
-    })
+    try:
+        append_ledger_entry(config.ledger_path, {
+            "dataset": DATASET_ID,
+            "version": f"{year}_{year}",
+            "start_year": year,
+            "end_year": year,
+            "outcome": "failed",
+            "error": redact_url(f"{type(exc).__name__}: {exc}"),
+            "ledger_version": LEDGER_VERSION,
+            "digest_algorithm": DIGEST_SCHEME,
+        })
+    except Exception:
+        logger.exception(
+            "Could not write the failed-harvest ledger entry for year "
+            "%d to %s — the fetch error below is the one that matters",
+            year,
+            config.ledger_path,
+        )
 
 
 def _fetch_single_year(
