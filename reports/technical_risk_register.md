@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-10-26 — C-153's premise corrected (ACLED *does* report `total_count`, with a flag we never sent, #510) and C-364 registered: a UCDP annual event's whole span is booked to its `date_end` month, so one event holds 113,368 of a single cell-month and C-356's claim that the temporal axis was corrected is false. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-11-02 — C-365 registered: C-337's guard expires an `ALLOWED_AT_FLOOR` exemption only when the *lock* leaves the floor, never when *upstream* does, so views-frames froze at 1.10.2 and this repo's `<2` cap kept the 3.0.0 reconciliation fix out of the forecast (#527; cap fixed in v1.17.0, blindness not). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 364 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 51 open concerns (0 Tier 1, 4 Tier 2, 17 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 365 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 52 open concerns (0 Tier 1, 5 Tier 2, 17 Tier 3, 24 Tier 4, 6 deferred by design; 5 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -170,6 +170,7 @@
 | ~~C-335~~ | ~~2~~ | ~~Nothing watches the data-serving path — green while every consumer gets nothing~~ | Resolved 2026-08-03: Better Stack monitor live and verified (Up, ~27ms, test alert delivered) + serving-freshness.yml for the content half | Operational monitoring |
 | C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
 | ~~C-337~~ | ~~2~~ | ~~A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics~~ | Resolved 2026-08-21 (#462). Floor raised to `>=1.10.2` and `uv.lock` moved; `tests/test_views_frames_floor.py` guards the declared floor; and the residual this entry stayed open for — *nothing checks the other floors against what their locks chose* — was closed by `tests/test_dependency_floors.py` (#430), which checks every runtime floor against every resolution in the lock | Dependency policy |
+| C-365 | 2 | C-337's successor: the floor-versus-lock guard asks whether the **lock** left the floor, never whether **upstream** left it, so an `ALLOWED_AT_FLOOR` exemption reading "the floor IS the latest release" stayed green for ten weeks while views-frames published 1.11.0, 2.0.0 and 3.0.0 and this repo's lock sat frozen at 1.10.2 | **Fired** 2026-11-02 (#527) — the frozen cap made views-datafactory the last constraint holding views-frames below 3.0.0, and the forecast lane silently resolved the reconciler that loses 2.9–7.3% of fatality mass. Re-fires whenever any entry is added to `ALLOWED_AT_FLOOR`, and on any dependency whose cap excludes the current major | Dependency policy |
 | C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
 | C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Before giving any human a command to paste** — if it spans more than one line it is unsafe (terminals join wrapped lines, and the joined form is often still valid shell); if it runs as root, ask what it writes to when mis-parsed | Operational safety |
 | C-340 | 3 | Auto-merge fails silently two ways: `gh pr merge --auto --<method>` refuses to change the method on an already-armed PR (nearly put a squash on `main`), and pushing to a branch whose PR already merged orphans the commit with no error | **Before arming a non-default merge method**, read `auto_merge.merge_method` back; **before any follow-up push to a PR branch**, check `merged` first or use a new branch | Operational safety |
@@ -229,6 +230,7 @@ the table below rather than removed, so the table has ten rows. C-331 closed 202
 | ~~**C-331**~~ | ~~`HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice~~ — **closed 2026-08-10, drilled with a negative control** |
 | **C-336** | Governance docs true when written, false later, nothing failing in between |
 | ~~**C-337**~~ | ~~`views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever~~ — **closed 2026-08-21 (#462)** |
+| **C-365** | The guard built to catch C-337 reported success for ten weeks over the same package frozen again — an exemption's reason expired and nothing was watching the reason |
 | **C-338** | Freshness detection that runs daily-and-by-issue rather than alerting |
 | **C-339** | `tee` wrote to an unintended path as root and exited 0 |
 | **C-340** | `git push` succeeds onto a merged branch; `gh pr merge` exits 0 without changing the method |
@@ -610,6 +612,19 @@ Cross-ref: ~~C-131~~ (external monitoring for cron — resolved; this is the sib
 ---
 
 ### ~~C-337: A loose floor froze an estimator version — and the audit that checked it asked the wrong question~~ — RESOLVED
+
+**Addendum 2026-11-02 — the guard named in this resolution is the one that failed (#527).** This
+entry's resolution rests on `tests/test_dependency_floors.py` checking every runtime floor against
+every resolution in the lock. It does, and views-frames froze again anyway: the `ALLOWED_AT_FLOOR`
+exemption written alongside that guard said *"the floor IS the latest release"*, upstream published
+1.11.0, 2.0.0 and 3.0.0, the lock stayed on 1.10.2, and `test_allow_list_has_not_rotted` reported
+success throughout — it expires an exemption only when the **lock** leaves the floor, never when
+**upstream** does. Ten weeks, no error. The consequence left this repository as the last constraint
+holding views-frames below 3.0.0, so the forecast lane silently resolved the reconciler that loses
+2.9–7.3% of fatality mass. Registered as **C-365**, which stays open for the blindness; the specific
+freeze is fixed in v1.17.0. This entry remains resolved, because its stated defect is genuinely
+fixed — but a resolution that cites a guard is only as good as that guard's referent, and nothing
+was checking the referent.
 
 **Source:** views-frames floor audit (2026-08-02), corrected after operator pushback.
 
@@ -4200,6 +4215,70 @@ Cross-ref: **C-356** (the spatial half, whose claim that the temporal axis was c
 ---
 
 ## Deferred by Design
+
+### C-365: The rot check watched the lock, not upstream — so C-337's guard reported success over the same package, frozen again — [OPEN]
+
+| Field | Value |
+|-------|-------|
+| ID | C-365 |
+| Tier | 2 |
+| Source | Found 2026-11-02 while investigating #527, which arrived as a cross-repo request from two peer sessions rather than from any audit or guard here. Not found by this repository. That is the finding's own evidence: the mechanism is undetectable from inside, and what detected it was a different repository noticing that its fix was not arriving. |
+| Trigger | **Fired** 2026-11-02 (#527). Re-fires on two specific actions: adding any entry to `ALLOWED_AT_FLOOR` in `tests/test_dependency_floors.py`, and declaring or keeping a cap on any runtime dependency that excludes that dependency's current major version. |
+| Location | `tests/test_dependency_floors.py` — `ALLOWED_AT_FLOOR` and `test_allow_list_has_not_rotted` |
+
+**The mechanism.** `test_no_dependency_is_pinned_at_its_floor` flags a runtime dependency whose lock
+resolution equals its declared floor, because `uv lock` keeps an existing pin while it still
+satisfies the constraint — so a loose floor freezes a version rather than merely permitting one.
+`ALLOWED_AT_FLOOR` exempts the cases where resting on the floor is correct, and
+`test_allow_list_has_not_rotted` is what stops an exemption outliving its reason.
+
+It cannot. It fires only when a package in the exemption list is **no longer** on its floor. The
+views-frames entry read *"the floor IS the latest release"* and *"remove this entry once views-frames
+publishes past 1.10.2 and the lock moves"* — two clauses that come apart. Upstream published 1.11.0,
+2.0.0 and 3.0.0, so the first clause became false on 2026-08-21 or shortly after. The lock never
+moved, because the exemption was what stopped anything asking it to, so the second clause never
+fired. Both tests were green for ten weeks over a dependency frozen at 1.10.2.
+
+**Why Tier 2 rather than Tier 4.** The freeze was not inert. Every published views-datafactory from
+1.13.0 to 1.16.0 declared `views-frames>=1.10.2,<2`, and every sparrow and condor member of
+views-models requires `views-datafactory>=1.13.0`. views-pipeline-core 3.4.0 requires
+`views-frames>=3.0.0` to carry views-frames 3.0.0's reconciliation fix. So a fresh resolve of the
+forecast lane fell back to pipeline-core **3.3.5** and views-frames **1.11.0** — the reconciler that
+silently drops a country's fatalities when its grid is all zeros in a draw, measured at **2.9–7.3%
+of fatality mass** on chrome_box (views-frames#283) — with **exit 0 and no warning**. Remove
+views-datafactory from the install set and the same resolve gives 3.4.0 and 3.0.0.
+
+A correctness fix shipped three repositories upstream, every intermediate package widened its pin,
+and the chain still delivered the old behaviour because one library declared a cap. No error
+anywhere, in any repository, at any step.
+
+**What is fixed and what is not.** #527 widened the cap to `<4`, moved the lock with
+`uv lock --upgrade-package views-frames`, and deleted the stale exemption — `ALLOWED_AT_FLOOR` is now
+empty, which is that file's strongest state, because `test_no_dependency_is_pinned_at_its_floor` then
+runs with no exemptions at all. **The blindness is unfixed.** The next exemption anyone writes will
+have the same property, and the entry is open for that reason rather than for views-frames.
+
+**What a fix would have to do, and why none is proposed here.** Detecting "upstream moved past our
+cap" requires querying an index at test time. That is a network call in the suite, a guard whose
+red/green depends on something outside the repository, and the C-320 shape — a check that can go red
+for reasons unrelated to the code under test, with no admin override on a protected branch. The
+cheaper instruments are: a dependency-update bot, which is out-of-band and cannot redden CI; or
+requiring every `ALLOWED_AT_FLOOR` reason to name **what will observe it ceasing to be true**, which
+is a documentation obligation a test can check the presence but not the truth of. The deleted
+exemption's replacement comment states that obligation. Neither is a mechanism, and saying so is
+better than registering a guard that cannot fire — which is the defect this entry is about.
+
+**The general shape, which is the part worth carrying.** An exemption is a claim about the world
+with an expiry nobody set. `test_allow_list_has_not_rotted` was written to expire exemptions and
+expires them against the wrong referent: it watches the thing the exemption protects, not the thing
+the exemption's reason depends on. Any guard with an allow-list, a skip-list, or a known-failures
+file has this shape available to it.
+
+Cross-ref: ~~C-337~~ (the predecessor — this is its residual, and the guard named in its resolution
+is the one that failed), C-336 (an artifact true when written and false later — same class, different
+medium), ~~C-342~~ (`uv sync` repairing a stale lock in CI, same file's subject), C-320 (why the
+obvious fix is not proposed). Part of the **mechanisms that fail green** cluster. GitHub: #527.
+
 
 ### C-10: Ontology vocabulary overhead
 Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add conceptual overhead. For a 7-package project, governance is heavy. **Accepted: governance has proven itself (ADR-008 caught bugs in 3 audits). Cost is documentation maintenance, not development velocity.**

@@ -17,6 +17,70 @@ entry could.
 
 ---
 
+## The guard expired the exemption against the wrong referent (2026-11-02)
+
+**C-365 registered.** It is C-337's residual, and the uncomfortable part is that the guard named in
+C-337's own resolution is the one that failed.
+
+**What happened.** C-337 (closed 2026-08-21, #462) was a loose views-frames floor letting `uv.lock`
+freeze at 1.0.0 for six weeks while three MINOR releases changed how MAP and HDI are computed. Its
+fix raised the floor to 1.10.2 and added `tests/test_dependency_floors.py`, which flags any runtime
+dependency whose lock resolution equals its declared floor. Since 1.10.2 *was* the latest release at
+the time, views-frames legitimately sat on its floor, so the same PR added an `ALLOWED_AT_FLOOR`
+exemption — with a written reason, and with `test_allow_list_has_not_rotted` to expire it.
+
+The exemption's reason had two clauses: *"the floor IS the latest release"* and *"remove this entry
+once views-frames publishes past 1.10.2 and the lock moves"*. Those clauses can come apart, and they
+did. views-frames published 1.11.0, then 2.0.0, then 3.0.0. The first clause became false. The lock
+never moved — because the exemption was the thing that stopped anything asking it to — so the second
+clause never fired. Both tests reported success for ten weeks over a dependency frozen at 1.10.2.
+
+**Why it mattered outside this repository.** Every published views-datafactory from 1.13.0 to 1.16.0
+declared `views-frames>=1.10.2,<2`. views-pipeline-core 3.4.0 requires `views-frames>=3.0.0` to carry
+views-frames 3.0.0's reconciliation fix, and every sparrow and condor member of views-models requires
+`views-datafactory>=1.13.0`. A fresh resolve of the forecast lane therefore fell back to
+pipeline-core 3.3.5 and views-frames 1.11.0 — the reconciler that silently drops a country's
+fatalities when its grid is all zeros in a draw, measured at 2.9–7.3% of fatality mass on chrome_box
+(views-frames#283) — with exit 0 and no warning. Remove views-datafactory from the install set and
+the same resolve gives 3.4.0 and 3.0.0.
+
+So: a correctness fix shipped three repositories upstream, every intermediate package widened its
+pin, and the chain still delivered the old behaviour because one library declared a cap. No error
+anywhere, in any repository, at any step.
+
+**How it was found, which is the entry's own evidence.** Not by this repository. It arrived on
+2026-11-02 as #527, a cross-repo request from two peer sessions, one of which had measured the lane's
+resolution twice. The mechanism is undetectable from inside — what detected it was a different
+repository noticing that its fix was not arriving. An audit here would not have found it, because
+every guard here was green and every guard here was correct about what it checked.
+
+**Fixed and unfixed.** v1.17.0 widened the cap to `<4`, moved the lock with
+`uv lock --upgrade-package views-frames`, and deleted the exemption, leaving `ALLOWED_AT_FLOOR`
+empty — which that file's docstring already argued is its strongest state, since
+`test_no_dependency_is_pinned_at_its_floor` then runs with no exemptions at all. The **blindness is
+unfixed**, and C-365 is open for that rather than for views-frames. The next exemption anyone writes
+has the same property available to it.
+
+**Why no mechanism is proposed.** Detecting "upstream moved past our cap" means querying an index at
+test time: a network call in the suite, and a guard whose colour depends on something outside the
+repository with no admin override on a protected branch. That is C-320's shape exactly. The
+alternatives are out-of-band (a dependency-update bot, which cannot redden CI) or documentary
+(requiring each exemption's reason to name what will observe it ceasing to be true — which a test
+can check the presence of but not the truth of). The replacement comment in
+`tests/test_dependency_floors.py` states that obligation. Registering a guard that cannot fire would
+reproduce the defect being registered, so none was written, and saying so explicitly is the point.
+
+**The transferable shape.** An exemption is a claim about the world with an expiry nobody set.
+`test_allow_list_has_not_rotted` expires exemptions against the wrong referent — it watches the
+thing the exemption protects, not the thing the exemption's reason depends on. Every allow-list,
+skip-list and known-failures file in this repository has that shape available to it.
+
+A dated addendum was added to C-337 rather than reopening it: its stated defect really is fixed, but
+a resolution that cites a guard is only as good as that guard's referent, and nothing was checking
+the referent.
+
+---
+
 ## Two falsified premises, one of them the register's own (2026-10-26)
 
 A `/review-rr strategic` pass, then a cross-session question from a modelling consumer, each
