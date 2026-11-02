@@ -4,6 +4,7 @@
 **Status:** Accepted
 **Date:** 2026-03-17
 **Deciders:** Simon Polichinel von der Maase, Claude Code
+**Amended:** 2026-11-02 — the views-frames range named in Context item 7 is now `>=1.10.2,<4`. The boundary decision is unchanged; see the Amendment at the end of Consequences. *(Header pointer per ADR-030's precedent: the stale range sits in Context, and a reader who stops there would leave with a constraint that is no longer declared.)*
 
 ---
 
@@ -162,6 +163,43 @@ Warnings are insufficient for structural configuration errors.
 - Increases up-front configuration clarity requirements
 
 These costs are accepted.
+
+---
+
+### Amendment 2026-11-02 — the views-frames range in Context item 7 (#527)
+
+Context item 7 reads *"FeatureFrame (views-frames `>=1.0,<2`)"*. The declared range is now
+**`>=1.10.2,<4`** (`pyproject.toml`). The original text is left as written, per the repository's
+dated-amendment rule; this section carries the current fact.
+
+It was wrong in two separate ways, and they are worth separating because only one of them is
+tonight's change.
+
+**The floor had been stale since 2026-08-02.** C-337 raised it from `>=1.0` to `>=1.10.2` because
+views-frames changed how MAP and HDI are computed three times in MINOR releases, and a floor
+constrains the resolver rather than our import list. This ADR was not updated then. The lesson is
+the ADR's own: a boundary stated in prose is an implicit contract unless something reads it.
+
+**The cap moved on 2026-11-02 (#527).** `<2` was the last constraint on the platform holding
+views-frames below 3.0.0, whose reconciliation fix (views-frames ADR-030) stops a draw with an
+all-zero grid silently losing a country's fatality mass. A fresh resolve of views-models' forecast
+lane fell back to views-pipeline-core 3.3.5 and views-frames 1.11.0 — exit 0, no warning — because
+this package declared `<2`.
+
+**The boundary invariant itself is unchanged, and that is a measurement rather than a hope.**
+views-frames 2.0.0 (ADR-028) makes a frame's `index` require a real `SpatioTemporalIndex` and makes
+`frame.values` read-only. This repository already satisfies both: both frames are constructed on a
+real `SpatioTemporalIndex` — `grid_to_feature_frame()` in
+`src/datafactory_adapters/grid_to_feature_frame.py` and `build_contract_frame()` in
+`scripts/generate_contract_fixture.py` — and nothing in `src/`, `scripts/`, `tests/` or
+`examples/` writes into `.values`. Verified against 3.0.0 in a clean venv on 2026-11-02: the full
+suite, `mypy --strict` and `ruff` all clean, including ADR-050's fixture drift alarm — so 3.0.0
+writes a byte-identical FeatureFrame layout, and the shape contract `(N, D, 1)` with time/unit/level
+validation holds exactly as stated above.
+
+The floor stays at 1.10.2 deliberately. The `>=3.0.0` floor belongs where reconciliation happens —
+views-pipeline-core 3.4.0 carries it — and views-baseline 1.0.3 shipped this same shape. This
+package does not reconcile.
 
 ---
 
