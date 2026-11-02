@@ -123,15 +123,20 @@ REPO = Path(__file__).resolve().parents[1]
 # ``test_no_dependency_is_pinned_at_its_floor`` — which does the real
 # work — runs with no exemptions at all. Do not "fix" this by inventing
 # an assertion that fires on emptiness.
-ALLOWED_AT_FLOOR = {
-    "views-frames": (
-        "The floor IS the latest release. C-337's fix raised it to 1.10.2 "
-        "on 2026-08-02 — deliberately meaning 'current' rather than 'the "
-        "oldest version that happens to work'. Being at the floor here is "
-        "the fix working, not the freeze. Remove this entry once "
-        "views-frames publishes past 1.10.2 and the lock moves."
-    ),
-}
+#
+# Emptied 2026-11-02 (#527), and the reason is worth more than the entry
+# was. The views-frames exemption said "the floor IS the latest release"
+# and "remove this entry once views-frames publishes past 1.10.2 and the
+# lock moves". views-frames published 1.11.0, 2.0.0 and 3.0.0 — so the
+# first clause became false — but the lock never moved, so the second
+# clause never fired, and ``test_allow_list_has_not_rotted`` stayed green
+# for ten weeks over a package frozen at 1.10.2. That is C-337's freeze
+# recurring inside the guard written to catch it: the rot check asks
+# whether the LOCK left the floor, never whether UPSTREAM left it, and an
+# exemption is precisely where those two questions come apart. Do not
+# re-add an entry whose reason is "the floor is current" without also
+# saying what will observe it ceasing to be current.
+ALLOWED_AT_FLOOR: dict[str, str] = {}
 
 
 def _declared_floors() -> dict[str, str]:

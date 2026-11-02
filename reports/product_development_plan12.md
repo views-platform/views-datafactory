@@ -1,9 +1,72 @@
-# Product Development Plan v12 — current through v1.16, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.17, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
+
+---
+
+## v1.17 Addendum (2026-11-02)
+
+**v1.17.0 (a dependency cap was costing the forecast 2.9–7.3% of its fatality mass).** This release
+changes one declared version range and no library code. It exists because that range was the last
+constraint on the platform holding `views-frames` below 3.0.0.
+
+**What the cap was doing.** views-frames 3.0.0 fixes reconciliation silently dropping a country's
+fatalities when its grid is all zeros in a draw — measured at **2.9–7.3% of fatality mass** on the
+first production run (views-frames#283). views-pipeline-core 3.4.0 requires `views-frames>=3.0.0`
+to carry that fix. But every sparrow and condor member of views-models requires
+`views-datafactory>=1.13.0`, and every published release from 1.13.0 to 1.16.0 declared
+`views-frames>=1.10.2,<2`. A fresh resolve of the forecast lane therefore fell back to
+pipeline-core **3.3.5** and views-frames **1.11.0** — the unfixed reconciler — with **exit 0 and no
+warning**. Two peer sessions measured this independently; the evidence is on #527. Remove
+views-datafactory from the install set and the same resolve gives 3.4.0 and 3.0.0.
+
+That is the shape worth remembering: a correctness fix shipped three repositories upstream, every
+intermediate package widened its pin, and the whole chain still delivered the old behaviour because
+one library declared a cap. No error anywhere.
+
+**What shipped.** `views-frames>=1.10.2,<2` → `>=1.10.2,<4`. The **floor stays at 1.10.2**
+deliberately: the `>=3.0.0` floor belongs where reconciliation happens, pipeline-core already
+carries it, and views-baseline 1.0.3 shipped this same shape. This package does not reconcile, so a
+`>=3.0.0` floor here would make a widely-installed library stricter than any sibling and force 3.x
+on consumers with no reason to move.
+
+**Crossing 2.0.0 and 3.0.0 cost no code, and that is a measurement.** views-frames 2.0.0 (its
+ADR-028) requires a frame's `index` to be a real `SpatioTemporalIndex`, makes `frame.values`
+read-only, and makes `map_estimate` reject non-finite draws. None of the three reaches us: both
+frames are built on a real `SpatioTemporalIndex`, every `.values` occurrence in `src/`, `scripts/`,
+`tests/` and `examples/` is a read, and we import no estimator. Verified against 3.0.0 in a clean
+venv: **2,433 passed, 16 skipped, 17 xfailed, 0 failed**, `mypy --strict` clean across 89 files,
+`ruff` clean. ADR-050's fixture drift alarm **did not fire**, so 3.0.0 writes a byte-identical
+FeatureFrame layout — a test that exists to go red on a layout change passing is information, not
+silence.
+
+**A wider cap does not move the lock.** `uv lock` keeps an existing pin while it still satisfies the
+constraint, so `<4` alone left `uv.lock` on 1.10.2 — verified in a scratch tree — and this release
+would have published a compatibility claim nothing had ever tested. That is **C-337** exactly. The
+lock was moved with `uv lock --upgrade-package views-frames`.
+
+**What that exposed, which is the part with a lesson in it.** Moving the lock turned one guard red:
+`ALLOWED_AT_FLOOR` in `tests/test_dependency_floors.py` still exempted views-frames with the reason
+*"the floor IS the latest release"* and the instruction *"remove this entry once views-frames
+publishes past 1.10.2 and the lock moves"*. views-frames published 1.11.0, 2.0.0 and 3.0.0, so the
+first clause became false. The lock never moved, so the second clause never fired. The rot check
+asks whether the **lock** left the floor, never whether **upstream** left it — and an exemption is
+exactly where those two questions come apart. So the guard written to catch C-337's freeze stayed
+green for ten weeks over a package frozen at 1.10.2, and that is why this repository became the
+platform's blocker rather than noticing on its own. The exemption is deleted; the register owes a
+C-337 successor.
+
+**ADR-009** named the range in Context item 7 as `views-frames >=1.0,<2`. It had been wrong since
+2026-08-02, when C-337 raised the floor and nobody updated the ADR — three months of code and ADR
+disagreeing, which ADR-000 forbids. Amended by date, original prose intact.
+
+**Not deployed.** The production host runs v1.16.0, which already carries the 429 fix and the
+failed-harvest ledger entry. This release changes only a declared dependency range, which the
+server's installed environment does not resolve against, so the 21 November cron is unaffected
+either way.
 
 ---
 

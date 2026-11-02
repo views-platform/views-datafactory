@@ -1,6 +1,6 @@
 [project]
 name = "views-datafactory"
-version = "1.16.0"
+version = "1.17.0"
 description = "Data factory for the VIEWS conflict forecasting platform — provenance, harvesting, consolidation, viewpoint construction, compilation, and assembly."
 authors = [
     { name = "Simon Polichinel von der Maase", email = "simmaa@prio.org" },
@@ -82,7 +82,40 @@ dependencies = [
     # documentation and test releases that cost consumers nothing, and a
     # floor meaning "current" stays honest more easily than one meaning "the
     # oldest version that happens to work".
-    "views-frames>=1.10.2,<2",
+    #
+    # CAP WIDENED to <4 on 2026-11-02 (#527). The floor is deliberately NOT
+    # raised, and both halves of that need stating.
+    #
+    # The cap had to move because it was the platform's only remaining
+    # blocker. views-pipeline-core 3.4.0 requires views-frames>=3.0.0, so a
+    # fresh resolve of views-models' forecast lane — which requires
+    # views-datafactory>=1.13.0 — fell back to pipeline-core 3.3.5 and
+    # views-frames 1.11.0, exit 0, no warning: the reconciler that silently
+    # drops a country's fatalities when its grid is all zeros in a draw
+    # (2.9-7.3% of fatality mass, views-frames#283). Our <2 was what made
+    # the resolver choose that.
+    #
+    # Crossing 2.0.0 (views-frames ADR-028) and 3.0.0 (ADR-030) costs this
+    # repository no code. Measured 2026-11-02 against 3.0.0 in a clean venv:
+    # the full suite, mypy --strict and ruff all clean, including the ADR-050
+    # fixture drift alarm, which means 3.0.0 writes a byte-identical
+    # FeatureFrame layout. We build both frames on a real
+    # SpatioTemporalIndex, we never write into the now-read-only
+    # frame.values, and we import no estimator.
+    #
+    # The floor stays at 1.10.2 because the >=3.0.0 floor belongs where the
+    # reconciliation happens — pipeline-core already carries it, and that is
+    # what forces the fix into the forecast lane. views-baseline 1.0.3
+    # shipped exactly this shape. We do not reconcile, so a >=3.0.0 floor
+    # here would only make this widely-installed package stricter than any
+    # sibling and force 3.x on consumers that have no reason to move.
+    #
+    # NB a wider cap does NOT move the lock. `uv lock` keeps an existing pin
+    # while it still satisfies the constraint, so <4 alone left uv.lock on
+    # 1.10.2 — verified — and we would have shipped a declaration we never
+    # tested, which is C-337 exactly. `uv lock --upgrade-package
+    # views-frames` is the step that makes the declaration honest.
+    "views-frames>=1.10.2,<4",
 ]
 
 # pandas is a LEGACY output format, never a foundational import.
