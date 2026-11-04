@@ -82,10 +82,13 @@ Options are not mutually exclusive; O1 is a prerequisite for honest evaluation o
 | # | Option | What changes | Status | This repo's? |
 |---|---|---|---|---|
 | **O0** | **Status quo** — `date_end_only` + `passthrough` | nothing | live | — (the control) |
-| **O1** | **Make ADR-049 live** — enable spatial distribution in a non-parity profile | `spatial_distribution_strategy` | **decided, dormant** | **yes** |
-| **O2** | **Temporal analog** — spread `date_prec ≥ 4` annual events across their span, conserving | a new registry entry; `even_split` or a benchmarking-style successor | undecided | **yes** |
-| **O3** | **Declare, don't allocate** — emit per-cell-month provenance: concentrated mass, its share, and the coarsest contributing precision | new export columns + contract | undecided | **yes** (ADR-009 / ADR-049 §8) |
-| **O4** | **Drop** — extend `exclude_where_prec` to 5 | profile config | argued against by ADR-049 | yes, but |
+| **O1** | **Make ADR-049 live** — proportional dasymetric weighting by well-located fatalities | `spatial_distribution_strategy` | **decided, dormant** | **yes** |
+| **O1b** | **Pycnophylactic allocation** (`Tobler1979`) — minimise the Dirichlet integral subject to mass preservation, Dirichlet boundary at water via our land mask | a new registry entry | new option, from `Gotway2002`'s ladder | **yes** |
+| **O2** | **Temporal allocation, Denton first-difference** (`Denton1971`) — ⚠️ **not** `even_split`, which Denton rejects by name | a new registry entry | undecided | **yes** |
+| **O2b** | **Covariate-informed temporal allocation** (`ChowLin1971`) — BLUE with an indicator series; conservation emerges rather than being imposed | a new registry entry | undecided | **yes**, but needs an indicator series |
+| **O3** | **Declare, don't allocate** — per-cell-month provenance: concentrated mass, its share, the coarsest contributing precision | new export columns + contract | undecided | **yes** (ADR-009 / ADR-049 §8) |
+| **⭐ O7** | **Multiple Spatial Imputation** (`Croicu2026`) — actor-dyad-monthly GP over the precise-event cloud; sample *m* locations per KGI event inside its admin polygon; emit *m* datasets | a new strategy **plus** an *m*-realisation output mode | **new; the measured state of the art** | **boundary question — see below** |
+| **O4** | **Drop** — extend `exclude_where_prec` to 5 | profile config | argued against twice over | yes, but no |
 | **O5** | **Weighted / scale-invariant scoring** — twCRPS, SCRPS downstream | nothing here | n/a | **no — hydranet's** |
 | **O6** | **Intensity-measure target** — evaluate against Λ, never bin | nothing here | n/a | **no — downstream** |
 
@@ -101,14 +104,65 @@ any in-scope option must be judged against, and O3 is what makes them *possible*
 the load-bearing deliverable for #533, and it is provenance, not modelling, so it sits inside the
 line ADR-049 drew.
 
+#### ⚠️ O7 puts that line in question, and the question is Simon's
+
+ADR-049 placed sampling treatments downstream: *"represent each imprecise event as a distribution
+over cells … belongs in a downstream transformation or modeling layer, not in the viewpoint."*
+`Croicu2026` answers the other way — MSI is **data preparation** that consumes the event cloud (this
+layer's own input) and emits *m* complete datasets. Both readings are defensible:
+
+- **For "downstream":** MSI fits Gaussian Processes over actor-dyad conflict histories. That is a
+  conflict-process model, and ADR-049's deferral reason (c) said so.
+- **For "here":** the GP is fitted *to the observed precise events*, not to covariates or forecasts,
+  and its output is a dataset, not a prediction. It is the same kind of object as ADR-049's
+  proportional weighting — which is *already* accepted at this layer — only with a better estimator
+  and *m* draws instead of one.
+
+My reading is that **O7 belongs here and ADR-049's deferral should be amended**, because the
+distinction it drew (materialisation vs modelling) does not survive contact with the fact that
+ADR-049's own accepted mechanism already estimates a spatial weighting from observed events. But
+this is a platform-boundary decision with consequences beyond this repo, so it is **D5 in the
+roadmap's decision table, not a conclusion of this document**.
+
+One architectural consequence either way: **emitting *m* realisations is a new output shape.** Every
+consumer contract assumes one viewpoint per profile. m=1 already beats centroid placement in 100% of
+Croicu's simulations, so a staged path exists — m=1 first, which needs no new output shape at all.
+
 ### On O4, and a reason to reject it the ADR did not have
 
-ADR-049 rejected dropping because it loses real deaths. The library adds a sharper argument:
-`Vesco2026_UnderreportedDeathTollWars` finds UCDP underreporting is **non-linear in event size** —
-~30% for large events versus >100% for single-fatality ones. **The large aggregates are the most
-accurately-counted values in the dataset.** Dropping or discounting them trades a known allocation
-error for a known and larger magnitude error. O4 should be rejected on this basis and the reason
-recorded.
+ADR-049 rejected dropping because it loses real deaths. The library now adds two sharper arguments,
+and they point the same way.
+
+**First, magnitude.** `Vesco2026_UnderreportedDeathTollWars`: UCDP underreporting is **non-linear in
+event size** — ~30% for large events versus >100% for single-fatality ones. **The large aggregates
+are the most accurately-counted values in the dataset.**
+
+**Second, and more directly, `Weidmann2015`: counts are substantially more accurate than
+locations.** Casualty estimates agree with military records in ~50% of matched events with symmetric
+deviations, and remoteness degrades *locational* accuracy without degrading *casualty* accuracy.
+
+So the reliable component of a KGI event is its count, and the unreliable component is its
+coordinate. **Dropping the event discards the reliable number because the unreliable one is
+unreliable.** O4 should be rejected on this basis and the reason recorded. (`Croicu2026` measures the
+cost: list deletion is 34.92% worse in RMSLE than MSI, and attenuates estimated effect sizes in his
+Pierskalla–Hollenbach replication.)
+
+### ⭐ And a theorem against O0, which ADR-049 did not have
+
+`Heitjan1991` proves that under **coarsening at random (CAR)** the coarsening mechanism may be
+ignored — and that **when data are *not* CAR, ignoring it "leads to severely biased inference"**
+(their simulation: estimates over 21 standard errors out).
+
+`Croicu2026` measures that **KGI is non-random**: it correlates with remoteness, reporting quality,
+and commonly used predictors of violence.
+
+> KGI is not CAR. `passthrough` and `date_end_only` ignore the coarsening mechanism. Therefore the
+> status quo is expected to bias inference severely — not as a matter of degree, but as a
+> consequence of a proved result with an empirically verified premise.
+
+This is the strongest argument in the dossier and it shifts the burden: **O0 is not a conservative
+default to be displaced by evidence; it is a specification error to be corrected.** What remains
+genuinely open is *which* remedy, not whether one is needed.
 
 ## 5. How to evaluate — the coarsen-and-recover design
 
@@ -158,12 +212,17 @@ reporting process. **The evaluation measures allocation skill on a proxy populat
 transfer to the real population is an assumption, not a result.** Stratifying the coarsening by
 event size and conflict intensity is the available mitigation.
 
-**C-b — the ground truth is not ground truth at our resolution.** ⚠️ Added 2026-11-04 from
-`Weidmann (2015)`, *On the Accuracy of Media-based Conflict Event Data* (JCR 59(6)): benchmarking
-UCDP-GED against military SIGACT records in Afghanistan, district-level patterns are captured
-reasonably well but **locational accuracy degrades sharply at finer spatial scales**. Our cells are
-0.5° (~55 km). So a `where_prec ≤ 3` event is *precisely coded*, not *precisely known*, and the
-"truth" we score recovery against carries its own locational error.
+**C-b — the ground truth is not ground truth at our resolution.** ⚠️ From `Weidmann2015`, now read
+rather than inferred: against military SIGACT records in Afghanistan (N=1,077), **80% of matched
+events lie within 50 km of their actual position, 63.4% are referenced to the correct district and a
+further 18.6% to a neighbouring one**, and the spatial error is *"roughly of the same order of
+magnitude as the size of an administrative district (approximately 50 km)."* Weidmann's explicit
+recommendation: **do not operate below ~50×50 km cells or district resolution.** Our cells are 0.5°
+≈ 55 km — at the floor, which validates the grid and bounds the exercise. So a `where_prec ≤ 3`
+event is *precisely coded*, not *precisely known*, and the "truth" we score against carries error of
+about one cell. `Weidmann2013` gives the gradient: ACLED-vs-military correlation 0.68 at
+province/month, 0.29 at district/week, 0.15 at cell/three-day. Afghanistan is likely a **lower
+bound** on error, given unusually dense coverage.
 
 Three consequences, all of which must be in the pre-registration:
 
@@ -179,17 +238,33 @@ Three consequences, all of which must be in the pre-registration:
 
 Both confounds belong in the skepticism ledger of any pre-registration.
 
-## 6. Expected ranking — a prediction to be tested, not a conclusion
+## 6. Expected ranking — revised 2026-11-04, still a prediction to be tested
 
-Stated now so it can be falsified later:
+The eight acquisitions reordered this. Stated so it can be falsified:
 
-1. **O1 + O3 together.** O1 is already decided and dormant; O3 is what #533 actually asked for and
-   is cheap provenance. Expected to dominate because neither requires a new assumption beyond what
-   ADR-049 already accepted.
-2. **O2**, conditional on beating uniform. The temporal axis carries 17.79% of mass and is the
-   *undecided* half, so it has the most genuine research content.
-3. **O0** retained permanently as `viewser_parity` — not a failure, a contract.
-4. **O4 rejected** on the Vesco underreporting argument.
+1. **O3 (declare) ships first and alone.** It is what #533 asked for, it is provenance rather than
+   modelling, it is independent of every allocation decision, and `Croicu2026` shows the flag is a
+   *restoration* of a concept both the legacy loader and the literature already had.
+2. **O7 (MSI) is the measured state of the art**, by 34.92% RMSLE over list deletion and 36.30% over
+   centroid, with mean point error halved (519 → 275 km). **m=1 is the cheap entry point** — it beats
+   centroid in 100% of simulations and needs no new output shape. Subject to decision **D5** on
+   whether it belongs in this layer.
+3. **O1 then O1b on the spatial axis.** O1 is already decided and dormant, so making it live is the
+   lowest-cost improvement available. `Gotway2002` places it on the bottom rung of the overlay
+   ladder, with `Tobler1979`'s pycnophylactic surface as the next rung — and Tobler's mass
+   preservation is ADR-040 Invariant 1 by construction rather than by assertion.
+4. **O2 (Denton first-difference) on the temporal axis**, *not* `even_split`.
+5. **O0 is no longer a defensible default** (§4, the CAR argument) but **`production_parity` is
+   retained permanently as a contract** — those are different claims and both hold.
+6. **O4 rejected** on the Vesco + Weidmann count-vs-location argument.
 
-**The honest caveat:** this ranking is an expectation from a literature survey and one measurement
-pass. The point of the harness in `03` and the pre-registration in `05` is to make it refutable.
+**What would falsify the ordering.** If proportional weighting (O1) cannot beat uniform allocation on
+the coarsen-and-recover harness, ADR-049 needs amending rather than enabling, and the ladder should
+be climbed straight to O1b/O7. If MSI's gains do not survive our own data — Croicu's are from Monte
+Carlo simulation plus one replication, not from our pipeline — then the cheap options are the right
+ones. Neither has been tested here.
+
+**A caution on importing his effect sizes.** Croicu's comparators are centroid imputation and list
+deletion. **He does not benchmark ADR-049's proportional weighting**, which is what we would actually
+be replacing. The 34.92% is therefore not our expected gain, and quoting it as such would be the
+kind of borrowed-number error this dossier exists to avoid.

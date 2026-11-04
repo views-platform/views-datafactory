@@ -9,7 +9,25 @@ PDF naming per ADR-019: `<FirstAuthorSurname><Year>_<ShortTitle>.pdf`.
 
 ---
 
-## Tier 1 — fetch these seven first (they block the program)
+## Tier 1 — ✅ **ACQUIRED 2026-11-04** (all seven, plus one)
+
+Simon added all seven, plus `Croicu2026_GeospatialPrecisionConflictData`, which was not on this list
+and is the most important of the eight. Library is now 848 papers. See `01 §A0` for what each one
+changed; four of them changed the design. **Nothing in this tier remains to fetch.**
+
+| library paper_id | status |
+|---|---|
+| `ChowLin1971_BestLinearUnbiasedInterpolation` | ✅ in |
+| `Denton1971_AdjustmentMonthlyQuarterly` | ✅ in |
+| `Tobler1979_SmoothPycnophylacticInterpolation` | ✅ in |
+| `Heitjan1991_IgnorabilityCoarseData` | ✅ in |
+| `Gotway2002_CombiningIncompatibleSpatialData` | ✅ in |
+| `Weidmann2013_AnalyticalResolutionConflictData` | ✅ in |
+| `Weidmann2015_AccuracyMediaConflictData` | ✅ in |
+| **`Croicu2026_GeospatialPrecisionConflictData`** | ✅ in — **not requested by me; the decisive paper** |
+
+<details><summary>Original Tier 1 request, kept for the record</summary>
+
 
 | # | Suggested filename | Full citation | Access |
 |---|---|---|---|
@@ -21,13 +39,28 @@ PDF naming per ADR-019: `<FirstAuthorSurname><Year>_<ShortTitle>.pdf`.
 | 6 | `Weidmann2015_AccuracyMediaBasedConflictEventData.pdf` | Weidmann, N.B. (2015). "On the Accuracy of Media-based Conflict Event Data." *Journal of Conflict Resolution* **59**(6), 1129–1149. | ✅ **green OA** — KOPS, Univ. Konstanz |
 | 7 | `Weidmann2013_LimitsAnalyticalResolution.pdf` | Weidmann, N.B. (2013). "The Higher the Better? The Limits of Analytical Resolution in Conflict Event Datasets." *Cooperation and Conflict* (⚠️ venue unverified). | ✅ **green OA** — KOPS |
 
-**Why these seven.** #1 and #5 are the two frameworks we are currently reasoning *without*: change
-of support, and coarsening. #2 is mass-preserving interpolation — our ADR-040 conservation invariant
-as an existing method. #3 and #4 are the temporal-allocation family that option O2 would otherwise
-reinvent. #6 and #7 bound how much allocation skill is even measurable at 0.5° resolution, and #6
-has already changed our evaluation design (confound C-b in `02 §5`).
+**Why these seven.** #1 and #5 are the two frameworks we were reasoning *without*: change of
+support, and coarsening. #2 is mass-preserving interpolation — our ADR-040 conservation invariant as
+an existing method. #3 and #4 are the temporal-allocation family that option O2 would otherwise
+reinvent. #6 and #7 bound how much allocation skill is even measurable at 0.5° resolution.
 
-## Tier 2 — strengthens the design
+</details>
+
+### What acquiring them cost us in rework — worth recording
+
+Three of my own positions did not survive the reading, which is the point of reading first:
+
+1. **O2 was going to be `even_split`.** Denton (1971) rejects exactly that specification by name as
+   *"inadequate for practical use"* — it introduces spurious year-boundary discontinuities. O2 is now
+   Denton first-difference.
+2. **The case against the status quo was "the evaluation instrument degrades."** With
+   `Heitjan1991` + `Croicu2026` it is a theorem with a verified premise: KGI is non-random, hence not
+   CAR, hence ignoring the coarsening mechanism is expected to bias inference severely.
+3. **ADR-049's two deferrals looked settled.** Croicu contradicts both — actor-level modelling is
+   *essential* rather than premature, and the sampling treatment belongs in data preparation rather
+   than downstream.
+
+## Tier 2 — still to fetch; strengthens the design
 
 | # | Suggested filename | Full citation | Note |
 |---|---|---|---|
@@ -40,7 +73,7 @@ has already changed our evaluation design (confound C-b in `02 §5`).
 | 14 | `Banerjee2015_HierarchicalModelingSpatialData.pdf` | Banerjee, S., Carlin, B.P. & Gelfand, A.E. *Hierarchical Modeling and Analysis for Spatial Data*, 2nd ed. (2015), CRC. ⚠️ *unverified* — want the **spatial misalignment** chapter | book; bridges #1 to the LGCP machinery we already hold |
 | 15 | `Kish1965_SurveySampling.pdf` | Kish, L. (1965). *Survey Sampling.* Wiley. ⚠️ *unverified* — want the **design effect / effective sample size** material | **the origin of views-hydranet's own formula**, ESS from weights as `(Σw)²/Σw²`. Anchors their instrument in its literature. A later secondary source may serve better than the 1965 book. |
 
-## Tier 3 — only if a specific path is taken
+## Tier 3 — still to fetch; only if a specific path is taken
 
 | # | Citation | Trigger |
 |---|---|---|

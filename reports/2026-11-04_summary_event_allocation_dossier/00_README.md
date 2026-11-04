@@ -39,7 +39,7 @@ graduates to a proposed ADR amending or extending ADR-049.
 | # | File | Status |
 |---|---|---|
 | 00 | `README` | living — this file |
-| 01 | `literature` | **drafted** — 840-paper survey + a verified 17-item acquisition list in 3 tiers |
+| 01 | `literature` | **revised 2026-11-04** — 848-paper survey; §A0 covers the eight new acquisitions and what each changed |
 | 02 | `design` | **drafted** — the option space and the repo-boundary cut |
 | 03 | `harness_and_invariants` | **drafted** — audit complete, gaps flagged |
 | 04 | `roadmap` | **drafted** — gated phases |
@@ -47,7 +47,7 @@ graduates to a proposed ADR amending or extending ADR-049.
 | 06 | `glossary` | drafted |
 | 07 | `experiment_log` | empty (append-only) |
 | 08 | `legacy_gedloader` | **drafted** — what the old `views3` ingestion actually did, and the parity divergence it exposes |
-| 09 | `library_acquisitions` | **drafted** — the 19-item fetch list, 3 tiers, verified citations |
+| 09 | `library_acquisitions` | **Tier 1 acquired**; Tiers 2–3 outstanding |
 
 ## 4. Harness at a glance
 
@@ -74,9 +74,13 @@ and it is constructible (see `03 §C` and `02 §5`).
       (i) ADR-049 is accepted but not live; (ii) its worked example misdescribes the code
       (`02 §3`); (iii) `production_parity` does not reproduce the legacy country-month path,
       which included `where_prec` 4/6 — ~19% of fatality mass (`08 §3`).
-- [ ] **Acquire the Tier 1 literature** (`01 §B`) — 7 items, citations verified 2026-11-04. Two of
-      them (Gotway & Young 2002; Heitjan & Rubin 1991) supply frameworks we are currently reasoning
-      without; one (Weidmann 2015) has already changed the evaluation design
+- [x] **Acquire the Tier 1 literature** — done 2026-11-04, all seven plus `Croicu2026`. Four
+      changed the design; see `01 §A0` and the rework note in `09`.
+- [ ] **Reconcile the two KGI measurements** — Croicu reports 31.1% of 293,634 GED observations; we
+      measure `where_prec ≥ 4` at 15.5% of 440,461. Different denominators and possibly different
+      definitions. Neither figure should be cited until they agree. **P0.**
+- [ ] Fetch Tier 2 (`09`) — chiefly `Dagum & Cholette` for the Denton family and `Kish` to anchor
+      views-hydranet's effective-sample-size formula
 - [ ] `expert-method-review` on `02_design` — specifically the coarsen-and-recover evaluation and
       its two declared confounds
 - [ ] Build the evaluation harness (`03 §C`) — **blocks the first experiment**

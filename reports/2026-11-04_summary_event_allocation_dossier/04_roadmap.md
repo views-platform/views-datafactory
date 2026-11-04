@@ -53,11 +53,15 @@ negative result and ADR-049 needs amending, not defending.
 17.79% of mass, and the half nobody has decided. This is where the literature gap bites hardest
 (`01 §B`: temporal disaggregation/benchmarking, 0 papers).
 
-- **Fetch the gap literature first** (Denton 1971; Chow–Lin 1971; Dagum–Cholette). We should not
-  reinvent a 1971 solution; `even_split` is a crude member of a known family.
-- Pre-register a comparison: `date_end_only` (control) vs `even_split` (conserving) vs a
-  benchmarking-style allocation informed by covariates, if the literature supports one.
-- ⚠️ `ceil_split` is **not** a candidate: it does not conserve.
+- ✅ **Gap literature acquired 2026-11-04** (`Denton1971`, `ChowLin1971`). Still wanted:
+  `Dagum & Cholette (2006)` for the full family. Reading them already removed our intended
+  candidate — see below.
+- ⚠️ **`even_split` is no longer a candidate.** `Denton1971` rejects that exact specification
+  (`A = I`) as *"inadequate for practical use"* — it introduces spurious year-boundary
+  discontinuities. Use the **first-difference penalty** (`A = D'D`) instead.
+- Pre-register: `date_end_only` (control) vs uniform-over-span (floor) vs **Denton first-difference**
+  vs **Chow–Lin** where an indicator series exists.
+- ⚠️ `ceil_split` is **not** a candidate either: it does not conserve.
 
 **Gate G3:** a conserving temporal strategy beats `date_end_only` on recovery, and beats uniform-
 over-span, with parity untouched.
@@ -88,6 +92,8 @@ to `reports/archived/`.
 | D2 | Is `ceil_split`'s 0.91% inflation in scope? | Simon | P0 |
 | D3 | Fetch the five missing literatures (`01 §B`)? | Simon | before P3 |
 | D4 | Does O3 ship independently of P2/P3? | Simon | P4 — recommend **yes**, it is provenance, not allocation |
+| **D5** | **Does Multiple Spatial Imputation (O7) belong in this layer or downstream?** ADR-049 deferred sampling treatments downstream; `Croicu2026` treats MSI as data preparation. Emitting *m* realisations is a new output shape; m=1 is not. | **Simon — a platform-boundary call beyond this repo** | **P0**, because it determines whether P2 is the destination or a waypoint |
+| **D6** | Reconcile the two KGI measurements (Croicu 31.1% of 293,634 vs our 15.5% of 440,461) before either is cited | Simon / me | **P0** |
 
 ## Explicitly out of scope
 
