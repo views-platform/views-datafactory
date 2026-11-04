@@ -25,13 +25,47 @@ the dataset; one cell holding 7.79% of all fatalities ever recorded.
 - **The capability is partly built.** Five temporal strategies and a `where_prec ≥ 4` polygon
   mechanism exist and are tested.
 
-## 3. ⚠️ The blocker: ADR-049 is accepted and not live
+## 3. ⚠️ CORRECTED 2026-11-04 — ADR-049 *is* implemented; what was missing was the join
+
+**This section originally claimed ADR-049 "is accepted and not live." That was wrong, and the
+error mattered**, because it framed a governance gap as an implementation gap and would have sent
+P2 looking for code that already exists.
+
+**What is actually true.** `proportional` implements §3's mechanism in full — polygon determination
+via the GAUL crosswalks, proportional weighting, uniform fallback, exact floor-plus-remainder
+conservation — with **46 unit tests**, the builder wired to it, the weight map built whenever the
+strategy is not `passthrough`, the crosswalk parquets present, and
+**`ViewpointConfig.spatial_distribution_strategy` defaulting to `"proportional"`**, which honours
+§6's "on by default" as written. A full weight-map build over the 2.73M-row store takes **3.1
+seconds**.
+
+**What was genuinely missing** is narrower and was closed on 2026-11-04:
+
+1. `production_parity` was the *only* registered UCDP profile, and it overrides the default back to
+   `passthrough` for VIEWSER parity. So §6's recommended behaviour had **no name anyone could
+   select**, could not be compared against parity, and could not be tested end to end.
+2. **No test asserted either choice**, so the ADR and the invoked configuration could drift in
+   silence — and did, for four months, while cell 148759's total *grew* from 273,076 to 274,358 with
+   nothing going red. C-365's mechanism exactly: a decision with no observer.
+
+**Closed by** the ADR-049 amendment of 2026-11-04, the `kgi_distributed` profile, and
+`tests/test_adr049_profile_contract.py`. The production pipeline still invokes `production_parity`;
+switching it remains open and is decision D1.
+
+### Measured consequence of the mechanism, for reference
+
+Cell 148759 sits in GAUL admin-1 **1301**, which has **18 weighted cells**, and the cell's own weight
+is **0.0743**. So under `proportional` the Tigray event's 113,368 fatalities split across 18 cells
+with ~**8,423** landing on 148759 instead of 113,368 — a **13.5× reduction**, conserving the total
+exactly. That is §Validation's criterion, now asserted by test rather than asserted by prose.
+
+### The two findings that remain unchanged
 
 `init` found two divergences between the accepted ADR and the code. **Both are governance questions,
 not research questions, and both should be resolved before any experiment is designed** — otherwise
 this program risks "discovering" a decision that was already taken in June.
 
-### Divergence 1 — the decision is not in effect
+#### Finding 1 — the golden criterion was unobserved (now fixed)
 
 ADR-049 §6: *"Spatial distribution is **on by default** for all events with `where_prec` ≥ 4."*
 ADR-049's own golden test: *"cell 148759's all-history total should drop from 273,076 to its
@@ -47,7 +81,7 @@ Measured 2026-11-04 on `data/viewpoint/production_parity.parquet`:
 The profile sets `spatial_distribution_strategy="passthrough"`. The totals have *grown*, not
 dropped. **The ADR's golden test is not satisfied and nothing is red**, because no test asserts it.
 
-### Divergence 2 — the ADR's worked example misdescribes the code
+#### Finding 2 — the ADR's worked example misdescribes the code (now corrected in the ADR)
 
 ADR-049 §Context: *"the Tigray war event (id 463131 …) **is spread across 12 months by temporal
 distribution (correct)** but dumped into one cell spatially (incorrect)."*

@@ -108,6 +108,53 @@ _register(
 )
 
 
+# ADR-049 decided that spatial distribution of geographically imprecise
+# events is this data factory's recommended behaviour, and ViewpointConfig
+# honours that: ``spatial_distribution_strategy`` defaults to
+# ``"proportional"``. But the only profile registered until 2026-11-04 was
+# ``production_parity``, which overrides it to ``"passthrough"`` to
+# reproduce VIEWSER's GedLoader -- so the recommended behaviour had no name
+# anyone could select, and no test asserted either choice. That is how the
+# two stayed apart for four months without anything going red.
+#
+# This profile gives the recommendation a home. It changes exactly one
+# concern against ``production_parity`` -- how events whose own
+# ``where_prec`` disowns their cell are handled -- which takes two fields,
+# because ADR-049 section 6 frames drop/passthrough/distribute as three
+# options on one mechanism:
+#
+#   exclude_where_prec=()  : stop dropping where_prec 4 and 6, so there is
+#                            something left for the strategy to distribute.
+#                            Side effect: where_prec 7 (276 events) and the
+#                            undocumented 99 (19 events) also flow in, both
+#                            routed to the country polygon by
+#                            ``_COUNTRY_LEVEL``.
+#   spatial_distribution_strategy="proportional"
+#                          : distribute across the target polygon weighted
+#                            by well-located fatalities, conserving totals.
+#
+# The temporal axis is deliberately left identical to ``production_parity``.
+# One variable at a time: the temporal question is its own experiment, and
+# ``Denton (1971)`` has already ruled out the candidate we would have
+# reached for.
+#
+# This is NOT what the production pipeline invokes.
+# ``scripts/build_viewpoint.py`` still defaults to ``production_parity``,
+# and switching that is a separate decision that moves every published
+# fatality figure.
+_register(
+    "kgi_distributed",
+    survivorship_strategy="dot9_wins",
+    distribution_strategy="ceil_split",
+    spatial_distribution_strategy="proportional",
+    source_distribution_map={"annual": "date_end_only"},
+    filter_stale_versions=True,
+    min_priogrid_gid=1,
+    max_type_of_violence=3,
+    exclude_where_prec=(),
+)
+
+
 # ---- ACLED profiles ----
 
 ACLED_PROFILES: dict[str, dict[str, Any]] = {}
