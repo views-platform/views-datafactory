@@ -155,6 +155,50 @@ _register(
 )
 
 
+
+# Both axes distributed: the tool for consumers who need summary events
+# placed rather than piled. One further step beyond ``kgi_distributed``,
+# and the step is the temporal axis:
+#
+#   distribution_strategy="uniform_span"
+#       Spread events UCDP declares temporally imprecise (date_prec >= 4)
+#       across the months they span, conserving exactly. Replaces
+#       ``ceil_split``, which assigns ceil(v/span) to every month and so
+#       inflates -- 0.91% measured across the consolidated store.
+#
+#   source_distribution_map=None
+#       This is the load-bearing change. ``production_parity`` and
+#       ``kgi_distributed`` both route annual-source events to
+#       ``date_end_only``, reproducing the legacy annual loader's
+#       fix_summary_events=False. That override is why the Tigray war's
+#       whole-year aggregate (event 463131, 113,368 fatalities,
+#       date_prec 5, where_prec 5) lands entirely on December 2021.
+#       Dropping it lets the temporal strategy see annual events.
+#
+# Measured effect on that event: 1 row becomes 12 months x 18 cells,
+# conserving all of best, low and high exactly, with the cell-month peak
+# falling by roughly two orders of magnitude.
+#
+# NOT what the pipeline invokes. ``scripts/refresh_pipeline.sh`` names
+# ``production_parity`` explicitly and a test asserts it. Select this one
+# deliberately:
+#
+#   uv run python scripts/build_viewpoint.py \
+#       --profile kgi_kti_distributed \
+#       --output data/viewpoint/kgi_kti_distributed.parquet
+_register(
+    "kgi_kti_distributed",
+    survivorship_strategy="dot9_wins",
+    distribution_strategy="uniform_span",
+    spatial_distribution_strategy="proportional",
+    source_distribution_map=None,
+    filter_stale_versions=True,
+    min_priogrid_gid=1,
+    max_type_of_violence=3,
+    exclude_where_prec=(),
+)
+
+
 # ---- ACLED profiles ----
 
 ACLED_PROFILES: dict[str, dict[str, Any]] = {}

@@ -277,6 +277,65 @@ differently and pooling would hide it.
 4. **Does T2 beat T1 at all?** If not, the activity indicator earns nothing and T1 is the answer.
 5. **Does the spike move rather than shrink?** Measured already for `kgi_only`: cell 148759 falls
    7× all-history, yet the largest state-based cell at month 504 is still 41,645 (~36% of it).
+   **Answered for both axes 2026-11-05 — see §10.**
+
+### ⭐ Surprise found, 2026-11-05: `high < best` in the source, concentrated where we care
+
+Not predicted, and it is a property of UCDP's data rather than of any allocator.
+
+| population | share with `high < best` | mass |
+|---|---:|---:|
+| all events | 0.89% (3,942) | 510,908 |
+| **KGI** (`where_prec >= 4`) | **2.81%** (1,912) | 439,646 |
+| **`event_clarity == 2`** | **5.36%** (1,789) | 438,550 |
+
+So the `low <= best <= high` invariant is violated **6× more often in the imprecise/aggregated
+class**, and **86% of the violating mass sits in KGI events**. The worst offenders are the worked
+examples themselves: `463131` (best 113,368, low 113,368, **high 77,825**), `34362`, `510463`,
+`510098`, `517244`.
+
+**Attributed upstream, not to us.** Event 463131 carries the same three values in *every* version in
+the store, and 90.7% of affected ids violate it in **all** their versions — so this is not our
+consolidation mixing fields across versions.
+
+Also worth knowing: `low == best` for **93.4%** of events and `high == best` for **84.9%**. The
+interval is degenerate for the large majority and informative only for a minority.
+
+**Consequences, in order:**
+
+1. **Any consumer treating `[low, high]` as an uncertainty interval on `best` gets a reversed
+   interval** for ~3% of KGI events, weighted toward the highest-mass ones.
+2. **The allocator propagates it rather than hiding it**, because it conserves each field
+   independently. That is the correct behaviour — silently repairing source data would be worse
+   than carrying it — but it must be **declared**, not discovered downstream.
+3. **Do not "fix" it here.** It belongs in the register and, arguably, in a note to UCDP.
+
+---
+
+## 10. Measured: both axes together, 2026-11-05
+
+`kgi_kti_distributed` built over the full store (128s, 8.9 GB peak, 2,815,165 rows against parity's
+372,303):
+
+| | `production_parity` | `kgi_kti_distributed` |
+|---|---:|---:|
+| cell 148759 / month 504 / state-based | **113,395** | **1,180** |
+| largest state-based cell at month 504 | 113,395 | **3,470** |
+| that cell's share of the month | **98.1%** | **28.0%** |
+| cells with mass that month | 248 | 922 |
+| event 463131 | 1 row | **216 rows** (12 months × 18 cells) |
+|   `best` conserved | — | **113,368 exactly** |
+|   its own peak cell-month | 113,368 | **3,471** |
+
+**So surprise 5 is answered: on both axes the spike does not merely move — it shrinks by ~96× at the
+target cell, and the month's worst concentration falls from 98.1% to 28.0%.** The earlier
+2.7×-not-removal result was the *spatial axis alone*; the temporal axis was carrying most of the
+remaining concentration, which is consistent with the Tigray event being a whole-year aggregate.
+
+⚠️ Two cautions. The row count is **7.6×** parity's, which downstream must absorb. And total mass
+rises from 3,473,358 to 4,258,880 — **not a conservation failure** but the effect of
+`exclude_where_prec=()` readmitting the `where_prec` 4 and 6 events that parity drops entirely.
+Those two changes are separable and should be reported separately.
 
 ---
 

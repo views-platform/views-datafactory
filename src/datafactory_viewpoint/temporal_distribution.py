@@ -17,6 +17,7 @@ import warnings
 from collections.abc import Callable
 
 from datafactory_provenance.registry import Registry
+from datafactory_viewpoint.apportionment import apportion
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ _registry: Registry[Callable[[dict], list[dict]]] = Registry(
 __all__ = [
     "get_distribution",
     "date_end_only",
+    "uniform_span",
     "even_split",
     "ceil_split",
     "floor_split",
@@ -34,6 +36,19 @@ __all__ = [
 ]
 
 _SUMMARY_DATE_PREC: int = 5  # date_prec value indicating multi-month span
+
+#: ``date_prec`` at or above which UCDP has declared it does not know the
+#: month. 4 is "month known, day unknown"; combined with a span crossing a
+#: month boundary that makes the month itself ambiguous, so 4 is included.
+#: This is the *declared* trigger -- contrast ``ceil_split``, which infers
+#: a summary event from span and magnitude without consulting
+#: ``date_prec`` at all. See section 4 of
+#: ``reports/2026-11-04_summary_event_allocation_dossier/11_allocator_spec.md``.
+_KTI_DATE_PREC: int = 4
+
+#: Fields that carry the extensive count and must be conserved
+#: independently (ADR-040; ADR-049 section 5 does the same spatially).
+_EXTENSIVE_FIELDS: tuple[str, ...] = ("best", "low", "high")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -110,6 +125,73 @@ def date_end_only(event: dict) -> list[dict]:
     """
     date_end = event.get("date_end") or event.get("date_start")
     return [{**event, "date_month": _month_first_day(str(date_end))}]
+
+
+@_registry.decorator("uniform_span")
+def uniform_span(event: dict) -> list[dict]:
+    """Spread a temporally imprecise event evenly over the months it spans.
+
+    **The declared-trigger, conserving temporal allocator** -- option T1 in
+    the allocator spec, and the floor that any weighted temporal strategy
+    has to beat before its extra assumption is earned.
+
+    Triggers on UCDP's own declaration: ``date_prec >= 4`` (the source does
+    not know the month) **and** a span crossing a month boundary. Both
+    conditions are needed. ``date_prec >= 4`` with a single-month span needs
+    no allocation -- the month is already right -- and a span over more than
+    one month with ``date_prec <= 3`` is a *precisely dated* event that
+    straddles a calendar boundary, which is a different problem with a
+    different answer.
+
+    Conservation is exact, on ``best``, ``low`` and ``high`` independently,
+    because allocation goes through
+    :func:`datafactory_viewpoint.apportionment.apportion`. Two consequences
+    worth stating:
+
+    - **It cannot inflate.** ``ceil_split`` assigns ``ceil(v/m)`` to every
+      month, so it sums to at least ``v`` and in practice above it; the
+      measured excess across the store is 0.91%. Largest-remainder
+      apportionment makes that impossible.
+    - **One death over three months stays one death**, landing in a single
+      month rather than becoming three. Rows are emitted only where the
+      allocation is nonzero, so output size is bounded by
+      ``min(v, span)`` rather than by ``span``.
+
+    Non-triggering events get one row at their ``date_end`` month, which is
+    ``date_end_only``'s behaviour.
+    """
+    date_end = event.get("date_end") or event.get("date_start")
+    date_start = event.get("date_start") or date_end
+    single = [{**event, "date_month": _month_first_day(str(date_end))}]
+
+    if int(event.get("date_prec") or 0) < _KTI_DATE_PREC:
+        return single
+
+    months = _months_between(str(date_start), str(date_end))
+    if len(months) <= 1:
+        return single
+
+    weights = dict.fromkeys(months, 1.0)
+    allocations = {
+        field: apportion(int(event.get(field) or 0), weights)
+        for field in _EXTENSIVE_FIELDS
+    }
+
+    rows = [
+        {
+            **event,
+            "date_month": month,
+            **{f: allocations[f][month] for f in _EXTENSIVE_FIELDS},
+            "_temporal_distributed": True,
+            "_temporal_n_months": len(months),
+        }
+        for month in months
+        if any(allocations[f][month] > 0 for f in _EXTENSIVE_FIELDS)
+    ]
+
+    # A zero-valued event still happened; keep it at its date_end month
+    # rather than dropping it, so counts stay accountable (ADR-040).
+    return rows or single
 
 
 @_registry.decorator("even_split")
