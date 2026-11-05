@@ -140,3 +140,10 @@ pre-registration must say whether that is in scope or deliberately excluded.
   accurately counted values we hold, so any remedy that quietly discounts them is masking, not
   fixing. The scale-invariant comparison (`02 §5`, metric 5) is the guard.
 - **Never run concurrently with a production pipeline run** on the same host.
+- ⭐ **Recompute every metric from its definition; never assert one from a reported number.** Added
+  2026-11-05 after a threshold-decomposition conclusion was green, plausible, quotable and wrong —
+  mean Brier at unequally spaced thresholds was compared as heights when `CRPS = ∫ BS(t) dt` makes
+  the contribution `BS(t) × dt`. One step from the definition overturned it (59.3% of the integral is
+  in the tail, not at the boundary). Conservation is already specified this way (`Σ allocated ==
+  best`, recomputed); every metric in `02 §5` must be too. A guard that compares a reported number
+  against a stored number cannot catch this class of error at all.

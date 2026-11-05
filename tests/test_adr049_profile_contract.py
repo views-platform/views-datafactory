@@ -86,6 +86,21 @@ class TestProductionParityIsPinned:
             "figure and needs an explicit decision (ADR-049 section 6)"
         )
 
+    def test_pipeline_names_its_profile_explicitly(self) -> None:
+        """The pipeline must state its own choice, not inherit a default.
+
+        Step 3 previously ran ``build_viewpoint.py`` with no ``--profile``,
+        so production's allocation policy was whatever argparse defaulted
+        to in another file. Two guards are better than one here: the
+        default above, and the pipeline naming it.
+        """
+        pipeline = (ROOT / "scripts" / "refresh_pipeline.sh").read_text()
+        assert "build_viewpoint.py --profile production_parity" in pipeline, (
+            "refresh_pipeline.sh must pass --profile explicitly, so that "
+            "what production emits is readable where production is "
+            "defined rather than inherited from an argparse default"
+        )
+
 
 class TestAdr049IsHonouredByTheDefault:
     """ADR-049 section 6: distribution is the recommended behaviour."""

@@ -120,7 +120,7 @@ Options are not mutually exclusive; O1 is a prerequisite for honest evaluation o
 | **O1b** | **Pycnophylactic allocation** (`Tobler1979`) — minimise the Dirichlet integral subject to mass preservation, Dirichlet boundary at water via our land mask | a new registry entry | new option, from `Gotway2002`'s ladder | **yes** |
 | **O2** | **Temporal allocation, Denton first-difference** (`Denton1971`) — ⚠️ **not** `even_split`, which Denton rejects by name | a new registry entry | undecided | **yes** |
 | **O2b** | **Covariate-informed temporal allocation** (`ChowLin1971`) — BLUE with an indicator series; conservation emerges rather than being imposed | a new registry entry | undecided | **yes**, but needs an indicator series |
-| **O3** | **Declare, don't allocate** — per-cell-month provenance: concentrated mass, its share, the coarsest contributing precision | new export columns + contract | undecided | **yes** (ADR-009 / ADR-049 §8) |
+| **O3** | **Declare, don't allocate** — per-cell-month provenance on **two independent axes** (see below): concentrated mass and coarsest contributing precision, *separately* for spatial and temporal | new export columns + contract | undecided | **yes** (ADR-009 / ADR-049 §8) |
 | **⭐ O7** | **Multiple Spatial Imputation** (`Croicu2026`) — actor-dyad-monthly GP over the precise-event cloud; sample *m* locations per KGI event inside its admin polygon; emit *m* datasets | a new strategy **plus** an *m*-realisation output mode | **new; the measured state of the art** | **boundary question — see below** |
 | **O4** | **Drop** — extend `exclude_where_prec` to 5 | profile config | argued against twice over | yes, but no |
 | **O5** | **Weighted / scale-invariant scoring** — twCRPS, SCRPS downstream | nothing here | n/a | **no — hydranet's** |
@@ -193,6 +193,35 @@ One architectural consequence either way: **emitting *m* realisations is a new o
 consumer contract assumes one viewpoint per profile. m=1 already beats centroid placement in 100% of
 Croicu's simulations, so a staged path exists — m=1 first, which needs no new output shape at all.
 
+### O3 is two flags, not one — the only structural finding from the KGI/KTI framing
+
+views-datafactory#533 asks for *"a coarse `is_summary` or `precision_level`"* — one axis. It is two,
+and they are independent:
+
+- **KGI**, known geographical imprecision: `where_prec` says the source does not know *where*.
+- **KTI**, known temporal imprecision: `date_prec` says it does not know *when*.
+
+On the consolidated store (parity filters, deduplicated by event id), with KTI as
+`date_prec >= 4 and span > 1` and KGI as `where_prec >= 4`:
+
+| | **no KTI** | **KTI** |
+|---|---|---|
+| **no KGI** | 369,156 / 60.6% | 3,221 / 6.6% |
+| **KGI** | 65,818 / 14.8% | **2,266 / 18.1%** |
+
+**2,266 events — 0.5% of them — carry 18.1% of all fatality mass and are imprecise on both axes.**
+That is the Tigray cell's class, and it is the only place ADR-049 §4's temporal-then-spatial ordering
+matters. A single `is_summary` flag cannot express it: the legacy flag read span and magnitude and
+**never consulted `where_prec` at all**, so it was blind to the spatial axis by construction.
+
+⚠️ **State the population and the thresholds or the number is meaningless.** 39.4% "either" here
+versus 21.95% in the catalog: the catalog measured the *viewpoint output*, where
+`exclude_where_prec=(4,6)` has already deleted those events, with KGI at `>= 5`. Same data, different
+question. This is D6's lesson applied to our own numbers.
+
+**Consequence for O3's deliverable:** two precision columns, not one, plus the concentrated-mass share
+per axis. The legacy schema's `_nokgi` suffix had a counterpart that was never built; this is it.
+
 ### On O4, and a reason to reject it the ADR did not have
 
 ADR-049 rejected dropping because it loses real deaths. The library now adds two sharper arguments,
@@ -259,7 +288,7 @@ as the precedent for a measurement script whose output is evidence).
 | 3 | **Mass-weighted hit rate** at the true cell and within k cells | interpretable secondary |
 | 4 | **Slice effective sample size** (hydranet's instrument) and the **CRPS threshold decomposition** (`Gneiting2011`) | does the remedy actually restore a usable instrument, or only move the spike? |
 | 5 | **Scale-invariant comparison** (SCRPS-style, `Bolin2023`) | guards against a remedy that looks good only because it shrank magnitudes |
-| 6 | ⭐ **Dynamic-range restoration** — relative spread across a fixed arm set, with and without the affected cell-months | **added 2026-11-05 from views-models' measurement; arguably the best-targeted metric we have** |
+| 6 | ⭐ **Dynamic-range restoration** — relative spread across a fixed arm set, with and without the affected cell-months, **on paired support** | **added 2026-11-05 from views-models' measurement; the primary endpoint for remedy comparison** |
 
 ### ⭐ Metric 6, and why it displaces the others in importance
 
@@ -290,7 +319,130 @@ Calibration, from the `kgi_distributed` build (`03`/ADR-049 amendment): distribu
 ~7× all-history but leaves the largest cell at month 504 at 41,645, still ~36% of it. On metric 6,
 expect ADR-049's remedy to recover **some** of the lost 1.6×, not all.
 
-### ⚠️ A caution on metric 5, raised by views-models against my own recommendation
+### ⚠️ Metric 6 must be measured on PAIRED support — views-models' qualifier, and it is load-bearing
+
+They hit this on their own SCRPS run and caught it before reporting: a naive pass scored the ten arms
+on **different cell sets** (32,026 to 54,086 cells), because how often a forecast is degenerate
+varies by arm — **and the arm penalised hardest was scored on the fewest cells.** Re-run on the
+25,601-cell intersection where every arm is non-degenerate, the conclusion changed.
+
+The same trap is waiting for us, and worse: **an allocation remedy changes which cells are
+degenerate for which arm**, because it changes where mass lands. So a spread comparison taken across
+two different supports is not measuring the remedy — it is measuring the support change. **Metric 6
+must compare on the intersection of cells where every arm is scorable under both allocations.**
+
+#### And paired support is necessary but not sufficient — report per-arm degeneracy too
+
+views-models' further refinement (2026-11-05), with the mechanism, which is specific to *our* remedy
+rather than to their arms:
+
+> More rows per imprecise event means more cells carrying nonzero history, which means fewer
+> degenerate forecasts, which means the non-degenerate support **grows** — and it grows by an amount
+> that **differs per arm**, because arms differ in how readily they put mass on thin history.
+
+`kgi_distributed` emits **2,414,552 rows against `production_parity`'s 372,303** — a 6.5× increase,
+since each imprecise event becomes many. So on such a pull the paired intersection would be both
+**larger and differently composed**, and a spread comparison across the two allocations would be
+measuring three things at once:
+
+1. the remedy,
+2. the support change,
+3. the arms' differing sensitivity to the support change.
+
+Taking the intersection handles (2). **(3) needs the per-arm degeneracy counts reported alongside,
+not merely the intersection size.** Concretely, for each arm: non-degenerate count under
+`production_parity`, under `kgi_distributed`, and the intersection. That is cheap, and it is the
+difference between a spread comparison that can be interpreted and one that cannot.
+
+The cautionary case is theirs: on the unpaired run *"the numbers looked perfectly reasonable and the
+ordering was wrong."* **Metric 6 is therefore specified as a triple — spread, intersection size, and
+per-arm degeneracy counts — and a result reporting only the first is not a result.**
+
+Their baselines for the metric, for calibration:
+
+| support | CRPS spread | note |
+|---|---:|---|
+| full field, as-is | **4.0%** | the compressed state |
+| full field, excluding the outlier cell | **6.5%** | 1.6× recovery — the headroom a perfect remedy could buy |
+| 25,601-cell active intersection | **8.1%** | paired, and the honest comparison surface |
+| same intersection, SCRPS | **32.7%** | 4× CRPS's range on identical cells |
+
+### ⭐ Metric 5 vindicated, with a disqualifying caveat — and the mechanism explained
+
+My pre-registered prediction (that SCRPS would *widen* the spread rather than narrow it, because it
+normalises by predictive spread rather than observation magnitude) **held, emphatically**: 32.7%
+against CRPS's 8.1% on identical cells. It also **reverses CRPS's verdict** — `B interp short` ranks
+1st on CRPS and **9th of ten on SCRPS**, and SCRPS agrees with average precision while CRPS is the
+outlier.
+
+**But I did not predict the fact that decides the matter, and views-models did: SCRPS is undefined on
+97.9% of cell-horizons.** A degenerate all-zero forecast has `E|X−X'| = 0`, so both the division and
+the log blow up; it is defined on 2.07% of the field. For a *production* scoring path that is
+disqualifying. **twCRPS is the better instrument** — defined everywhere, and it moves attention up
+the threshold range, which is where the next finding says the information is. So metric 5 should use
+**twCRPS as primary and SCRPS as a diagnostic on the active subset.**
+
+### ⛔ RETRACTED — the threshold-decomposition conclusion (struck 2026-11-05)
+
+**An earlier version of this section claimed that "CRPS puts its mass where there is no information
+and its information where there is no mass." That is backwards and must not be cited.**
+
+`CRPS = ∫ BS(t) dt`, so a threshold's contribution is `BS(t) × dt`, not `BS(t)`. The reported Brier
+figures were raw means at eight **unequally spaced** thresholds (0, 1, 2, 5, 10, 25, 100, 1000) —
+densities, compared as heights. Retracted by views-models, caught by views-hydranet, verified here
+before striking:
+
+| interval | width | height | contribution | share | spread |
+|---|---:|---:|---:|---:|---:|
+| [0, 1) | 1 | 3.0561 | 3.056 | 1.4% | 1.6% |
+| [25, 100) | 75 | 0.6744 | 50.580 | 23.1% | 4.5% |
+| **[100, 1000)** | **900** | 0.1444 | **129.960** | **59.3%** | **14.0%** |
+
+The "twenty-fold more mass at `t≤0`" is a height ratio (21.2×); multiplied by widths the
+contributions run **42.5× the other way**. **59.3% of the integral is in the tail — the same place
+the discrimination is.** Mass and information are in the *same* place.
+
+**Also retracted:** that this "predicts the remedy — any reweighting that shifts attention up the
+threshold range recovers range." Same misreading.
+
+### The open question that replaces it, and it is sharper
+
+Integrating the *absolute* spread weighted by each interval's share of the integral gives **9.78%**;
+the realised pooled CRPS spread is **4.0%**.
+
+> ~6 points of available discrimination are lost to **cancellation** — the arms must **cross over**
+> across thresholds, so their differences partly annihilate in the integral.
+
+**Dilution and cancellation have different remedies.** Dilution would be fixed by upweighting the
+informative region. **Cancellation is not** — a weighting merely picks a side of the crossing, which
+makes the weight function a free parameter rather than a fix. views-models is computing the fine-grid
+integral, a rank-crossing test, and AP restricted to the SCRPS cells (views-hydranet's separator for
+whether SCRPS's reversal is a magnitude signal or a **selection effect**).
+
+**Consequence for metric 5.** twCRPS over SCRPS still holds **on definedness grounds alone** (SCRPS
+undefined on 97.9% of cell-horizons — unaffected arithmetic). The claim that threshold reweighting
+*recovers range* does **not** hold. Treat "use twCRPS" as supported by definedness until the
+crossing results land, and do not build metric 5 on the dilution story.
+
+**Unaffected** (no threshold weighting involved): the outlier sensitivity (38.3% of summed CRPS,
+byte-identical ordering, 4.0% → 6.5%); the range-compression mechanism; metric 6's paired-support and
+per-arm-degeneracy requirements; SCRPS's 32.7% vs 8.1% as a *measurement*, though its **ordering** is
+pending the selection-effect test.
+
+### ⚠️ What this episode is evidence for, kept because it generalises
+
+This is the second plausible, green, wrong thing in two days — after an ADR whose golden criterion
+nothing watched for four months. **The common factor is not carelessness: both survived because
+nobody recomputed the number from the definition.** views-hydranet did, in one step, from
+`CRPS = ∫ BS(t) dt`.
+
+That is a direct argument for how this programme's harness should work. A guard that checks a
+*reported* number against a *stored* number cannot catch this class; only recomputation from the
+definition can. **Conservation is already specified that way** (`Σ allocated == best`, recomputed,
+not reported) — and the same discipline should apply to every metric in `§5`, which is now stated as
+a requirement in `03 §E`.
+
+### The original caution on metric 5, for the record
 
 > The arms differ **only** in how magnitude is drawn, so a scale-invariant score is attacking exactly
 > the axis where the discrimination has to come from.
