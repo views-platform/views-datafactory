@@ -80,6 +80,13 @@ and it is constructible (see `03 §C` and `02 §5`).
       configurable.
 - [x] **Acquire the Tier 1 literature** — done 2026-11-04, all seven plus `Croicu2026`. Four
       changed the design; see `01 §A0` and the rework note in `09`.
+- [x] **D5 resolved 2026-11-05** — sampling is a viewpoint concern; ADR-014/ADR-049 contradiction
+      settled in ADR-049's *Amendment 2026-11-05*; `seed` declared with a tripwire; scoped to m=1;
+      the sampler itself is **not** authorised.
+- [ ] **Fix ADR-049 §8's per-row provenance** — `proportional` attaches four annotations to every
+      row and **none reach the output parquet**. Third recorded instance of "computed then dropped
+      at a boundary", and it is the same defect #533 asks us to close, so fix it once as O3's
+      deliverable rather than incidentally.
 - [ ] **Reconcile the two KGI measurements** — Croicu reports 31.1% of 293,634 GED observations; we
       measure `where_prec ≥ 4` at 15.5% of 440,461. Different denominators and possibly different
       definitions. Neither figure should be cited until they agree. **P0.**

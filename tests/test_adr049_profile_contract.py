@@ -133,6 +133,56 @@ class TestAdr049IsHonouredByTheDefault:
         assert kgi["exclude_where_prec"] == ()
 
 
+class TestPurityContractForStochasticStrategies:
+    """ADR-014 Principle 3, stated before the first sampler arrives.
+
+    The viewpoint builder must be "a pure function of (consolidated store +
+    configuration)". Every strategy registered today is deterministic, so
+    the contract holds trivially. It stops holding the moment a stochastic
+    strategy lands -- unless that strategy's seed is part of the
+    configuration and recorded in provenance.
+
+    ADR-049's *Amendment 2026-11-05* resolves the contradiction with
+    ADR-014 that made this live: ADR-014 Principle 1 names "new uncertainty
+    models" as viewpoint concerns, while ADR-049's Deferred section placed
+    location sampling downstream. Fitting and sampling are viewpoint work;
+    *consuming* m realisations is a downstream concern.
+    """
+
+    def test_seed_is_declared_configuration(self) -> None:
+        assert hasattr(ViewpointConfig, "seed"), (
+            "ADR-014 Principle 3 requires the builder to be a pure "
+            "function of (store + configuration); a sampler satisfies "
+            "that only if its seed is configuration"
+        )
+        assert ViewpointConfig.seed is None, (
+            "the default must be None, meaning 'no stochastic strategy in "
+            "use'. A real default seed would make a deterministic build "
+            "look stochastic and vice versa."
+        )
+
+    def test_every_registered_strategy_is_still_deterministic(self) -> None:
+        """A tripwire, not a tautology.
+
+        While this passes, ``seed`` may legitimately stay unused. The first
+        strategy that needs randomness should make this fail, which is the
+        prompt to wire the seed through rather than seed from entropy.
+        """
+        import datafactory_viewpoint.spatial_distribution as sd
+        import datafactory_viewpoint.temporal_distribution as td
+
+        for module in (sd, td):
+            source = Path(module.__file__).read_text()  # type: ignore[arg-type]
+            for token in ("random", "np.random", "default_rng", "Generator"):
+                assert token not in source, (
+                    f"{module.__name__} now contains {token!r}. If a "
+                    f"stochastic strategy has landed, thread "
+                    f"ViewpointConfig.seed through it and reject seed=None "
+                    f"-- do not seed from entropy, which breaks ADR-014 "
+                    f"Principle 3 invisibly."
+                )
+
+
 @pytest.mark.skipif(
     not (STORE.exists() and GAUL1.exists() and GAUL0.exists()),
     reason=(

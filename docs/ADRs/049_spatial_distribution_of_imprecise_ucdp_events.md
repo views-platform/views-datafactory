@@ -6,7 +6,9 @@
 **Deciders:** Simon Polichinel von der Maase, Claude Code
 **Applies:** ADR-014 (Viewpoints as Derived Views), ADR-015 (UCDP Consolidation), ADR-023 (Viewpoint Builder Invariants), ADR-040 (Count Conservation), ADR-044 (Source Taxonomy)
 
-> **Amended 2026-11-04** — see *Amendment 2026-11-04* below. One statement in **Context** was wrong
+> **Amended 2026-11-04 and 2026-11-05** — see the two *Amendment* sections below. The 2026-11-05
+> amendment narrows the *Deferred* entry on input uncertainty sampling, resolving a contradiction
+> with ADR-014. The 2026-11-04 one: One statement in **Context** was wrong
 > about the code and is corrected there; the relationship between this decision and the profile the
 > production pipeline invokes was never recorded and now is. The Decision itself is unchanged.
 
@@ -239,6 +241,124 @@ uniform allocation by enough to justify its extra assumption has **never been me
 `Croicu2026` in that dossier's literature review, which finds actor-level modelling essential rather
 than premature and treats location sampling as data preparation rather than a downstream concern.
 Both deferrals are left standing here and raised as decisions in the dossier's roadmap.
+
+---
+
+## Amendment 2026-11-05 — sampling is a viewpoint concern (resolves a conflict with ADR-014)
+
+Prompted by `Croicu2026` (*Enhancing geospatial precision in conflict data*) and decision D5 in
+`reports/2026-11-04_summary_event_allocation_dossier/`. This amendment **narrows the *Deferred*
+entry on input uncertainty sampling**; the Decision above is again unchanged.
+
+### 1. The conflict
+
+The *Deferred* section says a distributional treatment of KGI *"is a future capability that belongs
+in a downstream transformation or modeling layer, not in the viewpoint."*
+
+**ADR-014 says the opposite.** Its Principle 1 (*Volatile by Design*) names the category directly:
+*"New survivorship rules, new temporal distribution methods, **new uncertainty models** — these are
+research outputs, not bugs."* Its Principle 4 (*Versioned*) then gives, as worked examples of
+coexisting viewpoint versions, *"v2: Uncertainty-weighted temporal distribution, proportional
+fatality spread"* and *"v3: Nowcasting-adjusted with revision-informed confidence."*
+
+Two Accepted ADRs therefore disagreed about which layer owns uncertainty representation, which
+ADR-000 does not permit. **Resolved in ADR-014's favour**, for the reasons below.
+
+### 2. The distinction the original deferral missed
+
+The deferral conflated **producing** an uncertainty representation with **consuming** one.
+
+- **Producing** is viewpoint work. ADR-014 Principle 4 already allows many coexisting
+  materialisations of one consolidated store, so *m* sampled realisations are *m* versioned
+  viewpoints. That needs no new output shape at this layer; it is this layer's existing model.
+- **Consuming** *m* realisations is a downstream concern — *m* grids through compilation and
+  assembly, and a consumer contract (ADR-050) that can express a realisation axis. **That** is where
+  the deferral's caution belongs, and it stands.
+
+Restated: *"sampling belongs downstream"* was wrong; *"consumers must be able to read m realisations
+before we emit them"* is right.
+
+### 3. ADR-014 Principle 3 gives the admissibility test
+
+The builder *"must be a pure function of (consolidated store + configuration)"* and *"must not
+contain information that is absent from the consolidated store."* A sampling strategy meets both,
+but only conditionally:
+
+| Requirement | Status for a `Croicu2026`-style sampler |
+|---|---|
+| No information absent from the store | ✅ the conflict-space model is fitted to the store's **own** precisely-located events; no covariate or external surface enters. §7's no-cross-source rule already required this. |
+| Pure function of (store + configuration) | ⚠️ **only if the seed is configuration.** A sampler seeded from entropy breaks Principle 3 invisibly — the same build would produce different output with no recorded cause. |
+
+**`ViewpointConfig.seed` is therefore declared now**, defaulting to `None` ("no stochastic strategy
+in use"), and written to the provenance ledger on every build. It is deliberately **unused today**:
+every registered strategy is deterministic, and stating the contract before the first sampler
+arrives is cheaper than retrofitting it. A stochastic strategy must **reject `None`** rather than
+seed itself.
+
+`tests/test_adr049_profile_contract.py` holds the tripwire: it asserts the seed is declared, that
+its default is `None`, and that no registered strategy module has acquired randomness. The last
+assertion is designed to **fail** when the first sampler lands — that failure is the prompt to
+thread the seed through.
+
+### 4. Scope admitted, and scope withheld
+
+**Admitted:** fitting and sampling a location model in the viewpoint layer, with a declared seed,
+is within this layer's responsibilities.
+
+**Withheld:** *m > 1* realisations. No consumer has asked for them. The one request on record
+(views-datafactory#533) asks for a **per-cell-month precision flag**, not *m* datasets, and
+`Croicu2026` measures that even **m = 1** beats centroid placement in 100% of his simulations. So
+the staged path is a single declared seed, which changes nothing downstream. Emitting *m* becomes a
+decision when a consumer needs it, and it carries the ADR-050 work in §2.
+
+**Also withheld:** building the sampler. This amendment establishes admissibility, nothing more. No
+MSI implementation is authorised by it, and `production_parity` remains what the pipeline invokes.
+
+### 5. What measurement showed, so the next decision is cheaper
+
+Building the `kgi_distributed` profile over the full store (**140 s**, 8.6 GB peak RSS, 885,075
+events in, **2,414,552 rows out** against `production_parity`'s 372,303 — a 6.5× row increase that
+downstream would have to absorb):
+
+| | `production_parity` | `kgi_distributed` |
+|---|---:|---:|
+| cell 148759, month 504, state-based | 113,395 | **13,866** |
+| cell 148759, all history | 274,358 | **39,221** |
+| event 463131 | 1 row | 18 rows, total conserved exactly |
+| largest state-based cell at month 504 | 113,395 | **41,645** |
+
+§Validation's criterion is met: the cell falls, by 7.0× over all history. **But the last row is the
+one to carry forward — the largest cell that month is still 41,645, about 36% of it.** Proportional
+distribution reduces the concentration roughly 2.7× and does **not** remove it. A pre-registered
+skepticism in the dossier was that a remedy might move the spike rather than remove it; on this
+evidence it partly does. That is an argument for continuing to the next rung of the
+change-of-support ladder (`Gotway2002`), not for stopping here.
+
+Scale, if a `Croicu2026`-style sampler is ever built: **15,722** dyad-months contain a KGI event and
+would need a fitted model; **68,084** KGI events need placing. Only **298 KGI events (0.4%, 7,981
+fatalities)** belong to a dyad with no precisely-located events anywhere — so *Deferred* reason (b),
+actors visible only in summary events, is a **fallback case, not a blocker**, and §3's existing
+uniform fallback already covers it. Reason (a), actor normalisation, is **partly vindicated**:
+`dyad_new_id` is always populated, but 122 ids carry more than one name, 75 names carry more than one
+id, and **15,020 events (3.4%) change `dyad_new_id` between store versions.** Real, modest, and
+largely absorbed by survivorship choosing one version per event.
+
+### 6. A gap in §8 found while measuring
+
+§8 requires that *"every spatially distributed event carries provenance annotation: the original
+event ID, the distribution strategy applied, the target polygon identifier, and the number of cells
+across which deaths were distributed."*
+
+`proportional` **does** attach all four to each row it emits. **They do not reach the output
+parquet** — the written schema has no `_spatial_distributed`, `_spatial_source_pgid`,
+`_spatial_polygon_code` or `_spatial_n_cells` column. The ledger counters from §Validation are
+present and correct; the per-row annotations are computed and dropped at the write.
+
+So **§8 is only partly implemented.** Recorded here rather than fixed, because it is the same defect
+as the one views-datafactory#533 asks us to close — precision information computed and then
+discarded at a boundary — and it should be fixed once, deliberately, as that issue's deliverable
+rather than incidentally here. This is now the **third** recorded instance of the pattern: the
+legacy `GedLoader`'s `is_summary` flag, event precision at cell-month aggregation, and these.
 
 ---
 

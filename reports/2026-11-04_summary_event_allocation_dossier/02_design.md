@@ -138,7 +138,38 @@ any in-scope option must be judged against, and O3 is what makes them *possible*
 the load-bearing deliverable for #533, and it is provenance, not modelling, so it sits inside the
 line ADR-049 drew.
 
-#### ⚠️ O7 puts that line in question, and the question is Simon's
+#### ✅ O7's boundary question — RESOLVED 2026-11-05 (D5)
+
+**Resolved in favour of "here", and the reason was an ADR conflict rather than a judgement call.**
+
+ADR-014 Principle 1 names *"new uncertainty models"* as viewpoint concerns outright, and its
+Principle 4 versioning examples are *"v2: Uncertainty-weighted temporal distribution, proportional
+fatality spread"* and *"v3: Nowcasting-adjusted with revision-informed confidence."* ADR-049's
+*Deferred* entry said the opposite. **Two Accepted ADRs disagreed, which ADR-000 does not permit.**
+
+The distinction the deferral missed: it conflated **producing** an uncertainty representation with
+**consuming** one. Producing *m* realisations is ADR-014 Principle 4's existing model — *m* versioned
+viewpoints, no new output shape at this layer. **Consuming** *m* is the downstream/ADR-050 problem,
+and that half of the caution stands.
+
+ADR-014 Principle 3 supplied the admissibility test, and a sampler passes it conditionally:
+
+| Requirement | Status |
+|---|---|
+| no information absent from the store | ✅ the model is fitted to the store's own precise events (same rule as ADR-049 §7) |
+| pure function of (store + configuration) | ⚠️ **only if the seed is configuration** |
+
+So `ViewpointConfig.seed` is now declared (default `None`, written to the ledger, deliberately
+unused while every strategy is deterministic), with a tripwire test that **fails when the first
+stochastic strategy lands** — the prompt to thread the seed rather than seed from entropy.
+
+**Scope admitted:** fitting and sampling, with a declared seed. **Scope withheld:** *m > 1*, because
+no consumer has asked — #533 asks for a *flag*, not *m* datasets, and Croicu measures m=1 beating
+centroid in 100% of simulations. **Also withheld:** building the sampler. Admissibility only.
+
+Recorded in ADR-049's *Amendment 2026-11-05*.
+
+#### The original framing, for the record
 
 ADR-049 placed sampling treatments downstream: *"represent each imprecise event as a distribution
 over cells … belongs in a downstream transformation or modeling layer, not in the viewpoint."*
@@ -228,6 +259,48 @@ as the precedent for a measurement script whose output is evidence).
 | 3 | **Mass-weighted hit rate** at the true cell and within k cells | interpretable secondary |
 | 4 | **Slice effective sample size** (hydranet's instrument) and the **CRPS threshold decomposition** (`Gneiting2011`) | does the remedy actually restore a usable instrument, or only move the spike? |
 | 5 | **Scale-invariant comparison** (SCRPS-style, `Bolin2023`) | guards against a remedy that looks good only because it shrank magnitudes |
+| 6 | ⭐ **Dynamic-range restoration** — relative spread across a fixed arm set, with and without the affected cell-months | **added 2026-11-05 from views-models' measurement; arguably the best-targeted metric we have** |
+
+### ⭐ Metric 6, and why it displaces the others in importance
+
+views-models measured ten climatology baseline arms on `lr_sb_best` (2,333,448 cell-horizons) with
+and without cell 148759 / month 504. The result corrects this dossier's problem statement:
+
+| | as-is | excl. the cell |
+|---|---:|---:|
+| the cell's share of summed CRPS | **38.3%** (37.3–38.8% across arms) | — |
+| **relative spread across the ten arms** | **4.0%** | **6.5%** |
+| arm ordering | — | **byte-identical** |
+
+**The ranking is robust; the range is not.** No arm can draw near 113,395 (largest draw anywhere:
+1,526), so the cell enters every arm's score as nearly the same additive constant and cancels from
+the comparison — while inflating every level equally and **compressing the relative spread by ~1.6×**.
+
+So the harm is **not** rank distortion. It is that *"your ranking is harder to see than it should be,
+by a factor you cannot observe without excluding the cell."* On a 99.6%-zero field there was little
+range to spare. Given 48.8% of 2020–2024 mass is concentrated this way, **range compression is
+plausibly the dominant platform-wide effect**, and it is weaker and more tractable than the claim
+this dossier started with.
+
+This is what the programme is actually trying to buy, and neither earth-mover distance nor hit-rate
+measures it. **It should be the primary endpoint for any remedy comparison**, with EMD demoted to
+diagnosing *where* the mass went.
+
+Calibration, from the `kgi_distributed` build (`03`/ADR-049 amendment): distribution cuts the cell
+~7× all-history but leaves the largest cell at month 504 at 41,645, still ~36% of it. On metric 6,
+expect ADR-049's remedy to recover **some** of the lost 1.6×, not all.
+
+### ⚠️ A caution on metric 5, raised by views-models against my own recommendation
+
+> The arms differ **only** in how magnitude is drawn, so a scale-invariant score is attacking exactly
+> the axis where the discrimination has to come from.
+
+A real objection. Scale-invariance could remove the axis the comparison lives on. It may be
+rescuable — SCRPS normalises by *predictive* spread, not observation magnitude, so it should still
+separate a timid arm from a wide one, and arguably stops a timid arm being rewarded for hugging zero
+on a 99.6%-zero field. **Pre-registered prediction: SCRPS widens the spread on that arm set.** If it
+narrows, metric 5 is a dead end and my recommendation was wrong. Either way it is a hypothesis to
+test, not advice to follow.
 
 ### Controls that must be included or the result is uninterpretable
 

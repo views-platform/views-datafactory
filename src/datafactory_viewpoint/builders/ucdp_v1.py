@@ -396,6 +396,10 @@ def build_ucdp_v1(
         "spatial_distribution_strategy": (
             config.spatial_distribution_strategy
         ),
+        # None while every strategy is deterministic. Recorded regardless
+        # so the reproducibility contract of ADR-014 Principle 3 is in the
+        # ledger before the first stochastic strategy needs it.
+        "seed": config.seed,
         "filter_stale_versions": config.filter_stale_versions,
         "source_distribution_map": config.source_distribution_map,
         "n_events_read": n_read,

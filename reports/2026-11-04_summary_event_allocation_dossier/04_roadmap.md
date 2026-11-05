@@ -46,7 +46,15 @@ free.
 - Stratify by event size and conflict intensity — the declared proxy-population confound.
 
 **Gate G2:** proportional beats uniform on the primary endpoint, conservation holds exactly, and
-`production_parity` is byte-identical. If proportional does *not* beat uniform, that is a publishable
+`production_parity` is byte-identical.
+
+⚠️ **Measured 2026-11-05, before the harness exists — and it tempers the expectation.** A full
+`kgi_distributed` build (140 s, 2.41M rows vs parity's 372k) drops cell 148759 from 274,358 to
+39,221 all-history and from 113,395 to 13,866 at month 504. **But the largest state-based cell that
+month is still 41,645 — about 36% of it.** Distribution reduces the concentration ~2.7× and does not
+remove it. The skepticism pre-registered in `05 §2` — that a remedy might move the spike rather than
+remove it — **partly fired before the experiment was even designed.** That argues for continuing to
+the next rung of `Gotway2002`'s ladder (O1b, O7), not for stopping at O1. If proportional does *not* beat uniform, that is a publishable
 negative result and ADR-049 needs amending, not defending.
 
 ## P3 — Temporal allocation (O2): the genuinely undecided half
@@ -92,7 +100,7 @@ to `reports/archived/`.
 | D2 | Is `ceil_split`'s 0.91% inflation in scope? | Simon | P0 |
 | D3 | Fetch the five missing literatures (`01 §B`)? | Simon | before P3 |
 | D4 | Does O3 ship independently of P2/P3? | Simon | P4 — recommend **yes**, it is provenance, not allocation |
-| **D5** | **Does Multiple Spatial Imputation (O7) belong in this layer or downstream?** ADR-049 deferred sampling treatments downstream; `Croicu2026` treats MSI as data preparation. Emitting *m* realisations is a new output shape; m=1 is not. | **Simon — a platform-boundary call beyond this repo** | **P0**, because it determines whether P2 is the destination or a waypoint |
+| ~~**D5**~~ | ✅ **RESOLVED 2026-11-05.** Sampling is a viewpoint concern (ADR-014 P1 beats ADR-049's *Deferred*; two Accepted ADRs had contradicted). Producing *m* = *m* versioned viewpoints; consuming *m* is downstream. `seed` declared for purity. Scoped to m=1; building the sampler not authorised. See ADR-049 *Amendment 2026-11-05*. | Simon | done |
 | **D6** | Reconcile the two KGI measurements (Croicu 31.1% of 293,634 vs our 15.5% of 440,461) before either is cited | Simon / me | **P0** |
 
 ## Explicitly out of scope
