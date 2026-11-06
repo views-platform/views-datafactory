@@ -14,10 +14,10 @@ Mirrors temporal_distribution.py for the spatial dimension.
 from __future__ import annotations
 
 import logging
-import math
 from collections.abc import Callable
 
 from datafactory_provenance.registry import Registry
+from datafactory_viewpoint.apportionment import apportion
 from datafactory_viewpoint.spatial_weights import SpatialWeightMap
 
 logger = logging.getLogger(__name__)
@@ -53,32 +53,24 @@ def _distribute_value(
 ) -> dict[int, int]:
     """Distribute an integer value across cells by weight.
 
-    Uses floor for all cells, then adds the integer remainder
-    to the cell with the highest weight (tie-break: lowest pgid).
-    Guarantees sum(output) == value.
+    Delegates to the shared largest-remainder rounder so that
+    conservation (ADR-040 Invariant 1) is proved in one place for every
+    allocation strategy. See ``datafactory_viewpoint.apportionment``.
+
+    **Behaviour change 2026-11-05.** This previously floored every share
+    and then handed the integer remainder to the *highest-weighted*
+    cell. That conserves but is not bounded: for ``value=10`` over
+    weights ``(0.5, 0.25, 0.25)`` it returned ``(6, 2, 2)`` although the
+    first cell's ideal share is exactly ``5.0``. It also sent the
+    remainder to the already-largest cell every time, which is the
+    concentration bias ADR-049 lists among its own negative
+    consequences. Largest remainder returns ``(5, 3, 2)`` and cannot
+    exceed any cell's ceiling.
+
+    The change cannot affect ``production_parity``: that profile selects
+    the ``passthrough`` strategy, which never reaches this function.
     """
-    if not weights:
-        return {}
-
-    if value == 0:
-        return dict.fromkeys(weights, 0)
-
-    allocated: dict[int, int] = {}
-    for pgid, share in weights.items():
-        allocated[pgid] = int(math.floor(value * share))
-
-    remainder = value - sum(allocated.values())
-
-    if remainder > 0:
-        ranked = sorted(
-            weights.items(),
-            key=lambda item: (-item[1], item[0]),
-        )
-        for i in range(remainder):
-            pgid = ranked[i % len(ranked)][0]
-            allocated[pgid] += 1
-
-    return allocated
+    return apportion(value, weights)
 
 
 def _get_polygon_weights(

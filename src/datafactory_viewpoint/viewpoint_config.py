@@ -43,6 +43,27 @@ class ViewpointConfig:
     distribution_strategy: str = "even_split"
     spatial_distribution_strategy: str = "proportional"
 
+    #: Seed for any stochastic distribution strategy.
+    #:
+    #: Currently **unused**: every registered strategy is deterministic,
+    #: and there is no randomness anywhere in this layer. It is declared
+    #: now because ADR-014 Principle 3 requires the viewpoint builder to be
+    #: "a pure function of (consolidated store + configuration)", and a
+    #: sampler only satisfies that if its seed is part of the
+    #: configuration. Stating the contract before the first stochastic
+    #: strategy arrives is cheaper than retrofitting it afterwards, and the
+    #: seed is written to the provenance ledger from day one so a
+    #: reproducibility record exists for builds that do not yet need it.
+    #:
+    #: ``None`` means "no stochastic strategy is in use". A stochastic
+    #: strategy must reject ``None`` rather than silently seeding itself
+    #: from entropy, which would break ADR-014 Principle 3 invisibly.
+    #:
+    #: See ADR-049's *Amendment 2026-11-05* for why sampling is a viewpoint
+    #: concern at all, and ``reports/2026-11-04_summary_event_allocation_dossier``
+    #: for the method this anticipates.
+    seed: int | None = None
+
     # GAUL crosswalk paths for spatial distribution
     gaul1_crosswalk_path: Path = Path(
         "data/raw/gaul_admin/gaul1_code.parquet"

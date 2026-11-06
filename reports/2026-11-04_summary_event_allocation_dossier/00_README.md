@@ -70,12 +70,23 @@ and it is constructible (see `03 §C` and `02 §5`).
 - [x] Library survey → `01_literature`
 - [x] Harness audit → `03_harness_and_invariants`
 - [x] Option space + boundary cut → `02_design`
-- [ ] **Resolve the three parity/ADR divergences** (blocker). Governance, not research:
-      (i) ADR-049 is accepted but not live; (ii) its worked example misdescribes the code
-      (`02 §3`); (iii) `production_parity` does not reproduce the legacy country-month path,
-      which included `where_prec` 4/6 — ~19% of fatality mass (`08 §3`).
+- [x] **ADR-049 closed out 2026-11-04** — amended (correcting its wrong worked example and
+      recording why `production_parity` overrides the default), `kgi_distributed` registered to give
+      §6's recommendation a name, and `tests/test_adr049_profile_contract.py` added so neither
+      choice can drift unobserved again. ⚠️ **I had claimed the ADR "was never implemented"; it was.
+      See the correction at `02 §3`.**
+- [ ] **(iii) still open:** `production_parity` does not reproduce the legacy country-month path,
+      which included `where_prec` 4/6 — ~19% of fatality mass (`08 §3`). Structural, not
+      configurable.
 - [x] **Acquire the Tier 1 literature** — done 2026-11-04, all seven plus `Croicu2026`. Four
       changed the design; see `01 §A0` and the rework note in `09`.
+- [x] **D5 resolved 2026-11-05** — sampling is a viewpoint concern; ADR-014/ADR-049 contradiction
+      settled in ADR-049's *Amendment 2026-11-05*; `seed` declared with a tripwire; scoped to m=1;
+      the sampler itself is **not** authorised.
+- [ ] **Fix ADR-049 §8's per-row provenance** — `proportional` attaches four annotations to every
+      row and **none reach the output parquet**. Third recorded instance of "computed then dropped
+      at a boundary", and it is the same defect #533 asks us to close, so fix it once as O3's
+      deliverable rather than incidentally.
 - [ ] **Reconcile the two KGI measurements** — Croicu reports 31.1% of 293,634 GED observations; we
       measure `where_prec ≥ 4` at 15.5% of 440,461. Different denominators and possibly different
       definitions. Neither figure should be cited until they agree. **P0.**

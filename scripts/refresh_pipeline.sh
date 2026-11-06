@@ -245,9 +245,23 @@ uv run python scripts/consolidate_ucdp.py
 echo
 
 # Step 3: Build viewpoint
+#
+# The profile is passed EXPLICITLY. It used to be omitted, which meant
+# production's allocation policy was decided by an argparse default in
+# scripts/build_viewpoint.py -- a one-line edit in an unrelated file could
+# have switched what production emits, silently. Naming it here makes the
+# pipeline state its own choice.
+#
+# production_parity reproduces VIEWSER's GedLoader: imprecise events are
+# dropped (where_prec 4, 6) or placed on their centroid cell, and annual
+# summary events land wholly on their date_end month. ADR-049 decided a
+# distributing alternative is preferable and it exists as the
+# kgi_distributed profile -- deliberately NOT invoked here, because
+# switching moves every published fatality figure and needs agreement on
+# the parity contract.
 CURRENT_STEP="3/14: Build viewpoint"
 echo "── $CURRENT_STEP ──"
-uv run python scripts/build_viewpoint.py
+uv run python scripts/build_viewpoint.py --profile production_parity
 echo
 
 # Step 4: Compile UCDP grid

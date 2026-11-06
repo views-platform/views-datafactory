@@ -50,6 +50,37 @@ the concept existed upstream in the legacy system and died at the same seam. Tha
 strengthens the case for **O3** and weakens any objection that a precision flag is a novel
 consumer demand.
 
+#### What `is_summary` actually measured — and a critique of mine that did not survive
+
+`date_prec` is **never consulted**, here or anywhere else in the loader. The flag is a
+*magnitude-dependent proxy* for temporal imprecision — long span, enough deaths to give each month
+one — rather than a reading of UCDP's own declaration. So "summary event" names a property of the
+**record** (it aggregates a period) while `date_prec` names a property of **our knowledge** (the
+source does not know when). Related, not the same set.
+
+⛔ **I argued from this that the magnitude condition `best >= summary_period` was indefensible —
+"whether an event is temporally imprecise cannot depend on how many people died." Measured, that is
+wrong, and the critique is retracted.** Of the events that genuinely need spreading
+(`date_prec >= 4` **and** `span > 1`):
+
+| | events | fatalities | share of store mass |
+|---|---:|---:|---:|
+| need spreading | 5,487 | 1,112,848 | 24.65% |
+| detected by the heuristic | 3,105 | 1,110,288 | 24.59% |
+| **missed** | 2,382 | **2,560** | **0.06%** |
+
+Median missed event: **1 fatality over 3 months.** On the sources `ceil_split` actually runs on
+(non-annual), the miss is **375 events and 209 fatalities — 0.00%**.
+
+And the condition is *protective*: spreading one death over three months with `ceil` yields one per
+month, a 3× inflation. **`best >= span` is an undocumented guard against the rounding policy, not a
+defect.** Recorded here so the critique is not re-derived — it is the kind of argument that sounds
+right and measures wrong, and the only reason it was caught is that the number was computed.
+
+Note also that the heuristic **would** have caught the Tigray event (113,368 ≥ 12). That event is
+unspread because of the annual `date_end_only` override, not because of detection. **Detection was
+never the problem.**
+
 ### 2b. `_nokgi` — the legacy schema declared the exclusion in the column name
 
 Every ingested column is named e.g. `ged_sb_best_sum_nokgi`, `ged_os_high_count_nokgi`.
