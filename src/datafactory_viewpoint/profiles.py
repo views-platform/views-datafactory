@@ -199,6 +199,46 @@ _register(
 )
 
 
+
+# Both axes, with the temporal axis weighted by observed activity rather
+# than spread flat. One field away from ``kgi_kti_distributed``, and the
+# field was earned by measurement rather than argued for: on 20,000 events
+# whose true month is known, with each event removed from its own
+# indicator, activity weighting cut the mean distance from the true month
+# from 4.883 months to 3.305 and raised the share of mass landing in the
+# right month from 0.0825 to 0.1525, beating uniform on 64.9% of events
+# against 22.9% worse. See scripts/evaluate_temporal_allocation.py --
+# that script is also what would falsify the choice.
+#
+# Honest limit: the gain is in the MEAN, not the median. Median hit share
+# is 0.00 for uniform and for activity alike, because most events are
+# small enough to land wholly in one month and usually the wrong one. So
+# this helps the typical fatality, not the typical event.
+#
+# The assumption most likely to be wrong: a month with no well-observed
+# activity gets zero, because zero weight means zero allocation. That
+# says "no observed fighting, so invent none", and absence of
+# well-located reporting is not absence of fighting -- 1,760 KTI events
+# have at least one zero-activity month inside their span.
+#
+# NOT what the pipeline invokes.
+#
+#   uv run python scripts/build_viewpoint.py \
+#       --profile kgi_kti_activity \
+#       --output data/viewpoint/kgi_kti_activity.parquet
+_register(
+    "kgi_kti_activity",
+    survivorship_strategy="dot9_wins",
+    distribution_strategy="activity_weighted",
+    spatial_distribution_strategy="proportional",
+    source_distribution_map=None,
+    filter_stale_versions=True,
+    min_priogrid_gid=1,
+    max_type_of_violence=3,
+    exclude_where_prec=(),
+)
+
+
 # ---- ACLED profiles ----
 
 ACLED_PROFILES: dict[str, dict[str, Any]] = {}

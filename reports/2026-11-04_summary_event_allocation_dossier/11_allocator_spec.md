@@ -353,3 +353,53 @@ Those two changes are separable and should be reported separately.
   surface per victim type: the well-located cloud would have to be split the same way, which is a
   modelling question rather than an allocation one. Recorded because the decomposition being exact
   is the precondition, and it holds.
+
+
+---
+
+## 11. Measured: all three allocators, 2026-11-06
+
+Full-store builds to scratch. Nothing overwritten; `production_parity` is the shipped output.
+
+| | `production_parity` | `kgi_kti_distributed` | `kgi_kti_activity` |
+|---|---:|---:|---:|
+| temporal strategy | `date_end` (annual) | `uniform_span` | `activity_weighted` |
+| rows | 372,303 | 2,815,165 | **2,654,111** |
+| total `best` | 3,473,358 | 4,258,880 | 4,258,880 |
+| **cell 148759 / month 504 / sb** | **113,395** | **1,180** | **240** |
+| month 504: largest sb cell | 113,395 | 3,470 | **642** |
+| month 504: that cell's share | 98.1% | 28.0% | **13.6%** |
+| **month 504: slice ESS** | **1.04** | 9.05 | **20.24** |
+| build time | — | 128 s | 426 s |
+
+**The effective sample size of that month's state-based slice goes from 1.04 to 20.24** — a 19×
+improvement on views-hydranet's own instrument, and the thing #533 is actually about. Under parity
+the score for that slice *is* one number; under activity weighting it is twenty cells' worth.
+
+### ⚠️ Activity weighting does not uniformly reduce peaks, and should not be sold as if it did
+
+The Tigray event's **own** peak cell-month rises: 3,471 under uniform, **11,732** under activity.
+That is the mechanism working, not failing. Uniform spreads the total flat across twelve months;
+activity concentrates it into the months with observed fighting, so the event's internal peak goes
+**up**. Yet the *cell-month total* at 148759/504 goes **down** (1,180 → 240), because December 2021
+had low observed activity relative to the rest of that span.
+
+So the honest statement is: **activity weighting moves mass to where evidence says it belongs.**
+Sometimes that raises a peak and sometimes it lowers one. The net effect on the month's
+concentration is strongly positive (ESS 9.05 → 20.24), but anyone expecting monotonic peak
+reduction will be surprised by individual cells, and that expectation should be corrected up front.
+
+### Two incidental confirmations
+
+- **Conservation held across both new allocators**: total `best` is identical at 4,258,880. (Higher
+  than parity's 3,473,358 only because `exclude_where_prec=()` readmits the `where_prec` 4 and 6
+  events parity drops entirely — a separate change, reported separately.)
+- **Activity emits *fewer* rows than uniform** (2,654,111 against 2,815,165), because a zero-activity
+  month receives zero and is not emitted. The rounder's zero-preservation property pays for itself
+  in output size as well as in honesty.
+
+### Cost
+
+Activity weighting is **3.3× slower** to build (426 s against 128 s), from the indicator scan and the
+per-event cascade. Still well inside a monthly pipeline's budget, but worth knowing before anyone
+runs it twenty times for a multiple-imputation ensemble.

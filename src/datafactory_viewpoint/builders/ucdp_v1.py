@@ -23,7 +23,6 @@ ADR-049 (spatial distribution of imprecise events).
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -44,7 +43,11 @@ from datafactory_viewpoint.spatial_weights import (
 )
 from datafactory_viewpoint.survivorship import get_survivorship
 from datafactory_viewpoint.temporal_distribution import (
+    TemporalStrategy,
     get_distribution,
+)
+from datafactory_viewpoint.temporal_weights import (
+    build_temporal_weight_map,
 )
 from datafactory_viewpoint.viewpoint_config import ViewpointConfig
 from datafactory_viewpoint.viewpoint_result import ViewpointResult
@@ -247,9 +250,7 @@ def build_ucdp_v1(
     )
 
     # Pre-resolve source-distribution overrides
-    source_dist_fns: (
-        dict[str, Callable[[dict], list[dict]]] | None
-    ) = None
+    source_dist_fns: dict[str, TemporalStrategy] | None = None
     if config.source_distribution_map is not None:
         source_dist_fns = {
             src: get_distribution(strat)
@@ -264,6 +265,17 @@ def build_ucdp_v1(
             config.gaul1_crosswalk_path,
             config.gaul0_crosswalk_path,
         )
+
+    # Build the monthly activity indicator only if some temporal strategy
+    # actually wants one. Scanning the table to build an indicator nothing
+    # reads would be pure cost, and a strategy that silently got None
+    # would fall back to uniform without saying so.
+    temporal_strategies = {config.distribution_strategy}
+    if config.source_distribution_map is not None:
+        temporal_strategies |= set(config.source_distribution_map.values())
+    temporal_weight_map = None
+    if "activity_weighted" in temporal_strategies:
+        temporal_weight_map = build_temporal_weight_map(table)
 
     # Sort by event id for grouped processing
     table = table.sort_by("id")
@@ -317,7 +329,7 @@ def build_ucdp_v1(
             fn = source_dist_fns.get(src_type, distribution_fn)
         else:
             fn = distribution_fn
-        distributed = fn(winner)
+        distributed = fn(winner, temporal_weight_map)
         if len(distributed) > 1:
             n_summary += 1
 
@@ -400,6 +412,11 @@ def build_ucdp_v1(
         # so the reproducibility contract of ADR-014 Principle 3 is in the
         # ledger before the first stochastic strategy needs it.
         "seed": config.seed,
+        "temporal_activity_pool_events": (
+            temporal_weight_map.n_pool_events
+            if temporal_weight_map is not None
+            else None
+        ),
         "filter_stale_versions": config.filter_stale_versions,
         "source_distribution_map": config.source_distribution_map,
         "n_events_read": n_read,
