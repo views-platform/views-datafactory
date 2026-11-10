@@ -27,6 +27,7 @@ hand when it was written; see the PR.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pyarrow.compute as pc
@@ -95,10 +96,66 @@ class TestProductionParityIsPinned:
         default above, and the pipeline naming it.
         """
         pipeline = (ROOT / "scripts" / "refresh_pipeline.sh").read_text()
-        assert "build_viewpoint.py --profile production_parity" in pipeline, (
-            "refresh_pipeline.sh must pass --profile explicitly, so that "
-            "what production emits is readable where production is "
-            "defined rather than inherited from an argparse default"
+        assert re.search(
+            r'^VIEWPOINT_PROFILE="[^"]+"', pipeline, re.MULTILINE,
+        ), (
+            "refresh_pipeline.sh must name its allocation profile in one "
+            "VIEWPOINT_PROFILE assignment, so that what production emits "
+            "is readable where production is defined rather than "
+            "inherited from an argparse default"
+        )
+        assert (
+            'build_viewpoint.py --profile "$VIEWPOINT_PROFILE"' in pipeline
+        ), (
+            "step 3 must build under $VIEWPOINT_PROFILE, not a literal -- "
+            "a literal here is free to disagree with step 4's source"
+        )
+
+    def test_the_profile_the_pipeline_names_is_registered(self) -> None:
+        """A typo in the profile name must not reach the server."""
+        pipeline = (ROOT / "scripts" / "refresh_pipeline.sh").read_text()
+        match = re.search(
+            r'^VIEWPOINT_PROFILE="([^"]+)"', pipeline, re.MULTILINE,
+        )
+        assert match is not None
+        profile = match.group(1)
+        assert profile in PROFILES, (
+            f"refresh_pipeline.sh builds profile {profile!r}, which is not "
+            f"registered. Available: {sorted(PROFILES)}"
+        )
+
+    def test_compile_reads_the_viewpoint_the_pipeline_just_built(
+        self,
+    ) -> None:
+        """The fail-green trap this guard exists for.
+
+        ``build_viewpoint.py`` writes to
+        ``data/viewpoint/<profile>.parquet`` when given no ``--output``,
+        and ``compile_grid.py`` *defaults* ``--source`` to
+        ``production_parity.parquet``. So switching only step 3's
+        ``--profile`` left step 4 compiling the previous profile's parquet:
+        the UCDP digest never moved, ADR-041's skip logic correctly skipped
+        assembly and export, and the whole run reported success having
+        changed nothing. Nothing would have gone red.
+
+        Asserting both sides derive from the same shell variable is what
+        makes that disagreement impossible rather than merely unlikely.
+        """
+        pipeline = (ROOT / "scripts" / "refresh_pipeline.sh").read_text()
+        assert (
+            'VIEWPOINT_PARQUET="data/viewpoint/${VIEWPOINT_PROFILE}.parquet"'
+            in pipeline
+        ), (
+            "the compiled source path must be derived from "
+            "$VIEWPOINT_PROFILE, so it cannot name a different profile "
+            "than step 3 builds"
+        )
+        assert (
+            'compile_grid.py --source "$VIEWPOINT_PARQUET"' in pipeline
+        ), (
+            "step 4 must compile $VIEWPOINT_PARQUET. Falling back to "
+            "compile_grid.py's own --source default silently recompiles "
+            "whatever profile ran last, and the run still reports success"
         )
 
 

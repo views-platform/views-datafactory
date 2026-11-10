@@ -244,30 +244,42 @@ echo "── $CURRENT_STEP ──"
 uv run python scripts/consolidate_ucdp.py
 echo
 
+# ---- The UCDP allocation profile (steps 3 and 4) ----
+#
+# ONE name, used twice, because the two uses MUST agree and used to be two
+# literals in two files. build_viewpoint.py writes to
+# data/viewpoint/<profile>.parquet when given no --output, and
+# compile_grid.py defaults --source to data/viewpoint/production_parity.parquet.
+# So changing only step 3's --profile made step 4 recompile the PREVIOUS
+# profile's parquet: the UCDP digest never moved, the ADR-041 skip logic
+# correctly skipped assembly and export, and the run reported success having
+# changed nothing. A variable cannot drift from itself.
+#
+# The profile is also still passed EXPLICITLY rather than inherited. It used
+# to be omitted, which meant production's allocation policy was decided by an
+# argparse default in another file, where a one-line edit could switch what
+# production emits silently.
+#
+# kgi_kti_activity is ADR-053's recommendation composed with ADR-049's:
+# activity-weighted in time, proportional in space, where_prec 4 and 6 no
+# longer dropped, and no annual date_end_only override. It replaced
+# production_parity on 2026-11-10 -- see ADR-053's amendment of that date for
+# the decision, what it costs, and who was told. production_parity remains
+# registered and reachable, and build_viewpoint.py still defaults to it, so
+# VIEWSER parity is a profile rather than a thing we lost.
+VIEWPOINT_PROFILE="kgi_kti_activity"
+VIEWPOINT_PARQUET="data/viewpoint/${VIEWPOINT_PROFILE}.parquet"
+
 # Step 3: Build viewpoint
-#
-# The profile is passed EXPLICITLY. It used to be omitted, which meant
-# production's allocation policy was decided by an argparse default in
-# scripts/build_viewpoint.py -- a one-line edit in an unrelated file could
-# have switched what production emits, silently. Naming it here makes the
-# pipeline state its own choice.
-#
-# production_parity reproduces VIEWSER's GedLoader: imprecise events are
-# dropped (where_prec 4, 6) or placed on their centroid cell, and annual
-# summary events land wholly on their date_end month. ADR-049 decided a
-# distributing alternative is preferable and it exists as the
-# kgi_distributed profile -- deliberately NOT invoked here, because
-# switching moves every published fatality figure and needs agreement on
-# the parity contract.
 CURRENT_STEP="3/14: Build viewpoint"
 echo "── $CURRENT_STEP ──"
-uv run python scripts/build_viewpoint.py --profile production_parity
+uv run python scripts/build_viewpoint.py --profile "$VIEWPOINT_PROFILE"
 echo
 
 # Step 4: Compile UCDP grid
 CURRENT_STEP="4/14: Compile UCDP to PRIO-GRID"
 echo "── $CURRENT_STEP ──"
-uv run python scripts/compile_grid.py
+uv run python scripts/compile_grid.py --source "$VIEWPOINT_PARQUET"
 echo
 
 # Step 5: Compile ACLED grid

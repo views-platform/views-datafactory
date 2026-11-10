@@ -17,6 +17,48 @@ entry could.
 
 ---
 
+## A named tripwire that could not fire, and the switch that found it (2026-11-10)
+
+**C-356 corrected; its trigger fired and was actioned.** Planning the production profile switch
+meant checking what downstream would break, and the answer the register gave was wrong.
+
+**What C-356 claimed.** That flipping any of the three allocation defaults would move *"the artifact
+digest that views-postprocessing's `test_gaul_lookup_fidelity.py` pins and that FAO is served
+against"*. C-364 repeated the clause and so did C-366's trigger.
+
+**What that test actually does.** It pins a lookup-version *string format* and checks GAUL
+cell-to-country assignment against synthetic digest fixtures. A UCDP allocation change does not
+touch the GAUL parquets, so it would not have fired — on either the old behaviour or the new.
+
+**Why this is worth a changelog entry rather than a silent fix.** A named tripwire that cannot fire
+is worse than no tripwire, because it is read as coverage. For two months the register asserted that
+a specific downstream test stood between this repository and an unnoticed allocation change, and
+anyone reasoning about the blast radius — including this session, at first — would have taken that at
+face value. The failure mode is the register's own recurring one: a claim asserted once and never
+re-derived (C-153, C-362, C-365).
+
+**The gate that would have fired** is in a downstream evaluation dossier and pins the delivered
+value at cell 148759 / month-id 504 as an exact number, which the switch moves from 113,395 to 240.
+Not cited by path, per C-358: naming a sibling's file as the thing that breaks reads as attribution
+even when the repository is public, and that precedent was set for this exact test.
+views-postprocessing is not unaffected either — it carries a strict-xfail freshness gate comparing
+the served grid's mtime against the GAUL parquets', which any re-assembly moves. So the shape of the
+original worry was right and only its instrument was wrong.
+
+**C-356's trigger has now fired and been actioned.** `refresh_pipeline.sh` builds under
+`kgi_kti_activity` per ADR-053's 2026-11-10 amendment. The three-files hazard the trigger was written
+against is partly closed by construction: the pipeline names its profile once, in a variable the
+compile step reads, because the two used to be independent literals whose disagreement would have
+been silent — the viewpoint would have been built under the new profile and the grid compiled from
+the old one, with the digest unmoved and the content-addressed skip correctly skipping everything
+downstream. A run that changed nothing would have reported success.
+
+**C-367 is expected to retire with this switch** — `ceil_split` is no longer the production path, so
+the 96 invented deaths go with it. Not struck through yet: that waits on a production build, because
+the entry is about what is *delivered*, not about what the code is capable of.
+
+---
+
 ## Two findings from one failed assertion (2026-11-10)
 
 **C-366 and C-367 registered.** Both came out of `notebooks/summary_event_allocation.ipynb`
