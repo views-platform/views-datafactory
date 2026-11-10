@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 **Date:** 2026-11-07
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-011 (Fail Loud), ADR-014 (Viewpoints as Derived Views), ADR-015 (UCDP Consolidation), ADR-023 (Viewpoint Builder Invariants), ADR-040 (Count Conservation), ADR-049 (Spatial Distribution of Imprecise UCDP Events)
 
 > **This ADR is the temporal twin of ADR-049.** ADR-049 decided what to do when UCDP does not
