@@ -24,9 +24,10 @@ UCDP GED encodes temporal uncertainty in the `date_prec` field. Per the GED code
 | 5 | Known only within a range longer than a year |
 
 `date_prec >= 4` is therefore UCDP stating, in its own data, **"we do not know which month."**
-Writing the codebook semantics down here is deliberate: concern **C-37** records that
-`date_prec` semantics were hardcoded in this pipeline with no codebook reference. This ADR does not
-close C-37, but it is the first governing document to state the mapping it depends on.
+Writing the codebook semantics down here is deliberate. These values are hardcoded in the pipeline
+with no reference to the codebook they come from, so if UCDP ever redefines the precision codes the
+pipeline would process the new meaning silently. This ADR does not fix that, but it is the first
+governing document to state the mapping its decision depends on.
 
 When UCDP does not know the month, it still has to put the event somewhere, so it reports a
 `date_start`/`date_end` span. The viewpoint builder then has to choose a single month — or several.
@@ -358,8 +359,8 @@ to agree with. This closes that gap.
 - **The seasonality guard.** December's share of state-based fatalities must stay below 9.0%. This is
   the observer the artifact lacked: the defect this ADR exists to fix is a *distributional* property
   that no per-event assertion can see. ADR-049's 2026-11-04 amendment records what happens without
-  one — cell 148759 grew from 273,076 to 274,358 while nothing went red, "a decision with no
-  observer," concern C-365's mechanism.
+  one — cell 148759 grew from 273,076 to 274,358 while nothing went red, because nothing was
+  watching. A decision with no observer drifts from its code in silence.
 - **Non-triggering events do not move:** an event with `date_prec <= 3` must produce exactly one row,
   at its `date_end` month, under every strategy.
 - **Fallback is reached, not assumed:** an event whose every cascade level has zero activity must
@@ -404,7 +405,8 @@ decision unchanged: a temporal sampler would be admissible under the same terms,
 - **It does not retrain or revalidate any model.** Every consumer of this package — 28 views-models
   requirements files — reads data whose grid-month values this changes. Notifying them is a
   precondition of the switch, not a consequence of it.
-- **It does not close C-37.** The codebook mapping in Context is stated, not yet asserted in code.
+- **It does not pin the codebook mapping in code.** Context states what the `date_prec` values
+  mean; no test asserts it, so a redefinition upstream would still pass unnoticed.
 
 ---
 
