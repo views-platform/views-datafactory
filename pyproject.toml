@@ -192,6 +192,20 @@ target-version = "py311"
 select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM"]
 ignore = ["UP046"]
 
+[tool.ruff.lint.per-file-ignores]
+# E402 is "module level import not at top of file", and ruff treats each
+# notebook cell as its own module. Every cell in notebooks/ opens with a
+# docstring saying what it does -- that is this repo's convention and it is
+# worth more than the rule, which exists to stop imports hiding behind
+# executable code in a module. A cell is not a module and its docstring is
+# not executable code, so the rule does not transfer. Every other violation
+# ruff reports in a notebook is a real one and gets fixed.
+#
+# Note the CI `lint` job runs `ruff check src/ tests/ scripts/` and never
+# sees notebooks at all; this entry exists so a bare `ruff check .` at the
+# keyboard agrees with CI instead of reporting eight findings nobody acts on.
+"notebooks/*.ipynb" = ["E402"]
+
 [tool.mypy]
 strict = true
 ignore_missing_imports = true
