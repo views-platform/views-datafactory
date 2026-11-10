@@ -183,6 +183,9 @@ These ADRs form the architectural constitution of the repository.
 - **ADR-052** -- Coverage Bounds Are Published Per Source, and Extrapolation Stays Where It Is
   Answers ADR-047's line 68, which sat unowned until two consumers raised it — views-pipeline-core (#420) as an unowned decision, CRAF'd (#476) as a delivered month of zeros a partner could not distinguish from observation. Assembly already computed every source's trailing coverage bound and the export mirror silently dropped all five; both edges are now published in the zarr attrs and the consumer manifest. States plainly that the bound is *inferred* from non-zero sums and is therefore wrong at both ends (C-355). Names the constant-hold extrapolation the repo already performs past the end of support, declines to extend it, and sets seven criteria for any future case — the load-bearing one being back-tested, published error. Also declares GHS-POP/GHS-BUILT-S 2025 and 2030 as provider projections.
 
+- **ADR-053** -- Temporal Distribution of Imprecise UCDP Events (Known Temporal Imprecision)
+  ADR-049's twin on the other axis. UCDP events where `date_prec` >= 4 declares the month unknown are distributed across their spanned months, weighted by observed monthly activity in the same conflict (dyad-first cascade), through the same conserving rounder. Fixes a measured calendar artifact: December carried 12.27% of all state-based fatalities, October 13.33%, because `date_end_only` stacked every annual summary event on its end month — and the spatial fix alone makes December *worse* (15.60%). Restores what the legacy ingestor already did, with a declared trigger instead of a magnitude proxy and exact conservation instead of `ceil`. **Accepted**; does not change what the pipeline invokes — selecting the profile in production is a separate, gated action.
+
 These must comply with the constitutional ADRs above.
 
 ---

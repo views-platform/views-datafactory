@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-28
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Related:** ADR-003 (declarations over inference), ADR-040 (count conservation), ADR-045 (data soundness invariants)
 
 ---

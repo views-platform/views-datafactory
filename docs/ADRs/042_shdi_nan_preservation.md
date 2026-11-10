@@ -3,7 +3,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-12
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-014 (Viewpoints as Derived Views), ADR-036 (SHDI Source Selection), ADR-040 (Count Conservation / Intensive Quantities), ADR-011 (Fail-Loud)
 
 ---

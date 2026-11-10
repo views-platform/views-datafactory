@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-05-18
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-029 (GHS-POP as First Population Source), ADR-012 (Four-Layer Data Architecture)
 **Amended:** 2026-08-13 — the Python floor is now `>=3.11`. The tooling decision is unchanged; see the Amendment at the end of Consequences. *(A header pointer is an extension of ADR-051's inline-amendment convention, added because this ADR is long and its floor claim appears in five places — a reader who stops after "In scope" would otherwise leave with a fact that is no longer true.)*
 

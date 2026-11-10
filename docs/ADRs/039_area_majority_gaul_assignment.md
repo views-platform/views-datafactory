@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-04 (accepted 2026-06-05)
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Supersedes:** Centroid-in-polygon assignment (implicit, undocumented)
 **Applies:** ADR-025 (Static Grid Features), ADR-030 (Raster Tooling — Rust Long-Term), ADR-012 (Four-Layer Data Architecture)
 

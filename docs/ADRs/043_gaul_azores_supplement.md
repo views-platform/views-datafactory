@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-12
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-039 (Area-Majority GAUL Assignment)
 
 ---
