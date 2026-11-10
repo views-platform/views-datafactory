@@ -9,6 +9,12 @@
 > know *where* an event happened. This decides what to do when UCDP does not know *when*. The two
 > axes are independent, they compose, and until now only one of them had a governing decision.
 
+> **Amended 2026-11-10** — see the *Amendment* section below. The production pipeline now invokes
+> `kgi_kti_activity`, which this document deliberately declined to decide; `source_distribution_map`
+> is settled; and the three observers *Validation & Monitoring* asked for are implemented. The
+> Decision itself is unchanged. Two bullets under *What this ADR does not decide* are superseded in
+> place and say so.
+
 ---
 
 ## Context
@@ -423,14 +429,116 @@ decision unchanged: a temporal sampler would be admissible under the same terms,
 - **It does not change what the production pipeline invokes.** `scripts/build_viewpoint.py` still
   defaults to `production_parity`, and `scripts/refresh_pipeline.sh` still passes
   `--profile production_parity`. Selecting `kgi_kti_activity` in the pipeline is a separate,
-  explicitly gated action.
+  explicitly gated action. — **Superseded by the Amendment of 2026-11-10 below**, which is that
+  separate action. The reasoning above is left standing because it is why the switch needed its
+  own decision rather than arriving as a side effect of this one.
 - **It does not settle `source_distribution_map`.** §7 states what the profile does and why. The
-  field itself is under discussion with Håvard and is not resolved by this document.
+  field itself is under discussion with Håvard and is not resolved by this document. —
+  **Superseded by the Amendment of 2026-11-10 below.** The discussion concluded.
 - **It does not retrain or revalidate any model.** Every consumer of this package — 28 views-models
   requirements files — reads data whose grid-month values this changes. Notifying them is a
   precondition of the switch, not a consequence of it.
 - **It does not pin the codebook mapping in code.** Context states what the `date_prec` values
   mean; no test asserts it, so a redefinition upstream would still pass unnoticed.
+
+---
+
+## Amendment 2026-11-10 — production invokes `kgi_kti_activity` (#533)
+
+**The Decision above is unchanged.** This amendment records the separate, explicitly gated action
+that *What this ADR does not decide* reserved: the production pipeline now builds under
+`kgi_kti_activity`, and the `source_distribution_map` question is settled. Dated amendment, not a
+rewrite, per the repository's editorial rule.
+
+### 1. What changed, and where
+
+`scripts/refresh_pipeline.sh` names its allocation profile once, in a `VIEWPOINT_PROFILE`
+variable, and both the viewpoint build and the UCDP compile step read it. Previously step 3 named
+`production_parity` and step 4 inherited `compile_grid.py`'s own default — two literals in two
+files that had to agree.
+
+**They did not have to agree, and nothing would have said so.** `build_viewpoint.py` derives its
+output path from the profile name when given no explicit output, while `compile_grid.py` defaults
+its source to the parity parquet. Changing only the profile would have left the compile step
+reading the *previous* profile's output: the UCDP digest would not have moved, ADR-041's
+content-addressed skip would have correctly skipped assembly and export, and the run would have
+reported success having changed nothing. One variable used twice cannot disagree with itself, and
+`test_compile_reads_the_viewpoint_the_pipeline_just_built` fails if either side stops deriving
+from it.
+
+`production_parity` remains registered, and `build_viewpoint.py` still defaults to it, so VIEWSER
+parity stays reachable by naming it. Parity is a profile, not something lost.
+
+### 2. `source_distribution_map` is settled
+
+§7 and the reservation above both flagged `{"annual": "date_end_only"}` as under discussion with
+Håvard. That discussion concluded, and the operator confirmed on 2026-11-10 that the hold is
+cleared. `kgi_kti_activity` sets `source_distribution_map=None`, so §1–§6 now run on finalised GED
+releases — the data the override had been exempting, and the data that matters.
+
+### 3. What it costs, measured
+
+Measured on the 2026-11-06 consolidated store, state-based unless stated:
+
+| | `production_parity` | `kgi_kti_activity` |
+|---|---:|---:|
+| cell 148759, December 2021 | **113,395** | **240** |
+| that month's largest cell | 113,395 | 642 |
+| its share of the month's slice | 98.1% | 13.6% |
+| the month's slice ESS | **1.04** | **20.24** |
+| event 463131 occupies | 1 cell-month | 12 months × 18 cells |
+| deaths above the source ceiling | 96 across 74 events | **0** |
+| rows | 372,303 | 2,654,111 (**7.1×**) |
+| total `best` | 3,473,358 | 4,258,880 (**+22.6%**) |
+| build time | 86.6 s | 425.6 s |
+
+The **+785,626** fatalities are 43,933 events readmitted because `exclude_where_prec` drops from
+`(4, 6)` to empty. **The switch adds deaths; it does not only move them.** Any consumer diffing
+totals sees that before anything else, which is why notifying them was a precondition and not a
+consequence.
+
+### 4. Seasonality: the guard passes, and the peak moves rather than vanishes
+
+December's share of state-based fatalities falls from **12.27% to 6.62%**, against the 9.0% ceiling
+*Validation & Monitoring* sets. Annual spread narrows from 6.99 to 4.67 percentage points.
+
+**The honest part.** The largest month is no longer October (13.33%) but **August (11.30%, up from
+6.66%)**. Most of that is event 463137 — 121,848 deaths recorded 2022-08-24 to 2022-10-24 — moving
+to the months where precisely-dated fighting was actually observed. That is the mechanism doing
+what §3 says it does: it borrows the shape of well-observed events. It is a different thing from a
+calendar artifact, which was an artifact of the *allocation rule* rather than of the data. But
+August is now the largest month by a clear margin, and reading the December result as "seasonality
+is fixed" claims more than was measured.
+
+### 5. The observers this ADR asked for now exist
+
+*Validation & Monitoring* named three things to watch, and until this amendment none of them was
+implemented — no test in the repository referenced this ADR at all, which is the failure shape §
+Rationale warns about in its own words.
+
+- The **composed golden criterion** — temporal then spatial, in §5's order — asserts exact
+  conservation on `best`, `low` and `high`, that the artifact cell-month falls below 1,000, and
+  that both stages marked the rows they produced. Composition is what production runs, and neither
+  axis's own tests could catch a composition defect.
+- The **December seasonality guard** asserts the 9.0% ceiling, and was demonstrated to fire:
+  against a `production_parity` build it reports 12.27% and fails.
+- **Provenance counters** on every build: `n_temporally_distributed`,
+  `temporal_weight_key_counts` across the cascade levels, and `n_temporal_uniform_fallback`. The
+  fallback count is the one worth watching — it is how many events got flat weights after all,
+  and a rising share means the assumption this ADR bets on is quietly applying less often.
+
+### 6. What this amendment does **not** decide
+
+- **It does not retrain or revalidate any model.** That bullet above stands unchanged.
+- **It does not publish the precision of an allocated value.** §9's defect is untouched: the row
+  annotations still do not reach the output parquet, and the served artifact still carries no
+  `date_prec`, no `where_prec`, and no marker naming the profile that produced it. A consumer
+  cannot distinguish an allocated value from an observed one. That is views-datafactory#533's own
+  acceptance criterion and it remains open.
+- **It does not settle whether activity weighting is the best allocator**, only that it is better
+  than booking a year onto one month. The dossier's coarsen-and-recover evaluator was never built,
+  so the comparison against uniform rests on the held-out measurement in §Rationale rather than on
+  a standing harness.
 
 ---
 

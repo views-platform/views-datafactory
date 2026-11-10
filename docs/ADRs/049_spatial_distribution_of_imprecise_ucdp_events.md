@@ -6,7 +6,8 @@
 **Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-014 (Viewpoints as Derived Views), ADR-015 (UCDP Consolidation), ADR-023 (Viewpoint Builder Invariants), ADR-040 (Count Conservation), ADR-044 (Source Taxonomy)
 
-> **Amended 2026-11-04 and 2026-11-05** — see the two *Amendment* sections below. The 2026-11-05
+> **Amended 2026-11-04 and 2026-11-05**, and narrowed as to the production pipeline by ADR-053's
+> Amendment of 2026-11-10 — see the two *Amendment* sections below. The 2026-11-05
 > amendment narrows the *Deferred* entry on input uncertainty sampling, resolving a contradiction
 > with ADR-014. The 2026-11-04 one: One statement in **Context** was wrong
 > about the code and is corrected there; the relationship between this decision and the profile the
@@ -215,7 +216,9 @@ a decision rather than an accident.
 
 - every strategy field of `production_parity`, so a parity break must be deliberate;
 - that `scripts/build_viewpoint.py` still defaults to `production_parity`, so switching what
-  production runs cannot happen by diff;
+  production runs cannot happen by diff — and, since 2026-11-10, that the pipeline names its
+  profile in one place which the compile step reads, so the two cannot name different
+  profiles (see ADR-053's Amendment);
 - that `ViewpointConfig`'s default is still `proportional`, i.e. that §6 and the code still agree;
 - that `kgi_distributed` differs from parity in exactly the two fields above;
 - **§Validation's golden criterion on the real event** — the centroid's share collapses, the
@@ -230,7 +233,10 @@ guard for this ADR.
 ### 4. What this amendment does **not** decide
 
 **It does not change what the production pipeline invokes.** `scripts/build_viewpoint.py` still
-defaults to `production_parity`, and the monthly pipeline still calls it. Switching to
+defaults to `production_parity`, and the monthly pipeline still calls it. — **No longer true as of 2026-11-10:**
+the pipeline builds under `kgi_kti_activity`, which composes §3's spatial strategy with
+ADR-053's temporal one. See ADR-053's Amendment of that date; `build_viewpoint.py`'s default is
+still `production_parity`, so this clause holds for everything except the pipeline. Switching to
 `kgi_distributed` would move every published grid-level fatality figure for `where_prec >= 4` events
 and invalidate the ADR-041 content digests, so it is a separate decision requiring agreement on the
 VIEWSER-parity contract. It should also wait on evidence: whether §3's proportional weighting beats
@@ -313,6 +319,7 @@ decision when a consumer needs it, and it carries the ADR-050 work in §2.
 
 **Also withheld:** building the sampler. This amendment establishes admissibility, nothing more. No
 MSI implementation is authorised by it, and `production_parity` remains what the pipeline invokes.
+(**Superseded 2026-11-10** as to the pipeline only — see ADR-053's Amendment of that date. No MSI implementation is authorised by this amendment either way.)
 
 ### 5. What measurement showed, so the next decision is cheaper
 

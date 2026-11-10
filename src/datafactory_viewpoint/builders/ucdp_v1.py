@@ -301,6 +301,17 @@ def build_ucdp_v1(
     n_excluded_where_prec = 0
     n_passthrough_where_prec = 0
 
+    # ADR-053 Validation & Monitoring asks for these on every build: how
+    # many events the temporal stage allocated, which cascade level
+    # supplied each one's weights, and how many fell through to uniform.
+    # The fallback count is the one worth watching -- activity weighting's
+    # whole claim is that a conflict's own observed monthly pattern is a
+    # better prior than a flat one, and an event that falls back got no
+    # such pattern. If that share climbs, the claim is weakening on data
+    # nobody re-examined.
+    n_temporally_distributed = 0
+    temporal_weight_key_counts: dict[str, int] = {}
+
     # Process groups: walk sorted id column, slice per group
     i = 0
     while i < n_input:
@@ -332,6 +343,21 @@ def build_ucdp_v1(
         distributed = fn(winner, temporal_weight_map)
         if len(distributed) > 1:
             n_summary += 1
+
+        # Every row from one event carries the same temporal annotations,
+        # so the first row answers for the event. ``activity_weighted``
+        # sets ``_temporal_weight_key`` to the cascade level it used, and
+        # leaves it absent when it fell back to ``uniform_span`` -- which
+        # is why absence is bucketed explicitly rather than ignored.
+        if distributed and distributed[0].get("_temporal_distributed"):
+            n_temporally_distributed += 1
+            bucket = (
+                distributed[0].get("_temporal_weight_key")
+                or "uniform_fallback"
+            )
+            temporal_weight_key_counts[bucket] = (
+                temporal_weight_key_counts.get(bucket, 0) + 1
+            )
 
         # Spatial distribution: expand imprecise events
         if weight_map is not None:
@@ -374,10 +400,16 @@ def build_ucdp_v1(
 
     logger.info(
         "Processed %d groups: %d summary expanded, "
+        "%d temporally distributed (weights: %s), "
         "%d spatially distributed (%d cells), "
         "%d passthrough where_prec, %d excluded where_prec, "
         "%d filtered, %d output rows",
         n_groups, n_summary,
+        n_temporally_distributed,
+        ", ".join(
+            f"{k}={v}"
+            for k, v in sorted(temporal_weight_key_counts.items())
+        ) or "none",
         n_spatially_distributed, n_spatial_cells_created,
         n_passthrough_where_prec, n_excluded_where_prec,
         n_filtered, len(output_columns["date_month"]),
@@ -426,6 +458,11 @@ def build_ucdp_v1(
         "n_survivorship_discarded": n_survivorship_discarded,
         "n_events_output": n_output,
         "n_summary_expanded": n_summary,
+        "n_temporally_distributed": n_temporally_distributed,
+        "temporal_weight_key_counts": temporal_weight_key_counts,
+        "n_temporal_uniform_fallback": temporal_weight_key_counts.get(
+            "uniform_fallback", 0,
+        ),
         "n_spatially_distributed": n_spatially_distributed,
         "n_spatial_cells_created": n_spatial_cells_created,
         "n_excluded_where_prec": n_excluded_where_prec,

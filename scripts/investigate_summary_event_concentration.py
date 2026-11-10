@@ -28,6 +28,20 @@ already applied. That file is the compiler's own input, which is why it
 is the basis rather than the raw store: re-deriving survivorship here
 would risk measuring something the pipeline does not actually see.
 
+.. warning::
+
+   **As of 2026-11-10 the pipeline no longer builds that file.** ADR-053's
+   amendment moved production to the ``kgi_kti_activity`` profile, so
+   ``refresh_pipeline.sh`` writes ``kgi_kti_activity.parquet`` instead and
+   any ``production_parity.parquet`` on disk is left over from an earlier
+   run. The path is **deliberately unchanged** -- this script measures the
+   parity behaviour, which is the thing the concentration was a property
+   of, so pointing it at the new profile would measure a different
+   question. But it is now measuring a *historical* artifact rather than
+   what is served, and the file it needs must be rebuilt explicitly:
+
+       uv run python scripts/build_viewpoint.py --profile production_parity
+
 **Leverage is proxied by ``best``**, not measured on model scores. That
 is sound for a count-unit CRPS, where a cell's contribution scales with
 its magnitude, and views-hydranet reports the directly measured figure
