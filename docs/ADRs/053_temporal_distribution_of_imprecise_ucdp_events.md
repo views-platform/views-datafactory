@@ -490,7 +490,38 @@ Measured on the 2026-11-06 consolidated store, state-based unless stated:
 | deaths above the source ceiling | 96 across 74 events | **0** |
 | rows | 372,303 | 2,654,111 (**7.1×**) |
 | total `best` | 3,473,358 | 4,258,880 (**+22.6%**) |
-| build time | 86.6 s | 425.6 s |
+| build time | 86.6 s | 425.6 s (136 s warm — see below) |
+| build peak RSS | — | **8.19 GiB** |
+
+**The 7.1× row increase does not cost 7.1× the memory, and that is the figure an
+operator needs.** Peak RSS for the full build was measured at 8,593,264 KB = **8.19
+GiB**, which is within rounding of the 8.6 GB ADR-049's amendment measured for
+`kgi_distributed` at 2.41M rows — 10% fewer rows for the same memory. The cost is
+dominated by reading the consolidated store and building the two weight maps, not by
+the output. On a 16 GB server that leaves roughly 7.8 GB of headroom, so the viewpoint
+step carries no OOM risk; C-345's exit-137 trap is not in play here.
+
+Build wall-clock is the one figure that moved on re-measurement: 425.6 s originally,
+**136 s** when measured again with the store warm in page cache. The cause was not
+isolated and page-cache warmth is a hypothesis, not a finding — both numbers are
+recorded rather than one replacing the other, and the larger one is the one to plan
+with.
+
+**Cascade levels, measured on the same build** — the distribution the counters in §5
+exist to report:
+
+| level | events | share |
+|---|---:|---:|
+| `dyad_new_id` | 4,112 | 84.7% |
+| `side_b_new_id` | 317 | 6.5% |
+| `country_id` | 286 | 5.9% |
+| `conflict_new_id` | 51 | 1.1% |
+| **`uniform_fallback`** | **91** | **1.87%** |
+
+4,857 events were temporally allocated in total. **Activity weighting actually applies
+to 98.1% of them**, so the assumption this ADR bets on is doing work rather than
+quietly degrading to a flat prior. That 1.87% is the baseline the fallback counter
+should be watched against.
 
 The **+785,626** fatalities are 43,933 events readmitted because `exclude_where_prec` drops from
 `(4, 6)` to empty. **The switch adds deaths; it does not only move them.** Any consumer diffing
