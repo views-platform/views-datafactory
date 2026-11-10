@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-10-26 — C-153's premise corrected (ACLED *does* report `total_count`, with a flag we never sent, #510) and C-364 registered: a UCDP annual event's whole span is booked to its `date_end` month, so one event holds 113,368 of a single cell-month and C-356's claim that the temporal axis was corrected is false. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-11-10 — C-366 and C-367 registered from the ADR-053 allocation notebook (#533): production drops 43,933 events carrying 785,626 fatalities (+22.6%) and `ceil_split` reports 96 deaths the source never recorded, which no conservation boundary catches because each compares a stage to its own input. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 364 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 51 open concerns (0 Tier 1, 4 Tier 2, 17 Tier 3, 24 Tier 4, 6 deferred by design; 4 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 367 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 54 open concerns (0 Tier 1, 5 Tier 2, 18 Tier 3, 25 Tier 4, 6 deferred by design; 5 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -170,6 +170,7 @@
 | ~~C-335~~ | ~~2~~ | ~~Nothing watches the data-serving path — green while every consumer gets nothing~~ | Resolved 2026-08-03: Better Stack monitor live and verified (Up, ~27ms, test alert delivered) + serving-freshness.yml for the content half | Operational monitoring |
 | C-336 | 4 | Governance docs drift against a world that changed elsewhere — ADR-006/ADR-010 cite `lab_grid/`, a package **views-metric-lab deleted** (their 6e1a34d); 10 line-number citations, 3 already pointing at blank lines | **Before citing code in any ADR or CIC**: cite the symbol, never the line; and before calling a cross-repo reference stale, check the sibling repo — `audit_data_parity.py` looked dead and is not | Documentation drift |
 | ~~C-337~~ | ~~2~~ | ~~A loose dependency floor **froze** an estimator version: `views-frames>=1.0` let `uv.lock` pin 1.0.0, so every CI run since June tested against pre-amendment MAP/HDI semantics~~ | Resolved 2026-08-21 (#462). Floor raised to `>=1.10.2` and `uv.lock` moved; `tests/test_views_frames_floor.py` guards the declared floor; and the residual this entry stayed open for — *nothing checks the other floors against what their locks chose* — was closed by `tests/test_dependency_floors.py` (#430), which checks every runtime floor against every resolution in the lock | Dependency policy |
+| C-365 | 2 | C-337's successor: the floor-versus-lock guard asks whether the **lock** left the floor, never whether **upstream** left it, so an `ALLOWED_AT_FLOOR` exemption reading "the floor IS the latest release" stayed green for ten weeks while views-frames published 1.11.0, 2.0.0 and 3.0.0 and this repo's lock sat frozen at 1.10.2 | **Fired** 2026-11-02 (#527) — the frozen cap made views-datafactory the last constraint holding views-frames below 3.0.0, and the forecast lane silently resolved the reconciler that loses 2.9–7.3% of fatality mass. Re-fires whenever any entry is added to `ALLOWED_AT_FLOOR`, and on any dependency whose cap excludes the current major | Dependency policy |
 | C-338 | 4 | Freshness detection depends on a GitHub-scheduled workflow, not the monitoring vendor — Better Stack's free tier cannot do content checks. GitHub may delay cron under load, so notice of stale data can slip a day | **If freshness notice ever needs to be prompt, or if the Better Stack plan is upgraded**: move the content check to a keyword monitor (matching status cells, NOT page text — see below) and retire the workflow | Operational monitoring |
 | C-339 | 3 | **Incident 2026-08-03:** an assistant-authored multi-line heredoc, pasted into a terminal that joined the lines, made `tee` treat the log path as a second output file and **destroyed `refresh.log`** (528 KB → 150 B) as root. Unrecoverable | **Before giving any human a command to paste** — if it spans more than one line it is unsafe (terminals join wrapped lines, and the joined form is often still valid shell); if it runs as root, ask what it writes to when mis-parsed | Operational safety |
 | C-340 | 3 | Auto-merge fails silently two ways: `gh pr merge --auto --<method>` refuses to change the method on an already-armed PR (nearly put a squash on `main`), and pushing to a branch whose PR already merged orphans the commit with no error | **Before arming a non-default merge method**, read `auto_merge.merge_method` back; **before any follow-up push to a PR branch**, check `merged` first or use a new branch | Operational safety |
@@ -185,7 +186,7 @@
 | C-353 | 2 | **Area-majority ranks candidate GAUL polygons in square degrees, not area** (`generate_area_majority_gaul.py:157-172`). Measured 2026-08-21 over every cell above 55°N: **9 of 3,591 border cells flip** under true area. All nine are in the FAO delivery. Eight differ at `gaul2_code` only, one also at `gaul1_code`, **none at `gaul0_code`** | **Before any correction of `data/raw/gaul_admin/*.parquet`** — views-postprocessing's `test_gaul_lookup_fidelity.py` breaks loudly on a changed digest and step 4 of their correction procedure (who tells FAO, on what notice) is still open. Also when GAUL is next reharvested, which reruns the same ranking | Compilation |
 | C-354 | 4 | **Nine test modules patch `datafactory_http.retry.requests.request` directly — 63 sites, five asserting the exact kwarg set.** The mock target is an implementation detail of `request_with_retry`, so any change to *how* it issues its request (a `requests.Session` for connection pooling, urllib3-level retries, or redirect safety) breaks tests that have nothing to do with the change | **Before changing how `request_with_retry` issues its request** — introducing a `Session`, an adapter, or a transport wrapper. Budget the test churn as part of that change rather than discovering it mid-implementation, as #388 did | HTTP layer |
 | C-355 | 3 | **The published observation boundary is inferred from non-zero sums, not declared by the harvest** (`export_zarr.py:280-296`). A genuinely all-zero month reads as unobserved; a **partially-reported month reads as complete**. Measured: the 2026-08-21 export declared `last_valid_month_id = 560` — the month it ran in. views-postprocessing uses this value to mark months **fabricated in the FAO delivery** | **Before any consumer builds logic on `last_valid_month_ids`** (published by ADR-052), or when views-postprocessing answers C-352 — whichever first. The declared bounds already exist in the ingestion ledgers: `ucdp_candidate.max_date_start`, `acled.max_date`, `shdi.year_range` | Consumer contract |
-| C-356 | 3 | **UCDP `where_prec >= 4` events are geocoded whole into one cell — measured live 2026-09-02.** Cell **148759 (Mekelle, Tigray) holds 121,915 in its peak month and 273,035 across the war window; 96.1% of all state-based fatalities in its 5x5 neighbourhood**, against a panel 99.99th percentile of 255. ADR-049 **did** ship the mirror strategy opt-in with parity default, and production uses parity. **The default is spread across three files that must stay aligned** — `viewpoint_config.py` says `proportional`, `profiles.py` overrides to `passthrough`, `refresh_pipeline.sh` passes no `--profile` | **Before changing any one of the three:** `spatial_distribution_strategy`'s default in `viewpoint_config.py`, the `production_parity` profile in `profiles.py`, or the `build_viewpoint.py` invocation in `refresh_pipeline.sh`. Any single edit silently changes delivered values and the digest views-postprocessing pins. Also fires when viewser parity stops being a project goal | Viewpoint |
+| C-356 | 3 | **UCDP `where_prec >= 4` events are geocoded whole into one cell — measured live 2026-09-02.** Cell **148759 (Mekelle, Tigray) holds 121,915 in its peak month and 273,035 across the war window; 96.1% of all state-based fatalities in its 5x5 neighbourhood**, against a panel 99.99th percentile of 255. ADR-049 **did** ship the mirror strategy opt-in with parity default, and production uses parity. **The default is spread across three files that must stay aligned** — `viewpoint_config.py` says `proportional`, `profiles.py` overrides to `passthrough`, `refresh_pipeline.sh` passes no `--profile` | **Before changing any one of the three:** `spatial_distribution_strategy`'s default in `viewpoint_config.py`, the `production_parity` profile in `profiles.py`, or the `build_viewpoint.py` invocation in `refresh_pipeline.sh`. Any single edit silently changes delivered values. (**Fired and actioned 2026-11-10**: the pipeline moved to `kgi_kti_activity` under ADR-053's amendment, and `refresh_pipeline.sh` now names the profile once in a variable the compile step reads. See the entry's 2026-11-10 correction for the downstream tripwire this trigger used to misname.) | Viewpoint |
 | C-357 | 4 | **UCDP's temporal assignment is a swappable strategy; ACLED's is a hardcoded one-liner.** `ucdp_v1.py` resolves `survivorship_fn`/`distribution_fn` from config through a registry with a `production_parity` profile; `acled_v1.py` calls a private `_assign_date_month()` inline. Correct today — ACLED events are single-day, so there is nothing to distribute — but the seam exists on one source only, and it exists because parity forced it, not because it was designed | **If ACLED gains multi-day or date-imprecise events, or a second temporal profile is wanted for ACLED** — the change lands inline in the builder rather than as a config value | Viewpoint |
 | C-358 | 4 | **This register is public and nothing screens what it cites from sibling repositories.** On 2026-09-08 a C-353 amendment published `managers/api.py` line numbers from **views-faoapi, which is private**, into this register and a public issue. Corrected the same day. **15 of the 32 views-platform repositories are private**, and this register cites siblings constantly | **Before citing a views-platform repository by file path in this register or a public issue, check it against the visibility list in the entry.** Also when any repository changes visibility, or a new private one is added | Disclosure hygiene |
 | C-359 | 3 | **A short ACLED harvest is recorded as `outcome: "success"` — `n_events` is written to the ingestion ledger and never read back.** `compare_snapshots()` computes `n_removed` and discards it; no aggregate count check exists on the path. A *zero*-event year fails loud; any non-zero shortfall does not. Worst case is the current year, re-fetched every run: the short snapshot overwrites the good one and the next run finds it digest-consistent, making the truncation the cached truth. ADR-027 exists because this happened to UCDP (335,918 of 384,918) | **Before the next change to how any harvester terminates a fetch** — pagination, retry or cache logic. Also if ACLED's envelope starts reporting `total_count`, which would make ADR-027's existing rule applicable (see C-153) | ACLED data integrity |
@@ -195,6 +196,8 @@
 | C-362 | 4 | **The server was rescaled on 2026-05-28 and the rescale was never recorded, so two ADRs reason from a hardware premise that is false.** Measured 8 vCPU / 16 GB RAM / 16 GB swap against a documented 4 vCPU / 8 GB. ADR-030:82 justifies the Rust raster path on *"memory predictability. The production server has 8 GB RAM"*; ADR-035:140 concludes *"No OOM risk"* for V-Dem's ~4.1 GB from the same figure. Neither conclusion is shown wrong — only its stated premise. Demonstrated cost: #516's hypothesis was written against 8 GB and would have answered a RAM-purchase question from a 4.7× overcommit that is really 1.17× | **Before any analysis, ADR or purchase decision rests on the server's RAM or vCPU figure**, and at the next rescale. Re-check ADR-030 and ADR-035 on their merits rather than assuming they survive | Hardware premise |
 | C-364 | 3 | **A UCDP annual event's whole date span is booked to its `date_end` month, so a 365-day episode becomes one cell-month.** `profiles.py:103` sets `source_distribution_map={"annual": "date_end_only"}`; the `even_split` default never applies to this source. Measured: cell 148759 month-id 504 holds **113,395**, of which **113,368 is a single event** spanning all of 2021 (UCDP 463131, `where_prec=5`, `date_prec=5`). In a 457–504 window, **4 cell-months carry 37.4% of all `ged_sb_best` mass** and no feature distinguishes them — the 79 delivered features carry no `date_prec`/`where_prec`. C-356 asserted the temporal axis *was* corrected; it is not | **When the delivered partition is extended past month-id 504** — UCDP 463137 (**121,848**, Aug–Oct 2022) lands in the same cell at month-id 512–514, larger than the one already there. Also before any change to the three-file distribution default (see C-356) | UCDP imprecision |
 | C-363 | 4 | **`logs/pipeline_duration.json` is written only on the success path, so after a failed run it still reports the previous success.** `refresh_pipeline.sh:336-341` writes it after the failure sentinel is cleared; a failure leaves the last good file untouched. Two operator-facing guides send an operator to it by name. The embedded `finished` timestamp is the only thing separating stale from fresh, and nothing prompts the reader to check it | **Before the duration record is used to answer whether a run got slower, or how far a failed run got** — the 21 October abort left the September duration standing as the newest answer | Operational observability |
+| C-366 | 3 | **Production drops 43,933 UCDP events carrying 785,626 fatalities — +22.6% of everything it delivers — rather than placing them imprecisely.** `profiles.py:107` sets `exclude_where_prec=(4, 6)`, so admin-1 (4) and country (6) events are filtered out while **country-or-larger (5) passes through whole** to its centroid cell — the class that produces C-356's and C-364's artifacts. ADR-049:29 documents the filter and ADR-049:81 says it *"loses real deaths"*; **neither ever stated how many.** Measured 2026-11-06: 36,608 of the dropped events are state-based | **Before the production profile is switched away from `production_parity`** — the switch *adds* 785,626 deaths rather than only moving mass, so the first thing any consumer comparing totals sees is +22.6%, and they will read it as corruption unless told first. Also before any statement that this repository's UCDP totals match UCDP's own | UCDP imprecision |
+| C-367 | 4 | **The production temporal strategy reports 96 deaths that appear in no version of the source.** `ceil_split` assigns `ceil(best/span)` to every spanned month, so a 7-death, 3-month event is delivered as 9. Measured 2026-11-06 against the per-event source maximum: **74 events over the ceiling, 96 invented deaths** live in production; both apportioned profiles measure **zero**. Documented in the strategy's own docstring as *"may inflate totals"* — what did not exist was the number, or any guard that would notice | **Before a conservation guard is added that bounds delivered per-event totals by the source** — it goes red on the current production path, and the cause is this, not a new defect. Also before any claim that the pipeline conserves fatality mass end to end | UCDP imprecision |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -229,6 +232,7 @@ the table below rather than removed, so the table has ten rows. C-331 closed 202
 | ~~**C-331**~~ | ~~`HEARTBEAT_URL` on the curl command line — leaks via `/proc` with nothing to notice~~ — **closed 2026-08-10, drilled with a negative control** |
 | **C-336** | Governance docs true when written, false later, nothing failing in between |
 | ~~**C-337**~~ | ~~`views-frames>=1.0` let `uv.lock` freeze at 1.0.0 for six weeks; no error, ever~~ — **closed 2026-08-21 (#462)** |
+| **C-365** | The guard built to catch C-337 reported success for ten weeks over the same package frozen again — an exemption's reason expired and nothing was watching the reason |
 | **C-338** | Freshness detection that runs daily-and-by-issue rather than alerting |
 | **C-339** | `tee` wrote to an unintended path as root and exited 0 |
 | **C-340** | `git push` succeeds onto a merged branch; `gh pr merge` exits 0 without changing the method |
@@ -610,6 +614,19 @@ Cross-ref: ~~C-131~~ (external monitoring for cron — resolved; this is the sib
 ---
 
 ### ~~C-337: A loose floor froze an estimator version — and the audit that checked it asked the wrong question~~ — RESOLVED
+
+**Addendum 2026-11-02 — the guard named in this resolution is the one that failed (#527).** This
+entry's resolution rests on `tests/test_dependency_floors.py` checking every runtime floor against
+every resolution in the lock. It does, and views-frames froze again anyway: the `ALLOWED_AT_FLOOR`
+exemption written alongside that guard said *"the floor IS the latest release"*, upstream published
+1.11.0, 2.0.0 and 3.0.0, the lock stayed on 1.10.2, and `test_allow_list_has_not_rotted` reported
+success throughout — it expires an exemption only when the **lock** leaves the floor, never when
+**upstream** does. Ten weeks, no error. The consequence left this repository as the last constraint
+holding views-frames below 3.0.0, so the forecast lane silently resolved the reconciler that loses
+2.9–7.3% of fatality mass. Registered as **C-365**, which stays open for the blindness; the specific
+freeze is fixed in v1.17.0. This entry remains resolved, because its stated defect is genuinely
+fixed — but a resolution that cites a guard is only as good as that guard's referent, and nothing
+was checking the referent.
 
 **Source:** views-frames floor audit (2026-08-02), corrected after operator pushback.
 
@@ -3877,7 +3894,9 @@ The peak-month figure matches the 2026-06-28 report's raw value **to the digit**
 2. `profiles.py` overrides it to `passthrough` in the `production_parity` profile;
 3. `refresh_pipeline.sh` passes no `--profile`, so the CLI default selects that profile.
 
-**Flip any one and the delivered values change silently** — including the artifact digest that views-postprocessing's `test_gaul_lookup_fidelity.py` pins and that FAO is served against. The intended behaviour holds by the coincidence of three independent defaults, not by any assertion.
+**Flip any one and the delivered values change silently.** The intended behaviour holds by the coincidence of three independent defaults, not by any assertion.
+
+**Correction 2026-11-10 — this entry named the wrong downstream tripwire.** The sentence above used to say the flip would move "the artifact digest that views-postprocessing's `test_gaul_lookup_fidelity.py` pins and that FAO is served against". That test pins a *lookup-version string format* and checks GAUL cell-to-country assignment against synthetic digest fixtures; a UCDP allocation change does not touch the GAUL parquets, so it would not have fired. Measured while planning the profile switch. Two consequences worth keeping: a named tripwire that does not exist is worse than none, because it is read as coverage; and the gate that **would** have fired is in a downstream evaluation dossier, which pins the delivered value at cell 148759 / month-id 504 as an exact number. Not cited by path here, per C-358 — naming a sibling's file as the thing that breaks reads as attribution even when the repository is public. views-postprocessing is not unaffected: it carries a strict-xfail freshness gate comparing the served grid's mtime against the GAUL parquets', which any re-assembly moves.
 
 That is why the trigger is now written against the three files rather than against a consumer's future behaviour: a consumer cannot cause this, and an ordinary edit to any of the three can.
 
@@ -4185,7 +4204,7 @@ Those four carry **120,872 of 323,343** total mass — **37.4%**. The other 22 h
 
 **Tier 3, not 2.** Consistent with C-356, which adjudicated the same question for the spatial half: the values are not *silently* wrong in the sense Tier 2 requires — they are what viewser deliberately produces under production parity, the behaviour is a configured strategy rather than a defect, and nothing about the delivered pipeline is broken. Not Tier 4 because these are model *training inputs*, four cell-months hold 37.4% of the target's mass in a real scored window, and a consumer reading cell-level fatalities without knowing about `date_prec` will draw a conclusion the data does not support — which is exactly what happened, and it took a cross-session query to resolve.
 
-**Not fixed, and not to be fixed from here.** `source_distribution_map={"annual": "date_end_only"}` is **under a formal hold with Håvard** and must not be changed on this entry's authority. C-356's trigger states the reason in general terms: the distribution default is spread across `viewpoint_config.py`, `profiles.py` and the `build_viewpoint.py` invocation in `refresh_pipeline.sh`, and any single edit silently changes delivered values and the digest views-postprocessing pins. This entry records the defect; it does not license the change.
+**Not fixed, and not to be fixed from here.** `source_distribution_map={"annual": "date_end_only"}` is **under a formal hold with Håvard** and must not be changed on this entry's authority. C-356's trigger states the reason in general terms: the distribution default is spread across `viewpoint_config.py`, `profiles.py` and the `build_viewpoint.py` invocation in `refresh_pipeline.sh`, and any single edit silently changes delivered values. (The clause about a views-postprocessing digest was wrong and is corrected under C-356, 2026-11-10.) This entry records the defect; it does not license the change.
 
 **What this does not touch.** Whether `even_split` is the *right* correction is a separate question this entry takes no position on — dividing a year's toll evenly across twelve months asserts a uniformity UCDP does not claim either. Both strategies are encodings of an unknown; only one of them is currently invisible.
 
@@ -4199,7 +4218,131 @@ Cross-ref: **C-356** (the spatial half, whose claim that the temporal axis was c
 
 ---
 
+### C-366: Production drops 43,933 events carrying 785,626 fatalities — 22.6% of what it delivers — and the number existed nowhere — [OPEN]
+
+| Field | Value |
+|-------|-------|
+| ID | C-366 |
+| Tier | 3 |
+| Source | `notebooks/summary_event_allocation.ipynb` §3, written 2026-11-06 while testing the ADR-053 allocator (#533). The notebook set out to assert that all three profiles carry the same total; they do not, and the first attempt at that assertion was wrong. This finding is what the failed assertion uncovered. Not raised by any audit, guard or review. |
+| Trigger | **Before the production profile is switched away from `production_parity`.** The switch *adds* 785,626 deaths rather than only redistributing mass, so a consumer diffing totals across the change sees +22.6% before they see anything else, and will reasonably read it as corruption. Also before any statement — in a delivery note, a README or a paper — that this repository's UCDP fatality totals match UCDP's own. |
+| Location | `src/datafactory_viewpoint/profiles.py:107` (`exclude_where_prec=(4, 6)` in `production_parity`); the filter itself at `src/datafactory_viewpoint/builders/ucdp_v1.py:94-96` and `:363-366`; `src/datafactory_viewpoint/viewpoint_config.py:88`, where the dataclass default is `()` — no exclusion at all. |
+
+**The measurement.** Three builds of the same consolidated store, produced by the same `scripts/build_viewpoint.py` the pipeline runs:
+
+| profile | rows | events | all deaths | state-based |
+|---|---:|---:|---:|---:|
+| `production_parity` | 372,303 | 372,058 | 3,473,358 | 1,955,611 |
+| `kgi_kti_distributed` | 2,815,165 | 415,991 | 4,258,880 | 2,557,595 |
+| `kgi_kti_activity` | 2,654,111 | 415,991 | 4,258,880 | 2,557,595 |
+
+**43,933 events** are in the two new builds and in no production build. They carry **785,626 fatalities**, which is **+22.6%** on production's own total. Their `where_prec`: 38,602 at 4, 5,325 at 6, 6 everything else. Their `type_of_violence`: 36,608 state-based, 2,755 non-state, 4,569 one-sided.
+
+**The mechanism, and the part of it that is inconsistent rather than merely lossy.** UCDP's `where_prec` runs 1 = exact point, 2 = ≤25 km, 3 = admin-2, 4 = admin-1, 5 = larger than admin-1, 6 = country, 7 = international (ADR-049:19). `production_parity` excludes **4 and 6 — and not 5**. So the two *bracketing* classes are dropped while the one between them passes through whole to a regional centroid. That surviving class is exactly the one that puts 113,368 deaths into cell 148759 (C-364) and 273,035 across the Tigray window (C-356). The filter is therefore not a precision threshold: it removes two imprecise classes and keeps the one that does the visible damage.
+
+**Why this is a finding when the behaviour is documented.** ADR-049:29 states the filter plainly, and ADR-049:81 names its cost: *"Loses real deaths but eliminates false hotspots."* Both are true and neither is new. What did not exist anywhere — not in the ADR, not in a report, not in the ledger's narrative — was **a number**. A reader of ADR-049 learns that deaths are lost; nothing told them it was more than a fifth of the delivered total, or that 36,608 of the lost events are state-based, which is the target most models here fit. The provenance counter `n_excluded_where_prec` exists (that is what resolved C-303) and is written per run, so the count *is* recoverable from a ledger — but it had never been read back and turned into a figure, and no delivered artifact or document carries one.
+
+**Tier 3, not 2.** Consistent with C-356 and C-364, which adjudicated the same question for the spatial and temporal halves. The delivered values are not silently wrong: they are what viewser deliberately produces under production parity, the exclusion is a configured strategy rather than a defect, and the count is logged. Not Tier 4 because these are model *training inputs*, the omission is 22.6% of all fatality mass with no marker in the 79 delivered features, and the magnitude was unmeasured for the five months ADR-049 has been accepted.
+
+**Not fixed, and not fixable from here.** Setting `exclude_where_prec=()` is one of the two changes a profile switch makes, and the profile default is spread across `viewpoint_config.py`, `profiles.py` and the `build_viewpoint.py` invocation in `refresh_pipeline.sh` — C-356's trigger explains why no single edit is safe. ADR-053 is the governance for the temporal half of that switch and records this recovery as a consequence; it does not schedule it. This entry records the magnitude so that whoever switches is not surprised by it.
+
+Cross-ref: **C-356** (the spatial artifact produced by the `where_prec = 5` class this filter keeps), **C-364** (the temporal artifact in the same cell), **C-367** (the other finding from the same notebook — the opposite sign, mass invented rather than dropped), C-303 (resolved — added the `n_excluded_where_prec` counter that could have produced this number at any point since 2026-06-28), ADR-049 (§Alternatives documents the filter and its cost in words), ADR-053 (names the recovery as a consequence of the temporal decision).
+
+---
+
+### C-367: `ceil_split` reports 96 deaths that appear in no version of the source — live in production — [OPEN]
+
+| Field | Value |
+|-------|-------|
+| ID | C-367 |
+| Tier | 4 |
+| Source | `notebooks/summary_event_allocation.ipynb` §3, 2026-11-06 (#533). The check was written to prove the *new* allocators conserve — `assert invented == 0` on both, which passes. The production column was added for contrast and did not come out zero. |
+| Trigger | **Before a conservation guard is added that bounds delivered per-event totals by the source maximum.** Such a guard goes red immediately on the current production path, and the cause is this entry rather than whatever change prompted the guard — budget it as part of that work. Also before any claim, in a delivery note or an ADR, that the pipeline conserves fatality mass end to end. |
+| Location | `src/datafactory_viewpoint/temporal_distribution.py` — `ceil_split`, via `_split_summary` with `math.ceil`; selected by `src/datafactory_viewpoint/profiles.py:101` (`distribution_strategy="ceil_split"` in `production_parity`). |
+
+**The measurement.** Delivered per-event totals compared against each event's maximum `best` across every version in the consolidated store — a ceiling no profile may exceed:
+
+| profile | events over the ceiling | deaths invented |
+|---|---:|---:|
+| `production_parity` | 74 | 96 |
+| `kgi_kti_distributed` | 0 | 0 |
+| `kgi_kti_activity` | 0 | 0 |
+
+**The mechanism, which is documented.** `ceil_split` reproduces the legacy GedLoader's `fix_summary_events`: an event is a summary event if `best > 0`, its span crosses a month boundary, and `best >= span`; each spanned month then receives `ceil(best / span)`. The sum is therefore at least `best` and usually more. The docstring says so outright — *"This may inflate totals (e.g., best=7 over 3 months → 3+3+3=9, not 7)"* — and `uniform_span`'s docstring records the excess as 0.91% across the store for the events `ceil_split` splits. The production-level total is only 96 because `source_distribution_map={"annual": "date_end_only"}` keeps `ceil_split` off the **annual** source, which is where the long spans are (C-364). *That last step is inference from the two configurations, not a separate measurement.*
+
+**So what is the finding.** Not the mechanism, which was written down. Two things: the **production-level number**, which had never been taken, and the **absence of any guard that would notice**. This repository enforces count conservation at four boundaries (C-258, resolved) and asserts placement conservation on exact integer equality, but every one of those checks compares a stage's output to **the stage's own input**. None compares a delivered total to the *source*. An allocator that inflates before the first conservation boundary is invisible to all of them, by construction — which is why a defect that is loud in a docstring is silent in the pipeline.
+
+**Tier 4, and the reasoning is worth keeping because it points the other way first.** By shape this is the register's Tier 1 definition: a delivered value exceeds anything the source ever recorded, with no error signal. By magnitude it is 96 of 3,473,358 deaths — **0.003%** — spread over 74 events, no one of which is large. Impact dominates likelihood and detectability here: nothing downstream turns on 96 deaths, and no consumer could act on them differently if flagged. Tier 4 also because the remedy is already specified and tested rather than needing design — largest-remainder apportionment makes inflation arithmetically impossible, and both apportioned profiles measure exactly zero — so this retires with the profile switch instead of needing its own work. **Not demoted to the tech-debt backlog**, because it is live, it is a correctness defect rather than a maintainability one, and the zero in the other two rows is the only reason anyone can see it.
+
+Cross-ref: **C-366** (the other finding from the same notebook, opposite sign: mass dropped rather than invented), **C-364** (`date_end_only` on the annual source, which is why this number is 96 and not larger), C-258 and C-242 (resolved — the conservation boundaries that cannot see this, because they compare each stage to its own input), ADR-023 (the summary-event detection rule `best >= span` that `ceil_split` implements), ADR-040 (count conservation invariants), ADR-053 (§Decision adopts exact apportionment, under which this is impossible).
+
+---
+
 ## Deferred by Design
+
+### C-365: The rot check watched the lock, not upstream — so C-337's guard reported success over the same package, frozen again — [OPEN]
+
+| Field | Value |
+|-------|-------|
+| ID | C-365 |
+| Tier | 2 |
+| Source | Found 2026-11-02 while investigating #527, which arrived as a cross-repo request from two peer sessions rather than from any audit or guard here. Not found by this repository. That is the finding's own evidence: the mechanism is undetectable from inside, and what detected it was a different repository noticing that its fix was not arriving. |
+| Trigger | **Fired** 2026-11-02 (#527). Re-fires on two specific actions: adding any entry to `ALLOWED_AT_FLOOR` in `tests/test_dependency_floors.py`, and declaring or keeping a cap on any runtime dependency that excludes that dependency's current major version. |
+| Location | `tests/test_dependency_floors.py` — `ALLOWED_AT_FLOOR` and `test_allow_list_has_not_rotted` |
+
+**The mechanism.** `test_no_dependency_is_pinned_at_its_floor` flags a runtime dependency whose lock
+resolution equals its declared floor, because `uv lock` keeps an existing pin while it still
+satisfies the constraint — so a loose floor freezes a version rather than merely permitting one.
+`ALLOWED_AT_FLOOR` exempts the cases where resting on the floor is correct, and
+`test_allow_list_has_not_rotted` is what stops an exemption outliving its reason.
+
+It cannot. It fires only when a package in the exemption list is **no longer** on its floor. The
+views-frames entry read *"the floor IS the latest release"* and *"remove this entry once views-frames
+publishes past 1.10.2 and the lock moves"* — two clauses that come apart. Upstream published 1.11.0,
+2.0.0 and 3.0.0, so the first clause became false on 2026-08-21 or shortly after. The lock never
+moved, because the exemption was what stopped anything asking it to, so the second clause never
+fired. Both tests were green for ten weeks over a dependency frozen at 1.10.2.
+
+**Why Tier 2 rather than Tier 4.** The freeze was not inert. Every published views-datafactory from
+1.13.0 to 1.16.0 declared `views-frames>=1.10.2,<2`, and every sparrow and condor member of
+views-models requires `views-datafactory>=1.13.0`. views-pipeline-core 3.4.0 requires
+`views-frames>=3.0.0` to carry views-frames 3.0.0's reconciliation fix. So a fresh resolve of the
+forecast lane fell back to pipeline-core **3.3.5** and views-frames **1.11.0** — the reconciler that
+silently drops a country's fatalities when its grid is all zeros in a draw, measured at **2.9–7.3%
+of fatality mass** on chrome_box (views-frames#283) — with **exit 0 and no warning**. Remove
+views-datafactory from the install set and the same resolve gives 3.4.0 and 3.0.0.
+
+A correctness fix shipped three repositories upstream, every intermediate package widened its pin,
+and the chain still delivered the old behaviour because one library declared a cap. No error
+anywhere, in any repository, at any step.
+
+**What is fixed and what is not.** #527 widened the cap to `<4`, moved the lock with
+`uv lock --upgrade-package views-frames`, and deleted the stale exemption — `ALLOWED_AT_FLOOR` is now
+empty, which is that file's strongest state, because `test_no_dependency_is_pinned_at_its_floor` then
+runs with no exemptions at all. **The blindness is unfixed.** The next exemption anyone writes will
+have the same property, and the entry is open for that reason rather than for views-frames.
+
+**What a fix would have to do, and why none is proposed here.** Detecting "upstream moved past our
+cap" requires querying an index at test time. That is a network call in the suite, a guard whose
+red/green depends on something outside the repository, and the C-320 shape — a check that can go red
+for reasons unrelated to the code under test, with no admin override on a protected branch. The
+cheaper instruments are: a dependency-update bot, which is out-of-band and cannot redden CI; or
+requiring every `ALLOWED_AT_FLOOR` reason to name **what will observe it ceasing to be true**, which
+is a documentation obligation a test can check the presence but not the truth of. The deleted
+exemption's replacement comment states that obligation. Neither is a mechanism, and saying so is
+better than registering a guard that cannot fire — which is the defect this entry is about.
+
+**The general shape, which is the part worth carrying.** An exemption is a claim about the world
+with an expiry nobody set. `test_allow_list_has_not_rotted` was written to expire exemptions and
+expires them against the wrong referent: it watches the thing the exemption protects, not the thing
+the exemption's reason depends on. Any guard with an allow-list, a skip-list, or a known-failures
+file has this shape available to it.
+
+Cross-ref: ~~C-337~~ (the predecessor — this is its residual, and the guard named in its resolution
+is the one that failed), C-336 (an artifact true when written and false later — same class, different
+medium), ~~C-342~~ (`uv sync` repairing a stale lock in CI, same file's subject), C-320 (why the
+obvious fix is not proposed). Part of the **mechanisms that fail green** cluster. GitHub: #527.
+
 
 ### C-10: Ontology vocabulary overhead
 Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add conceptual overhead. For a 7-package project, governance is heavy. **Accepted: governance has proven itself (ADR-008 caught bugs in 3 audits). Cost is documentation maintenance, not development velocity.**

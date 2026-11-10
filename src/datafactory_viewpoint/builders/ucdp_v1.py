@@ -23,7 +23,6 @@ ADR-049 (spatial distribution of imprecise events).
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -44,7 +43,11 @@ from datafactory_viewpoint.spatial_weights import (
 )
 from datafactory_viewpoint.survivorship import get_survivorship
 from datafactory_viewpoint.temporal_distribution import (
+    TemporalStrategy,
     get_distribution,
+)
+from datafactory_viewpoint.temporal_weights import (
+    build_temporal_weight_map,
 )
 from datafactory_viewpoint.viewpoint_config import ViewpointConfig
 from datafactory_viewpoint.viewpoint_result import ViewpointResult
@@ -247,9 +250,7 @@ def build_ucdp_v1(
     )
 
     # Pre-resolve source-distribution overrides
-    source_dist_fns: (
-        dict[str, Callable[[dict], list[dict]]] | None
-    ) = None
+    source_dist_fns: dict[str, TemporalStrategy] | None = None
     if config.source_distribution_map is not None:
         source_dist_fns = {
             src: get_distribution(strat)
@@ -264,6 +265,17 @@ def build_ucdp_v1(
             config.gaul1_crosswalk_path,
             config.gaul0_crosswalk_path,
         )
+
+    # Build the monthly activity indicator only if some temporal strategy
+    # actually wants one. Scanning the table to build an indicator nothing
+    # reads would be pure cost, and a strategy that silently got None
+    # would fall back to uniform without saying so.
+    temporal_strategies = {config.distribution_strategy}
+    if config.source_distribution_map is not None:
+        temporal_strategies |= set(config.source_distribution_map.values())
+    temporal_weight_map = None
+    if "activity_weighted" in temporal_strategies:
+        temporal_weight_map = build_temporal_weight_map(table)
 
     # Sort by event id for grouped processing
     table = table.sort_by("id")
@@ -288,6 +300,17 @@ def build_ucdp_v1(
     n_spatial_cells_created = 0
     n_excluded_where_prec = 0
     n_passthrough_where_prec = 0
+
+    # ADR-053 Validation & Monitoring asks for these on every build: how
+    # many events the temporal stage allocated, which cascade level
+    # supplied each one's weights, and how many fell through to uniform.
+    # The fallback count is the one worth watching -- activity weighting's
+    # whole claim is that a conflict's own observed monthly pattern is a
+    # better prior than a flat one, and an event that falls back got no
+    # such pattern. If that share climbs, the claim is weakening on data
+    # nobody re-examined.
+    n_temporally_distributed = 0
+    temporal_weight_key_counts: dict[str, int] = {}
 
     # Process groups: walk sorted id column, slice per group
     i = 0
@@ -317,9 +340,24 @@ def build_ucdp_v1(
             fn = source_dist_fns.get(src_type, distribution_fn)
         else:
             fn = distribution_fn
-        distributed = fn(winner)
+        distributed = fn(winner, temporal_weight_map)
         if len(distributed) > 1:
             n_summary += 1
+
+        # Every row from one event carries the same temporal annotations,
+        # so the first row answers for the event. ``activity_weighted``
+        # sets ``_temporal_weight_key`` to the cascade level it used, and
+        # leaves it absent when it fell back to ``uniform_span`` -- which
+        # is why absence is bucketed explicitly rather than ignored.
+        if distributed and distributed[0].get("_temporal_distributed"):
+            n_temporally_distributed += 1
+            bucket = (
+                distributed[0].get("_temporal_weight_key")
+                or "uniform_fallback"
+            )
+            temporal_weight_key_counts[bucket] = (
+                temporal_weight_key_counts.get(bucket, 0) + 1
+            )
 
         # Spatial distribution: expand imprecise events
         if weight_map is not None:
@@ -362,10 +400,16 @@ def build_ucdp_v1(
 
     logger.info(
         "Processed %d groups: %d summary expanded, "
+        "%d temporally distributed (weights: %s), "
         "%d spatially distributed (%d cells), "
         "%d passthrough where_prec, %d excluded where_prec, "
         "%d filtered, %d output rows",
         n_groups, n_summary,
+        n_temporally_distributed,
+        ", ".join(
+            f"{k}={v}"
+            for k, v in sorted(temporal_weight_key_counts.items())
+        ) or "none",
         n_spatially_distributed, n_spatial_cells_created,
         n_passthrough_where_prec, n_excluded_where_prec,
         n_filtered, len(output_columns["date_month"]),
@@ -396,6 +440,15 @@ def build_ucdp_v1(
         "spatial_distribution_strategy": (
             config.spatial_distribution_strategy
         ),
+        # None while every strategy is deterministic. Recorded regardless
+        # so the reproducibility contract of ADR-014 Principle 3 is in the
+        # ledger before the first stochastic strategy needs it.
+        "seed": config.seed,
+        "temporal_activity_pool_events": (
+            temporal_weight_map.n_pool_events
+            if temporal_weight_map is not None
+            else None
+        ),
         "filter_stale_versions": config.filter_stale_versions,
         "source_distribution_map": config.source_distribution_map,
         "n_events_read": n_read,
@@ -405,6 +458,11 @@ def build_ucdp_v1(
         "n_survivorship_discarded": n_survivorship_discarded,
         "n_events_output": n_output,
         "n_summary_expanded": n_summary,
+        "n_temporally_distributed": n_temporally_distributed,
+        "temporal_weight_key_counts": temporal_weight_key_counts,
+        "n_temporal_uniform_fallback": temporal_weight_key_counts.get(
+            "uniform_fallback", 0,
+        ),
         "n_spatially_distributed": n_spatially_distributed,
         "n_spatial_cells_created": n_spatial_cells_created,
         "n_excluded_where_prec": n_excluded_where_prec,

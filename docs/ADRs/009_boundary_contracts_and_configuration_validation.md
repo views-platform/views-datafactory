@@ -3,7 +3,7 @@
 
 **Status:** Accepted
 **Date:** 2026-03-17
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Amended:** 2026-11-02 — the views-frames range named in Context item 7 is now `>=1.10.2,<4`. The boundary decision is unchanged; see the Amendment at the end of Consequences. *(Header pointer per ADR-030's precedent: the stale range sits in Context, and a reader who stops there would leave with a constraint that is no longer declared.)*
 
 ---

@@ -1,4 +1,4 @@
-# Product Development Plan v12 — current through v1.17, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.18, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)

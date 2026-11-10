@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-04-26
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Extends:** ADR-008 (Observability and Explicit Failure), ADR-011 (Fail Loud, No Stale Data Serving)
 
 ---

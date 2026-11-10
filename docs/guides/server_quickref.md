@@ -122,13 +122,29 @@ for i, name in enumerate(features):
 "'
 ```
 
-Expected totals (as of v1.2.7, UCDP GED v25.1, verified 2026-04-26):
+**These totals changed in v1.18.0 and the old ones will read a healthy run as
+broken.** ADR-053's amendment of 2026-11-10 moved production to the
+`kgi_kti_activity` profile, which stops *dropping* UCDP events located only to
+an admin-1 region or a country and distributes them instead. That recovers
+43,933 events carrying 785,626 fatalities, so every `ged_*_best` total rises.
+**The switch adds deaths; it does not only move them.**
 
-| Feature | Expected |
-|---------|----------|
-| `ged_sb_best` | ~1,956,320 |
-| `ged_ns_best` | ~285,346 |
-| `ged_os_best` | ~1,232,241 |
+| Feature | Before v1.18.0 | Expected from v1.18.0 | Change |
+|---------|---------------:|----------------------:|-------:|
+| `ged_sb_best` | ~1,956,320 | **~2,557,600** | +30.8% |
+| `ged_ns_best` | ~285,346 | **~406,500** | +42.4% |
+| `ged_os_best` | ~1,232,241 | **~1,294,800** | +5.1% |
+
+The "before" column is as of v1.2.7, UCDP GED v25.1, verified 2026-04-26. The
+"expected" column is **projected**, not measured on the server: it comes from a
+2026-11-06 full build under the new profile, whose parity build reproduced the
+"before" column to within 0.01%, which is why the projection is comparable. A
+production run harvests fresher data first, so expect drift of a percent or so —
+and replace this column with a measured one at the next release.
+
+If a run comes in near the "before" column after v1.18.0, that is the signal
+worth chasing: it means the viewpoint was built under the old profile, or the
+compile step read a stale viewpoint parquet.
 
 The script also prints `ged_sb_count`, `ged_ns_count`, `ged_os_count`
 — compare against prior runs rather than a fixed reference value.

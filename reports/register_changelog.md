@@ -17,6 +17,170 @@ entry could.
 
 ---
 
+## A named tripwire that could not fire, and the switch that found it (2026-11-10)
+
+**C-356 corrected; its trigger fired and was actioned.** Planning the production profile switch
+meant checking what downstream would break, and the answer the register gave was wrong.
+
+**What C-356 claimed.** That flipping any of the three allocation defaults would move *"the artifact
+digest that views-postprocessing's `test_gaul_lookup_fidelity.py` pins and that FAO is served
+against"*. C-364 repeated the clause and so did C-366's trigger.
+
+**What that test actually does.** It pins a lookup-version *string format* and checks GAUL
+cell-to-country assignment against synthetic digest fixtures. A UCDP allocation change does not
+touch the GAUL parquets, so it would not have fired — on either the old behaviour or the new.
+
+**Why this is worth a changelog entry rather than a silent fix.** A named tripwire that cannot fire
+is worse than no tripwire, because it is read as coverage. For two months the register asserted that
+a specific downstream test stood between this repository and an unnoticed allocation change, and
+anyone reasoning about the blast radius — including this session, at first — would have taken that at
+face value. The failure mode is the register's own recurring one: a claim asserted once and never
+re-derived (C-153, C-362, C-365).
+
+**The gate that would have fired** is in a downstream evaluation dossier and pins the delivered
+value at cell 148759 / month-id 504 as an exact number, which the switch moves from 113,395 to 240.
+Not cited by path, per C-358: naming a sibling's file as the thing that breaks reads as attribution
+even when the repository is public, and that precedent was set for this exact test.
+views-postprocessing is not unaffected either — it carries a strict-xfail freshness gate comparing
+the served grid's mtime against the GAUL parquets', which any re-assembly moves. So the shape of the
+original worry was right and only its instrument was wrong.
+
+**C-356's trigger has now fired and been actioned.** `refresh_pipeline.sh` builds under
+`kgi_kti_activity` per ADR-053's 2026-11-10 amendment. The three-files hazard the trigger was written
+against is partly closed by construction: the pipeline names its profile once, in a variable the
+compile step reads, because the two used to be independent literals whose disagreement would have
+been silent — the viewpoint would have been built under the new profile and the grid compiled from
+the old one, with the digest unmoved and the content-addressed skip correctly skipping everything
+downstream. A run that changed nothing would have reported success.
+
+**C-367 is expected to retire with this switch** — `ceil_split` is no longer the production path, so
+the 96 invented deaths go with it. Not struck through yet: that waits on a production build, because
+the entry is about what is *delivered*, not about what the code is capable of.
+
+---
+
+## Two findings from one failed assertion (2026-11-10)
+
+**C-366 and C-367 registered.** Both came out of `notebooks/summary_event_allocation.ipynb`
+while testing the ADR-053 allocator (#533), and neither was found by an audit, a guard or a
+review. They were found by an assertion that was written wrong.
+
+**What happened.** The notebook's §3 was supposed to be the easy part: build the same store
+under three profiles and assert the totals match. They do not match, and the gap is 785,626
+deaths. Chasing why produced two separate findings pointing in opposite directions.
+
+**C-366 — mass dropped, and the number existed nowhere.** `production_parity` sets
+`exclude_where_prec=(4, 6)`, which filters out 43,933 events carrying 785,626 fatalities —
+**+22.6% on production's own delivered total**, of which 36,608 events are state-based. The
+filter itself is not a discovery: ADR-049:29 documents it and ADR-049:81 says in words that it
+*"loses real deaths"*. What had never been written down was how many. The provenance counter
+that could have answered it (`n_excluded_where_prec`) has existed since 2026-06-28 — adding it
+is what resolved C-303 — and had never been read back.
+
+**The part that is inconsistent rather than merely lossy.** The filter drops `where_prec` 4
+(admin-1) and 6 (country) and keeps **5** (larger than admin-1). So the two bracketing classes
+go and the one between them passes through whole to a regional centroid — and that surviving
+class is exactly what produces C-356's 273,035-death cell and C-364's 113,368-death month. The
+filter is not a precision threshold; it removes two imprecise classes and keeps the one that
+does the visible damage.
+
+**C-367 — mass invented, in the other direction.** The same notebook then checked that no
+profile reports more deaths than UCDP ever recorded for an event. The two apportioned profiles
+measure exactly zero. `production_parity` measures **74 events over the source ceiling, 96
+invented deaths**, live today. The mechanism is documented in `ceil_split`'s own docstring
+(*"may inflate totals"*) — `ceil(best/span)` per month, so 7 deaths over 3 months are delivered
+as 9.
+
+**The structural part of C-367, which is the reason it is worth an entry at 0.003%.** This
+repository enforces count conservation at four boundaries (C-258) on exact integer equality,
+and every one of them compares a stage's output to **that stage's own input**. None compares a
+delivered total to the source. An allocator that inflates before the first boundary is
+invisible to all of them by construction — which is how a defect that is loud in a docstring is
+silent in the pipeline.
+
+**Tiers, and why they differ by two levels for findings from the same cell of the same
+notebook.** C-366 is Tier 3, consistent with C-356 and C-364: parity-faithful, configured
+rather than defective, logged — but 22.6% of fatality mass absent from training inputs with no
+marker in the 79 delivered features. C-367 is Tier 4 against its own shape: it *is* the Tier 1
+definition (a delivered value exceeding anything the source recorded, with no error signal) at
+0.003% of delivered mass, which impact-wise dominates. It also retires with the profile switch
+rather than needing design, because exact apportionment makes inflation arithmetically
+impossible. Not demoted to the tech-debt backlog, because it is live and it is a correctness
+defect, not a maintainability one.
+
+**What neither entry licenses.** `source_distribution_map={"annual": "date_end_only"}` remains
+under a formal hold with Håvard, and the profile default remains spread across three files
+(C-356). ADR-053 is the governance for the temporal half and names the 785,626-death recovery
+as a consequence; it does not schedule the switch. Both entries record magnitudes so that
+whoever does switch is not surprised — the switch *adds* deaths, it does not only move them,
+and that is the first thing any consumer diffing totals will see.
+
+---
+
+## The guard expired the exemption against the wrong referent (2026-11-02)
+
+**C-365 registered.** It is C-337's residual, and the uncomfortable part is that the guard named in
+C-337's own resolution is the one that failed.
+
+**What happened.** C-337 (closed 2026-08-21, #462) was a loose views-frames floor letting `uv.lock`
+freeze at 1.0.0 for six weeks while three MINOR releases changed how MAP and HDI are computed. Its
+fix raised the floor to 1.10.2 and added `tests/test_dependency_floors.py`, which flags any runtime
+dependency whose lock resolution equals its declared floor. Since 1.10.2 *was* the latest release at
+the time, views-frames legitimately sat on its floor, so the same PR added an `ALLOWED_AT_FLOOR`
+exemption — with a written reason, and with `test_allow_list_has_not_rotted` to expire it.
+
+The exemption's reason had two clauses: *"the floor IS the latest release"* and *"remove this entry
+once views-frames publishes past 1.10.2 and the lock moves"*. Those clauses can come apart, and they
+did. views-frames published 1.11.0, then 2.0.0, then 3.0.0. The first clause became false. The lock
+never moved — because the exemption was the thing that stopped anything asking it to — so the second
+clause never fired. Both tests reported success for ten weeks over a dependency frozen at 1.10.2.
+
+**Why it mattered outside this repository.** Every published views-datafactory from 1.13.0 to 1.16.0
+declared `views-frames>=1.10.2,<2`. views-pipeline-core 3.4.0 requires `views-frames>=3.0.0` to carry
+views-frames 3.0.0's reconciliation fix, and every sparrow and condor member of views-models requires
+`views-datafactory>=1.13.0`. A fresh resolve of the forecast lane therefore fell back to
+pipeline-core 3.3.5 and views-frames 1.11.0 — the reconciler that silently drops a country's
+fatalities when its grid is all zeros in a draw, measured at 2.9–7.3% of fatality mass on chrome_box
+(views-frames#283) — with exit 0 and no warning. Remove views-datafactory from the install set and
+the same resolve gives 3.4.0 and 3.0.0.
+
+So: a correctness fix shipped three repositories upstream, every intermediate package widened its
+pin, and the chain still delivered the old behaviour because one library declared a cap. No error
+anywhere, in any repository, at any step.
+
+**How it was found, which is the entry's own evidence.** Not by this repository. It arrived on
+2026-11-02 as #527, a cross-repo request from two peer sessions, one of which had measured the lane's
+resolution twice. The mechanism is undetectable from inside — what detected it was a different
+repository noticing that its fix was not arriving. An audit here would not have found it, because
+every guard here was green and every guard here was correct about what it checked.
+
+**Fixed and unfixed.** v1.17.0 widened the cap to `<4`, moved the lock with
+`uv lock --upgrade-package views-frames`, and deleted the exemption, leaving `ALLOWED_AT_FLOOR`
+empty — which that file's docstring already argued is its strongest state, since
+`test_no_dependency_is_pinned_at_its_floor` then runs with no exemptions at all. The **blindness is
+unfixed**, and C-365 is open for that rather than for views-frames. The next exemption anyone writes
+has the same property available to it.
+
+**Why no mechanism is proposed.** Detecting "upstream moved past our cap" means querying an index at
+test time: a network call in the suite, and a guard whose colour depends on something outside the
+repository with no admin override on a protected branch. That is C-320's shape exactly. The
+alternatives are out-of-band (a dependency-update bot, which cannot redden CI) or documentary
+(requiring each exemption's reason to name what will observe it ceasing to be true — which a test
+can check the presence of but not the truth of). The replacement comment in
+`tests/test_dependency_floors.py` states that obligation. Registering a guard that cannot fire would
+reproduce the defect being registered, so none was written, and saying so explicitly is the point.
+
+**The transferable shape.** An exemption is a claim about the world with an expiry nobody set.
+`test_allow_list_has_not_rotted` expires exemptions against the wrong referent — it watches the
+thing the exemption protects, not the thing the exemption's reason depends on. Every allow-list,
+skip-list and known-failures file in this repository has that shape available to it.
+
+A dated addendum was added to C-337 rather than reopening it: its stated defect really is fixed, but
+a resolution that cites a guard is only as good as that guard's referent, and nothing was checking
+the referent.
+
+---
+
 ## Two falsified premises, one of them the register's own (2026-10-26)
 
 A `/review-rr strategic` pass, then a cross-session question from a modelling consumer, each

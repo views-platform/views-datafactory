@@ -3,7 +3,7 @@
 
 **Status:** Accepted
 **Date:** 2026-03-20
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Supersedes:** ADR-002 (Topology and Dependency Rules)
 
 ---

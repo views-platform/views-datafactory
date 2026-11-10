@@ -100,8 +100,14 @@ SOURCE_STAGES: dict[str, dict[str, StageArtifact | str | None]] = {
             artifact="consolidated/ucdp_store.parquet",
             ledger="consolidation/ledger.jsonl",
         ),
+        # The filename carries the profile name, because build_viewpoint.py
+        # derives the output path from it. It must track the
+        # VIEWPOINT_PROFILE that scripts/refresh_pipeline.sh builds under --
+        # ADR-053's amendment of 2026-11-10 moved it off production_parity.
+        # Naming a profile that is not built reports this stage as missing,
+        # which reads as a pipeline failure rather than as a stale constant.
         "viewpoint": StageArtifact(
-            artifact="viewpoint/production_parity.parquet",
+            artifact="viewpoint/kgi_kti_activity.parquet",
             ledger="viewpoint/ledger.jsonl",
         ),
         "compilation": StageArtifact(

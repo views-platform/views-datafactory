@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-05-22
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-012 (Four-Layer Data Architecture), ADR-029 (GHS-POP precedent), ADR-030 (tifffile tooling), ADR-031 (Resource Ownership), ADR-032 (Harvest Idempotence)
 
 ---

@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-05
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-012 (Four-Layer Data Architecture), ADR-013 (Consolidation Principles), ADR-014 (Viewpoints as Derived Views), ADR-024 (Compilation Grid Invariants), ADR-025 (Country Identity Uses GAUL Codes)
 
 ---

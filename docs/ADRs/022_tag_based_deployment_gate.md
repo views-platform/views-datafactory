@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-04-06
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Extends:** ADR-011 (Fail Loud), ADR-018 (Operational Resilience)
 
 ---

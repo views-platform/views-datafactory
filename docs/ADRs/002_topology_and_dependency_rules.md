@@ -3,7 +3,7 @@
 
 **Status:** Superseded by ADR-012
 **Date:** 2026-03-17
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Superseded:** 2026-03-20 — See [ADR-012: Four-Layer Data Architecture](012_four_layer_data_architecture.md)
 
 ---

@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-05-22
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-003 (Authority of Declarations), ADR-012 (Four-Layer Data Architecture), ADR-029 (GHS-POP Source Selection)
 
 ---

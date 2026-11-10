@@ -11,6 +11,8 @@ Gated behind --run-consumer (requires local data at each stage).
 from __future__ import annotations
 
 import json
+import re
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -29,6 +31,30 @@ from gold_set_config import (
 from datafactory_priogrid import to_views_month_id
 from datafactory_query import load_dataset
 
+
+def _pipeline_viewpoint_parquet() -> Path:
+    """The viewpoint parquet the pipeline actually builds.
+
+    Read out of ``refresh_pipeline.sh`` rather than hardcoded. These
+    fixtures used to name ``production_parity.parquet``, which meant that
+    when the pipeline moved to another profile they would have **skipped**
+    -- the file simply would not exist -- and a conservation check that
+    skips looks exactly like one that passes. Deriving the name is what
+    stops a stale constant from quietly switching the check off.
+    """
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scripts" / "refresh_pipeline.sh"
+    ).read_text()
+    match = re.search(r'^VIEWPOINT_PROFILE="([^"]+)"', script, re.MULTILINE)
+    if match is None:
+        raise AssertionError(
+            "refresh_pipeline.sh has no VIEWPOINT_PROFILE assignment -- "
+            "these fixtures cannot tell which viewpoint production builds"
+        )
+    return VIEWPOINT_DIR / f"{match.group(1)}.parquet"
+
+
 # ── Viewpoint → Grid conservation ────────────────────────
 
 
@@ -43,7 +69,7 @@ class TestViewpointToGridConservation:
 
     @pytest.fixture(scope="class")
     def viewpoint_monthly_sums(self) -> pd.DataFrame:
-        vp_path = VIEWPOINT_DIR / "production_parity.parquet"
+        vp_path = _pipeline_viewpoint_parquet()
         if not vp_path.exists():
             pytest.skip(f"Viewpoint parquet not found: {vp_path}")
         vp = pq.read_table(vp_path).to_pandas()
@@ -214,7 +240,7 @@ class TestEventTraceability:
 
     @pytest.fixture(scope="class")
     def viewpoint(self) -> pd.DataFrame:
-        path = VIEWPOINT_DIR / "production_parity.parquet"
+        path = _pipeline_viewpoint_parquet()
         if not path.exists():
             pytest.skip(f"Viewpoint parquet not found: {path}")
         return pq.read_table(path).to_pandas()

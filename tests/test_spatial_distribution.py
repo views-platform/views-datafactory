@@ -97,8 +97,18 @@ class TestDistributeValueGreen:
         assert result == {1: 50, 2: 30, 3: 20}
         assert sum(result.values()) == 100
 
-    def test_remainder_to_highest_weight(self) -> None:
-        """7 across 50/30/20: floors 3+2+1=6, remainder 1 to pgid 1."""
+    def test_remainder_to_largest_fractional_remainder(self) -> None:
+        """7 across 50/30/20: floors 3+2+1=6, remainder 1 to pgid 1.
+
+        Renamed 2026-11-05. This was ``test_remainder_to_highest_weight``,
+        which described the old mechanism -- but the assertion never
+        distinguished the two rules, because here the highest weight (0.5)
+        and the largest fractional remainder (0.5) are the same cell. They
+        usually are, since weight and remainder correlate, which is why
+        swapping the rule left this file green.
+        See ``test_remainder_does_not_exceed_a_cell_ceiling`` for a case
+        that does separate them.
+        """
         result = _distribute_value(
             7, {1: 0.5, 2: 0.3, 3: 0.2}
         )
@@ -106,6 +116,29 @@ class TestDistributeValueGreen:
         assert result[1] == 4
         assert result[2] == 2
         assert result[3] == 1
+
+    def test_remainder_does_not_exceed_a_cell_ceiling(self) -> None:
+        """The case that separates largest-remainder from highest-weight.
+
+        10 across 50/25/25: ideal shares are exactly 5.0, 2.5, 2.5. The
+        old rule handed the surplus to the highest-weighted cell, giving
+        ``(6, 2, 2)`` -- a full unit above cell 1's ceiling of 5. Largest
+        remainder gives it to one of the tied 0.5 remainders instead.
+
+        This matters beyond rounding hygiene: sending the surplus to the
+        largest cell every time is the concentration bias ADR-049 lists
+        among its own negative consequences.
+        """
+        result = _distribute_value(
+            10, {1: 0.5, 2: 0.25, 3: 0.25}
+        )
+        assert sum(result.values()) == 10
+        assert result[1] == 5, (
+            "cell 1's ideal share is exactly 5.0; 6 is the weight-ranked "
+            "defect replaced on 2026-11-05"
+        )
+        assert result[2] == 3
+        assert result[3] == 2
 
     def test_conservation_prime(self) -> None:
         """Prime number (13) conserved exactly."""
