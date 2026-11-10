@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-13
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-001 (Ontology), ADR-012 (Four-Layer Data Architecture), ADR-014 (Viewpoints as Derived Views)
 
 ---

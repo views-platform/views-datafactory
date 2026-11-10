@@ -1,7 +1,7 @@
 # ADR-053: Temporal Distribution of Imprecise UCDP Events (Known Temporal Imprecision)
 
-**Status:** Proposed
-**Date:** 2026-11-07
+**Status:** Accepted
+**Date:** 2026-11-07 (drafted) · 2026-11-10 (accepted)
 **Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-011 (Fail Loud), ADR-014 (Viewpoints as Derived Views), ADR-015 (UCDP Consolidation), ADR-023 (Viewpoint Builder Invariants), ADR-040 (Count Conservation), ADR-049 (Spatial Distribution of Imprecise UCDP Events)
 

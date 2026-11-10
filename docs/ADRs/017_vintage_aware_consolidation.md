@@ -3,7 +3,7 @@
 
 **Status:** Accepted
 **Date:** 2026-03-21
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Extends:** ADR-013 (Consolidation Principles)
 
 ---

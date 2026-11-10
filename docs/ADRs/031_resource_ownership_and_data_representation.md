@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-05-20
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-003 (Authority of Declarations), ADR-009 (Boundary Contracts), ADR-011 (Fail Loud), ADR-030 (Raster Tooling)
 
 ---

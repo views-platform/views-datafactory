@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-03-18
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 
 ---
 

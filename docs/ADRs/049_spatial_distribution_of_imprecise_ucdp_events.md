@@ -3,7 +3,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-28
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-014 (Viewpoints as Derived Views), ADR-015 (UCDP Consolidation), ADR-023 (Viewpoint Builder Invariants), ADR-040 (Count Conservation), ADR-044 (Source Taxonomy)
 
 > **Amended 2026-11-04 and 2026-11-05** — see the two *Amendment* sections below. The 2026-11-05

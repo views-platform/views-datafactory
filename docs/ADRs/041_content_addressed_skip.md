@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-06-09
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Extends:** ADR-032 (Harvest Idempotence and Caching), ADR-011 (Fail Loud, No Stale Data Serving)
 
 ---

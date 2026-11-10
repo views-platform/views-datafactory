@@ -3,7 +3,7 @@
 
 **Status:** Accepted
 **Date:** 2026-04-08
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-014 (Viewpoints as Derived Views), ADR-015 (UCDP Consolidation)
 
 ---

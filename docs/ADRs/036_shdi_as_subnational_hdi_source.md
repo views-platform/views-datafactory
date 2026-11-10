@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-05-29
-**Deciders:** Simon Polichinel von der Maase, Claude Code
+**Deciders:** Simon Polichinel von der Maase
 **Applies:** ADR-012 (Four-Layer Data Architecture), ADR-029 (skip consolidation precedent), ADR-033 (Data Source Catalog), ADR-034 (GHS-BUILT-S pattern), ADR-035 (V-Dem pattern)
 
 ---
