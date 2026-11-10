@@ -17,6 +17,64 @@ entry could.
 
 ---
 
+## Two findings from one failed assertion (2026-11-10)
+
+**C-366 and C-367 registered.** Both came out of `notebooks/summary_event_allocation.ipynb`
+while testing the ADR-053 allocator (#533), and neither was found by an audit, a guard or a
+review. They were found by an assertion that was written wrong.
+
+**What happened.** The notebook's §3 was supposed to be the easy part: build the same store
+under three profiles and assert the totals match. They do not match, and the gap is 785,626
+deaths. Chasing why produced two separate findings pointing in opposite directions.
+
+**C-366 — mass dropped, and the number existed nowhere.** `production_parity` sets
+`exclude_where_prec=(4, 6)`, which filters out 43,933 events carrying 785,626 fatalities —
+**+22.6% on production's own delivered total**, of which 36,608 events are state-based. The
+filter itself is not a discovery: ADR-049:29 documents it and ADR-049:81 says in words that it
+*"loses real deaths"*. What had never been written down was how many. The provenance counter
+that could have answered it (`n_excluded_where_prec`) has existed since 2026-06-28 — adding it
+is what resolved C-303 — and had never been read back.
+
+**The part that is inconsistent rather than merely lossy.** The filter drops `where_prec` 4
+(admin-1) and 6 (country) and keeps **5** (larger than admin-1). So the two bracketing classes
+go and the one between them passes through whole to a regional centroid — and that surviving
+class is exactly what produces C-356's 273,035-death cell and C-364's 113,368-death month. The
+filter is not a precision threshold; it removes two imprecise classes and keeps the one that
+does the visible damage.
+
+**C-367 — mass invented, in the other direction.** The same notebook then checked that no
+profile reports more deaths than UCDP ever recorded for an event. The two apportioned profiles
+measure exactly zero. `production_parity` measures **74 events over the source ceiling, 96
+invented deaths**, live today. The mechanism is documented in `ceil_split`'s own docstring
+(*"may inflate totals"*) — `ceil(best/span)` per month, so 7 deaths over 3 months are delivered
+as 9.
+
+**The structural part of C-367, which is the reason it is worth an entry at 0.003%.** This
+repository enforces count conservation at four boundaries (C-258) on exact integer equality,
+and every one of them compares a stage's output to **that stage's own input**. None compares a
+delivered total to the source. An allocator that inflates before the first boundary is
+invisible to all of them by construction — which is how a defect that is loud in a docstring is
+silent in the pipeline.
+
+**Tiers, and why they differ by two levels for findings from the same cell of the same
+notebook.** C-366 is Tier 3, consistent with C-356 and C-364: parity-faithful, configured
+rather than defective, logged — but 22.6% of fatality mass absent from training inputs with no
+marker in the 79 delivered features. C-367 is Tier 4 against its own shape: it *is* the Tier 1
+definition (a delivered value exceeding anything the source recorded, with no error signal) at
+0.003% of delivered mass, which impact-wise dominates. It also retires with the profile switch
+rather than needing design, because exact apportionment makes inflation arithmetically
+impossible. Not demoted to the tech-debt backlog, because it is live and it is a correctness
+defect, not a maintainability one.
+
+**What neither entry licenses.** `source_distribution_map={"annual": "date_end_only"}` remains
+under a formal hold with Håvard, and the profile default remains spread across three files
+(C-356). ADR-053 is the governance for the temporal half and names the 785,626-death recovery
+as a consequence; it does not schedule the switch. Both entries record magnitudes so that
+whoever does switch is not surprised — the switch *adds* deaths, it does not only move them,
+and that is the first thing any consumer diffing totals will see.
+
+---
+
 ## The guard expired the exemption against the wrong referent (2026-11-02)
 
 **C-365 registered.** It is C-337's residual, and the uncomfortable part is that the guard named in
