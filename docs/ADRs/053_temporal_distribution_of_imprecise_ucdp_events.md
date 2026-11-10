@@ -13,7 +13,9 @@
 
 ## Context
 
-UCDP GED encodes temporal uncertainty in the `date_prec` field. Per the GED codebook:
+The Uppsala Conflict Data Program (UCDP) records armed-conflict deaths as individual events. Its
+Georeferenced Event Dataset (GED) encodes temporal uncertainty in the `date_prec` field. Per the
+GED codebook:
 
 | `date_prec` | Meaning |
 |---|---|
@@ -30,7 +32,8 @@ pipeline would process the new meaning silently. This ADR does not fix that, but
 governing document to state the mapping its decision depends on.
 
 When UCDP does not know the month, it still has to put the event somewhere, so it reports a
-`date_start`/`date_end` span. The viewpoint builder then has to choose a single month — or several.
+**span** — the window from `date_start` to `date_end` inside which the deaths occurred. The viewpoint
+builder then has to choose a single month within that span — or several.
 
 ### Current behaviour
 
@@ -56,7 +59,7 @@ calendar month, over the whole store, built 2026-11-06:
 | Oct | 13.33 | 12.00 | 9.48 | 9.02 |
 | Nov | 7.16 | 7.35 | 7.44 | 7.22 |
 | **Dec** | **12.27** | **15.60** | **7.16** | **6.62** |
-| max − min (pp) | 6.99 | 9.38 | 2.33 | 4.68 |
+| max − min, in percentage points (pp) | 6.99 | 9.38 | 2.33 | 4.68 |
 
 An even year is 8.33%. **December carries 12.27% of all state-based fatalities ever recorded, and
 October 13.33%.** This is not a property of conflict. It is a property of where `date_end_only` puts
@@ -100,7 +103,8 @@ temporal decision would have made the seasonality defect worse while closing the
 
 ## Prior art: the legacy ingestor already decided this
 
-This ADR does not introduce temporal distribution to VIEWS. It restores it.
+This ADR does not introduce temporal distribution to VIEWS — the Violence & Impact Early Warning
+System this data factory feeds. It restores it.
 
 The legacy UCDP ingestor — the system the data factory was built to reproduce (ADR-015) — spread
 summary events across their spanned months. Its `fix_summary_events` path detected a summary event
@@ -170,6 +174,10 @@ being placed. "Same conflict" descends a most-specific-first cascade, in `CASCAD
 
 `dyad_new_id` → `conflict_new_id` → `side_b_new_id` → `country_id`
 
+A **dyad** is UCDP's unit for a specific pair of fighting parties — so `dyad_new_id` asks "what was
+*this particular pair* doing each month?", and each step down the cascade widens the question when
+the narrower one has no observed activity to answer it.
+
 The first level with nonzero activity anywhere in the span wins. **`dyad_new_id` carries 98.6% of
 cases.** With no weight map, or zero activity at every level, allocation falls back to
 `uniform_span` — **never to flat-on-the-end-month**, because that is the behaviour being replaced.
@@ -177,13 +185,17 @@ cases.** With no weight map, or zero activity at every level, allocation falls b
 A month with zero observed activity receives **zero** allocation, by the rounder's
 zero-preservation property. This is deliberate — it says "no well-observed fighting here, so do not
 invent any" — and it is also **the assumption in this ADR most likely to be wrong**, because absence
-of well-observed reporting is not absence of fighting. **1,760 KTI events have at least one
-zero-activity month inside their span.** Stated here as a known weakness, not hidden in a docstring.
+of well-observed reporting is not absence of fighting. **1,760 KTI events — events with Known
+Temporal Imprecision, meaning the `date_prec >= 4` multi-month-span events this ADR governs — have at
+least one zero-activity month inside their span.** Stated here as a known weakness, not hidden in a
+docstring.
 
 ### 4. Conservation
 
 Allocation goes through `apportion` in `apportionment.py`, which implements largest-remainder
-(Hamilton) apportionment over integer totals. `best`, `low` and `high` are each conserved **exactly**.
+(Hamilton) apportionment over integer totals — the method used to hand out parliamentary seats:
+give each month its whole-number share, then award the leftover units to the months with the largest
+fractional remainders. The point is that the parts always sum back to the original total. `best`, `low` and `high` are each conserved **exactly**.
 This extends ADR-040's count conservation invariant to the temporal dimension, as ADR-049 §5 extended
 it to the spatial one.
 
@@ -209,7 +221,8 @@ configurable, mirroring ADR-049 §6's framing of one mechanism with several sett
   Introduces a temporal allocation assumption, stated in §3.
 - **Uniform (`uniform_span`):** flat across the span. Conserves exactly. The honest floor that any
   weighted strategy must beat before its extra assumption is earned.
-- **Endpoint (`date_end_only`):** all mass at `date_end`. Reproduces VIEWSER parity. Creates the
+- **Endpoint (`date_end_only`):** all mass at `date_end`. Reproduces the behaviour of VIEWSER, the
+  legacy VIEWS data service this factory replaces. Creates the
   calendar artifact documented in Context. Not recommended.
 - **`ceil_split`:** retained for parity reproduction only. **Does not conserve** — it invents
   fatalities, §Prior art. Should not be selected for new work.
@@ -238,8 +251,9 @@ can be audited back to its indicator.
 2026-11-05 amendment §6 records for the spatial annotations, and the same defect
 views-datafactory#533 asks us to close. It is recorded here, not fixed here, so that it is fixed once
 and deliberately as that issue's deliverable. This is the **fourth** recorded instance of the
-pattern: the legacy loader's `is_summary` flag, event precision at cell-month aggregation, ADR-049's
-spatial annotations, and these.
+pattern: the legacy loader's `is_summary` flag, event precision lost when events are aggregated to
+cell-months (one grid cell in one calendar month — the unit the published data is shaped in),
+ADR-049's spatial annotations, and these.
 
 ---
 
@@ -255,6 +269,11 @@ known (`scripts/evaluate_temporal_allocation.py`):
 | `date_end_only` (parity) | 0.0703 | 5.564 months |
 | `uniform_span` | 0.0825 | 4.883 months |
 | `activity_weighted` | **0.1525** | **3.305 months** |
+
+Reading the two columns: **hit share** is the fraction of an event's deaths that landed in the month
+the event actually happened in — 1.0 would be perfect, 0.0 means none of them did. **Distance** is
+how far the allocated deaths sat from that true month, in months, averaged over the event's mass —
+so lower is better, and 5.564 means parity's placements were on average more than five months off.
 
 Activity is closer than uniform on 64.9% of events and further on 22.9%.
 
@@ -285,6 +304,11 @@ Measured on the Tigray case (event 463131, cell 148759, December 2021) and on th
 | `kgi_distributed` | 13,865 | 41,645 | 35.8% | 5.75 | 45,887 |
 | `kgi_kti_distributed` | 1,180 | 3,470 | 28.0% | 9.05 | 24,979 |
 | `kgi_kti_activity` | **240** | **642** | **13.6%** | **20.24** | 39,487 |
+
+**Month ESS** is the effective sample size of that month's spread across grid cells: `1 / Σpᵢ²`,
+where `pᵢ` is each cell's share of the month's fatalities. It answers "how many cells is this month's
+death toll *effectively* spread over?" — 1.04 means one cell holds essentially all of it, 20.24 means
+the mass is spread as evenly as it would be across about twenty cells. Higher is less concentrated.
 
 Across the 13 worst months in
 `reports/investigation_summary_event_concentration/findings.md`, the count still above a 70% single-cell
