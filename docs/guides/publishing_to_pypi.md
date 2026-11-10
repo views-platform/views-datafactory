@@ -63,8 +63,21 @@ pending because nothing at the platform level said no).
 
 | Branch | Required checks | Other |
 |--------|-----------------|-------|
-| `development` | `lint`, `typecheck`, `test` | PR required (0 approvals), no force-push, no deletion, admins included |
-| `main` | `lint`, `typecheck`, `test`, `import-enforcement` | same |
+| `development` | `lint`, `typecheck`, `test`, `docs`, `test-py313` | PR required (0 approvals), no force-push, no deletion, admins included |
+| `main` | `lint`, `typecheck`, `test`, `docs`, `test-py313`, `import-enforcement` | same |
+
+**Read it live rather than trusting this table.** Until 2026-11-10 it listed three
+contexts and four; the live lists had five and six. `test-py313` was added on
+2026-08-13 (C-347) and `docs` at some point nobody recorded, and neither edit reached
+this page — so the table understated protection for roughly three months. The command
+that answers for itself:
+
+```bash
+gh api repos/views-platform/views-datafactory/branches/development/protection \
+  --jq '.required_status_checks.contexts'
+gh api repos/views-platform/views-datafactory/branches/main/protection \
+  --jq '.required_status_checks.contexts'
+```
 
 `import-enforcement` is required on `main` only — its job-level
 `if: github.base_ref == 'main'` in `.github/workflows/ci.yml` means it merely reports
@@ -87,31 +100,65 @@ loop: a watcher that dies on a network hiccup looks exactly like a watcher that 
 green, which is how C-320 recurred.
 
 **Break-glass** (CI provider outage, or a required check that can never report). Lift,
-act, restore immediately — the API leaves an audit trail:
+act, restore immediately — the API leaves an audit trail.
+
+**Capture the live protection before you delete it, and restore from that capture.**
+A hand-written template is a second copy of a configuration that changes without it:
+the one that used to sit here listed three contexts, so restoring from it verbatim
+would have quietly dropped `docs` and `test-py313` from `development` and those two
+plus nothing else from `main` — weakening protection on a public repo as the final
+step of a procedure whose whole purpose is to put it back.
 
 ```bash
-gh api -X DELETE repos/views-platform/views-datafactory/branches/<branch>/protection
-# ... do the thing, then restore from the table above:
-gh api -X PUT repos/views-platform/views-datafactory/branches/<branch>/protection \
-  --input protection.json
+B=development   # or main
+
+# 1. Capture, and keep it outside the repo
+gh api repos/views-platform/views-datafactory/branches/$B/protection \
+  > ~/protection-$B-$(date +%F).json
+
+# 2. Lift
+gh api -X DELETE repos/views-platform/views-datafactory/branches/$B/protection
+
+# 3. ... do the thing, then restore from the capture. The GET response carries
+#    `url` keys the PUT rejects, so reshape it to the PUT schema:
+python3 - <<'PY' > ~/restore-$B.json
+import json, os, pathlib, glob
+src = sorted(glob.glob(os.path.expanduser("~/protection-*-*.json")))[-1]
+p = json.loads(pathlib.Path(src).read_text())
+r = p.get("required_pull_request_reviews") or {}
+print(json.dumps({
+    "required_status_checks": {
+        "strict": p["required_status_checks"]["strict"],
+        "contexts": p["required_status_checks"]["contexts"],
+    },
+    "enforce_admins": p["enforce_admins"]["enabled"],
+    "required_pull_request_reviews": {
+        "required_approving_review_count":
+            r.get("required_approving_review_count", 0),
+        "dismiss_stale_reviews": r.get("dismiss_stale_reviews", False),
+        "require_code_owner_reviews": r.get("require_code_owner_reviews", False),
+    },
+    "restrictions": None,
+    "required_linear_history": p["required_linear_history"]["enabled"],
+    "allow_force_pushes": p["allow_force_pushes"]["enabled"],
+    "allow_deletions": p["allow_deletions"]["enabled"],
+    "block_creations": p["block_creations"]["enabled"],
+    "required_conversation_resolution":
+        p["required_conversation_resolution"]["enabled"],
+}, indent=2))
+PY
+
+gh api -X PUT repos/views-platform/views-datafactory/branches/$B/protection \
+  --input ~/restore-$B.json
+
+# 4. Read it back and compare against the capture — restoring is not the same
+#    as having restored (C-343's theme, one layer up).
+gh api repos/views-platform/views-datafactory/branches/$B/protection \
+  --jq '{checks:.required_status_checks.contexts, admins:.enforce_admins.enabled}'
 ```
 
-```json
-{
-  "required_status_checks": {"strict": false, "contexts": ["lint", "typecheck", "test"]},
-  "enforce_admins": true,
-  "required_pull_request_reviews": {"required_approving_review_count": 0,
-    "dismiss_stale_reviews": false, "require_code_owner_reviews": false},
-  "restrictions": null,
-  "required_linear_history": false,
-  "allow_force_pushes": false,
-  "allow_deletions": false,
-  "block_creations": false,
-  "required_conversation_resolution": false
-}
-```
-
-(For `main`, add `"import-enforcement"` to `contexts`.)
+If the capture is unavailable, the live lists are in the table above — but read them
+from the API first, because that table has been wrong before.
 
 ---
 
