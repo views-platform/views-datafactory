@@ -210,6 +210,21 @@ share = weight_map.admin1_weights.get(code, {}).get(pgid, 0.0)
 - **Beige:** `TestProportionalBeige` covers the branches that conserve while doing something
   different — `test_zero_fatality_polygon_uniform` pins step 4, a single-cell polygon,
   `where_prec == 3` at the trigger boundary, and a centroid in water passing through.
+
+**The gap, measured rather than reasoned about.** An independent mutation audit replaced
+`_compute_weights`'s `deaths / total` with a flat `1.0 / n` — making every allocation uniform
+over the weighted cells — and **every guard added by this epic passed**. Only
+`tests/test_spatial_distribution.py::TestWeightMapGreen::test_weights_sum_to_one` and its
+siblings, which predate it, assert anything about the magnitudes.
+
+So the guarantee that shares are *proportional to observed fatalities* — the whole substance
+of §3 step 3, and of ADR-049 — is **unguarded in CI**. The guards assert which cells receive
+mass and how much in total; none asserts how much per cell. The synthetic fixtures' unequal
+fatalities make the two **distinguishable**, which is necessary and was the point of building
+them that way, but nothing yet does the distinguishing. Note that this is a different
+uniformity from §3 step 4: the fallback spreads over the polygon's *whole* cell list and so
+changes the cell set, which guards do see; replacing the weights changes only the values,
+which none of them see.
 - The guarantee that must not regress is end-to-end rather than local: an allocation of N
   cells must be **delivered** as N cells through the real compiler. Asserted by
   `tests/test_falsification_spatial_allocation_delivery.py`, which runs without any real
