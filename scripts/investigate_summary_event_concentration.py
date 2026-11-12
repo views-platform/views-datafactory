@@ -42,6 +42,22 @@ would risk measuring something the pipeline does not actually see.
 
        uv run python scripts/build_viewpoint.py --profile production_parity
 
+.. warning::
+
+   **The cells this script reports are the cells the allocator chose,
+   not the cells a consumer receives.** It reads the viewpoint parquet,
+   which is the compiler's input. For every release up to v1.18.1 the
+   compiler discarded the allocator's ``priogrid_gid`` and re-derived
+   the cell from ``latitude``/``longitude``, so an allocation across 18
+   cells arrived as one (#547, C-368). A concentration figure measured
+   here was therefore a lower bound on the delivered concentration, and
+   in the worst case understated it by a factor of 18.
+
+   The delivered layer is read by
+   ``scripts/measure_allocation_delivery.py``, through
+   ``datafactory_query.load_dataset``. If a number is going into a
+   release verification, take it from there.
+
 **Leverage is proxied by ``best``**, not measured on model scores. That
 is sound for a count-unit CRPS, where a cell's contribution scales with
 its magnitude, and views-hydranet reports the directly measured figure
