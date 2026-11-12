@@ -29,6 +29,33 @@ METRICS, per event:
   - ``dist`` mass-weighted mean absolute distance in months from the true
     month (0.0 is perfect) -- an earth-mover distance on a line
 
+.. warning::
+
+   **Every number this script prints describes the allocator's decision,
+   not what a consumer receives.** It scores rows as the allocation
+   emits them. Whether those rows survive compilation is a separate
+   question, and on the spatial axis the answer was *no* for every
+   release up to v1.18.1: the compiler re-derived each event's cell from
+   ``latitude``/``longitude`` and ignored the ``priogrid_gid`` the
+   allocator had written (#547, C-368).
+
+   The delivered layer is read by
+   ``scripts/measure_allocation_delivery.py``, which goes through
+   ``datafactory_query.load_dataset`` -- the consumer entry point. Grade
+   a release there, not here.
+
+   The temporal axis this script measures was never affected: the
+   compiler reads the month field *by name*, so a month the allocator
+   chose is a month the grid receives. That asymmetry is exactly why the
+   distinction has to be stated rather than assumed -- the same script
+   can be sound about one axis and silent about the other.
+
+   Note also that ``priogrid_gid`` appears in ``load`` only as a
+   validity filter (``>= 1``); no metric here is grouped by cell, so
+   "report the delivered cell instead" is not available to this script
+   and would not mean anything if it were. Issue #553 asked for that
+   conversion first and the ask was wrong on inspection.
+
 Usage::
 
     uv run python scripts/evaluate_temporal_allocation.py [--sample N]
