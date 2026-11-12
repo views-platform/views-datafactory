@@ -40,6 +40,13 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 def _required_columns(config: CompilationConfig) -> set[str]:
     """Derive the minimal set of Parquet columns needed for compilation."""
     cols = {config.lat_field, config.lon_field, config.date_field}
+    # Without this the pgid_field branch in _place_events reads a column
+    # that was never loaded, so it falls back to the coordinates on every
+    # row and the fix is inert while looking present. That is its own
+    # mutation drill: reverting this line alone must turn the delivery
+    # tests red.
+    if config.pgid_field:
+        cols.add(config.pgid_field)
     for feat in config.features:
         if feat.filter:
             cols.update(feat.filter.keys())
@@ -105,32 +112,61 @@ def _place_events(
     lats = table[config.lat_field].to_pylist()
     lons = table[config.lon_field].to_pylist()
     dates = table[config.date_field].to_pylist()
+    declared = (
+        table[config.pgid_field].to_pylist()
+        if config.pgid_field
+        else None
+    )
 
     # Phase 1: compute bin assignments (row_index → bin key)
     row_bins: dict[int, tuple[int, int]] = {}
     n_skipped_spatial = 0
     n_skipped_temporal = 0
+    n_declared_cell = 0
+    n_declared_fallback = 0
 
     for i in range(n_rows):
         lat, lon, date_str = lats[i], lons[i], dates[i]
 
-        if lat is None or lon is None:
-            n_skipped_spatial += 1
-            continue
+        # A cell an upstream stage decided beats one derived from
+        # coordinates the upstream stage did not update (ADR-015). The
+        # fallback is for rows that carry no decision, not for rows
+        # whose decision we dislike -- an out-of-range declared cell is
+        # a data error, so it is counted rather than clamped. Invariant
+        # 2 of ADR-024 clamps an out-of-bounds *coordinate* to the
+        # nearest valid cell; that leniency is not extended here.
+        pgid: int | None = None
+        if declared is not None:
+            raw = declared[i]
+            if raw is not None:
+                try:
+                    candidate = int(raw)
+                except (ValueError, TypeError):
+                    candidate = 0
+                if 1 <= candidate <= n_cells:
+                    pgid = candidate
+                    n_declared_cell += 1
+            if pgid is None:
+                n_declared_fallback += 1
 
-        try:
-            pgid = int(
-                latlon_to_pgid(
-                    float(lat), float(lon), config.grid_config
+        if pgid is None:
+            if lat is None or lon is None:
+                n_skipped_spatial += 1
+                continue
+
+            try:
+                pgid = int(
+                    latlon_to_pgid(
+                        float(lat), float(lon), config.grid_config
+                    )
                 )
-            )
-        except (ValueError, TypeError):
-            n_skipped_spatial += 1
-            continue
+            except (ValueError, TypeError):
+                n_skipped_spatial += 1
+                continue
 
-        if pgid < 1 or pgid > n_cells:
-            n_skipped_spatial += 1
-            continue
+            if pgid < 1 or pgid > n_cells:
+                n_skipped_spatial += 1
+                continue
 
         if not isinstance(date_str, str):
             n_skipped_temporal += 1
@@ -166,6 +202,28 @@ def _place_events(
             "Skipped %d events: outside temporal range",
             n_skipped_temporal,
         )
+    if config.pgid_field:
+        logger.info(
+            "Placement authority '%s': %d rows used the declared cell, "
+            "%d fell back to coordinates",
+            config.pgid_field,
+            n_declared_cell,
+            n_declared_fallback,
+        )
+        # Said out loud because ADR-003 forbids an implicit fallback for
+        # decision-relevant semantics. A caller naming a pgid field
+        # expects it to be used; a run where most rows fell back is
+        # reporting a column that is absent, null or out of range, and
+        # that must be visible rather than inferred from the output.
+        if n_declared_fallback > n_declared_cell:
+            logger.warning(
+                "Placement authority '%s' was unusable on %d of %d "
+                "rows -- more rows fell back to coordinates than used "
+                "the declared cell",
+                config.pgid_field,
+                n_declared_fallback,
+                n_rows,
+            )
 
     # Phase 2: extract columns as numpy arrays, build row-index bins
     if not row_bins:

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import logging
 import sys
 import time
 from pathlib import Path
@@ -64,12 +65,33 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--pgid-field",
+        default="priogrid_gid",
+        help=(
+            "Column holding a cell an upstream stage already decided; "
+            "it wins over the coordinates, which stay as the fallback "
+            "for rows where it is null or out of range (ADR-015). "
+            "Pass an empty string to place purely by coordinates "
+            "(default: priogrid_gid)"
+        ),
+    )
+    parser.add_argument(
         "--provenance-dir",
         type=Path,
         default=Path("provenance"),
         help="Provenance directory",
     )
     args = parser.parse_args()
+
+    # Without this, every logger.info in the compilation layer is
+    # discarded: no handler is configured, and Python's lastResort
+    # handler only emits WARNING and above. The placement counters --
+    # how many rows used the declared cell and how many fell back --
+    # are INFO, so they were written and never seen, which is the same
+    # "correct code that never runs" shape as the skipped test that let
+    # the seam ship in the first place. ADR-008 wants the pipeline
+    # observable; a counter nobody can read is not observability.
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     print("=" * 60)
     print("PRIO-GRID COMPILER (Layer 4)")
@@ -80,6 +102,14 @@ def main() -> int:
         f"{args.end_year}-12"
     )
     print(f"Date field: {args.date_field}")
+    print(
+        "Placement: "
+        + (
+            f"{args.pgid_field}, coordinates as fallback"
+            if args.pgid_field
+            else "coordinates only"
+        )
+    )
     print("=" * 60)
     print()
 
@@ -88,6 +118,17 @@ def main() -> int:
         print(
             "Run scripts/build_viewpoint.py first."
         )
+        return 1
+
+    from datafactory_compilation.preflight import (
+        reject_ignored_allocation,
+    )
+
+    refusal = reject_ignored_allocation(
+        args.source, args.date_field
+    )
+    if refusal is not None:
+        print(refusal)
         return 1
 
     from datafactory_compilation import compile_grid
@@ -139,6 +180,7 @@ def main() -> int:
             / "ledger.jsonl"
         ),
         date_field=args.date_field,
+        pgid_field=args.pgid_field or None,
     )
 
     n_cells = config.grid_config.n_cells
