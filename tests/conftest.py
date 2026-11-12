@@ -82,7 +82,7 @@ _WITHHELD: pytest.StashKey[dict[str, int]] = pytest.StashKey()
 
 
 def pytest_terminal_summary(
-    terminalreporter: pytest.TerminalReporter,  # type: ignore[name-defined]
+    terminalreporter: pytest.TerminalReporter,
     exitstatus: int,
     config: pytest.Config,
 ) -> None:

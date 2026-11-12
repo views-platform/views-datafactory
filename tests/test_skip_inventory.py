@@ -188,28 +188,6 @@ class TestSkipInventoryGreen:
             f"rather than the suite being clean"
         )
 
-    def test_no_file_declines_to_run_more_often_than_declared(
-        self,
-    ) -> None:
-        """The ratchet. A rise is red; a fall is free."""
-        live = _live_inventory()
-        risen = {
-            name: (len(sites), _INVENTORY[name])
-            for name, sites in live.items()
-            if name in _INVENTORY and len(sites) > _INVENTORY[name]
-        }
-        assert not risen, (
-            "a test module gained a way to decline to run:\n"
-            + "\n".join(
-                f"  {name}: {now} sites, {declared} declared"
-                for name, (now, declared) in sorted(risen.items())
-            )
-            + "\n\nIf the new skip is correct, add it to _INVENTORY in "
-            "tests/test_skip_inventory.py and give its reason in "
-            "reports/test_skip_catalogue.md. The number is meant to be "
-            "edited deliberately -- that is the whole mechanism."
-        )
-
     def test_no_undeclared_file_declines_to_run(self) -> None:
         """A file absent from the inventory may have no skip sites."""
         live = _live_inventory()
@@ -276,13 +254,28 @@ class TestSkipInventoryRed:
     ) -> None:
         """Exact, per file, so slack cannot accumulate anywhere.
 
-        The ceiling in ``test_no_file_declines_to_run_more_often_than_
-        declared`` is what keeps a release commit from turning this
-        red. This test is the other half: it requires the declared
-        number to be the true number *today*, so the slack a ceiling
-        would otherwise allow is zero. Removing a skip therefore fails
-        here -- deliberately. Removing coverage-withholding is good news
-        and it still has to be written down.
+        This is the only assertion on the number itself, and it is an
+        equality rather than a ceiling. A ceiling would let slack
+        accumulate: remove a skip from a file, leave its allowance
+        behind, and that many new skips can land silently afterwards.
+
+        An earlier version of this module carried **both** -- a ceiling
+        test and this one -- and claimed they were two halves of one
+        mechanism. They are not. Every state that violates a ceiling is
+        also an inequality, so the ceiling could never fail without
+        this test failing too; it was a guard that could not fail
+        alone, inside the module written to catch exactly that. Review
+        of #571 found it. The ceiling is gone and this is what remains.
+
+        Nothing here depends on the environment, which is what keeps a
+        release commit from turning the module red: the number counts
+        skip sites **declared in the source**, not tests that actually
+        skipped. That property belongs to the inventory, not to any
+        choice between equality and a bound.
+
+        Removing a skip therefore fails this test -- deliberately.
+        Removing withheld coverage is good news and still has to be
+        written down.
         """
         live = _live_inventory()
         sites = live.get(name, [])

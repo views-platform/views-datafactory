@@ -223,7 +223,7 @@ measuring bytecode no longer on disk.
 | Drill | Outcome |
 |---|---|
 | Add a skip site to a file **not** in the inventory | **Caught** — `test_no_undeclared_file_declines_to_run` |
-| Add a skip site to a file **already** in the inventory | **Caught** — the ceiling test and the per-file exactness test |
+| Add a skip site to a file **already** in the inventory | **Caught** — `test_each_declared_allowance_is_fully_used` |
 | Inflate one inventory number by 1 | **Caught** — `test_each_declared_allowance_is_fully_used` |
 | Name a module in the inventory that does not exist | **Caught** — three tests, including the stale-entry guard |
 | **Delete `tests/test_skip_inventory.py` and run the whole suite** | **SURVIVED.** Exit 0. |
@@ -245,6 +245,23 @@ tests, which would catch any test module vanishing. It is a new guard in a share
 path of every later change, and it needs editing every time a test is legitimately removed —
 and this story's scope is the skip ratchet. Recorded as a finding instead, where the next
 person deciding whether to build that floor can see what it would buy.
+
+### A sixth finding, from review rather than from a drill
+
+The drills above were run against a version of this module that carried **two** assertions on
+the number: a ceiling (`live <= declared`) and a per-file equality (`live == declared`). The
+PR body claimed they were two halves of one mechanism.
+
+They were not. Every state that violates a ceiling is also an inequality, so **the ceiling
+could never fail without the equality test failing too** — a guard that could not fail alone,
+inside the module written to catch exactly that. The D2 drill showed both going red together
+and that was read as corroboration rather than as subsumption, which is the mistake worth
+recording: *two guards failing together is evidence they overlap, not evidence both work.*
+
+Review of #571 caught it; the ceiling is gone. What makes this module immune to the fluttering
+that would have wedged a protected branch is not a choice between a bound and an equality — it
+is that the number counts skip sites **declared in the source** rather than tests that actually
+skipped. That property lives in the inventory, and the earlier docstring misattributed it.
 
 The first run of this drill returned exit **124** — a timeout at 75%, because the whole suite
 takes longer than the 900 s the drill script allowed. That was recorded as `UNRUN` and re-run
