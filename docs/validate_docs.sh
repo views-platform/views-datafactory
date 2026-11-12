@@ -21,7 +21,11 @@ warnings=0
 while IFS= read -r file; do
     [[ -z "$file" ]] && continue
     [[ "$file" == *template* ]] && continue
-    if grep -q 'YYYY-MM-DD' "$file"; then
+    # Only the header fields can carry an unfilled date. A whole-file grep
+    # also matched documents that legitimately *document* the ISO format,
+    # which is what load_dataset.md's parameter table does -- it warned for
+    # months on a field that was filled in.
+    if grep -qE '^\*\*(Last reviewed|Date):\*\*.*YYYY-MM-DD' "$file"; then
         echo "  WARN: Unfilled date placeholder in $file"
         warnings=$((warnings + 1))
     fi
