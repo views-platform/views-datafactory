@@ -377,3 +377,67 @@ legacy `GedLoader`'s `is_summary` flag, event precision at cell-month aggregatio
 - ADR-040 — Count Conservation and Hierarchical Reconciliation
 - ADR-044 — Source Taxonomy: Reference Infrastructure vs Feature Sources
 - UCDP GED Codebook — `where_prec` field definitions
+
+---
+
+## Amendment 2026-11-12 — the measured evidence describes allocated cells, not delivered ones (#547, #556)
+
+**The Decision and both amendments above stand. Nothing here changes what this ADR decided.**
+What changes is the status of its numbers. Dated amendment, not a rewrite.
+
+### 1. Which numbers, and what they describe
+
+Every measurement in this ADR was computed by grouping on `priogrid_gid` — the field the
+viewpoint writes its chosen cell into. Until 2026-11-12 the event compiler did not read that
+field: it re-derived each event's cell from `latitude`/`longitude`, which the allocator leaves
+at the source centroid. So the figures describe **what the allocator decided**, not what a
+consumer receives.
+
+Concretely, in §Measured outcome:
+
+| reported as | actually |
+|---|---|
+| cell 148759, month 504: 113,395 → **13,866** | allocated. Delivered was **113,395 → 113,395**. |
+| cell 148759, all history: 274,358 → **39,221** | allocated. Delivered was unchanged. |
+| event 463131: 1 row → **18 rows** | allocated 18 cells; **delivered 1**. |
+| largest state-based cell at month 504: **41,645** | allocated. |
+
+The delivered figures, measured through the consumer entry point
+`datafactory_query.load_dataset`, are in `reports/investigation_allocation_delivery/findings.md`.
+
+**The conclusions drawn from these numbers survive**, because every one of them is a statement
+about the allocation: that proportional distribution reduces concentration roughly 2.7× and
+does not remove it, that the largest cell is still about 36% of its slice, that a remedy can
+move a spike rather than remove it. Those remain true of the allocator's output and are now
+true of delivered data as well. What was wrong was the implied claim that they had already
+*arrived*.
+
+### 2. §Validation's golden criterion was weaker than it read
+
+The criterion — the centroid's share collapses, the allocation matches the weight map cell by
+cell, totals conserved — was checked on the allocator's return value. All three held there and
+none of them held in delivered data. A criterion stated over a stage's output cannot grade the
+pipeline that stage feeds.
+
+### 3. This ADR wrote the diagnosis and missed the instance
+
+Two sentences in the 2026-11-10 amendment describe this failure exactly, and both were applied
+one layer too high:
+
+- *"A guard that cannot distinguish distribution from relocation is not a guard for this ADR."*
+  Written about a mutation that moved the whole total onto a different single cell. The
+  compiler was doing precisely that, to every allocated event, and the guard did not reach it.
+- *"A decision with no observer"* — written about the drift between this ADR and the invoked
+  configuration. The same mechanism was running one layer down: the decision was observed where
+  it was made and nowhere after.
+
+The pattern worth carrying is not that the diagnosis was wrong. It was right, and it was applied
+to the scope the author had in view. **A correct diagnosis is scoped to where its author was
+looking.**
+
+### 4. What follows for future amendments here
+
+Any figure this ADR reports in future must name the layer it was read at. ADR-045's amendment of
+the same date adds the governing rule: a decision a later stage could re-derive must be verified
+at the layer the consumer reads. The practical consequence for this ADR is that its validation
+criteria belong against the served store, not against the allocator's return value.

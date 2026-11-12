@@ -4249,6 +4249,20 @@ Cross-ref: **C-356** (the spatial half, whose claim that the temporal axis was c
 
 **Not fixed, and not fixable from here.** Setting `exclude_where_prec=()` is one of the two changes a profile switch makes, and the profile default is spread across `viewpoint_config.py`, `profiles.py` and the `build_viewpoint.py` invocation in `refresh_pipeline.sh` — C-356's trigger explains why no single edit is safe. ADR-053 is the governance for the temporal half of that switch and records this recovery as a consequence; it does not schedule it. This entry records the magnitude so that whoever switches is not surprised by it.
 
+**Confirmed 2026-11-12 (#548), not corrected.** The epic that measured the delivery defect
+asked for these figures to be replaced, on the premise that they had been derived the same
+loose way as that epic's own indicative 32.8% — last-version-wins rather than the real
+stale-version filter. **That premise was wrong.** The table above comes from three full builds
+of the same consolidated store through the same `build_viewpoint.py` the pipeline runs, not
+from a shortcut over the store. #548's independent measurement reproduces **43,933 events and
+785,626 fatalities exactly**. The entry stands as written, and now carries a second measurement
+behind it.
+
+Worth keeping: the epic's own figure was the loose one, and it corrected *downward* (32.8%
+eligible → 26.49% displaced) when measured properly. Assuming a neighbouring number shared
+that flaw was reasonable and still wrong. A premise about how a number was obtained is
+checkable, and checking it took one reading.
+
 Cross-ref: **C-356** (the spatial artifact produced by the `where_prec = 5` class this filter keeps), **C-364** (the temporal artifact in the same cell), **C-367** (the other finding from the same notebook — the opposite sign, mass invented rather than dropped), C-303 (resolved — added the `n_excluded_where_prec` counter that could have produced this number at any point since 2026-06-28), ADR-049 (§Alternatives documents the filter and its cost in words), ADR-053 (names the recovery as a consequence of the temporal decision).
 
 ---
@@ -4276,6 +4290,27 @@ Cross-ref: **C-356** (the spatial artifact produced by the `where_prec = 5` clas
 **So what is the finding.** Not the mechanism, which was written down. Two things: the **production-level number**, which had never been taken, and the **absence of any guard that would notice**. This repository enforces count conservation at four boundaries (C-258, resolved) and asserts placement conservation on exact integer equality, but every one of those checks compares a stage's output to **the stage's own input**. None compares a delivered total to the *source*. An allocator that inflates before the first conservation boundary is invisible to all of them, by construction — which is why a defect that is loud in a docstring is silent in the pipeline.
 
 **Tier 4, and the reasoning is worth keeping because it points the other way first.** By shape this is the register's Tier 1 definition: a delivered value exceeds anything the source ever recorded, with no error signal. By magnitude it is 96 of 3,473,358 deaths — **0.003%** — spread over 74 events, no one of which is large. Impact dominates likelihood and detectability here: nothing downstream turns on 96 deaths, and no consumer could act on them differently if flagged. Tier 4 also because the remedy is already specified and tested rather than needing design — largest-remainder apportionment makes inflation arithmetically impossible, and both apportioned profiles measure exactly zero — so this retires with the profile switch instead of needing its own work. **Not demoted to the tech-debt backlog**, because it is live, it is a correctness defect rather than a maintainability one, and the zero in the other two rows is the only reason anyone can see it.
+
+**Held, not retired — 2026-11-12 (#556).** The condition that made this live has gone:
+production moved to `kgi_kti_activity` on 2026-11-10, and both apportioned profiles measure
+exactly **0** events over the ceiling and **0** deaths invented. The deployed pipeline was
+re-read on the server on 2026-11-12 and names `kgi_kti_activity`, so `ceil_split` is not on the
+production path.
+
+It is held rather than retired because the defect is **dormant, not removed**. `ceil_split` is
+still a registered strategy, `production_parity` is still a registered profile, and
+`build_viewpoint.py` still defaults to it — so naming that profile reactivates the inflation
+with no warning. Retiring the entry would record that the problem was solved when what happened
+is that the configuration moved away from it.
+
+The arithmetic remedy is now covered by a test that runs in CI rather than by a notebook cell:
+composition across both allocation stages is asserted to conserve every extensive field exactly,
+on synthetic data, with no real store required (#550). That is stronger evidence than the
+measurement this hold was asked to wait for — but it is evidence about the apportioned path, and
+says nothing about `ceil_split`, which still behaves exactly as its docstring says.
+
+**Retire this entry when** `ceil_split` is removed from the registry, or when `production_parity`
+stops being reachable as a profile. Not before.
 
 Cross-ref: **C-366** (the other finding from the same notebook, opposite sign: mass dropped rather than invented), **C-364** (`date_end_only` on the annual source, which is why this number is 96 and not larger), C-258 and C-242 (resolved — the conservation boundaries that cannot see this, because they compare each stage to its own input), ADR-023 (the summary-event detection rule `best >= span` that `ceil_split` implements), ADR-040 (count conservation invariants), ADR-053 (§Decision adopts exact apportionment, under which this is impossible).
 

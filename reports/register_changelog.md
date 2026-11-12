@@ -103,6 +103,54 @@ All fixed. The pattern is the finding: **a guard written against a defect tends 
 defect's own blind spot**, which is the case for having it attacked by someone other than its
 author.
 
+## Five ADRs amended, and two premises that did not survive checking (2026-11-12)
+
+**C-366 confirmed; C-367 held; no new IDs.** The governance half of the delivery defect. Five
+ADRs carried claims the defect falsified, and two of them contradicted each other for four
+months while ADR-003 required that exact contradiction to fail loudly.
+
+**ADR-015** had already decided this. Its §Decision said the compiler prefers the declared cell
+and falls back to coordinates; its §Known Complexities said the two *"can disagree"* and that
+the viewpoint *"should prefer `priogrid_gid`"*. Neither sentence existed in `src/`. The
+amendment records that the decision stood unimplemented from acceptance until 2026-11-12, that
+the disagreement it predicted did occur, and that the cost was 26.49% of UCDP fatality mass.
+It also refutes the ADR's own stated cause: of the seventy pre-existing disagreements, **zero
+are border-adjacent** and the median offset is **1,460 cells**, so *"border cells, precision
+issues"* describes none of them.
+
+**ADR-024** Invariant 2 is now conditional, and the amendment keeps its heading's warning rather
+than softening it: the invariants *"cannot be changed without breaking all downstream
+consumers"* was correct, this change does alter delivered values, which is why the three
+consumer repositories were told before it shipped. It also records a tension it deliberately
+does not resolve — Invariant 3 authorises skipping out-of-range input with only a warning,
+which is the behaviour ADR-003 forbids.
+
+**ADR-045** got the narrow doctrine amendment and a corrected gap table. Its row for spatial
+binning at the Viewpoint → Compilation boundary recorded gap *"None"* — it certified as sound
+the exact boundary where the mass was being misplaced. The row was not careless: the binning
+rule *is* tested. It recorded the absence of a gap in the thing it measured and was read as
+recording the absence of a gap. One rule follows for the table itself: a `Gap` cell saying
+*"None"* claims that no property of that boundary is unverified, which is almost never true.
+
+**ADR-049 and ADR-053** keep their decisions and lose the implied layer of their evidence. Every
+per-cell figure in both describes allocated cells. ADR-049 is the sharper case, because it wrote
+the diagnosis and missed the instance: *"a guard that cannot distinguish distribution from
+relocation is not a guard for this ADR"* was written about a mutation inside the viewpoint while
+the compiler was doing exactly that to every allocated event. **A correct diagnosis is scoped to
+where its author was looking.** ADR-053's amendment records the opposite outcome on the temporal
+axis and why — the compiler reads the month field *by name*, so that decision arrived. Two
+stages, the same shape of decision, opposite fates, decided entirely by whether the downstream
+stage reads the field or recomputes the quantity.
+
+**Two premises checked and dropped.** The epic's own issue asked for C-366's figures to be
+replaced as loosely derived and for three of six GAUL-dependent skip sites to be converted to
+synthetic fixtures. Neither survived contact: C-366's numbers came from three full viewpoint
+builds and #548 reproduced them exactly, and five of the six skip sites assert facts about real
+geography, so pointing them at invented data would have raised the CI-run count and lowered the
+evidence. Both are recorded where they were asked for rather than quietly done differently.
+**An acceptance criterion written while diagnosing is a hypothesis about the work, not a
+specification of it.**
+
 ## A named tripwire that could not fire, and the switch that found it (2026-11-10)
 
 **C-356 corrected; its trigger fired and was actioned.** Planning the production profile switch
