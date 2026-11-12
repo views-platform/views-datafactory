@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-11-10 — C-366 and C-367 registered from the ADR-053 allocation notebook (#533): production drops 43,933 events carrying 785,626 fatalities (+22.6%) and `ceil_split` reports 96 deaths the source never recorded, which no conservation boundary catches because each compares a stage to its own input. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-11-12 — C-368 (Tier 1), C-369 and C-370 registered: the spatial allocator's chosen cell never reached delivered data in any release, 1,128,236 deaths misplaced with every aggregate reconciling, because two stages disagreed about which field carries a decision. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 367 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 54 open concerns (0 Tier 1, 5 Tier 2, 18 Tier 3, 25 Tier 4, 6 deferred by design; 5 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 370 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 57 open concerns (1 Tier 1, 7 Tier 2, 18 Tier 3, 25 Tier 4, 6 deferred by design; 6 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -198,6 +198,9 @@
 | C-363 | 4 | **`logs/pipeline_duration.json` is written only on the success path, so after a failed run it still reports the previous success.** `refresh_pipeline.sh:336-341` writes it after the failure sentinel is cleared; a failure leaves the last good file untouched. Two operator-facing guides send an operator to it by name. The embedded `finished` timestamp is the only thing separating stale from fresh, and nothing prompts the reader to check it | **Before the duration record is used to answer whether a run got slower, or how far a failed run got** — the 21 October abort left the September duration standing as the newest answer | Operational observability |
 | C-366 | 3 | **Production drops 43,933 UCDP events carrying 785,626 fatalities — +22.6% of everything it delivers — rather than placing them imprecisely.** `profiles.py:107` sets `exclude_where_prec=(4, 6)`, so admin-1 (4) and country (6) events are filtered out while **country-or-larger (5) passes through whole** to its centroid cell — the class that produces C-356's and C-364's artifacts. ADR-049:29 documents the filter and ADR-049:81 says it *"loses real deaths"*; **neither ever stated how many.** Measured 2026-11-06: 36,608 of the dropped events are state-based | **Before the production profile is switched away from `production_parity`** — the switch *adds* 785,626 deaths rather than only moving mass, so the first thing any consumer comparing totals sees is +22.6%, and they will read it as corruption unless told first. Also before any statement that this repository's UCDP totals match UCDP's own | UCDP imprecision |
 | C-367 | 4 | **The production temporal strategy reports 96 deaths that appear in no version of the source.** `ceil_split` assigns `ceil(best/span)` to every spanned month, so a 7-death, 3-month event is delivered as 9. Measured 2026-11-06 against the per-event source maximum: **74 events over the ceiling, 96 invented deaths** live in production; both apportioned profiles measure **zero**. Documented in the strategy's own docstring as *"may inflate totals"* — what did not exist was the number, or any guard that would notice | **Before a conservation guard is added that bounds delivered per-event totals by the source** — it goes red on the current production path, and the cause is this, not a new defect. Also before any claim that the pipeline conserves fatality mass end to end | UCDP imprecision |
+| C-368 | 1 | **The spatial allocator's chosen cell never reached delivered data — in any release.** `spatial_distribution.proportional` records its decision by rewriting `priogrid_gid`; `grid_compilation._place_events` re-derived the cell from `latitude`/`longitude`, which the allocator leaves at the source centroid, and `_required_columns` did not even load the column. Every allocated row returned to the cell it came from. Measured 2026-11-12: **1,128,236 deaths across 60,105 events, 26.49% of all UCDP fatality mass**; 97.3% of the mass at `where_prec=6`, collapsing 6,896 chosen cells into 91. Totals conserve under relocation, so none of the four conservation boundaries could see it. ADR-015:102-106 chose `priogrid_gid` in June 2026 and nothing implemented it; `PregriddedCompilationConfig.pgid_field` already did exactly this for the pregridded sources | **Fired** — fixed by #562 (`pgid_field`), but the guards that prove it skip in CI until #550 lands, so a regression would be caught on a developer machine and not by branch protection | UCDP imprecision |
+| C-369 | 2 | **`CompilationConfig.date_field` defaults to a raw field while the temporal allocator writes `date_month`.** A caller taking the default on an allocated source collapses every distributed month onto the event's start month, conserving totals. Production survived only because `compile_grid.py`'s argparse default happens to be `date_month`. Closed inside this repository by `preflight.reject_ignored_allocation` plus an AST guard over every `scripts/` call site (#562); **the residual is an external library caller**, since `CompilationConfig` ships in the wheel and removing the default is a breaking change owed to a MAJOR. An auto-detecting default was rejected: inferring decision-relevant semantics is what ADR-003 forbids | **At the next MAJOR release** — make `date_field` required then. Until then, recorded as a strict xfail so that whoever makes the default safe is forced to remove the marker | UCDP imprecision |
+| C-370 | 2 | **No test crossed the viewpoint-to-compilation boundary, which is why C-368 survived four months.** 47 tests exercised spatial distribution and none called the compiler; `test_cross_layer_contracts.py` compares column *names*, so a field present in both layers and ignored by one passed, and its `UCDP_COMPILATION_COLUMNS` omitted `priogrid_gid` — the contract described the compiler rather than the requirement. ADR-045:57 certified this exact boundary as having no gap, because ADR-045:16 rules end-to-end invariants out of scope by construction. The one test that would have caught it (`test_adr053_production_profile.py:93`) is `skipif`'d on data `.gitignore` guarantees CI never has | **Before adding any further allocation strategy** — and #550 must land, or the replacement guards skip in CI exactly as their predecessor did | Testing |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -4275,6 +4278,104 @@ Cross-ref: **C-356** (the spatial artifact produced by the `where_prec = 5` clas
 **Tier 4, and the reasoning is worth keeping because it points the other way first.** By shape this is the register's Tier 1 definition: a delivered value exceeds anything the source ever recorded, with no error signal. By magnitude it is 96 of 3,473,358 deaths — **0.003%** — spread over 74 events, no one of which is large. Impact dominates likelihood and detectability here: nothing downstream turns on 96 deaths, and no consumer could act on them differently if flagged. Tier 4 also because the remedy is already specified and tested rather than needing design — largest-remainder apportionment makes inflation arithmetically impossible, and both apportioned profiles measure exactly zero — so this retires with the profile switch instead of needing its own work. **Not demoted to the tech-debt backlog**, because it is live, it is a correctness defect rather than a maintainability one, and the zero in the other two rows is the only reason anyone can see it.
 
 Cross-ref: **C-366** (the other finding from the same notebook, opposite sign: mass dropped rather than invented), **C-364** (`date_end_only` on the annual source, which is why this number is 96 and not larger), C-258 and C-242 (resolved — the conservation boundaries that cannot see this, because they compare each stage to its own input), ADR-023 (the summary-event detection rule `best >= span` that `ceil_split` implements), ADR-040 (count conservation invariants), ADR-053 (§Decision adopts exact apportionment, under which this is impossible).
+
+---
+
+### C-368: the spatial allocator's chosen cell never reached delivered data — [OPEN, trigger fired]
+
+| | |
+|---|---|
+| ID | C-368 |
+| Tier | 1 — silent wrong answer in delivered data, no error signal |
+| Source | `/falsify` claim-mode audit 2026-11-12, after the first production run under `kgi_kti_activity` |
+| Trigger | **Fired.** Fixed by #562; the guards proving it skip in CI until #550 lands |
+| Location | `src/datafactory_viewpoint/spatial_distribution.py` `proportional`; `src/datafactory_compilation/grid_compilation.py` `_place_events`, `_required_columns` |
+| Cross-refs | C-369 (the same seam on the temporal axis), C-370 (why nothing saw it), C-356, C-364, C-366, C-365 (a decision with no observer) |
+
+Two stages disagreed about which field carries a decision. The allocator wrote an authority
+field; the compiler read a raw observation field and recomputed. Nothing reconciled them, and
+the disagreement was invisible because both fields were present and both were valid.
+
+Verified end to end through the real compiler: six allocated cells in, **one cell out**, totals
+conserved exactly, no warning. `conservation.py` counts rows — a row placed in the *wrong* cell
+is a placed row — so the module its own docstring calls the "Tier 2 silent-corruption guard"
+is structurally blind to this.
+
+**The displacement preserves every aggregate.** 99.89% of displaced mass stays inside the same
+GAUL country; `where_prec` 4 and 5 are **100%** same-country and same-admin-1. Country-month
+sums, coverage counts and conservation all reconcile before and after. No check above cell
+level can see this, in either direction — which is why a consumer validating totals saw
+nothing for four months.
+
+**Scope correction worth keeping.** The allocator never worked, but the *delivered consequence*
+is shorter than that: `production_parity` excluded `where_prec` 4 and 6 outright, so 685,282 of
+the displaced mass was **absent** from delivered data rather than misplaced in it, and
+`where_prec` 5 sat at its nominal centroid in every prior release as `passthrough`'s declared
+behaviour. The 2026-11-11 run is the first to deliver codes 4 and 6 at all. One release of
+exposure, not many. "The allocator never worked" and "delivered data has always been wrong this
+way" are different claims; only the first had been measured.
+
+---
+
+### C-369: the temporal twin — a default that discards an allocation — [OPEN]
+
+| | |
+|---|---|
+| ID | C-369 |
+| Tier | 2 — structural fragility, one argument away from a silent wrong answer |
+| Source | The same audit, 2026-11-12 |
+| Trigger | At the next MAJOR release, make `date_field` required |
+| Location | `src/datafactory_compilation/compilation_config.py` `date_field`; all seven strategies in `src/datafactory_viewpoint/temporal_distribution.py` |
+| Cross-refs | C-368, C-370 |
+
+ADR-053 found and fixed the **filename** version of this pattern during the v1.18.0 release —
+viewpoint decides, compile step independently re-derives, nothing reconciles — and shipped a
+test for it. The lesson was not generalised one line down, to the **field** version carrying
+the other inherited default.
+
+Closed inside this repository; the residual is an external caller, and it is recorded as a
+strict xfail rather than left to memory.
+
+---
+
+### C-370: the unobserved layer boundary — [OPEN]
+
+| | |
+|---|---|
+| ID | C-370 |
+| Tier | 2 — the mechanism by which C-368 survived four months |
+| Source | The same audit, plus a cross-layer test survey, 2026-11-12 |
+| Trigger | Before adding any further allocation strategy; and #550 must land |
+| Location | `tests/test_cross_layer_contracts.py`; `tests/test_adr053_production_profile.py:93`; `.gitignore`; `tests/conftest.py` marker deselection |
+| Cross-refs | C-368, C-369, C-365, C-345, C-320 |
+
+The allocator was verified at its source and placement at its destination; the handover between
+them was unobserved. **58 of 62 skip sites skip on a fresh CI runner**, and `conftest.py`
+silently *deselects* two whole markers — deselected items do not even report as skipped.
+
+Three guards written during #562 to close this were themselves found defective by review, each
+in the same family: one passed from any directory but the repo root, checking zero files; one
+reported a reconciliation pass having compared nothing; one asserted a maximum that an empty
+grid satisfies. All three are fixed, and the pattern is the finding: **a guard written against
+a defect tends to inherit the defect's own blind spot.**
+
+Registered without fixing, found in the same window:
+
+- `builders/acled_v1.py` writes `date_month` as `YYYY-MM` while `grid_compilation.py`'s
+  validator requires `YYYY-MM-DD`. Pointing ACLED at that field would skip **every** row, log
+  one aggregate warning, and still pass conservation — an all-zero grid reported green.
+- `where_prec` has no range check; value `99` is undeclared in the UCDP codebook and routes to
+  the country branch.
+- Four independent `month_id` re-derivations, agreeing today, with no single owner.
+- ADR-039:40 and :141 are stale — the name and `iso3_code` crosswalks are no longer
+  centroid-derived.
+- `test_falsification_deploy_v140.py` reads **live GitHub state**, so it is flaky by
+  construction, and `if result.returncode != 0: return` makes it pass silently with no `gh`,
+  no auth or no network.
+- ADR-015:104 explains the pre-existing `priogrid_gid` disagreements as *"border cells,
+  precision issues"*. Refuted: zero of the seventy are border-adjacent, median offset **1,460
+  cells**, and 62 of 70 are `where_prec=6` where the declared cell and the coordinates are
+  independently-chosen country representatives.
 
 ---
 

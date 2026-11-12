@@ -169,7 +169,7 @@ Layers are decoupled by the filesystem, not by imports. Each layer computes SHA-
 |----------|--------|--------|-----------|--------|---------------------|
 | Harvest → Consolidation | `harvest_ucdp.py` | `consolidate_ucdp.py` | `data/raw/ucdp_*/` | Parquet | `id`, `date_start`, `date_end`, `best`, `low`, `high`, `type_of_violence` |
 | Consolidation → Viewpoint | `consolidate_ucdp.py` | `build_viewpoint.py` | `data/consolidated/` | Parquet | All harvest columns + `_source_type`, `_source_version`, `_ingested_at` |
-| Viewpoint → Compilation | `build_viewpoint.py` | `compile_grid.py` | `data/viewpoint/*.parquet` | Parquet | `latitude`, `longitude`, `date_month`, `best`, `type_of_violence` |
+| Viewpoint → Compilation | `build_viewpoint.py` | `compile_grid.py` | `data/viewpoint/*.parquet` | Parquet | `priogrid_gid`, `date_month`, `best`, `type_of_violence`, and `latitude`, `longitude` as the fallback for rows declaring no cell |
 | Compilation → Assembly | `compile_grid.py` | `assemble_grid.py` | `data/compiled/` | npy `[T,H,W,C]` | `grid.npy` + `pgids.npy` + `time_steps.npy` + `feature_names.json` |
 | Assembly → Query/Consumer | `assemble_grid.py` | `load_dataset()` | `data/assembled/` or `.zarr` | npy or zarr | `grid.npy [T,H,W,C]` with same sidecars |
 

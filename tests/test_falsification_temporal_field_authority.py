@@ -52,10 +52,25 @@ from datafactory_compilation.preflight import (
 
 #: Scripts are the production entry points. A future one that takes the
 #: default is the failure this file exists to prevent.
-_SCRIPTS = Path("scripts")
+#:
+#: Anchored to this file rather than to the working directory. The first
+#: version used ``Path("scripts")``, which is CWD-relative: run from
+#: anywhere but the repository root the glob matched nothing, ``offenders``
+#: came back empty, and the guard passed while checking zero files.
+#: Demonstrated by running pytest from ``/tmp``. That is mutation
+#: category M1 -- vacuous by construction -- in a guard written to
+#: prevent exactly that class of defect, so the premise guard below is
+#: not decoration.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_SCRIPTS = _REPO_ROOT / "scripts"
 
-def _configs_without_date_field(path: Path) -> list[int]:
-    """Line numbers of CompilationConfig calls that omit date_field.
+#: Scanning fewer than this many scripts means the scan is not looking at
+#: the repository. The real count is far higher; this is a floor that
+#: catches a broken path, not an inventory.
+_MIN_SCRIPTS_SCANNED = 20
+
+def _configs_omitting(path: Path, keyword: str) -> list[int]:
+    """Line numbers of CompilationConfig calls that omit `keyword`.
 
     Parsed rather than pattern-matched. The first version of this used a
     regex and reported nine false positives: it stopped at the closing
@@ -77,7 +92,7 @@ def _configs_without_date_field(path: Path) -> list[int]:
         )
         if name != "CompilationConfig":
             continue
-        if not any(kw.arg == "date_field" for kw in node.keywords):
+        if not any(kw.arg == keyword for kw in node.keywords):
             offenders.append(node.lineno)
     return offenders
 
@@ -93,10 +108,16 @@ class TestProductionCallSitesNameTheirDateFieldGreen:
         failure -- someone adding a second UCDP-shaped compile script
         and inheriting a default that silently discards allocation.
         """
+        scanned = sorted(_SCRIPTS.rglob("*.py"))
+        assert len(scanned) >= _MIN_SCRIPTS_SCANNED, (
+            f"only {len(scanned)} scripts found under {_SCRIPTS} -- the "
+            f"scan is not looking at the repository, so a pass here "
+            f"would mean nothing"
+        )
         offenders = [
-            f"{path}:{line}"
-            for path in sorted(_SCRIPTS.glob("*.py"))
-            for line in _configs_without_date_field(path)
+            f"{path.relative_to(_REPO_ROOT)}:{line}"
+            for path in scanned
+            for line in _configs_omitting(path, "date_field")
         ]
 
         assert not offenders, (
@@ -104,6 +125,37 @@ class TestProductionCallSitesNameTheirDateFieldGreen:
             f"CompilationConfig.date_field='{CompilationConfig.date_field}', "
             "a raw field, so an allocated source would be silently "
             "collapsed onto its start month: " + ", ".join(offenders)
+        )
+
+    def test_no_script_takes_the_pgid_field_default(self) -> None:
+        """Same requirement on the spatial axis, for the same reason.
+
+        ``pgid_field`` defaults to ``None``, which places purely by
+        coordinates. On a source whose cells were decided upstream that
+        silently discards every decision -- the defect this epic exists
+        for. A script that means to place by coordinates must say so by
+        passing ``pgid_field=None`` explicitly, which is a declaration
+        rather than an inherited default.
+
+        The temporal half of this guard was written first and the
+        spatial half was not, which is how a guard protects the axis
+        nobody got wrong.
+        """
+        scanned = sorted(_SCRIPTS.rglob("*.py"))
+        assert len(scanned) >= _MIN_SCRIPTS_SCANNED, (
+            f"only {len(scanned)} scripts found under {_SCRIPTS}"
+        )
+        offenders = [
+            f"{path.relative_to(_REPO_ROOT)}:{line}"
+            for path in scanned
+            for line in _configs_omitting(path, "pgid_field")
+        ]
+
+        assert not offenders, (
+            "these production call sites inherit "
+            "CompilationConfig.pgid_field=None, so a source that "
+            "declares its cells would be placed by coordinates and "
+            "every allocation discarded: " + ", ".join(offenders)
         )
 
     def test_the_hazardous_default_is_still_what_we_think_it_is(

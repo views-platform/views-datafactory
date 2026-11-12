@@ -141,12 +141,29 @@ def delivered_pgid(cols: dict[str, np.ndarray]) -> np.ndarray:
     those as ``n_skipped_spatial``.
     """
     lat, lon = cols["latitude"], cols["longitude"]
-    usable = np.isfinite(lat) & np.isfinite(lon)
+    # latlon_to_pgid RAISES on an out-of-range coordinate rather than
+    # returning a sentinel, and it is called here on the whole vector --
+    # so one row at latitude 90.0 would abort the entire measurement
+    # with "Latitude out of range" instead of reporting. The compiler
+    # catches per row; this must not be less tolerant than the thing it
+    # is measuring.
+    usable = (
+        np.isfinite(lat) & np.isfinite(lon)
+        & (lat >= -90.0) & (lat <= 90.0)
+        & (lon >= -180.0) & (lon <= 180.0)
+    )
     out = np.full(lat.shape, -1, dtype="int64")
     if usable.any():
         out[usable] = latlon_to_pgid(
             lat[usable], lon[usable], DEFAULT_GRID_CONFIG
         ).astype("int64")
+    n_unusable = int((~usable).sum())
+    if n_unusable:
+        logger.warning(
+            "%d rows have coordinates outside the grid; counted as "
+            "unplaceable rather than aborting the measurement",
+            n_unusable,
+        )
     return out
 
 
@@ -308,7 +325,13 @@ def reconcile_against_compiled(
         # delivered value is >= this event-group's share. Equality holds
         # only when the prediction covers all contributors -- which it
         # does, because `predicted` is built from the whole viewpoint.
-        if abs(got - want) > 0.5:
+        #
+        # Written as `not (<= tol)` rather than `> tol` on purpose: every
+        # comparison against NaN is False, so `got - want > 0.5` would
+        # treat a NaN delivered value as an exact match. A null `best`
+        # aggregated by sum_field reaches the grid as NaN, so this is
+        # reachable, not theoretical.
+        if not (abs(got - want) <= 0.5):
             mismatched += 1
             if abs(got - want) > abs(worst[0]):
                 worst = (got - want, (pgid, month, want, got))
@@ -319,6 +342,23 @@ def reconcile_against_compiled(
     print(f"cell-months predicted : {len(predicted):,}")
     print(f"cell-months checked   : {checked:,}")
     print(f"mismatched            : {mismatched:,}")
+
+    # A grid whose temporal range does not cover the viewpoint sends
+    # every key down the `continue` path, leaving checked == 0 and
+    # mismatched == 0 -- which would print "delivered exactly" and exit
+    # 0 having compared nothing. Same shape as the missing-grid case
+    # above, which was handled; this one was not.
+    skipped = len(predicted) - checked
+    if checked == 0:
+        print("\n  NOTHING WAS CHECKED. The compiled grid's temporal "
+              "range does not overlap the viewpoint, so this "
+              "reconciliation is not a result.")
+        return False
+    if skipped:
+        print(f"\n  {skipped:,} predicted cell-months fell outside the "
+              f"grid's range and were NOT checked. A partial "
+              f"reconciliation is not a pass.")
+        return False
     if mismatched:
         d, detail = worst
         print(f"worst discrepancy     : {d:+,.0f}  at {detail}")
@@ -447,10 +487,19 @@ def main() -> None:
     for event_id in (TIGRAY_EVENT_ID, SECOND_EVENT_ID):
         report_event(cols, got, event_id)
 
+    reconciled = True
     if args.compiled is not None:
-        reconcile_against_compiled(cols, args.compiled)
+        reconciled = reconcile_against_compiled(cols, args.compiled)
     if args.served is not None:
         report_served(args.served)
+
+    # A reconciliation that fails must not exit 0. Returning the boolean
+    # and discarding it would make this script safe to wire into CI and
+    # useless there -- the same fail-green shape the defect it measures
+    # had. A missing compiled grid also returns False: a check that
+    # could not run is not a check that passed.
+    if not reconciled:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

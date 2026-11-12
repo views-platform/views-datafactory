@@ -6,8 +6,14 @@ Usage:
     uv run python scripts/compile_grid.py --source data/viewpoint/parity.parquet
     uv run python scripts/compile_grid.py --end-year 2026
 
-Reads a viewpoint Parquet (or any event Parquet with lat, lon, date
-columns) and produces npy arrays on the 259,200-cell PRIO-GRID.
+Reads a viewpoint Parquet and produces npy arrays on the 259,200-cell
+PRIO-GRID.
+
+The source must carry `priogrid_gid` -- the cell the viewpoint's spatial
+allocator decided -- because that field is the placement authority and
+`--pgid-field` defaults to it. For a raw event Parquet that has only
+lat, lon and a date, pass `--pgid-field ''` to place by coordinates
+instead.
 
 Does NOT fetch data, consolidate, or build viewpoints.
 """
@@ -122,14 +128,18 @@ def main() -> int:
 
     from datafactory_compilation.preflight import (
         reject_ignored_allocation,
+        reject_ignored_declared_cell,
     )
 
-    refusal = reject_ignored_allocation(
-        args.source, args.date_field
-    )
-    if refusal is not None:
-        print(refusal)
-        return 1
+    # Both axes, because the allocator decides on both and the compiler
+    # can discard either independently.
+    for refusal in (
+        reject_ignored_allocation(args.source, args.date_field),
+        reject_ignored_declared_cell(args.source, args.pgid_field),
+    ):
+        if refusal is not None:
+            print(refusal)
+            return 1
 
     from datafactory_compilation import compile_grid
     from datafactory_compilation.compilation_config import (

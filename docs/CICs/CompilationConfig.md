@@ -31,7 +31,8 @@ Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, 
 - Guarantees immutability (frozen dataclass)
 - Guarantees features are non-empty (`__post_init__` validation)
 - Guarantees feature names are unique (`__post_init__` validation)
-- Guarantees all field names are explicit — column mappings (`lat_field`, `lon_field`, `date_field`) are declared in config, never hardcoded in the compiler
+- Guarantees all field names are explicit — column mappings (`lat_field`, `lon_field`, `date_field`, `pgid_field`) are declared in config, never hardcoded in the compiler
+- Guarantees a **declared cell beats a derived one**: when `pgid_field` is set, a row's value in that column determines its grid cell, and `lat_field`/`lon_field` are consulted only for rows where the declared value is null or outside `[1, n_cells]` (ADR-015, ADR-003). Rows whose declared value is unusable are counted separately from rows that carry none, and any unusable value is reported — a fallback for decision-relevant placement may not be silent
 - Guarantees grid and temporal configs use standard defaults when not overridden
 - Provides default features: `FeatureSpec("event_count", "count")` and `FeatureSpec("fatalities", "sum_field")`
 - Grid output uses canonical `[T, H, W, C]` dimension order (time, height, width, channels)
@@ -48,10 +49,15 @@ Features are declared as `FeatureSpec` instances (frozen dataclass with `name`, 
 - `output_dir`: Path for compiled npy output
 - `ledger_path`: Path for provenance JSONL ledger
 - `lat_field`, `lon_field`, `date_field`: Column names in the source Parquet
+- `pgid_field`: Column name holding a grid cell an upstream stage has already decided, or `None`. **Default `None`**, which places purely by coordinates — the behaviour every caller had before this field existed. Set it only for a source whose cells were decided upstream; for a source nobody relocates (ACLED events are single-day points), the coordinates *are* the authority and this stays unset. Its pregridded counterpart is `PregriddedCompilationConfig.pgid_field`.
 - `output_dtype`: str, numpy dtype for output grid (default: `"float32"`, validated against whitelist)
 - `fill_value`: float, fill value for empty (cell, month) bins (default: `0.0`)
 
 Empty `features` causes immediate `ValueError`. Duplicate feature names cause immediate `ValueError`.
+
+A `pgid_field` naming a column the source does not contain is **not** detected at config
+time. `compile_grid` fails at compile time with the missing column named, which is loud
+but late; a caller passing an unverified field name should expect the failure there.
 
 ---
 

@@ -112,18 +112,15 @@ def _place_events(
     lats = table[config.lat_field].to_pylist()
     lons = table[config.lon_field].to_pylist()
     dates = table[config.date_field].to_pylist()
-    declared = (
-        table[config.pgid_field].to_pylist()
-        if config.pgid_field
-        else None
-    )
+    declared = None  # M-01 MUTATION: revert the declared-cell fix
 
     # Phase 1: compute bin assignments (row_index → bin key)
     row_bins: dict[int, tuple[int, int]] = {}
     n_skipped_spatial = 0
     n_skipped_temporal = 0
     n_declared_cell = 0
-    n_declared_fallback = 0
+    n_declared_absent = 0
+    n_declared_invalid = 0
 
     for i in range(n_rows):
         lat, lon, date_str = lats[i], lons[i], dates[i]
@@ -138,16 +135,26 @@ def _place_events(
         pgid: int | None = None
         if declared is not None:
             raw = declared[i]
-            if raw is not None:
+            if raw is None:
+                # No decision was made for this row. This is the case
+                # ADR-015:66 describes, and falling back is correct.
+                n_declared_absent += 1
+            else:
+                candidate: int | None
                 try:
                     candidate = int(raw)
                 except (ValueError, TypeError):
-                    candidate = 0
-                if 1 <= candidate <= n_cells:
+                    candidate = None
+                if candidate is not None and 1 <= candidate <= n_cells:
                     pgid = candidate
                     n_declared_cell += 1
-            if pgid is None:
-                n_declared_fallback += 1
+                else:
+                    # A decision was made and it is unusable: not an
+                    # integer, or outside [1, n_cells]. Counted apart
+                    # from the absent case because the two need
+                    # different responses -- one is normal, the other
+                    # means the upstream stage wrote something wrong.
+                    n_declared_invalid += 1
 
         if pgid is None:
             if lat is None or lon is None:
@@ -205,24 +212,32 @@ def _place_events(
     if config.pgid_field:
         logger.info(
             "Placement authority '%s': %d rows used the declared cell, "
-            "%d fell back to coordinates",
+            "%d had none, %d were unusable",
             config.pgid_field,
             n_declared_cell,
-            n_declared_fallback,
+            n_declared_absent,
+            n_declared_invalid,
         )
         # Said out loud because ADR-003 forbids an implicit fallback for
-        # decision-relevant semantics. A caller naming a pgid field
-        # expects it to be used; a run where most rows fell back is
-        # reporting a column that is absent, null or out of range, and
-        # that must be visible rather than inferred from the output.
-        if n_declared_fallback > n_declared_cell:
+        # decision-relevant semantics.
+        #
+        # ANY unusable value is reported, not a majority of them. The
+        # first version warned only when fallbacks outnumbered uses,
+        # which left a source with 49% corrupt declared cells silent --
+        # and an upstream stage that writes one bad cell is a stage
+        # that can write a million. There is no benign rate for this:
+        # the allocator either decided a placeable cell or it did not.
+        if n_declared_invalid:
             logger.warning(
                 "Placement authority '%s' was unusable on %d of %d "
-                "rows -- more rows fell back to coordinates than used "
-                "the declared cell",
+                "rows -- not an integer, or outside [1, %d]. Those "
+                "rows were placed from their coordinates instead, "
+                "which discards whatever the upstream stage intended "
+                "for them.",
                 config.pgid_field,
-                n_declared_fallback,
+                n_declared_invalid,
                 n_rows,
+                n_cells,
             )
 
     # Phase 2: extract columns as numpy arrays, build row-index bins
@@ -393,6 +408,10 @@ def compile_grid(config: CompilationConfig) -> Path:
             dataset_id=DATASET_ID,
             source_path=config.source_path,
             source_digest=source_digest,
+        placement={
+            "pgid_field": config.pgid_field,
+            "date_field": config.date_field,
+        },
         )
 
         logger.info(
