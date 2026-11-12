@@ -28,6 +28,11 @@ Output arrays have shape `(time_steps, height, width, channels)`:
 
 ### 2. Spatial Binning: Floor-Based Cell Assignment
 
+> **Superseded as unconditional by the Amendment of 2026-11-12 below.** A cell declared by an
+> upstream stage wins when the compilation config names the field carrying it and the value is
+> in range. Everything in this section still holds, as the fallback and as the only way a
+> *coordinate* becomes a cell.
+
 Events are assigned to grid cells using `latlon_to_pgid()`, which uses floor-based assignment:
 
 ```python
