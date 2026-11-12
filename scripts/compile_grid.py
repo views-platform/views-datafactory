@@ -6,8 +6,14 @@ Usage:
     uv run python scripts/compile_grid.py --source data/viewpoint/parity.parquet
     uv run python scripts/compile_grid.py --end-year 2026
 
-Reads a viewpoint Parquet (or any event Parquet with lat, lon, date
-columns) and produces npy arrays on the 259,200-cell PRIO-GRID.
+Reads a viewpoint Parquet and produces npy arrays on the 259,200-cell
+PRIO-GRID.
+
+The source must carry `priogrid_gid` -- the cell the viewpoint's spatial
+allocator decided -- because that field is the placement authority and
+`--pgid-field` defaults to it. For a raw event Parquet that has only
+lat, lon and a date, pass `--pgid-field ''` to place by coordinates
+instead.
 
 Does NOT fetch data, consolidate, or build viewpoints.
 """
@@ -16,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import logging
 import sys
 import time
 from pathlib import Path
@@ -64,12 +71,33 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--pgid-field",
+        default="priogrid_gid",
+        help=(
+            "Column holding a cell an upstream stage already decided; "
+            "it wins over the coordinates, which stay as the fallback "
+            "for rows where it is null or out of range (ADR-015). "
+            "Pass an empty string to place purely by coordinates "
+            "(default: priogrid_gid)"
+        ),
+    )
+    parser.add_argument(
         "--provenance-dir",
         type=Path,
         default=Path("provenance"),
         help="Provenance directory",
     )
     args = parser.parse_args()
+
+    # Without this, every logger.info in the compilation layer is
+    # discarded: no handler is configured, and Python's lastResort
+    # handler only emits WARNING and above. The placement counters --
+    # how many rows used the declared cell and how many fell back --
+    # are INFO, so they were written and never seen, which is the same
+    # "correct code that never runs" shape as the skipped test that let
+    # the seam ship in the first place. ADR-008 wants the pipeline
+    # observable; a counter nobody can read is not observability.
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     print("=" * 60)
     print("PRIO-GRID COMPILER (Layer 4)")
@@ -80,6 +108,14 @@ def main() -> int:
         f"{args.end_year}-12"
     )
     print(f"Date field: {args.date_field}")
+    print(
+        "Placement: "
+        + (
+            f"{args.pgid_field}, coordinates as fallback"
+            if args.pgid_field
+            else "coordinates only"
+        )
+    )
     print("=" * 60)
     print()
 
@@ -89,6 +125,21 @@ def main() -> int:
             "Run scripts/build_viewpoint.py first."
         )
         return 1
+
+    from datafactory_compilation.preflight import (
+        reject_ignored_allocation,
+        reject_ignored_declared_cell,
+    )
+
+    # Both axes, because the allocator decides on both and the compiler
+    # can discard either independently.
+    for refusal in (
+        reject_ignored_allocation(args.source, args.date_field),
+        reject_ignored_declared_cell(args.source, args.pgid_field),
+    ):
+        if refusal is not None:
+            print(refusal)
+            return 1
 
     from datafactory_compilation import compile_grid
     from datafactory_compilation.compilation_config import (
@@ -139,6 +190,7 @@ def main() -> int:
             / "ledger.jsonl"
         ),
         date_field=args.date_field,
+        pgid_field=args.pgid_field or None,
     )
 
     n_cells = config.grid_config.n_cells

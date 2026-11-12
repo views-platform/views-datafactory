@@ -4,6 +4,20 @@ Verifies that viewpoint output columns match compilation input
 expectations for all 6 sources. Catches schema drift at test time
 rather than at runtime during compilation.
 
+**Name agreement is necessary and not sufficient, and this file is the
+reason that sentence is here.** These tests compare column *names*
+between two layers. They cannot see a column that both layers carry and
+one of them ignores -- which is exactly what happened to
+``priogrid_gid`` for four months: present in the viewpoint output,
+present in this contract's reasoning, and never read by
+``grid_compilation._place_events``, which re-derived the cell from the
+coordinates and discarded every spatial allocation. Totals were
+conserved, so no conservation check fired either.
+
+For the assertion that values *flow* across the boundary rather than
+merely being named on both sides, see
+``tests/test_falsification_spatial_allocation_delivery.py``.
+
 Two compilation paths:
 - Event-based (UCDP, ACLED): CompilationConfig with lat/lon/date
 - Pre-gridded (GHS-POP, GHS-BUILT-S, V-Dem, SHDI):
@@ -33,6 +47,12 @@ from datafactory_compilation.pregridded_compilation import (
 UCDP_COMPILATION_COLUMNS: set[str] = {
     CompilationConfig.lat_field,
     CompilationConfig.lon_field,
+    # The cell the viewpoint's spatial allocator decided. Absent from
+    # this set until 2026-11-12, and its absence was not an oversight:
+    # the compiler genuinely did not read it, so the contract was
+    # accurate about a compiler that discarded every allocation. The set
+    # described the code instead of the requirement, and agreed with it.
+    "priogrid_gid",
     "date_month",
     "best",
     "type_of_violence",

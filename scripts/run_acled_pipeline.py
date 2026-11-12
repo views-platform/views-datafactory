@@ -227,6 +227,10 @@ def main() -> int:
                 "provenance/compilation/acled_ledger.jsonl",
             ),
             date_field="event_date",
+            # ACLED events are single-day points and nothing
+            # relocates them, so the coordinates are the
+            # authority here. Declared rather than inherited.
+            pgid_field=None,
             lat_field="latitude",
             lon_field="longitude",
         )
