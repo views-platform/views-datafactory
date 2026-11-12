@@ -112,3 +112,67 @@ The 1-indexed convention means `pgid` ranges from 1 to 259,200. Grid arrays use 
 - `src/datafactory_compilation/grid_compilation.py` — the compiler
 - `src/datafactory_priogrid/cell_generator.py` — spatial binning implementation
 - ADR-010 (GridConfig spatial-only) — grid geometry decisions
+
+---
+
+## Amendment 2026-11-12 — Invariant 2 is now conditional (#547, #551)
+
+**Invariants 1, 3, 4, 5 and 6 are unchanged.** This amendment narrows Invariant 2 and records
+two tensions found while doing it. Dated amendment, not a rewrite.
+
+### 1. Invariant 2 is no longer unconditional
+
+§Decision, Invariant 2 states: *"Events are assigned to grid cells using `latlon_to_pgid()`."*
+Superseded as written. The rule is now:
+
+> An event is assigned to the cell its source **declares**, when the compilation config names a
+> field carrying that declaration and the row's value is present and inside the grid.
+> Otherwise it is assigned by `latlon_to_pgid` on its coordinates, exactly as before.
+
+Floor-based assignment, the south-west boundary rule and the clamping behaviour below are all
+unchanged; they now describe the fallback rather than the only path. A compilation config that
+names no such field — which is the library default, and what ACLED uses — behaves exactly as
+this ADR originally specified.
+
+### 2. The heading was right, and that is why this was done in the open
+
+§Decision's heading says these invariants *"cannot be changed without breaking all downstream
+consumers"*. Changing Invariant 2 **does** change delivered values: that is the point of the
+change, since the previous behaviour discarded the spatial allocation ADR-049 decided. The
+three consumer repositories were told before the change shipped rather than after, with the
+measured displacement, and the measurement is in
+`reports/investigation_allocation_delivery/findings.md`.
+
+What makes this a narrowing rather than a reversal: `latlon_to_pgid` remains the only way a
+*coordinate* becomes a cell, and remains the sole spatial-binning implementation. What changed
+is whether coordinates are consulted at all when an upstream stage has already decided.
+
+### 3. A declared cell is not clamped, and that asymmetry is deliberate
+
+Invariant 2 ends: *"Points outside the grid bounds are clamped to the nearest valid cell."*
+That leniency is **not** extended to a declared cell. A coordinate slightly outside the grid is
+a near-miss worth rescuing; a declared cell index outside `1..n_cells` is a data error, and
+clamping it would invent a location. Such a value falls back to the coordinates and is counted
+and warned on, separately from a row that simply carries no declaration — conflating "no
+decision was made" with "the decision is corrupt" would hide both.
+
+### 4. A tension recorded, not resolved
+
+Invariant 3 states that events outside the configured temporal range are *"silently skipped
+(logged as warnings)"*. ADR-003 requires that a contradiction between two representations of
+the same fact *"fail loudly and immediately"* and forbids implicit fallbacks. **Invariant 3
+explicitly authorises the behaviour ADR-003 forbids**, and that authorisation is what let a
+whole-grid misplacement pass as a warning for four months.
+
+This amendment does not resolve it. Deciding whether out-of-range input should fail the
+compile is a change to the operational contract of every source, and it is not a patch-release
+question. It is recorded here so the next person reading Invariant 3 knows the sentence is
+contested rather than settled.
+
+### 5. Observation
+
+Column-schema agreement at this boundary was tested by name and found sound. It was: the names
+agreed. **Name agreement is necessary and not sufficient** — it cannot see that one side writes
+a decision into a column the other side does not read. The cross-layer contract test now
+declares `priogrid_gid` among the compiler's inputs, and the delivery guards assert that the
+number of cells an allocation chooses is the number the grid receives.
