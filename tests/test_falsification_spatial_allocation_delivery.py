@@ -99,8 +99,12 @@ def _summary_event(month: str = "2021-12-01") -> dict:
         "latitude": lat,
         "longitude": lon,
         "best": _GEN.SUMMARY_EVENT_BEST,
-        "low": _GEN.SUMMARY_EVENT_BEST,
-        "high": _GEN.SUMMARY_EVENT_BEST,
+        # Distinct from best on purpose -- see the comment in
+        # scripts/generate_synthetic_data.py's _synthetic_event. Equal
+        # values make a per-field conservation check indistinguishable
+        # from a single-field one (#555 audit survivor M-06).
+        "low": _GEN.SUMMARY_EVENT_BEST // 3,
+        "high": _GEN.SUMMARY_EVENT_BEST * 2 + 1,
         "date_start": "2021-01-01",
         "date_end": "2021-12-31",
         "date_month": month,

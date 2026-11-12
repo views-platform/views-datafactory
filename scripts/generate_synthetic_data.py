@@ -255,8 +255,17 @@ def _synthetic_event(
         "date_prec": date_prec,
         "where_prec": where_prec,
         "best": best,
-        "low": best,
-        "high": best,
+        # Deliberately NOT equal to best, and deliberately not round
+        # multiples of it. All three are extensive and are apportioned
+        # independently by the same weights, so a fixture setting them
+        # equal turns a three-field conservation loop into one
+        # assertion run three times. The #555 mutation audit recorded
+        # that as a survivor: changing which field the allocator reads
+        # left the loop green. UCDP's own ordering is low <= best <=
+        # high, and these divide with different remainders so the
+        # apportionment rounding differs per field too.
+        "low": best // 3,
+        "high": best * 2 + 1,
         "type_of_violence": 1,
         "_source_type": "annual",
         "_source_version": "25.1",
