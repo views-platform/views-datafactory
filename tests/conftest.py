@@ -25,20 +25,83 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+#: Marker -> the flag that includes it. Gated markers are withheld from
+#: a default run; the flag is what a reader needs in order to get the
+#: coverage back, so it is reported alongside the count.
+_GATED_MARKERS: dict[str, str] = {
+    "falsification": "--run-falsification",
+    "consumer": "--run-consumer",
+}
+
+
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item],
 ) -> None:
-    """Deselect gated markers unless their flag is passed."""
-    run_falsification = config.getoption("--run-falsification")
-    run_consumer = config.getoption("--run-consumer")
+    """Deselect gated markers unless their flag is passed.
+
+    **Why this now reports.** Until 2026-11-12 the removed items simply
+    vanished: they were dropped from ``items`` without telling pytest,
+    so they did not appear in the run's counts at all -- not as passed,
+    not as failed, not even as skipped. Two whole markers of coverage
+    were withheld and no line of output said so. That is the same class
+    of failure as the defect epic #547 exists to fix: coverage that
+    stops happening and leaves no trace.
+
+    ``pytest_deselected`` is the hook pytest provides for exactly this,
+    and calling it makes the items appear as *deselected* in the
+    summary. ``pytest_terminal_summary`` below then names the count and
+    the flag that would include them (#554).
+    """
+    withheld: dict[str, list[pytest.Item]] = {
+        marker: [] for marker in _GATED_MARKERS
+    }
     kept: list[pytest.Item] = []
     for item in items:
-        if "falsification" in item.keywords and not run_falsification:
-            continue
-        if "consumer" in item.keywords and not run_consumer:
-            continue
-        kept.append(item)
+        for marker, flag in _GATED_MARKERS.items():
+            if marker in item.keywords and not config.getoption(flag):
+                withheld[marker].append(item)
+                break
+        else:
+            kept.append(item)
     items[:] = kept
+
+    removed = [item for group in withheld.values() for item in group]
+    if removed:
+        config.hook.pytest_deselected(items=removed)
+
+    # Read back by pytest_terminal_summary. Stashed on config because
+    # that is the object both hooks are handed.
+    config.stash[_WITHHELD] = {
+        marker: len(group)
+        for marker, group in withheld.items()
+        if group
+    }
+
+
+_WITHHELD: pytest.StashKey[dict[str, int]] = pytest.StashKey()
+
+
+def pytest_terminal_summary(
+    terminalreporter: pytest.TerminalReporter,
+    exitstatus: int,
+    config: pytest.Config,
+) -> None:
+    """Say out loud how much coverage this run withheld, and how to get it.
+
+    One line per gated marker. A reader of CI output can now see that
+    coverage was withheld deliberately, rather than having to know that
+    ``conftest.py`` removes two markers and that no workflow passes
+    either flag.
+    """
+    counts = config.stash.get(_WITHHELD, {})
+    if not counts:
+        return
+    terminalreporter.write_sep("-", "coverage withheld by marker")
+    for marker, count in sorted(counts.items()):
+        terminalreporter.write_line(
+            f"{count} {marker} test(s) deselected -- pass "
+            f"{_GATED_MARKERS[marker]} to run them"
+        )
 
 
 def load_synthetic_generator():  # type: ignore[no-untyped-def]
