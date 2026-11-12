@@ -41,6 +41,34 @@ def pytest_collection_modifyitems(
     items[:] = kept
 
 
+def load_synthetic_generator():  # type: ignore[no-untyped-def]
+    """Import ``scripts/generate_synthetic_data.py`` as a module.
+
+    ``scripts/`` is not a package, so it cannot be imported by name.
+    ``tests/test_synthetic_pipeline.py`` has loaded it this way since
+    the synthetic path was built; it now has three callers, which is
+    why the loader lives here rather than being copied a third time.
+
+    Exposing the generator to tests is deliberate: its planted
+    constants are the expected answers, so a test asserts against the
+    same numbers the fixture was written from rather than against a
+    golden file on disk.
+    """
+    import importlib.util
+
+    path = (
+        Path(__file__).resolve().parent.parent
+        / "scripts"
+        / "generate_synthetic_data.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "generate_synthetic_data", path,
+    )
+    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module
+
+
 def make_ucdp_event(
     event_id: int = 1,
     *,

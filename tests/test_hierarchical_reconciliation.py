@@ -130,6 +130,10 @@ _DATA_DIR = Path("data/raw/gaul_admin")
 class TestRealDataHierarchy:
     """Verify real GAUL Parquet files have consistent nesting."""
 
+    # Stays on real data (#550 reviewed this). The subject is whether
+    # the three real crosswalks nest consistently with each other.
+    # The same property on a synthetic trio is already covered by the
+    # classes above, which build their hierarchies in the test body.
     @pytest.mark.skipif(
         not (_DATA_DIR / "gaul0_code.parquet").exists(),
         reason="No local GAUL data — run generate_area_majority_gaul.py first",

@@ -255,6 +255,17 @@ class TestPurityContractForStochasticStrategies:
                 )
 
 
+# Stays on real data (#550 reviewed this). The subject is ADR-049's
+# golden criterion: that cell 148759's total comes down to its
+# proportional share *within the real Tigray polygon*, and that the real
+# polygon still sums to the original. Both are claims about Ethiopian
+# geography and the store's own contents.
+#
+# The mechanism underneath -- a proportional allocation spreads an
+# imprecise event across a polygon's weighted cells and conserves its
+# total -- is asserted on synthetic geography, in CI, by
+# tests/test_synthetic_spatial_fixtures.py and
+# TestAdr053ComposedOnSyntheticGeographyGreen.
 @pytest.mark.skipif(
     not (STORE.exists() and GAUL1.exists() and GAUL0.exists()),
     reason=(

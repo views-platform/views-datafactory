@@ -40,7 +40,12 @@ class TestF2ShdiCrosswalkNotCountryLevel:
     """SHDI needs admin-1 → pgid crosswalk, not ISO3 → pgid."""
 
     def test_gaul1_crosswalk_exists(self) -> None:
-        """gaul1_code.parquet must exist for admin-1 mapping."""
+        """gaul1_code.parquet must exist for admin-1 mapping.
+
+        Stays on real data (#550 reviewed this). The subject is
+        whether the harvest produced the file at all, so pointing it
+        at a synthetic copy would make it assert nothing.
+        """
         from pathlib import Path
 
         import pytest

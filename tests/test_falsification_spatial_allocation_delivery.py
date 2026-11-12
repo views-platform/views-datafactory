@@ -30,6 +30,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from conftest import load_synthetic_generator
 
 from datafactory_compilation.compilation_config import (
     CompilationConfig,
@@ -44,24 +45,25 @@ from datafactory_viewpoint.spatial_distribution import (
 )
 from datafactory_viewpoint.spatial_weights import build_spatial_weight_map
 
-GAUL1 = Path("data/raw/gaul_admin/gaul1_code.parquet")
-GAUL0 = Path("data/raw/gaul_admin/gaul0_code.parquet")
+_GEN = load_synthetic_generator()
 
-#: Cell 148759 is event 463131's regional centroid — the cell that held
-#: 113,395 state-based fatalities in one month before this release.
-TIGRAY_PGID = 148759
+#: The cell the imprecise event names as its own location.
+#:
+#: The incident's cell was 148759, Tigray's regional centroid, which
+#: held 113,395 state-based fatalities in a single month. This is a
+#: synthetic cell instead (``scripts/generate_synthetic_data.py``):
+#: nothing about the seam depends on which cell it is, and the real one
+#: required the GAUL crosswalks, which ``.gitignore`` keeps out of CI.
+#: A module-level ``skipif`` on those files is what made this defect
+#: invisible for four months; #550 removed it.
+SOURCE_PGID = _GEN.SUMMARY_EVENT_PGID
 
-#: Cells of the admin-1 polygon containing TIGRAY_PGID, read from the
-#: live crosswalk rather than hardcoded.
-_POLYGON_WELL_LOCATED = (148039, 149477, 150197, 150199, 149479)
+#: The cells a correct admin-1 allocation of that event must reach.
+ALLOCATED_CELLS = _GEN.ADMIN1_ALLOCATION_CELLS
 
-pytestmark = pytest.mark.skipif(
-    not (GAUL1.exists() and GAUL0.exists()),
-    reason=(
-        "needs the GAUL crosswalks; a skip here is why this defect "
-        "shipped, so it is stated rather than silent"
-    ),
-)
+#: A polygon cell that is not the source cell, for the cases that need
+#: coordinates resolving somewhere other than the declaration.
+_OTHER_CELL = next(p for p in ALLOCATED_CELLS if p != SOURCE_PGID)
 
 
 def _centroid(pgid: int) -> tuple[float, float]:
@@ -69,29 +71,36 @@ def _centroid(pgid: int) -> tuple[float, float]:
     return float(lat[0]), float(lon[0])
 
 
-def _weight_map() -> object:
-    """A weight map whose polygon has several well-located cells."""
-    cells = [*_POLYGON_WELL_LOCATED, TIGRAY_PGID]
-    table = pa.table({
-        "where_prec": pa.array([1] * len(cells), pa.int64()),
-        "priogrid_gid": pa.array(cells, pa.int64()),
-        "best": pa.array([100, 200, 300, 150, 120, 180], pa.int64()),
-    })
-    return build_spatial_weight_map(table, GAUL1, GAUL0)
+def _weight_map(tmp_path: Path) -> object:
+    """A weight map over the synthetic polygon, built by the real code.
+
+    The crosswalks and the well-located events are written under
+    ``tmp_path`` by the synthetic generator, so these guards run with
+    nothing under ``data/``. ``build_spatial_weight_map`` itself is the
+    production function, unchanged.
+    """
+    gaul = _GEN.write_synthetic_gaul(tmp_path / "gaul_admin")
+    events_path = tmp_path / "well_located.parquet"
+    _GEN.write_synthetic_ucdp_events(events_path)
+    return build_spatial_weight_map(
+        pq.read_table(events_path),
+        gaul["gaul1_code"],
+        gaul["gaul0_code"],
+    )
 
 
 def _summary_event(month: str = "2021-12-01") -> dict:
-    lat, lon = _centroid(TIGRAY_PGID)
+    lat, lon = _centroid(SOURCE_PGID)
     return {
-        "id": 463131,
+        "id": _GEN.SUMMARY_EVENT_ID,
         "where_prec": 5,
         "date_prec": 5,
-        "priogrid_gid": TIGRAY_PGID,
+        "priogrid_gid": SOURCE_PGID,
         "latitude": lat,
         "longitude": lon,
-        "best": 113368,
-        "low": 113368,
-        "high": 113368,
+        "best": _GEN.SUMMARY_EVENT_BEST,
+        "low": _GEN.SUMMARY_EVENT_BEST,
+        "high": _GEN.SUMMARY_EVENT_BEST,
         "date_start": "2021-01-01",
         "date_end": "2021-12-31",
         "date_month": month,
@@ -148,7 +157,7 @@ class TestAllocationSurvivesCompilation:
         places all of them into that one cell.
         """
         rows = get_spatial_distribution("proportional")(
-            _summary_event(), _weight_map(),
+            _summary_event(), _weight_map(tmp_path),
         )
         allocated = {r["priogrid_gid"] for r in rows}
         assert len(allocated) > 1, (
@@ -177,7 +186,7 @@ class TestAllocationSurvivesCompilation:
         FAILS TODAY: exactly one cell carries all 113,368.
         """
         rows = get_spatial_distribution("proportional")(
-            _summary_event(), _weight_map(),
+            _summary_event(), _weight_map(tmp_path),
         )
         slab = _compile(
             rows, tmp_path,
@@ -189,12 +198,14 @@ class TestAllocationSurvivesCompilation:
         # future change drops these rows instead of misplacing them --
         # skipped spatially, or a month outside the temporal range --
         # this guard would go green on a total absence.
-        assert slab.sum() == pytest.approx(113368), (
-            f"delivered {slab.sum():,.0f} of 113,368 -- the rows were "
+        assert slab.sum() == pytest.approx(_GEN.SUMMARY_EVENT_BEST), (
+            f"delivered {slab.sum():,.0f} of "
+            f"{_GEN.SUMMARY_EVENT_BEST:,} -- the rows were "
             f"dropped, not placed, so the maximum below proves nothing"
         )
-        assert slab.max() < 113368, (
-            f"one cell holds {slab.max():,.0f} of 113,368 — the "
+        assert slab.max() < _GEN.SUMMARY_EVENT_BEST, (
+            f"one cell holds {slab.max():,.0f} of "
+            f"{_GEN.SUMMARY_EVENT_BEST:,} — the "
             f"allocation did not survive compilation"
         )
 
@@ -219,7 +230,7 @@ class TestAllocationSurvivesCompilation:
         declaration-derived placement cannot be confused.
         """
         rows = get_spatial_distribution("proportional")(
-            _summary_event(), _weight_map(),
+            _summary_event(), _weight_map(tmp_path),
         )
         allocated = sorted({r["priogrid_gid"] for r in rows})
         assert len(allocated) > 1, (
@@ -290,7 +301,7 @@ class TestTemporalAxisHasTheSameSeam:
         """
         months = [f"2021-{m:02d}-01" for m in range(1, 13)]
         rows = [
-            {**_summary_event(month=m), "best": 113368 // 12}
+            {**_summary_event(month=m), "best": _GEN.SUMMARY_EVENT_BEST // 12}
             for m in months
         ]
         slab = _compile(rows, tmp_path)  # library default date_field
@@ -343,7 +354,7 @@ class TestUnusableDeclaredCellRed:
         """One row per declared value, each with distinct coordinates."""
         out = []
         for n, value in enumerate(declared):
-            lat, lon = _centroid(_POLYGON_WELL_LOCATED[0])
+            lat, lon = _centroid(_OTHER_CELL)
             out.append({
                 **_summary_event(),
                 "priogrid_gid": value,
@@ -381,7 +392,7 @@ class TestUnusableDeclaredCellRed:
             f"an out-of-range declared cell {bad} was used as a cell"
         )
         # It fell back to the coordinates, which resolve to this cell.
-        assert delivered == {_POLYGON_WELL_LOCATED[0]}, (
+        assert delivered == {_OTHER_CELL}, (
             f"expected the coordinate fallback, got {delivered}"
         )
         assert slab.sum() == pytest.approx(10)
@@ -396,7 +407,7 @@ class TestUnusableDeclaredCellRed:
         was silent. There is no benign rate: the allocator either
         decided a placeable cell or it did not.
         """
-        rows = self._rows([148_039, 148_040, 149_477, 0])
+        rows = self._rows([*ALLOCATED_CELLS[:3], 0])
         with caplog.at_level(logging.INFO):
             _compile(
                 rows, tmp_path,
@@ -416,7 +427,7 @@ class TestUnusableDeclaredCellRed:
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture,
     ) -> None:
         """A null is normal; conflating it with corruption hides both."""
-        rows = self._rows([148_039, None])
+        rows = self._rows([ALLOCATED_CELLS[0], None])
         with caplog.at_level(logging.INFO):
             _compile(
                 rows, tmp_path,
