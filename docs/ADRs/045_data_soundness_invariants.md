@@ -34,7 +34,7 @@ Extensive features must conserve: `input = placed + excluded`. Intensive feature
 | **Harvest output** | Raw data written atomically (temp + rename); content digest recorded in provenance ledger | ADR-011, event_store.py |
 | **Harvest -> Consolidation** | Lossless append; no row modification; deduplication by event ID preserves latest version | ADR-023 |
 | **Consolidation -> Viewpoint** | Count conservation: `placed + filtered = input` with per-reason exclusion counts logged; summary event detection formula (ADR-023); month assignment from `date_end` | ADR-023, ADR-040 |
-| **Viewpoint -> Compilation** | Column schema match (required fields not stripped); spatial binning via floor-based cell assignment; temporal binning at month precision; dimension order [T, H, W, C] | ADR-024 |
+| **Viewpoint -> Compilation** | Column schema match (required fields not stripped); cell assignment from the field the compilation config declares, falling back to floor-based binning on the coordinates (**corrected 2026-11-12, previously "spatial binning via floor-based cell assignment"** — see the Amendment below and ADR-024's); temporal binning at month precision; dimension order [T, H, W, C] | ADR-024 |
 | **Compilation -> Assembly** | All 259,200 cells present; feature stacking in declaration order; `feature_names.json` sidecar matches channel dimension | ADR-024 |
 | **Assembly -> Query** | Read-back fidelity (mmap returns identical bytes); region subsetting preserves values; feature selection by name matches channel index | ADR-024 |
 | **Assembly -> Country-Month** | For extensive features: `sum(grid cells in country) = CM(country)` with tolerance `rtol=1e-6, atol=1e-4` (float32 summation) | ADR-040 |

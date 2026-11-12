@@ -59,7 +59,7 @@ This is a parity target, not a design ideal. Future UCDP viewpoints should revis
 - `annual_wins` — Annual takes precedence. For months not covered by annual, the latest candidate version wins. Does not use `.9` data.
 - `dot9_wins` (production parity) — Annual takes precedence, then `.9`, then candidate. For months covered by the annual release, annual wins. For the trailing window, `.9` wins over candidate. This matches VIEWS production behavior.
 
-**Summary event handling:** Events with `date_prec=5` (spanning `date_start` to `date_end` across multiple months) are distributed across those months. Fatalities (`best`, `low`, `high`) are divided evenly across the spanned months, following the production `fix_summary_events` logic.
+**Summary event handling:** Events with `date_prec=5` (spanning `date_start` to `date_end` across multiple months) are distributed across those months. Fatalities (`best`, `low`, `high`) are divided evenly across the spanned months, following the production `fix_summary_events` logic. — **Superseded by ADR-053**, which allocates across the spanned months by observed activity rather than evenly, and by exact apportionment rather than `ceil`. Even division remains reachable as a named profile; it is no longer what production does.
 
 **Month assignment:** Uses `date_end` for month assignment, matching production behavior. This is a documented choice, not an accident — future viewpoint versions may use `date_start` or a distribution approach.
 
@@ -86,7 +86,8 @@ If UCDP discontinues `.9`, we lose access to its exclusive events but our annual
 ### Summary Events (date_prec=5)
 - 1.4% of events, 15.8% of fatalities in 2023 annual data
 - Span multiple months (`date_start` to `date_end`)
-- Production distributes fatalities evenly across spanned months
+- ~~Production distributes fatalities evenly across spanned months~~ — **Superseded by
+  ADR-053.** Production has allocated by observed activity since 2026-11-10.
 - Future viewpoint versions may use more sophisticated distribution
 
 ### Candidate Version Overlap
@@ -101,7 +102,9 @@ If UCDP discontinues `.9`, we lose access to its exclusive events but our annual
 
 ### priogrid_gid vs. Computed Cell
 - UCDP provides `priogrid_gid` for most events
-- Our current compiler computes cell from lat/lon
+- ~~Our current compiler computes cell from lat/lon~~ — **Superseded by the Amendment of
+  2026-11-12 below.** True when written and false since the compiler was given
+  `CompilationConfig.pgid_field`; it now prefers the declared cell, as this section asked.
 - These can disagree (border cells, precision issues)
 - Viewpoint v1 should prefer `priogrid_gid` to match production
 
