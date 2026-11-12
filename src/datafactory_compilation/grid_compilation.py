@@ -112,7 +112,11 @@ def _place_events(
     lats = table[config.lat_field].to_pylist()
     lons = table[config.lon_field].to_pylist()
     dates = table[config.date_field].to_pylist()
-    declared = None  # M-01 MUTATION: revert the declared-cell fix
+    declared = (
+        table[config.pgid_field].to_pylist()
+        if config.pgid_field
+        else None
+    )
 
     # Phase 1: compute bin assignments (row_index → bin key)
     row_bins: dict[int, tuple[int, int]] = {}
