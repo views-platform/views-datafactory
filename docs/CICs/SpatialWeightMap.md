@@ -239,6 +239,17 @@ said the guarantee was unguarded in CI outright. It was not; the audit's scope w
 this epic added, and a pre-existing one covered seam one. The absence was real but one layer
 lower, and only re-running the mutation at the second seam established that.
 
+**What "proportional" is pinned to, quantitatively.** An independent re-audit of the two
+guards above found that the first one initially pinned the *size* of a weighting error rather
+than the property: quantising every share with `round(share, 2)` passed the entire suite,
+because the fixture's shares were all exactly representable at two decimal places. That
+matters beyond the test, because quantisation is how proportionality degrades in practice —
+in a polygon with many cells the small ones round to zero weight and receive nothing, and a
+polygon whose every cell rounds to zero makes `apportion` raise. The fixture now uses prime
+fatality counts, and the measured boundary is that `round(share, 6)` is caught while
+`round(share, 7)` survives. So the guarantee this section states is enforced to roughly one
+part in a million, not merely "not flat".
+
 Note that both are a different uniformity from §3 step 4: the fallback spreads over the
 polygon's *whole* cell list and so changes the cell set, which many guards see; replacing the
 weights changes only the magnitudes, which until now almost nothing did.
