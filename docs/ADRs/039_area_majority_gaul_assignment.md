@@ -37,7 +37,7 @@ The GAUL spatial join is precomputed using shapely polygon intersection and stor
 
 Each file has columns `gid` (int) and `value` (int). Same schema as the former centroid-based files.
 
-**Pipeline integration:** `refresh_pipeline.sh` runs `harvest_gaul.py` (for shapefile download + name files), then `generate_area_majority_gaul.py` which overwrites the three code files with area-majority versions. Name files and iso3_code remain from the centroid harvester.
+**Pipeline integration:** `refresh_pipeline.sh` runs `harvest_gaul.py` (for shapefile download + name files), then `generate_area_majority_gaul.py` which overwrites the three code files with area-majority versions. ~~Name files and iso3_code remain from the centroid harvester.~~ — **Corrected 2026-11-12.** They do not. `generate_area_majority_gaul.py` writes all seven files itself: the three code files, the three name files, and `iso3_code`. Its `GAUL_NAME_VARIABLES` declares the four non-code outputs alongside `GAUL_CODE_VARIABLES`, both are written in the same pass, and all seven on disk carry the full 259,200 rows. Every file is therefore area-majority; none is centroid-derived.
 
 **Regeneration:** Run the generation script when GAUL updates (estimated next: ~2030). The script, GAUL shapefile version, computation method, and content digest are recorded in the provenance ledger.
 
