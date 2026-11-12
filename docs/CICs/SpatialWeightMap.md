@@ -211,20 +211,37 @@ share = weight_map.admin1_weights.get(code, {}).get(pgid, 0.0)
   different — `test_zero_fatality_polygon_uniform` pins step 4, a single-cell polygon,
   `where_prec == 3` at the trigger boundary, and a centroid in water passing through.
 
-**The gap, measured rather than reasoned about.** An independent mutation audit replaced
-`_compute_weights`'s `deaths / total` with a flat `1.0 / n` — making every allocation uniform
-over the weighted cells — and **every guard added by this epic passed**. Only
-`tests/test_spatial_distribution.py::TestWeightMapGreen::test_weights_sum_to_one` and its
-siblings, which predate it, assert anything about the magnitudes.
+**The proportionality guarantee, and where it is actually guarded.** The substance of §3
+step 3 — that shares are proportional to *observed fatalities* rather than flat — breaks at
+two independent seams, and they were not equally covered. An independent mutation audit
+attacked the first; moving the same mutation to the second found the real gap.
 
-So the guarantee that shares are *proportional to observed fatalities* — the whole substance
-of §3 step 3, and of ADR-049 — is **unguarded in CI**. The guards assert which cells receive
-mass and how much in total; none asserts how much per cell. The synthetic fixtures' unequal
-fatalities make the two **distinguishable**, which is necessary and was the point of building
-them that way, but nothing yet does the distinguishing. Note that this is a different
-uniformity from §3 step 4: the fallback spreads over the polygon's *whole* cell list and so
-changes the cell set, which guards do see; replacing the weights changes only the values,
-which none of them see.
+- **Seam one, the shares themselves.** Replacing `_compute_weights`'s `deaths / total` with a
+  flat `1.0 / n` is caught by `tests/test_spatial_distribution.py::TestWeightMapBeige::test_multiple_events_same_cell`,
+  which asserts 0.6 and 0.4 on a two-cell polygon and has done since the original ADR-049
+  implementation. Proportionality here has always been guarded in CI — incidentally, by a test
+  whose stated subject is event aggregation. `TestWeightMapGreen::test_each_weight_is_its_cell_share_of_polygon_deaths`
+  now asserts it directly, at both polygon levels, over four cells whose shares are pairwise
+  distinct and none of which equals `1/n` of either polygon.
+- **Seam two, whether the allocator uses them.** Equalising the weights inside `proportional`
+  — same cell set, equal magnitudes — was caught by **nothing that runs in CI**. Every test in
+  `TestProportionalGreen` asserted the total and the cell set, and both are invariant to the
+  weights: 100 deaths over 50/30/20 arrives as 34/33/33, three cells, total 100, and all of
+  them passed. The only test in the suite that caught it was
+  `tests/test_adr049_profile_contract.py::TestAdr049GoldenCriterion::test_allocation_is_proportional_to_the_weight_map`,
+  which is `skipif`'d on the real store and the GAUL crosswalks that CI never has — correct,
+  and never runs, which is the mechanism that hid the defect this epic exists to fix.
+  `TestProportionalGreen::test_each_cell_receives_its_weighted_share_not_an_equal_one` now
+  asserts the per-cell magnitudes of `best`, `low` and `high`.
+
+The first bullet corrects an earlier reading of the audit recorded here on 2026-11-12, which
+said the guarantee was unguarded in CI outright. It was not; the audit's scope was the guards
+this epic added, and a pre-existing one covered seam one. The absence was real but one layer
+lower, and only re-running the mutation at the second seam established that.
+
+Note that both are a different uniformity from §3 step 4: the fallback spreads over the
+polygon's *whole* cell list and so changes the cell set, which many guards see; replacing the
+weights changes only the magnitudes, which until now almost nothing did.
 - The guarantee that must not regress is end-to-end rather than local: an allocation of N
   cells must be **delivered** as N cells through the real compiler. Asserted by
   `tests/test_falsification_spatial_allocation_delivery.py`, which runs without any real
