@@ -99,12 +99,14 @@ def _summary_event(month: str = "2021-12-01") -> dict:
         "latitude": lat,
         "longitude": lon,
         "best": _GEN.SUMMARY_EVENT_BEST,
-        # Distinct from best on purpose -- see the comment in
-        # scripts/generate_synthetic_data.py's _synthetic_event. Equal
-        # values make a per-field conservation check indistinguishable
-        # from a single-field one (#555 audit survivor M-06).
-        "low": _GEN.SUMMARY_EVENT_BEST // 3,
-        "high": _GEN.SUMMARY_EVENT_BEST * 2 + 1,
+        # Equal to best, and deliberately left that way: _compile's
+        # `keep` tuple below does not carry low or high into the
+        # parquet, and nothing in this file asserts on either. Making
+        # them distinct here was reverted after the re-audit measured
+        # it protecting nothing -- setting both to None left every
+        # test in this file green.
+        "low": _GEN.SUMMARY_EVENT_BEST,
+        "high": _GEN.SUMMARY_EVENT_BEST,
         "date_start": "2021-01-01",
         "date_end": "2021-12-31",
         "date_month": month,

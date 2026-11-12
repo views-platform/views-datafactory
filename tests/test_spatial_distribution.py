@@ -243,6 +243,17 @@ class TestProportionalGreen:
         the apportionment of a given weight dict; this pins that
         ``proportional`` applies the map's weights rather than some
         other distribution over the right cells.
+
+        Two things this does **not** establish, both measured by the
+        re-audit rather than reasoned about. It exercises no remainder,
+        because all three fields divide exactly into these weights --
+        so it cannot distinguish independent per-field apportionment
+        from three copies of a lucky division; ``test_apportionment.py``
+        covers that. And ``_simple_weight_map`` declares the same
+        weights for the admin-1 and country polygons, so this cannot
+        tell which of the two the strategy read; only
+        ``test_provenance_annotations`` can, via
+        ``_spatial_polygon_code``.
         """
         event = _make_event(
             where_prec=4, priogrid_gid=100, best=100, low=50, high=150,
@@ -362,9 +373,18 @@ class TestWeightMapGreen:
             tmp_path / "gaul0.parquet",
             {10: 1, 11: 1, 12: 1, 13: 1},
         )
-        # Pairwise distinct, and no cell's share equals 1/n of either
-        # polygon, so a uniform spread disagrees on every single cell.
-        deaths = {10: 60, 11: 30, 12: 10, 13: 400}
+        # Primes, chosen so that no share is exactly representable at
+        # two decimal places, and no cell's share equals 1/n of either
+        # polygon. The first property closes a survivor from the
+        # re-audit of this test: the fixture was 60/30/10 of 100 and
+        # 60/30/10/400 of 500, whose shares are all exact at 2dp, so
+        # quantising every weight with round(share, 2) passed the
+        # entire suite. Quantisation is not a hypothetical defect --
+        # in a real GAUL polygon with many cells it rounds the small
+        # ones to zero weight, and a polygon whose every cell rounds
+        # to zero makes apportion raise. The second property is what
+        # makes a uniform spread disagree on every cell.
+        deaths = {10: 7, 11: 11, 12: 13, 13: 29}
         table = pa.table({
             "where_prec": [1, 1, 1, 1],
             "priogrid_gid": list(deaths),
@@ -372,7 +392,7 @@ class TestWeightMapGreen:
         })
         wm = build_spatial_weight_map(table, gaul1, gaul0)
 
-        admin1_total = 60 + 30 + 10
+        admin1_total = 7 + 11 + 13
         for pgid in (10, 11, 12):
             expected = deaths[pgid] / admin1_total
             actual = wm.admin1_weights[100][pgid]
@@ -385,7 +405,7 @@ class TestWeightMapGreen:
                 f"catch, and it conserves totals while doing it."
             )
 
-        country_total = 60 + 30 + 10 + 400
+        country_total = 7 + 11 + 13 + 29
         for pgid, n in deaths.items():
             expected = n / country_total
             actual = wm.country_weights[1][pgid]

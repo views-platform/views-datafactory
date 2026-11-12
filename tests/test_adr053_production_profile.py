@@ -245,6 +245,14 @@ class TestAdr053ComposedGoldenCriterion:
         # row reached the output by another path. `any` was the
         # original spelling and the #555 audit showed it passes when
         # only one row in the whole allocation is marked.
+        #
+        # This assertion has never executed. Its class is skipif'd on
+        # the real store and the GAUL crosswalks, which .gitignore
+        # keeps out of CI, so the change from `any` to `all` here is
+        # correct but unverified -- M6, recorded rather than claimed.
+        # The same change in TestAdr053ComposedOnSyntheticGeographyGreen
+        # below does run, and the re-audit confirmed it goes red when
+        # only the first row is marked.
         assert all(row.get("_spatial_distributed") for row in allocated), (
             "a row carries no _spatial_distributed marker -- the spatial "
             "stage did not distribute this event off its centroid, or "
@@ -395,12 +403,15 @@ def _synthetic_event(
         "date_end": date_end,
         "date_prec": date_prec,
         "best": best,
-        # Distinct from best on purpose -- see the comment in
-        # scripts/generate_synthetic_data.py's _synthetic_event. With
-        # all three equal, the _EXTENSIVE conservation loop above is
-        # one assertion run three times (#555 audit survivor M-06).
-        "low": best // 3,
-        "high": best * 2 + 1,
+        # Equal to best, and deliberately left that way. This helper
+        # feeds only TestAdr053ProvenanceCounters, which asserts ledger
+        # counters and runs no conservation loop -- the _EXTENSIVE
+        # loops above take their event from the generator fixture or
+        # the real store, never from here. Making these distinct was
+        # reverted after the re-audit measured it protecting nothing:
+        # setting both to None left the class green.
+        "low": best,
+        "high": best,
         "type_of_violence": 1,
         "where_prec": 1,
         "priogrid_gid": 150000,
