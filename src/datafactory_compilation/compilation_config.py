@@ -64,7 +64,59 @@ class CompilationConfig:
     # Column mapping (source Parquet field names)
     lat_field: str = "latitude"
     lon_field: str = "longitude"
+    #: Column holding the month each row belongs to.
+    #:
+    #: The default is a RAW field, and that is a hazard rather than a
+    #: convenience. The temporal allocator writes its decision to
+    #: ``date_month`` and leaves ``date_start``/``date_end`` untouched,
+    #: so a caller who takes this default on an allocated source
+    #: collapses every distributed month back onto the event's start
+    #: month -- the temporal twin of the spatial defect that cost 26.49%
+    #: of UCDP fatality mass its placement. ``scripts/compile_grid.py``
+    #: refuses to run in that configuration; see ``_reject_ignored_allocation``
+    #: there.
+    #:
+    #: **This should be a required keyword argument, and is not, for one
+    #: reason:** ``CompilationConfig`` is exported in
+    #: ``datafactory_compilation.__all__`` and ships in the wheel, so
+    #: removing the default is a breaking change for any external caller
+    #: and belongs in a MAJOR release rather than a patch. Registered as
+    #: such. An auto-detecting default -- ``None`` meaning "use
+    #: ``date_month`` if the source has one" -- was considered and
+    #: rejected: inferring decision-relevant semantics is what ADR-003
+    #: forbids, and this defect is not worth fixing with a second
+    #: instance of its own cause.
     date_field: str = "date_start"
+
+    #: Column holding a cell the UPSTREAM STAGE HAS ALREADY DECIDED.
+    #:
+    #: When set, a row's value in this column wins over
+    #: ``lat_field``/``lon_field``; the coordinates are the fallback for
+    #: rows where it is null or out of range. That ordering is
+    #: ADR-015's, stated in its section "priogrid_gid vs. Computed
+    #: Cell": *"These can disagree (border cells, precision issues) …
+    #: Viewpoint v1 should prefer priogrid_gid to match production."*
+    #:
+    #: It was declared there in June 2026 and never implemented. The
+    #: spatial allocator records its decision by rewriting
+    #: ``priogrid_gid`` and leaves the coordinates at the source
+    #: centroid, so re-deriving the cell from the coordinates discarded
+    #: every allocation: 1,128,236 deaths — 26.49% of UCDP fatality
+    #: mass — were delivered to a cell other than the one chosen for
+    #: them, with totals conserved, so no conservation check could see
+    #: it. ``where_prec=6`` events collapsed from 6,896 chosen cells
+    #: into 91 delivered ones.
+    #:
+    #: ``None`` by default, which is the pre-existing behaviour, because
+    #: a decided cell is not something every source has. ACLED events
+    #: are single-day points that no stage relocates
+    #: (``acled_v1`` reports ``n_spatially_distributed=0``), so for
+    #: ACLED the coordinates *are* the authority and this stays unset.
+    #: ``PregriddedCompilationConfig.pgid_field`` is the same idea for
+    #: sources that are gridded before they arrive; this is its
+    #: event-shaped twin, and the asymmetry between the two is what let
+    #: the defect exist.
+    pgid_field: str | None = None
 
     # Output array parameters
     output_dtype: str = "float32"

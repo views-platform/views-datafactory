@@ -33,11 +33,27 @@ def write_compilation_output(
     n_placed: int | None = None,
     n_skipped_spatial: int | None = None,
     n_skipped_temporal: int | None = None,
+    placement: dict[str, Any] | None = None,
 ) -> str:
     """Write grid output files, provenance, and ledger entry.
 
     The three n_* parameters are pregridded-compilation diagnostics.
     They are included in the ledger entry only when not None.
+
+    ``placement`` records which columns decided each event's cell and
+    month, and goes into ``provenance.json`` so the artifact says how
+    it was produced. This matters more here than it usually would: a
+    grid whose events were placed from stale coordinates instead of
+    their declared cells is **indistinguishable from a correct one by
+    any total** -- country sums, coverage counts and conservation all
+    reconcile either way. Without this, nothing on disk answers "was
+    the declaration honoured when this was built?".
+
+    It is deliberately not added to the ledger entry: the rule at
+    ``digests_and_ledgers`` is to bump ``LEDGER_VERSION`` on a ledger
+    schema change, and that constant is shared with the viewpoint
+    builders, so an additive field in one layer would version every
+    ledger in the platform.
 
     Returns the output digest string.
     """
@@ -53,13 +69,15 @@ def write_compilation_output(
 
     output_digest = compute_file_digest(grid_path)
 
-    provenance = {
+    provenance: dict[str, Any] = {
         "source_path": str(source_path),
         "source_digest": source_digest,
         "grid_shape": list(grid_array.shape),
         "feature_names": feature_names,
         "output_digest": output_digest,
     }
+    if placement is not None:
+        provenance["placement"] = placement
     provenance_path = output_dir / "provenance.json"
     provenance_path.write_text(json.dumps(provenance, indent=2))
 

@@ -17,6 +17,92 @@ entry could.
 
 ---
 
+## The allocation that never arrived (2026-11-12)
+
+**C-368 (Tier 1), C-369, C-370.**
+
+The first production run under `kgi_kti_activity` completed successfully, and the data it
+produced was wrong. The spatial allocator records which 0.5° cell an imprecisely-located
+UCDP event belongs to by rewriting `priogrid_gid`. The event compiler never read that field —
+it recomputed the cell from `latitude`/`longitude`, which the allocator leaves at the source
+centroid, and `_required_columns` did not even load the column. Every allocated row returned
+to the cell it came from.
+
+**1,128,236 deaths across 60,105 events — 26.49% of all UCDP fatality mass.** At
+`where_prec=6`, 97.3% of the mass, collapsing 6,896 chosen cells into 91.
+
+Three things make this worth more than a bug entry.
+
+**It is invisible to every aggregate.** 99.89% of displaced mass stays inside the same
+country; `where_prec` 4 and 5 are 100% same-country *and* same-admin-1. Country-month sums,
+coverage counts and conservation reconcile identically before and after. `conservation.py`
+counts rows, and a row placed in the wrong cell is a placed row — so the module its own
+docstring calls the "Tier 2 silent-corruption guard" is structurally blind to it. A consumer
+validating totals would never see this, and for four months none did.
+
+**The fix was written down in June and never implemented.** ADR-015:102-106, in a section
+titled *"priogrid_gid vs. Computed Cell"*, says *"These can disagree (border cells, precision
+issues) … Viewpoint v1 should prefer `priogrid_gid` to match production."* The fallback it
+describes existed nowhere in `src/`. Meanwhile `PregriddedCompilationConfig.pgid_field`
+already did exactly this for the pregridded sources, which is why V-Dem, SHDI and the two GHS
+layers were never affected. ADR-024:29-38 enshrined the opposite as an invariant that *"cannot
+be changed"*, and ADR-003:50-52 says such a contradiction *"must fail loudly and
+immediately."* Nothing failed. The capability sat in the same package as the defect.
+
+**The measurements were taken at the wrong layer.** `evaluate_temporal_allocation.py` and
+`investigate_summary_event_concentration.py` both group by `priogrid_gid` — so did every
+number in ADR-049, ADR-053 and the dossier, including the eight figures the v1.18.0 release
+was verified against and passed. The allocator spec and the dossier's harness document
+contain zero mentions of `priogrid_gid`, `latitude`, `longitude` or compilation: the spec
+never said how the decision reaches the grid, and the harness never named the delivered layer
+as the place to measure.
+
+### Corrections made in this window, including to this register
+
+**C-366 is confirmed, not corrected.** Its 43,933 events and 785,626 deaths were measured
+exactly under the stale-version filter. Stronger than it had been.
+
+**ADR-015:104's stated cause is refuted.** It explains the pre-existing `priogrid_gid`
+disagreements as *"border cells, precision issues"*. Border adjacency means a pgid offset of 1
+or 720. **Zero** of the seventy are offset by 1; the median offset is **1,460 cells**; 62 of
+70 are `where_prec=6`, where the declared cell and the coordinates are independently-chosen
+representatives of a whole country.
+
+**The epic's own duration claim was overstated and is narrowed here.** "The spatial half never
+affected delivered data" is true of the *allocator* and wrong about the *delivered
+consequence*. `production_parity` excluded `where_prec` 4 and 6 outright, so 685,282 of the
+displaced mass was **absent** from delivered data rather than misplaced in it, and
+`where_prec` 5 sat at its nominal centroid in every release as `passthrough`'s declared
+behaviour. The 2026-11-11 run is the first to deliver codes 4 and 6 at all — **one release,
+not many.** The correction surfaced only because a consumer asked whether totals moved
+separately from whether cells did. A correction can overstate as easily as the thing it
+corrects.
+
+**Two pre-registered criteria did not survive measurement.** A target of "worst delivered
+cell-month under 5,000" is unreachable by correct allocation, which produces 11,732 — ADR-053's
+own amendment had already recorded the mechanism, and the bound was carried into the falsifier
+set anyway. And a criterion of "more than 100 cells with mass" reads 223 on the broken store,
+so it could not fail; withdrawn rather than tightened. The rule both point at: **a
+pre-registered criterion must be checked against the broken state to confirm it can fail**, and
+a number is evidence only if it was measured where the consumer reads it.
+
+### What the review passes found, which is the part worth re-reading
+
+Three guards written during the fix to close this seam were themselves defective, each in the
+same family as the defect:
+
+- one was anchored to a CWD-relative path, so it passed from any directory but the repository
+  root, having checked zero files
+- one reported a reconciliation pass having compared nothing, when the compiled grid's
+  temporal range did not overlap the viewpoint
+- one asserted a maximum that an empty grid satisfies
+- and the entry-point refusal was built for the temporal axis while the spatial axis — the one
+  the defect was actually on — had none
+
+All fixed. The pattern is the finding: **a guard written against a defect tends to inherit the
+defect's own blind spot**, which is the case for having it attacked by someone other than its
+author.
+
 ## A named tripwire that could not fire, and the switch that found it (2026-11-10)
 
 **C-356 corrected; its trigger fired and was actioned.** Planning the production profile switch
