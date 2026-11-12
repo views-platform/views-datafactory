@@ -224,6 +224,55 @@ class TestProportionalGreen:
         assert len(result) == 3
         assert sum(r["best"] for r in result) == 50
 
+    def test_each_cell_receives_its_weighted_share_not_an_equal_one(
+        self,
+    ) -> None:
+        """Magnitudes per cell, not just the total and the cell set.
+
+        Added 2026-11-12, the second half of the gap the mutation audit
+        found. Every other test in this class asserts the sum over the
+        allocated rows and the set of cells they land on. Both are
+        invariant to the weights: an allocation that ignored
+        ``weights`` and spread 100 deaths equally over the same three
+        cells gives 34/33/33 -- three cells, total 100 -- and passes
+        all of them.
+
+        ``_simple_weight_map`` is 50/30/20 and 100 deaths divide into it
+        exactly, so the expected values are arithmetic rather than
+        rounding-dependent. ``TestDistributeValueGreen`` already pins
+        the apportionment of a given weight dict; this pins that
+        ``proportional`` applies the map's weights rather than some
+        other distribution over the right cells.
+
+        Two things this does **not** establish, both measured by the
+        re-audit rather than reasoned about. It exercises no remainder,
+        because all three fields divide exactly into these weights --
+        so it cannot distinguish independent per-field apportionment
+        from three copies of a lucky division; ``test_apportionment.py``
+        covers that. And ``_simple_weight_map`` declares the same
+        weights for the admin-1 and country polygons, so this cannot
+        tell which of the two the strategy read; only
+        ``test_provenance_annotations`` can, via
+        ``_spatial_polygon_code``.
+        """
+        event = _make_event(
+            where_prec=4, priogrid_gid=100, best=100, low=50, high=150,
+        )
+        result = proportional(event, _simple_weight_map())
+        allocated = {r["priogrid_gid"]: r["best"] for r in result}
+        assert allocated == {100: 50, 101: 30, 102: 20}, (
+            f"expected the 50/30/20 weights to place 50/30/20 deaths, "
+            f"got {allocated}. An equal spread over these same three "
+            f"cells would be 34/33/33 and would conserve the total."
+        )
+        # low and high are apportioned by the same weights, independently.
+        assert {r["priogrid_gid"]: r["low"] for r in result} == {
+            100: 25, 101: 15, 102: 10,
+        }
+        assert {r["priogrid_gid"]: r["high"] for r in result} == {
+            100: 75, 101: 45, 102: 30,
+        }
+
     def test_conservation_all_fields(self) -> None:
         """best, low, high all conserved independently."""
         event = _make_event(
@@ -295,6 +344,76 @@ class TestRegistryGreen:
 
 
 class TestWeightMapGreen:
+
+    def test_each_weight_is_its_cell_share_of_polygon_deaths(
+        self, tmp_path: Path,
+    ) -> None:
+        """The property ADR-049 exists for: shares, not a flat spread.
+
+        Added 2026-11-12. The independent mutation audit of this epic
+        replaced ``_compute_weights``'s ``deaths / total`` with a flat
+        ``1.0 / n`` -- making every allocation uniform over the weighted
+        cells -- and every guard the epic added stayed green. The four
+        tests below assert that weights sum to one, that only
+        well-located events contribute, which cells are present and
+        which excluded. A flat spread satisfies all four.
+
+        This is a *different* uniformity from the documented fallback
+        for a polygon with no well-located deaths (see
+        ``docs/CICs/SpatialWeightMap.md``, section 3 step 4). That one
+        spreads over the polygon's whole cell list and so changes the
+        cell set, which other guards do see. Replacing the weights
+        changes only the magnitudes, which nothing saw until this test.
+        """
+        gaul1 = _write_gaul_parquet(
+            tmp_path / "gaul1.parquet",
+            {10: 100, 11: 100, 12: 100, 13: 200},
+        )
+        gaul0 = _write_gaul_parquet(
+            tmp_path / "gaul0.parquet",
+            {10: 1, 11: 1, 12: 1, 13: 1},
+        )
+        # Primes, chosen so that no share is exactly representable at
+        # two decimal places, and no cell's share equals 1/n of either
+        # polygon. The first property closes a survivor from the
+        # re-audit of this test: the fixture was 60/30/10 of 100 and
+        # 60/30/10/400 of 500, whose shares are all exact at 2dp, so
+        # quantising every weight with round(share, 2) passed the
+        # entire suite. Quantisation is not a hypothetical defect --
+        # in a real GAUL polygon with many cells it rounds the small
+        # ones to zero weight, and a polygon whose every cell rounds
+        # to zero makes apportion raise. The second property is what
+        # makes a uniform spread disagree on every cell.
+        deaths = {10: 7, 11: 11, 12: 13, 13: 29}
+        table = pa.table({
+            "where_prec": [1, 1, 1, 1],
+            "priogrid_gid": list(deaths),
+            "best": list(deaths.values()),
+        })
+        wm = build_spatial_weight_map(table, gaul1, gaul0)
+
+        admin1_total = 7 + 11 + 13
+        for pgid in (10, 11, 12):
+            expected = deaths[pgid] / admin1_total
+            actual = wm.admin1_weights[100][pgid]
+            assert actual == pytest.approx(expected), (
+                f"admin-1 cell {pgid} carries {deaths[pgid]} of "
+                f"{admin1_total} well-located deaths, so its share must "
+                f"be {expected:.6f}, not {actual:.6f}. A flat spread "
+                f"over this polygon's 3 weighted cells gives 0.333333 "
+                f"for each -- that is the mutation this test exists to "
+                f"catch, and it conserves totals while doing it."
+            )
+
+        country_total = 7 + 11 + 13 + 29
+        for pgid, n in deaths.items():
+            expected = n / country_total
+            actual = wm.country_weights[1][pgid]
+            assert actual == pytest.approx(expected), (
+                f"country cell {pgid} carries {n} of {country_total} "
+                f"well-located deaths, so its share must be "
+                f"{expected:.6f}, not {actual:.6f}"
+            )
 
     def test_weights_sum_to_one(self, tmp_path: Path) -> None:
         """Weights within each polygon sum to 1.0."""

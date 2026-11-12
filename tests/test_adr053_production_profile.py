@@ -238,9 +238,25 @@ class TestAdr053ComposedGoldenCriterion:
             "some rows carry no _temporal_distributed marker -- the "
             "temporal stage did not allocate this event"
         )
-        assert any(row.get("_spatial_distributed") for row in allocated), (
-            "no row carries _spatial_distributed -- the spatial stage did "
-            "not distribute this event off its centroid"
+        # `all`, not `any`: proportional() marks every row it emits
+        # (spatial_distribution.proportional sets the flag inside the
+        # per-cell loop), and the temporal stage carries the field
+        # through with **event. So a single unmarked row means some
+        # row reached the output by another path. `any` was the
+        # original spelling and the #555 audit showed it passes when
+        # only one row in the whole allocation is marked.
+        #
+        # This assertion has never executed. Its class is skipif'd on
+        # the real store and the GAUL crosswalks, which .gitignore
+        # keeps out of CI, so the change from `any` to `all` here is
+        # correct but unverified -- M6, recorded rather than claimed.
+        # The same change in TestAdr053ComposedOnSyntheticGeographyGreen
+        # below does run, and the re-audit confirmed it goes red when
+        # only the first row is marked.
+        assert all(row.get("_spatial_distributed") for row in allocated), (
+            "a row carries no _spatial_distributed marker -- the spatial "
+            "stage did not distribute this event off its centroid, or "
+            "some row reached the output without passing through it"
         )
 
 
@@ -326,7 +342,9 @@ class TestAdr053ComposedOnSyntheticGeographyGreen:
         assert all(
             row.get("_temporal_distributed") for row in allocated
         ), "the temporal stage did not allocate this event"
-        assert any(
+        # `all`, not `any` -- see the sibling assertion in
+        # TestAdr053ComposedGoldenCriterion for why.
+        assert all(
             row.get("_spatial_distributed") for row in allocated
         ), "the spatial stage did not distribute off the centroid"
 
@@ -385,6 +403,13 @@ def _synthetic_event(
         "date_end": date_end,
         "date_prec": date_prec,
         "best": best,
+        # Equal to best, and deliberately left that way. This helper
+        # feeds only TestAdr053ProvenanceCounters, which asserts ledger
+        # counters and runs no conservation loop -- the _EXTENSIVE
+        # loops above take their event from the generator fixture or
+        # the real store, never from here. Making these distinct was
+        # reverted after the re-audit measured it protecting nothing:
+        # setting both to None left the class green.
         "low": best,
         "high": best,
         "type_of_violence": 1,

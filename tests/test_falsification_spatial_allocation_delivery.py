@@ -99,6 +99,12 @@ def _summary_event(month: str = "2021-12-01") -> dict:
         "latitude": lat,
         "longitude": lon,
         "best": _GEN.SUMMARY_EVENT_BEST,
+        # Equal to best, and deliberately left that way: _compile's
+        # `keep` tuple below does not carry low or high into the
+        # parquet, and nothing in this file asserts on either. Making
+        # them distinct here was reverted after the re-audit measured
+        # it protecting nothing -- setting both to None left every
+        # test in this file green.
         "low": _GEN.SUMMARY_EVENT_BEST,
         "high": _GEN.SUMMARY_EVENT_BEST,
         "date_start": "2021-01-01",
