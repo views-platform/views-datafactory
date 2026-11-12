@@ -213,3 +213,40 @@ Stated here rather than discovered later, and repeated in the guard's own docstr
   count-based scheme can see it — including an exact one.
 - **`@pytest.mark.xfail`.** An xfail declares an expectation of failure and is reported as such.
   It is not coverage withheld, and it is deliberately out of scope here.
+
+## The ratchet was attacked, and one attack succeeded
+
+Five mutation drills against `tests/test_skip_inventory.py`, each with `__pycache__` cleared
+beforehand — the 2026-10-30 post-mortem records five earlier drills that reported `CAUGHT` while
+measuring bytecode no longer on disk.
+
+| Drill | Outcome |
+|---|---|
+| Add a skip site to a file **not** in the inventory | **Caught** — `test_no_undeclared_file_declines_to_run` |
+| Add a skip site to a file **already** in the inventory | **Caught** — the ceiling test and the per-file exactness test |
+| Inflate one inventory number by 1 | **Caught** — `test_each_declared_allowance_is_fully_used` |
+| Name a module in the inventory that does not exist | **Caught** — three tests, including the stale-entry guard |
+| **Delete `tests/test_skip_inventory.py` and run the whole suite** | **SURVIVED.** Exit 0. |
+
+The fifth one is the finding, and it is reported rather than buried.
+
+**Deleting this guard leaves the build green.** Nothing in this repository counts collected
+tests, so removing a test module removes its coverage silently — which is the same failure
+class this module exists to detect, one level up. Worse, the inventory *is* this file, so the
+guard and the record of what it was guarding disappear together.
+
+That is mutation category **M6 applied to the remedy for M6**. It is not a reason to distrust
+the four drills that passed: within the file, the ratchet works, and a skip cannot be added or
+an allowance inflated without it going red. It is a statement about the boundary of what a
+single test file can defend.
+
+**Deliberately not fixed here.** The obvious remedy is a floor on the number of collected
+tests, which would catch any test module vanishing. It is a new guard in a shared place, on the
+path of every later change, and it needs editing every time a test is legitimately removed —
+and this story's scope is the skip ratchet. Recorded as a finding instead, where the next
+person deciding whether to build that floor can see what it would buy.
+
+The first run of this drill returned exit **124** — a timeout at 75%, because the whole suite
+takes longer than the 900 s the drill script allowed. That was recorded as `UNRUN` and re-run
+without a limit rather than reported as green. A timeout is not a pass, and exit 124 is as
+misleading here as exit 137 is for an out-of-memory kill.
