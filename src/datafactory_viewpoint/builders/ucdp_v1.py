@@ -156,6 +156,8 @@ def build_ucdp_v1(
         # For months covered by the annual, ONLY annual events
         # exist in VIEWSER — candidate and .9 events for those
         # months are replaced. We replicate this by:
+        #   a0) Letting the latest annual release supersede older
+        #       ones for the span it covers (#595)
         #   a) Determining the annual's temporal coverage
         #   b) Dropping candidate/.9 rows whose event id doesn't
         #      appear in the annual
@@ -163,6 +165,69 @@ def build_ucdp_v1(
         source_types = table.column("_source_type")
         source_versions = table.column("_source_version")
         n_before = table.num_rows
+
+        from datafactory_viewpoint.survivorship import _parse_version
+
+        # (a0) The latest annual release supersedes older ones
+        # for the span it covers (#595).
+        #
+        # UCDP does not only revise events between annual
+        # releases — it deletes and merges them. The store is
+        # append-only by design (ADR-013), so an event dropped in
+        # v26.1 still carries its v25.1 row here. Without this
+        # step that row is annual, so (b) keeps it
+        # unconditionally, (c) never looks at annual, and
+        # survivorship cannot help because the id has no
+        # competing row. The deleted event gets republished.
+        #
+        # This runs BEFORE (a) deliberately. Once a single
+        # release remains, (a) derives its coverage and its id
+        # set from that release with no further change, and a .9
+        # or candidate row for a deleted event is dropped too,
+        # because its id is no longer among annual_ids.
+        #
+        # Rows beyond the latest release's own coverage survive.
+        # Today that selects nothing (v26.1 spans 1989-2025,
+        # v25.1 spans 1989-2024), but a future release with a
+        # shorter span must not silently delete history.
+        annual_mask = pc.equal(source_types, "annual")
+        annual_versions = pc.filter(source_versions, annual_mask)
+        distinct_annual = annual_versions.unique().to_pylist()
+        if len(distinct_annual) > 1:
+            latest_annual = max(distinct_annual, key=_parse_version)
+            latest_mask = pc.and_(
+                annual_mask,
+                pc.equal(source_versions, latest_annual),
+            )
+            latest_cutoff = max(
+                pc.filter(
+                    table.column("date_end"), latest_mask,
+                ).to_pylist()
+            )
+            keep = pc.or_(
+                pc.not_equal(source_types, "annual"),
+                pc.or_(
+                    pc.equal(source_versions, latest_annual),
+                    pc.greater(
+                        table.column("date_end"),
+                        pa.scalar(latest_cutoff),
+                    ),
+                ),
+            )
+            n_annual_before = table.num_rows
+            table = table.filter(keep)
+            superseded = sorted(
+                set(distinct_annual) - {latest_annual}
+            )
+            logger.info(
+                "Annual %s supersedes %s through %s: dropped %d rows",
+                latest_annual,
+                superseded,
+                latest_cutoff,
+                n_annual_before - table.num_rows,
+            )
+            source_types = table.column("_source_type")
+            source_versions = table.column("_source_version")
 
         # (a) Find annual coverage boundary
         annual_mask = pc.equal(source_types, "annual")
@@ -207,10 +272,6 @@ def build_ucdp_v1(
         dot9_mask = pc.equal(source_types, "dot9")
         dot9_versions = pc.filter(source_versions, dot9_mask)
         if len(dot9_versions) > 0:
-            from datafactory_viewpoint.survivorship import (
-                _parse_version,
-            )
-
             latest_dot9 = max(
                 dot9_versions.unique().to_pylist(),
                 key=_parse_version,

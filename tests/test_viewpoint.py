@@ -955,6 +955,144 @@ class TestBuildUcdpV1Beige:
         result = build_ucdp_v1(cfg)
         assert result.n_events_output == 3
 
+    def test_later_annual_release_wins_for_a_shared_event(
+        self, tmp_path: Path
+    ) -> None:
+        """Two annual releases carry one event — the later wins.
+
+        UCDP revises events between annual releases. The store is
+        append-only (ADR-013), so both rows are present and the
+        builder has to choose.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="25.1",
+                date_start="2024-06-15",
+                best=100,
+            ),
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+                best=140,
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 1
+        out = pq.read_table(cfg.output_path)
+        assert out.column("best").to_pylist() == [140]
+
+    def test_event_deleted_by_a_later_release_is_dropped(
+        self, tmp_path: Path
+    ) -> None:
+        """An event only in the superseded release must not ship.
+
+        UCDP deletes and merges events between annual releases,
+        not only revises them. A deleted event's old row has no
+        competitor, so survivorship cannot discard it — the
+        stale filter has to. Regression guard for #594.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 1
+        out = pq.read_table(cfg.output_path)
+        assert out.column("id").to_pylist() == [1]
+
+    def test_deleted_event_does_not_return_through_dot9(
+        self, tmp_path: Path
+    ) -> None:
+        """A deleted event's .9 row must not resurrect it.
+
+        The annual supersession runs before the annual id set is
+        derived, so a .9 row for a deleted event is dropped with
+        it. Ordering the two the other way round would publish
+        the event from .9 instead.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_type="dot9",
+                source_version="25.9.11",
+                date_start="2023-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 1
+        out = pq.read_table(cfg.output_path)
+        assert out.column("id").to_pylist() == [1]
+
+    def test_older_release_survives_beyond_the_latest_coverage(
+        self, tmp_path: Path
+    ) -> None:
+        """Supersession is bounded by the later release's span.
+
+        A future annual release covering a shorter period must
+        not silently delete the history only the older release
+        holds.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2020-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2024-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 2
+        out = pq.read_table(cfg.output_path)
+        assert sorted(out.column("id").to_pylist()) == [1, 2]
+
 
 # ---- Filtering: Green ----
 
