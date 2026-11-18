@@ -180,37 +180,72 @@ def build_ucdp_v1(
         # survivorship cannot help because the id has no
         # competing row. The deleted event gets republished.
         #
-        # This runs BEFORE (a) deliberately. Once a single
-        # release remains, (a) derives its coverage and its id
-        # set from that release with no further change, and a .9
-        # or candidate row for a deleted event is dropped too,
+        # This runs BEFORE (a) deliberately: a .9 or candidate
+        # row for a deleted event is then dropped with it,
         # because its id is no longer among annual_ids.
         #
-        # Rows beyond the latest release's own coverage survive.
-        # Today that selects nothing (v26.1 spans 1989-2025,
-        # v25.1 spans 1989-2024), but a future release with a
-        # shorter span must not silently delete history.
+        # Supersession is bounded by the latest release's own
+        # coverage, and that bound is UPPER-ONLY: an older row
+        # whose event ends after the latest release's last event
+        # survives, because the latest release says nothing about
+        # that period and cannot be read as having withdrawn
+        # anything there. Today it selects nothing (v26.1 spans
+        # 1989-2025, v25.1 spans 1989-2024), but a release ending
+        # earlier than its predecessor must not silently delete
+        # the trailing years.
+        #
+        # There is deliberately NO lower bound, and a release
+        # whose coverage STARTS later than its predecessor's would
+        # therefore delete the earlier history (#598). The bound
+        # cannot be fixed here: max(date_end) is a sound proxy for
+        # where coverage ends because a release is dense up to its
+        # cutoff, but min(date_start) is not a proxy for where
+        # coverage begins — in a sparse store it is just the
+        # earliest event that happens to be present. The declared
+        # span is in the snapshot filename and is discarded by
+        # _ANNUAL_PATTERN during consolidation, so closing the gap
+        # means carrying it into the store. Every UCDP annual
+        # release so far starts at 1989.
+        #
+        # When the upper clause does select rows, (a)'s
+        # annual_cutoff and annual_ids then span two releases.
+        # That is correct, because the two releases legitimately
+        # cover different periods.
         annual_mask = pc.equal(source_types, "annual")
         annual_versions = pc.filter(source_versions, annual_mask)
         distinct_annual = annual_versions.unique().to_pylist()
-        if len(distinct_annual) > 1:
+
+        # _parse_version returns (0,) for a non-numeric string.
+        # In (c) that only loses a preference; here it would elect
+        # the wrong release as latest and delete the real one, so
+        # refuse to supersede at all instead.
+        unparseable = sorted(
+            v
+            for v in distinct_annual
+            if not all(p.isdigit() for p in v.split("."))
+        )
+        if unparseable:
+            logger.warning(
+                "Annual versions %s are not numeric; refusing to "
+                "supersede any annual release. Superseded events "
+                "may remain in the output.",
+                unparseable,
+            )
+        elif len(distinct_annual) > 1:
             latest_annual = max(distinct_annual, key=_parse_version)
             latest_mask = pc.and_(
                 annual_mask,
                 pc.equal(source_versions, latest_annual),
             )
-            latest_cutoff = max(
-                pc.filter(
-                    table.column("date_end"), latest_mask,
-                ).to_pylist()
+            latest_end = pc.max(
+                pc.filter(table.column("date_end"), latest_mask)
             )
             keep = pc.or_(
                 pc.not_equal(source_types, "annual"),
                 pc.or_(
                     pc.equal(source_versions, latest_annual),
                     pc.greater(
-                        table.column("date_end"),
-                        pa.scalar(latest_cutoff),
+                        table.column("date_end"), latest_end,
                     ),
                 ),
             )
@@ -220,10 +255,11 @@ def build_ucdp_v1(
                 set(distinct_annual) - {latest_annual}
             )
             logger.info(
-                "Annual %s supersedes %s through %s: dropped %d rows",
+                "Annual %s supersedes %s through %s: "
+                "dropped %d rows",
                 latest_annual,
                 superseded,
-                latest_cutoff,
+                latest_end.as_py(),
                 n_annual_before - table.num_rows,
             )
             source_types = table.column("_source_type")

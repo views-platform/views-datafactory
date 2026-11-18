@@ -168,15 +168,28 @@ A fourth rule, applied **before** the annual coverage boundary is derived:
 
 - **Latest annual only:** among annual sources, only the latest version (by `_parse_version`)
   is retained for the span that version covers. Rows from an older release whose `date_end`
-  lies beyond the latest release's coverage survive.
+  lies beyond the latest release's coverage survive. If any annual version string is
+  non-numeric, supersession is refused entirely and a warning is logged, because an
+  unorderable version would otherwise elect the wrong release as latest and delete the real
+  one.
 
 The ordering is load-bearing. Running it first means the coverage boundary and the annual id
 set are derived from a single release, and a `.9` or candidate row for a withdrawn event is
 dropped with it. Running it last would leave that row to win survivorship and republish the
 event from another source.
 
-The span clause selects nothing today — v26.1 spans 1989–2025 and v25.1 spans 1989–2024 — and
-exists so that a future release with a shorter span cannot silently delete history.
+The span clause is **upper-only, and deliberately so**. It selects nothing today — v26.1 spans
+1989–2025 and v25.1 spans 1989–2024 — and exists so that a release ending *earlier* than its
+predecessor cannot silently delete the trailing years.
+
+It does **not** bound the start of the span, so a release whose coverage *began* later than its
+predecessor's would delete the earlier history. That gap is open as **#598**. It is not closed
+here because the bound cannot be derived from the data: `max(date_end)` is a sound proxy for
+where coverage ends, since a release is dense up to its cutoff, but `min(date_start)` is not a
+proxy for where coverage begins — in a sparse store it is merely the earliest event present, and
+using it stops supersession happening at all. The declared span is in the harvest filename and is
+discarded during consolidation, so closing #598 means carrying it into the store. Every UCDP
+annual release so far starts at 1989.
 
 Implemented in the UCDP viewpoint builder, inside the same block the other three rules live
 in, under the existing `filter_stale_versions` flag. Guarded by `tests/test_viewpoint.py`,

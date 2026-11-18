@@ -17,6 +17,48 @@ entry could.
 
 ---
 
+## A fix that made its own failure mode destructive (2026-11-18)
+
+**C-371 (Tier 2).**
+
+#595 taught the UCDP viewpoint builder that the latest annual release supersedes older ones.
+It had to: UCDP withdraws events between releases, our store is append-only, and 321 withdrawn
+events were still in our published figures — 4,939 deaths across 24 years, found by an external
+reader comparing a number we sent him to UCDP's own website.
+
+The rule works by id. An event present in the older release and absent from the newer one is
+dropped. That is correct when UCDP withdrew it, and wrong when our own harvest of the newer
+release simply failed to fetch it — and the rule cannot tell the two apart, because they look
+identical in the store.
+
+**What makes this worth an entry is the inversion.** Before #595, a short harvest of the newest
+annual release was masked: the previous release's rows stayed in place, the totals came out too
+high, and nothing was lost. After #595, the same shortfall is amplified — every event missing
+from the short harvest takes its predecessor's row with it. A detectability gap acquired a
+data-loss path. C-359 recorded the detectability gap on the ACLED side and said "re-tier if a
+shortfall is ever observed"; the consequence of one is now larger than when that was written.
+
+The harvest guard is real but loose for this purpose. `ucdp_annual.py` raises only when a
+shortfall exceeds **both** 1% and 1100 absolute events. That dual threshold was adopted
+deliberately in April 2026 — the UCDP API counts `type_of_violence=4` events in `TotalCount`
+and omits them from `Result`, a ~1000-event offset that is 40-100% of a small candidate version
+and would otherwise fail every one of them. For a 416,968-row annual release the same offset is
+0.26%, so the band is loose by inheritance rather than by design: a shortfall below ~4,169
+events passes, and then deletes up to that many old rows.
+
+Nothing would go red. The dropped rows are counted into `n_stale`, so `n_read == n_input +
+n_stale` balances exactly — as it did throughout the four and a half months of #594. ADR-040
+conservation compares pipeline input with pipeline output; this is a loss at selection.
+
+Registered without fixing. The smallest candidate fix is to tighten the shortfall tolerance for
+annual specifically, where the offset is 0.26% and a 1% band buys nothing.
+
+**Found by `/code-review` on the pull request, before it merged.** The same review found that
+the new rule's span bound was one-sided, which would delete history if a release ever started
+later than its predecessor; that is #598, and the review is the reason neither shipped silently.
+
+---
+
 ## The allocation that never arrived (2026-11-12)
 
 **C-368 (Tier 1), C-369, C-370.**
@@ -1624,6 +1666,7 @@ Moved here as part of #404; the header keeps a pointer.
 - repo-assimilation v1.3.0 2026-06-16
 - expert-code-review register-risk 2026-06-18
 - test-review v1.4.0 2026-06-24
+- code-review on #596 (annual supersession) 2026-11-18
 
 ---
 

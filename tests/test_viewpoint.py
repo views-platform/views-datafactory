@@ -1064,11 +1064,12 @@ class TestBuildUcdpV1Beige:
     def test_older_release_survives_beyond_the_latest_coverage(
         self, tmp_path: Path
     ) -> None:
-        """Supersession is bounded by the later release's span.
+        """The upper bound of the later release's span.
 
-        A future annual release covering a shorter period must
-        not silently delete the history only the older release
-        holds.
+        A future annual release ending earlier than the older one
+        must not silently delete the trailing history only the
+        older release holds. The lower bound is the twin test
+        below.
         """
         events = [
             _make_consolidated_event(
@@ -1080,6 +1081,83 @@ class TestBuildUcdpV1Beige:
                 event_id=2,
                 source_version="25.1",
                 date_start="2024-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 2
+        out = pq.read_table(cfg.output_path)
+        assert sorted(out.column("id").to_pylist()) == [1, 2]
+
+    def test_deleted_event_does_not_return_through_candidate(
+        self, tmp_path: Path
+    ) -> None:
+        """The .9 twin, for candidate rows.
+
+        Candidate reaches the output by the same route as .9, so
+        the ordering that stops a deleted event returning through
+        .9 has to stop it returning through candidate too.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_type="candidate",
+                source_version="25.0.8",
+                date_start="2023-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 1
+        out = pq.read_table(cfg.output_path)
+        assert out.column("id").to_pylist() == [1]
+
+    def test_non_numeric_annual_version_blocks_supersession(
+        self, tmp_path: Path
+    ) -> None:
+        """A version string we cannot order must not delete data.
+
+        `_parse_version` maps a non-numeric string to (0,), which
+        sorts below every real version. Electing the latest
+        release by that key would make a malformed new release
+        lose to its predecessor and delete the new release's own
+        rows. Supersession is refused instead, which overcounts
+        visibly rather than deleting silently.
+        """
+        # The malformed release's event sits INSIDE the older
+        # release's span. Were "25.1" elected latest, the newer
+        # release's own row would fail both keep clauses and be
+        # deleted — so this fixture fails if the guard is removed.
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.",
+                date_start="2023-01-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
             ),
         ]
         store = _write_consolidated(

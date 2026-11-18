@@ -102,3 +102,31 @@ mis-attribution is untouched by this change and remains open.
 - `docs/` cannot cite the UCDP viewpoint builder by symbol, because
   `src/datafactory_viewpoint/builders/` is missing from the citation guard's search
   roots. Found while writing the ADR-023 amendment; not fixed here.
+
+## Found by review, after the measurement above
+
+`/code-review` ran on this branch before it merged and found two defects in the fix
+itself. Both are recorded here because the measurement above was already complete when
+they were found, and neither changes any number in it.
+
+- **The span bound is upper-only (#598).** An older release's rows survive if they end
+  *after* the latest release's coverage, and not if they begin *before* it. A future
+  release starting later than its predecessor would delete the earlier history. Confirmed
+  by probe: with a release covering 2000-2026 alongside one covering 1989-2024, a 1990
+  event disappears. A symmetric `min(date_start)` bound was tried and reverted — it
+  broke all three regression tests above, correctly, because in a sparse store every
+  older row falls before the latest release's first event. The declared span is in the
+  harvest filename and discarded at consolidation, so the real fix needs it carried into
+  the store. The code comment and the ADR amendment now state the bound is one-sided.
+- **A non-numeric annual version would delete the real release (fixed here).**
+  `_parse_version` maps an unorderable string to `(0,)`, which sorts below every real
+  version, so a malformed new release would lose to its predecessor and have its own
+  rows dropped as superseded. Supersession is now refused outright when any annual
+  version is non-numeric, with a warning. Guarded by
+  `test_non_numeric_annual_version_blocks_supersession`.
+- **A short harvest of the newest release is now destructive (C-371).** The rule cannot
+  distinguish an event UCDP withdrew from one our harvest missed. Before this change a
+  shortfall left the old rows in place; after it, the shortfall deletes them. Registered,
+  not fixed.
+
+All four guards in this change were sabotaged individually and confirmed to go red.
