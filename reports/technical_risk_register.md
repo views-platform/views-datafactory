@@ -4395,6 +4395,41 @@ reported a reconciliation pass having compared nothing; one asserted a maximum t
 grid satisfies. All three are fixed, and the pattern is the finding: **a guard written against
 a defect tends to inherit the defect's own blind spot.**
 
+**2026-11-19 addendum — four more instances, and the process gap that let three of them
+through (#595/#596).** Four guards were written for the annual-supersession fix; every one was
+defective on first writing, which makes the count for this entry seven in two windows:
+
+1. `test_older_release_survives_beyond_the_latest_coverage` claimed the whole span property in
+   its docstring and exercised the upper half only. **Sabotage did not catch it** — mutating
+   the `pc.greater` clause turned it red, correctly. Mutation testing cannot detect an
+   *incomplete claim*; it only detects a *non-discriminating fixture*. Caught by review.
+2. `test_non_numeric_annual_version_blocks_supersession` — first fixture put the malformed
+   release's event outside the older release's span, so it survived either way. Caught by
+   reasoning before the first run.
+3. `test_later_annual_release_wins_for_a_shared_event` asserted only the output value, which
+   survivorship alone produces for an id with two annual rows. **It passed against
+   `development` with the entire supersession block absent.** Caught by review, second round.
+4. `test_ambiguous_annual_versions_block_supersession` — first fixture had the same flaw as 2.
+   Caught by own sabotage run.
+
+**The process gap is specific and worth more than the instances.** Sabotage was applied, and
+it worked where applied: 2 and 4 were caught by it. Instance 3 escaped because the mutation was
+run against a **hand-picked subset** of the affected tests — the supersession block was disabled
+and two of the four tests were executed, not the class. Had the whole `TestBuildUcdpV1Beige`
+class run under each mutation, a test staying green would have been visible immediately.
+
+**Remedy adopted, no new machinery:** when a mutation is applied, run every test in the
+enclosing class or module, not the tests believed to cover it. A guard that stays green under a
+mutation that should break it is the signal, and selecting which tests to run hides exactly that
+signal. Mutation tooling (mutmut, cosmic-ray) was considered and rejected: ongoing upkeep and
+runtime against a 2,625-test suite, to automate a discipline whose failure here was scope of
+execution rather than absence.
+
+**Instance 1 is the one with no procedural answer.** An incomplete claim in a docstring cannot
+be caught by mutating code, because the code and the test agree — only the prose overclaims. The
+partial answer is #597: a claim stated in prose beside a guard that tests less than the claim is
+the same failure, one layer down.
+
 Registered without fixing, found in the same window:
 
 - `builders/acled_v1.py` writes `date_month` as `YYYY-MM` while `grid_compilation.py`'s
