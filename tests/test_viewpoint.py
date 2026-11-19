@@ -985,6 +985,15 @@ class TestBuildUcdpV1Beige:
 
         result = build_ucdp_v1(cfg)
 
+        # n_events_input counts rows that SURVIVED stale
+        # filtering, and is what distinguishes supersession from
+        # survivorship here. Survivorship alone would also yield
+        # best == [140], because it prefers the higher annual
+        # version among two rows for one id — so asserting on the
+        # output value only cannot fail. Supersession must remove
+        # the v25.1 row from the input entirely: 2 rows read, 1
+        # reaching survivorship.
+        assert result.n_events_input == 1
         assert result.n_events_output == 1
         out = pq.read_table(cfg.output_path)
         assert out.column("best").to_pylist() == [140]
@@ -1131,6 +1140,47 @@ class TestBuildUcdpV1Beige:
         assert result.n_events_output == 1
         out = pq.read_table(cfg.output_path)
         assert out.column("id").to_pylist() == [1]
+
+    def test_ambiguous_annual_versions_block_supersession(
+        self, tmp_path: Path
+    ) -> None:
+        """Two strings parsing to one tuple must not decide.
+
+        `_parse_version` maps "26.1" and "26.01" to the same
+        tuple, so `max` would keep whichever `unique()` returned
+        first and the outcome would depend on row order in the
+        store. `_ANNUAL_PATTERN` captures `[\d.]+` from the
+        filename, so `ucdp_ged_v26.01_1989_2025.parquet` produces
+        exactly this. Supersession is refused rather than decided
+        by row order.
+        """
+        # Row order matters, which is the defect. `unique()`
+        # returns "26.1" first, so `max` elects it; its event is
+        # the LATER of the two, so the "26.01" event falls inside
+        # its span and is deleted once supersession proceeds.
+        # Reverse the dates and the fixture cannot fail.
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2023-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="26.01",
+                date_start="2023-01-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 2
+        out = pq.read_table(cfg.output_path)
+        assert sorted(out.column("id").to_pylist()) == [1, 2]
 
     def test_non_numeric_annual_version_blocks_supersession(
         self, tmp_path: Path

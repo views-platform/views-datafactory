@@ -4415,8 +4415,6 @@ Registered without fixing, found in the same window:
 
 ---
 
-## Deferred by Design
-
 ### C-371: a short annual harvest is now destructive, not merely short — [OPEN]
 
 | | |
@@ -4467,6 +4465,9 @@ exists for small candidate versions and is loose for annual by inheritance, not 
 
 **Source:** `/code-review` on #596, 2026-11-18. Confirmed by reading the supersession condition
 and the harvest tolerances; the shortfall scenario itself is reasoned, not reproduced.
+
+
+## Deferred by Design
 
 ### C-365: The rot check watched the lock, not upstream — so C-337's guard reported success over the same package, frozen again — [OPEN]
 

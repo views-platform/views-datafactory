@@ -168,10 +168,12 @@ A fourth rule, applied **before** the annual coverage boundary is derived:
 
 - **Latest annual only:** among annual sources, only the latest version (by `_parse_version`)
   is retained for the span that version covers. Rows from an older release whose `date_end`
-  lies beyond the latest release's coverage survive. If any annual version string is
-  non-numeric, supersession is refused entirely and a warning is logged, because an
-  unorderable version would otherwise elect the wrong release as latest and delete the real
-  one.
+  lies beyond the latest release's coverage survive. Supersession is refused entirely, with a
+  warning, unless the annual versions are **totally ordered** by `_parse_version` — that is, if
+  any version string is non-numeric, or if two distinct strings parse to the same tuple (`26.1`
+  and `26.01` both give `(26, 1)`). An unorderable version would elect the wrong release as
+  latest and delete the real one; an ambiguous pair would make the outcome depend on row order
+  in the store. Overcounting visibly is preferred to deleting silently.
 
 The ordering is load-bearing. Running it first means the coverage boundary and the annual id
 set are derived from a single release, and a `.9` or candidate row for a withdrawn event is
@@ -183,7 +185,13 @@ The span clause is **upper-only, and deliberately so**. It selects nothing today
 predecessor cannot silently delete the trailing years.
 
 It does **not** bound the start of the span, so a release whose coverage *began* later than its
-predecessor's would delete the earlier history. That gap is open as **#598**. It is not closed
+predecessor's would delete the earlier history. That gap is open as **#598**.
+
+The bound is also derived from the data rather than declared, so a single corrupt `date_end` in the
+newest release — one event dated far in the future — makes it vacuous and supersedes the older
+release wholesale. This matters only in the case the bound exists for, a release ending earlier than
+its predecessor, and is recorded on **#598** with it. Both have the same cause: the span is observed,
+not declared. It is not closed
 here because the bound cannot be derived from the data: `max(date_end)` is a sound proxy for
 where coverage ends, since a release is dense up to its cutoff, but `min(date_start)` is not a
 proxy for where coverage begins — in a sparse store it is merely the earliest event present, and

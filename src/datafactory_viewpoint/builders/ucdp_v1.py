@@ -215,21 +215,44 @@ def build_ucdp_v1(
         annual_versions = pc.filter(source_versions, annual_mask)
         distinct_annual = annual_versions.unique().to_pylist()
 
-        # _parse_version returns (0,) for a non-numeric string.
-        # In (c) that only loses a preference; here it would elect
-        # the wrong release as latest and delete the real one, so
-        # refuse to supersede at all instead.
-        unparseable = sorted(
+        # Refuse to supersede unless the annual versions are
+        # totally ordered by _parse_version. Two ways they are not:
+        #
+        #  - a non-numeric string, which _parse_version maps to
+        #    (0,). In (c) that only loses a preference; here it
+        #    would elect the wrong release as latest and delete
+        #    the real one.
+        #  - two distinct strings that parse to the SAME tuple,
+        #    e.g. "26.1" and "26.01" both give (26, 1), because
+        #    _ANNUAL_PATTERN captures [\d.]+ from the filename.
+        #    max() would then keep whichever unique() happened to
+        #    return first, making the outcome depend on row order
+        #    in the store.
+        #
+        # Either way the ordering is not trustworthy, so overcount
+        # visibly rather than delete silently.
+        unorderable = sorted(
             v
             for v in distinct_annual
             if not all(p.isdigit() for p in v.split("."))
         )
-        if unparseable:
+        parsed: dict[tuple[int, ...], list[str]] = {}
+        for v in distinct_annual:
+            parsed.setdefault(_parse_version(v), []).append(v)
+        ambiguous = sorted(
+            v
+            for versions in parsed.values()
+            if len(versions) > 1
+            for v in versions
+        )
+        if unorderable or ambiguous:
             logger.warning(
-                "Annual versions %s are not numeric; refusing to "
+                "Annual versions are not totally ordered "
+                "(non-numeric: %s; ambiguous: %s); refusing to "
                 "supersede any annual release. Superseded events "
                 "may remain in the output.",
-                unparseable,
+                unorderable,
+                ambiguous,
             )
         elif len(distinct_annual) > 1:
             latest_annual = max(distinct_annual, key=_parse_version)
