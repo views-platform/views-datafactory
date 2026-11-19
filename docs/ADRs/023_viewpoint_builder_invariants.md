@@ -123,3 +123,92 @@ Add a `strip_fields: set[str]` parameter.
 - `reports/consumer_parity_investigation.md` — Full investigation report
 - `reports/dot9_investigation/parity_results.md` — .9-only parity validation
 - VIEWSER GED_loader notebooks (Desktop/notebook/GED_loader{0,1,2}.ipynb) — source of truth for VIEWSER behavior
+
+---
+
+## Amendment 2026-11-17 — annual releases now supersede each other (#594, #595)
+
+**The Decision above is unchanged in intent.** This amendment records that §Decision item 3
+enumerated three stale-filtering rules as if they were exhaustive, that the missing fourth
+rule let withdrawn events stay in published figures for as long as two annual releases
+coexisted, and what it cost. Dated amendment, not a rewrite.
+
+### 1. The gap
+
+§Decision item 3 defines the *Annual coverage boundary* as "the maximum `date_end` value
+across all annual events" — across the **union** of annual releases, not the latest one — and
+its three bullets say nothing about one annual release superseding another. The third bullet
+does exactly that for `.9` data: "among .9 sources, only the latest version is retained".
+Annual got no equivalent.
+
+That asymmetry was invisible while only one annual release was on disk. It became
+load-bearing when v26.1 was harvested on 2026-07-02 alongside v25.1, which is the state the
+production store has been in since.
+
+### 2. What it cost
+
+UCDP does not only revise events between annual releases — it **deletes and merges** them.
+Because the consolidated store is append-only by design (ADR-013), a withdrawn event keeps
+its row from the superseded release. That row is annual, so the "within annual period" rule
+kept it unconditionally; the ".9" rule never looked at it; and survivorship could not discard
+it, because the event id had no competing row to lose to.
+
+Measured 2026-11-17 against UCDP release 26.1: **229 events and 2,878 deaths** across
+2022–2024 were events UCDP had withdrawn, of which 2,499 were Ukraine. The per-year totals —
+90, 388 and 2,400 — accounted exactly for the entire gap between our published global figures
+and UCDP's own. An external reviewer found the symptom before we did.
+
+Nothing went red. Deaths were neither created nor destroyed by the pipeline, so every ADR-040
+conservation invariant held; the error entered at ingestion of a release that was later
+withdrawn.
+
+### 3. The rule now applied
+
+A fourth rule, applied **before** the annual coverage boundary is derived:
+
+- **Latest annual only:** among annual sources, only the latest version (by `_parse_version`)
+  is retained for the span that version covers. Rows from an older release whose `date_end`
+  lies beyond the latest release's coverage survive. Supersession is refused entirely, with a
+  warning, in three cases: if any annual version string is non-numeric; if two distinct strings
+  parse to the same tuple (`26.1` and `26.01` both give `(26, 1)`); or if any annual row has a
+  null `date_end`. An unorderable version would elect the wrong release as latest and delete the
+  real one; an ambiguous pair would make the outcome depend on row order in the store; and a null
+  `date_end` would propagate through the span comparison, because `pc.max` skips nulls,
+  `pc.greater` against a null scalar yields null, and `filter` drops null — deleting every annual
+  row in silence. In the null case the rule stands aside so that the pre-existing `TypeError` in
+  the *Annual coverage boundary* rule fires instead, which is the loud failure ADR-011 wants;
+  no second error path is introduced. Refusing and overcounting is preferred to deleting
+  silently.
+
+The ordering is load-bearing. Running it first means the coverage boundary and the annual id
+set are derived from a single release, and a `.9` or candidate row for a withdrawn event is
+dropped with it. Running it last would leave that row to win survivorship and republish the
+event from another source.
+
+The span clause is **upper-only, and deliberately so**. It selects nothing today — v26.1 spans
+1989–2025 and v25.1 spans 1989–2024 — and exists so that a release ending *earlier* than its
+predecessor cannot silently delete the trailing years.
+
+It does **not** bound the start of the span, so a release whose coverage *began* later than its
+predecessor's would delete the earlier history. That gap is open as **#598**.
+
+The bound is also derived from the data rather than declared, so a single corrupt `date_end` in the
+newest release — one event dated far in the future — makes it vacuous and supersedes the older
+release wholesale. This matters only in the case the bound exists for, a release ending earlier than
+its predecessor, and is recorded on **#598** with it. Both have the same cause: the span is observed,
+not declared. It is not closed
+here because the bound cannot be derived from the data: `max(date_end)` is a sound proxy for
+where coverage ends, since a release is dense up to its cutoff, but `min(date_start)` is not a
+proxy for where coverage begins — in a sparse store it is merely the earliest event present, and
+using it stops supersession happening at all. The declared span is in the harvest filename and is
+discarded during consolidation, so closing #598 means carrying it into the store. Every UCDP
+annual release so far starts at 1989.
+
+Implemented in the UCDP viewpoint builder, inside the same block the other three rules live
+in, under the existing `filter_stale_versions` flag. Guarded by `tests/test_viewpoint.py`,
+which now carries the first fixtures in the suite with two annual versions present.
+
+### 4. What this does not change
+
+The consolidation layer still preserves every vintage (ADR-013, ADR-017). Supersession is a
+viewpoint decision, which is where ADR-013 places it. Nothing is deleted from `data/raw/`.
