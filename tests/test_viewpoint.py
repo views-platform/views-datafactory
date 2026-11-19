@@ -1182,6 +1182,45 @@ class TestBuildUcdpV1Beige:
         out = pq.read_table(cfg.output_path)
         assert sorted(out.column("id").to_pylist()) == [1, 2]
 
+    def test_null_annual_date_end_does_not_delete_silently(
+        self, tmp_path: Path
+    ) -> None:
+        """A null `date_end` must not be swallowed by step (a0).
+
+        `pc.max` skips nulls, `pc.greater` against a null scalar
+        yields null, and `filter()` drops null — so before this
+        guard an all-null newest release deleted every annual row
+        in silence, its own rows included, with conservation still
+        balancing and nothing logged above INFO. On `development`,
+        before supersession existed, the same input raised.
+
+        The exception type below is step (a)'s own pre-existing
+        behaviour, not something (a0) invents. The property under
+        test is that (a0) stands aside and lets it fire rather
+        than returning a silently empty result. A regression would
+        show up here as no exception at all.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+        ]
+        events[0]["date_end"] = None
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        with pytest.raises(TypeError):
+            build_ucdp_v1(cfg)
+
     def test_non_numeric_annual_version_blocks_supersession(
         self, tmp_path: Path
     ) -> None:

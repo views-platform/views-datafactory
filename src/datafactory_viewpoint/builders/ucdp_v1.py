@@ -236,6 +236,18 @@ def build_ucdp_v1(
             for v in distinct_annual
             if not all(p.isdigit() for p in v.split("."))
         )
+        # A null date_end among annual rows must not reach the
+        # span comparison. pc.max skips nulls, pc.greater against
+        # a null scalar yields null, and filter() drops null — so
+        # an all-null newest release would delete every annual row
+        # in silence, this step included. Step (a) raises TypeError
+        # on such a list, which is the behaviour ADR-011 wants, so
+        # standing aside restores it rather than inventing a second
+        # error path.
+        annual_ends = pc.filter(table.column("date_end"), annual_mask)
+        n_null_ends = (
+            pc.sum(pc.cast(pc.is_null(annual_ends), "int64")).as_py() or 0
+        )
         parsed: dict[tuple[int, ...], list[str]] = {}
         for v in distinct_annual:
             parsed.setdefault(_parse_version(v), []).append(v)
@@ -245,14 +257,15 @@ def build_ucdp_v1(
             if len(versions) > 1
             for v in versions
         )
-        if unorderable or ambiguous:
+        if unorderable or ambiguous or n_null_ends:
             logger.warning(
-                "Annual versions are not totally ordered "
-                "(non-numeric: %s; ambiguous: %s); refusing to "
-                "supersede any annual release. Superseded events "
-                "may remain in the output.",
+                "Not superseding any annual release: versions not "
+                "totally ordered (non-numeric: %s; ambiguous: %s) "
+                "or %d annual rows have a null date_end. "
+                "Superseded events may remain in the output.",
                 unorderable,
                 ambiguous,
+                n_null_ends,
             )
         elif len(distinct_annual) > 1:
             latest_annual = max(distinct_annual, key=_parse_version)

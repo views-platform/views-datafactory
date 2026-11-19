@@ -85,7 +85,7 @@ mis-attribution is untouched by this change and remains open.
 
 ## Verification performed
 
-- Full suite: **2,622 tests, 0 failures, 0 errors** (counted from JUnit XML, not from
+- Full suite: **2,626 tests, 0 failures, 0 errors** (counted from JUnit XML, not from
   the exit status — this repo's conftest withholds the summary line, and C-345 warns
   that a piped status can hide a SIGKILL).
 - `ruff check .`, `mypy src/` (91 files), `bash docs/validate_docs.sh` — all clean.
@@ -129,4 +129,14 @@ they were found, and neither changes any number in it.
   shortfall left the old rows in place; after it, the shortfall deletes them. Registered,
   not fixed.
 
-All four guards in this change were sabotaged individually and confirmed to go red.
+All guards in this change were sabotaged and confirmed to go red, and from the third round
+onward the **whole enclosing test class** was run under each mutation rather than the tests
+believed to cover it — see C-370, where selecting a subset is what let a decorative test through.
+
+A `/falsify` audit then found one more defect, in the fix itself: a null `date_end` in the newest
+annual release made this step delete **every** annual row in silence, its own release included,
+with conservation balancing and nothing logged above INFO. On `development` the same input raises
+`TypeError`. The step now stands aside when any annual `date_end` is null, which restores that
+loud failure rather than inventing a second error path. Real data has zero nulls across all
+384,918 rows, so it was never reachable, but ADR-023 §2 documents a missing `date_end` as
+possible. Guarded by `test_null_annual_date_end_does_not_delete_silently`.

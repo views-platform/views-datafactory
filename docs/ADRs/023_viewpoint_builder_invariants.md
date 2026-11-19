@@ -169,11 +169,16 @@ A fourth rule, applied **before** the annual coverage boundary is derived:
 - **Latest annual only:** among annual sources, only the latest version (by `_parse_version`)
   is retained for the span that version covers. Rows from an older release whose `date_end`
   lies beyond the latest release's coverage survive. Supersession is refused entirely, with a
-  warning, unless the annual versions are **totally ordered** by `_parse_version` — that is, if
-  any version string is non-numeric, or if two distinct strings parse to the same tuple (`26.1`
-  and `26.01` both give `(26, 1)`). An unorderable version would elect the wrong release as
-  latest and delete the real one; an ambiguous pair would make the outcome depend on row order
-  in the store. Overcounting visibly is preferred to deleting silently.
+  warning, in three cases: if any annual version string is non-numeric; if two distinct strings
+  parse to the same tuple (`26.1` and `26.01` both give `(26, 1)`); or if any annual row has a
+  null `date_end`. An unorderable version would elect the wrong release as latest and delete the
+  real one; an ambiguous pair would make the outcome depend on row order in the store; and a null
+  `date_end` would propagate through the span comparison, because `pc.max` skips nulls,
+  `pc.greater` against a null scalar yields null, and `filter` drops null — deleting every annual
+  row in silence. In the null case the rule stands aside so that the pre-existing `TypeError` in
+  the *Annual coverage boundary* rule fires instead, which is the loud failure ADR-011 wants;
+  no second error path is introduced. Refusing and overcounting is preferred to deleting
+  silently.
 
 The ordering is load-bearing. Running it first means the coverage boundary and the annual id
 set are derived from a single release, and a `.9` or candidate row for a withdrawn event is

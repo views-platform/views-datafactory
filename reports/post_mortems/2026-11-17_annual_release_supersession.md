@@ -375,6 +375,29 @@ when the code they guard is disabled.
 Three decorative guards in one evening, each caught by something other than me, is the number
 worth remembering from this incident.
 
+**A third round, a `/falsify` audit, found the worst defect of the three rounds — in the fix.** A
+null `date_end` in the newest annual release made the supersession step delete **every** annual
+row, its own release included. `n_read=2, n_input=0, n_output=0`, conservation balancing exactly,
+nothing logged above INFO. On `development`, before supersession existed, the same input raises
+`TypeError`.
+
+So the fix for a silent-wrong-data bug had introduced a silent-total-data-loss path. The cause is
+pyarrow's null semantics: `pc.max` skips nulls and returns null, `pc.greater` against a null
+scalar yields null, and `filter` treats null as drop. Worse, because the new step runs first, it
+changed the input to the *Annual coverage boundary* rule so that rule's own `TypeError` no longer
+fired — the new code did not merely fail silently, it silenced an existing alarm.
+
+The step now refuses to supersede when any annual `date_end` is null, which lets the pre-existing
+loud failure fire. No new error path. Measured: zero nulls and zero empty strings in `date_start`
+and `date_end` across all 384,918 rows of the annual snapshot, so this was never reachable with
+real data — but ADR-023 §2 documents a missing `date_end` as possible, which makes it a
+contract-relevant shape rather than a hypothetical.
+
+That audit also corrected the test count stated in this document and in `findings.md`, which both
+said 2,622 when the suite was 2,625. And it cleared one thing I expected to be a gap: ADR-040
+already disclaims ownership of *which* events are selected, so no amendment to it was owed by
+this change.
+
 **The lesson is not "review caught it".** It is that I wrote a guarantee into a code comment and an
 ADR, wrote a test whose docstring claimed the guarantee and whose body tested half of it, and did
 not notice. That is the same failure as #597, one layer down: a correctness property asserted in
@@ -411,7 +434,7 @@ measurement. In each case the measurement, once taken, contradicted it.
 
 ## Verification performed
 
-- Full suite: **2,622 tests, 0 failures, 0 errors**, counted from JUnit XML rather than the exit
+- Full suite: **2,626 tests, 0 failures, 0 errors**, counted from JUnit XML rather than the exit
   status — this repo's conftest withholds the summary line, and C-345 warns that a piped status can
   hide a SIGKILL.
 - `ruff check .`, `mypy src/` (91 files), `bash docs/validate_docs.sh` — all clean.
