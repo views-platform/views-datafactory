@@ -35,7 +35,7 @@ METRICS, per event:
    not what a consumer receives.** It scores rows as the allocation
    emits them. Whether those rows survive compilation is a separate
    question, and on the spatial axis the answer was *no* for every
-   release up to v1.18.1: the compiler re-derived each event's cell from
+   release through v1.18.0: the compiler re-derived each event's cell from
    ``latitude``/``longitude`` and ignored the ``priogrid_gid`` the
    allocator had written (#547, C-368).
 

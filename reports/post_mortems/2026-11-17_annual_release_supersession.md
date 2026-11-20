@@ -309,9 +309,10 @@ that anywhere a reader of our figures would see it. #592 exists to fix the secon
 ## Found by review, before it merged
 
 The measurement in section 7 was complete and the PR was green when `/code-review` ran on the
-branch. It found two defects in the fix itself. Neither changes any figure in section 7, and
-neither affects today's data — both are latent — but one is a data-loss path in a change about not
-losing data, and it was mine.
+branch. It found two defects in the fix itself; a third review, on the promote PR after the release
+was already cut, found one more, recorded at the end of this section. None of the three changes any
+figure in section 7, and none affects today's data — all are latent — but two of them are data-loss
+paths in a change about not losing data, and all three were mine.
 
 **The span bound was one-sided (#598).** Section 6 explains the clause that keeps an older
 release's rows when they fall outside the newest release's coverage, and says it stops a future
@@ -403,6 +404,58 @@ ADR, wrote a test whose docstring claimed the guarantee and whose body tested ha
 not notice. That is the same failure as #597, one layer down: a correctness property asserted in
 prose, with a guard that looked like it checked it.
 
+### A third defect, found by review on the promote PR (2026-11-20)
+
+The release was cut, #600 was merged to `development`, and the promote PR to `main` (#602) was
+green when `/code-review` ran again. It found a third defect in the same 69-line change, and this
+one is the plainest of the three: **`pyarrow`'s `pc.or_` propagates nulls.** `or_(True, null)` is
+null, not true, and `Table.filter` treats null as *drop*. So a term that says "keep this row
+unconditionally" does not, if any other term in the same expression is null.
+
+Both `keep` expressions in the stale-version filter were built with `pc.or_`:
+
+- Step (a0), the supersession step this fix added, opens with "keep every row that is not annual".
+- Step (b), which predates the fix and is on `main` today, opens with "keep every annual row" and
+  then "keep every row whose id is in an annual release".
+
+A non-annual row with a null `date_end` failed all three of those terms, because the null in
+`date_end` poisoned the whole expression. Both now use `pc.or_kleene`, which is the three-valued
+version: `or_kleene(True, null)` is true.
+
+**The review called it a log-count defect. It was a row-loss defect.** The review's own probe used
+a candidate row whose id was in no annual release, and that row is dropped by step (b) in any case,
+so only the number in the `Annual X supersedes Y: dropped N rows` log line was wrong. Probing the
+case the review did not — a `.9` row whose id *is* in the latest annual release — showed
+`n_events_input` falling from 2 to 1: the row was deleted. Under the production profile's
+`dot9_wins` survivorship that `.9` row is the one that would have won its group, so losing it
+changes the published figure for that event. The finding was real and one severity level worse than
+reported.
+
+**Fixing step (a0) alone would have been decorative**, which is the part worth remembering. With
+only (a0) corrected, the row survived supersession and was then deleted six lines later by step
+(b), for exactly the same reason. The measured outcome was unchanged. A fix whose effect is undone
+by the next statement is not a fix, and the only reason this was noticed is that the probe measured
+`n_events_input` after the whole filter rather than reading the log line the fix had just made
+honest.
+
+Nothing delivered changes. `date_end` has **0 nulls in 384,918 rows** in the production
+consolidated store, so no figure in section 7 moves. The guard is
+`TestBuildUcdpV1Beige::test_null_date_end_on_a_dot9_row_keeps_it`, which asserts against a control
+build of the same fixture with a real `date_end` rather than against a literal, and which was
+sabotage-tested against each `or_kleene` reverted separately — it fails on either.
+
+One case is left, deliberately: a non-annual row with a null `date_end` whose id is in no annual
+release is still dropped, because whether it lies beyond the annual coverage boundary is genuinely
+unknown. That is 📌 #603, filed rather than fixed, because the two defensible answers — keep it, or
+refuse the whole filter the way the annual branch already does — differ in delivered behaviour and
+neither has been measured against a real file.
+
+**The lesson here is narrower than the other two and more mechanical.** Three-valued logic in a
+filter expression is a known trap in this file: the null guard added two days earlier
+(`n_null_ends`) exists because `pc.max` skips nulls and `pc.greater` against a null scalar yields
+null. The same session then wrote a new `keep` expression with `pc.or_` and did not connect it.
+Knowing a library's null semantics in one place is not knowing them in the next place.
+
 ## Honest negatives — what we got wrong on the way
 
 Recorded because the register and the ADRs are the only places this stays true, and because three of
@@ -434,9 +487,10 @@ measurement. In each case the measurement, once taken, contradicted it.
 
 ## Verification performed
 
-- Full suite: **2,626 tests, 0 failures, 0 errors**, counted from JUnit XML rather than the exit
-  status — this repo's conftest withholds the summary line, and C-345 warns that a piped status can
-  hide a SIGKILL.
+- Full suite: **2,627 tests, 0 failures, 0 errors**, 30 skipped, 456.8 s, counted from JUnit XML
+  rather than the exit status — this repo's conftest withholds the summary line, and C-345 warns
+  that a piped status can hide a SIGKILL. The count was 2,626 before 2026-11-20; the extra test is
+  the `or_kleene` guard described above.
 - `ruff check .`, `mypy src/` (91 files), `bash docs/validate_docs.sh` — all clean.
 - Both regression tests confirmed red with the source change reverted, green with it.
 - CI on #596: docs 7s, lint 20s, typecheck 28s, test 9m19s, test-py313 15m23s — all pass.
@@ -507,18 +561,31 @@ measurement. In each case the measurement, once taken, contradicted it.
 
 ## Open after this post-mortem
 
+Updated 2026-11-20, after the release was cut.
+
+✅ Done since this document was written:
+
+1. **#596 merged** to `development` (merge commit `0ccef9b`).
+2. **v1.19.0 cut** — #600 merged to `development` (merge commit `c08193d`).
+
 🛠️ In order, all requiring the operator:
 
-1. **Merge #596.** Green, mergeable, targeting `development`.
-2. **Rebuild and redeploy.** This republishes the figures. Confirmed at the moment of doing it.
-3. **Verify the served store:** `scripts/verify_consumer_contract.py`, plus the three global totals
+1. **Merge the promote PR #602** (`development` → `main`), then tag `v1.19.0` on that merge commit
+   and back-merge to `development`.
+2. **Deploy on views-datafactory-00** — the four blocks in `docs/guides/server_quickref.md`, with
+   `scripts/preflight.py` as an advance check. The monthly cron fires 00:00 UTC on the 21st, which
+   is 01:00 Oslo time; the server clock is UTC, verified with `timedatectl`.
+3. **Let the cron rebuild the store** (~7.5 h), rather than starting the pipeline by hand. The
+   operator's choice.
+4. **Verify the served store:** `scripts/verify_consumer_contract.py`, plus the three global totals
    read back through `load_dataset`.
-4. **Notify views-hydranet, views-models and views-postprocessing.** A figure change, not a release
+5. **Notify views-hydranet, views-models and views-postprocessing.** A figure change, not a release
    note. The outstanding 26.49% → 35.94% state-based correction belongs in the same message.
-5. **Then** the follow-up to Håvard, which was the operator's explicit condition: mapped, fixed and
+6. **Then** the follow-up to Håvard, which was the operator's explicit condition: mapped, fixed and
    proven before anything goes out.
 
-📌 Tracked and not blocking: #592, #593, #597.
+📌 Tracked and not blocking: #592, #593, #597, #598, #599, #603, and C-371.
 
-❔📌 Not yet filed, listed in Remaining weaknesses above: the source-total comparison check (1), the
-second-annual-release alarm (2), the `last_digest` guard (6), and the citation-guard search root (7).
+❔📌 Not yet filed, listed in Remaining weaknesses above: the second-annual-release alarm (2), the
+`last_digest` guard (6), and the citation-guard search root (7). The source-total comparison check
+(1) is now #599.

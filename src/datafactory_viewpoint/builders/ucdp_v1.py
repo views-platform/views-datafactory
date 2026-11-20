@@ -276,7 +276,15 @@ def build_ucdp_v1(
             latest_end = pc.max(
                 pc.filter(table.column("date_end"), latest_mask)
             )
-            keep = pc.or_(
+            # `or_kleene`, not `or_`: `pc.or_` propagates nulls,
+            # so `or_(True, null)` is null and `filter` drops the
+            # row. A non-annual row with a null `date_end` would
+            # therefore be deleted here even though the first term
+            # says to keep every non-annual row. The guard above
+            # counts nulls among annual rows only, by design --
+            # it defers to step (a)'s TypeError -- so this term
+            # has to survive a null on its own.
+            keep = pc.or_kleene(
                 pc.not_equal(source_types, "annual"),
                 pc.or_(
                     pc.equal(source_versions, latest_annual),
@@ -329,9 +337,18 @@ def build_ucdp_v1(
             in_annual_period = pc.less_equal(
                 dates_col, pa.scalar(annual_cutoff),
             )
-            keep = pc.or_(
+            # `or_kleene` for the same reason as step (a0):
+            # `in_annual_period` is null when `date_end` is null,
+            # and plain `or_` would propagate that null through
+            # both positive terms, so a row the first two terms
+            # say to keep unconditionally would be dropped.
+            # A non-annual row with a null `date_end` whose id is
+            # in no annual release is still dropped, because its
+            # position relative to the coverage boundary is
+            # unknown; that residue is #603.
+            keep = pc.or_kleene(
                 is_annual,
-                pc.or_(
+                pc.or_kleene(
                     in_annual_ids,
                     pc.invert(in_annual_period),
                 ),

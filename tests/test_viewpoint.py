@@ -1144,7 +1144,7 @@ class TestBuildUcdpV1Beige:
     def test_ambiguous_annual_versions_block_supersession(
         self, tmp_path: Path
     ) -> None:
-        """Two strings parsing to one tuple must not decide.
+        r"""Two strings parsing to one tuple must not decide.
 
         `_parse_version` maps "26.1" and "26.01" to the same
         tuple, so `max` would keep whichever `unique()` returned
@@ -1220,6 +1220,69 @@ class TestBuildUcdpV1Beige:
 
         with pytest.raises(TypeError):
             build_ucdp_v1(cfg)
+
+    def test_null_date_end_on_a_dot9_row_keeps_it(
+        self, tmp_path: Path
+    ) -> None:
+        """A null `date_end` outside annual must not delete a row.
+
+        `pc.or_` propagates nulls, so `or_(True, null)` is null and
+        `filter()` drops the row. Both the supersession step and the
+        coverage step open with a term that says "keep this row
+        unconditionally" -- "not annual" in the first, "in an annual
+        release" in the second -- and plain `or_` let a null in
+        `date_end` override both. The null-count guard counts annual
+        rows only, by design, so nothing upstream catches this.
+
+        Event 1 exists in two annual releases and as a `.9` row with
+        no `date_end`. The `.9` row is the one `dot9_wins` would
+        elect, so losing it changes the published figure for that
+        event. Measured against the same fixture with a real
+        `date_end`: both must leave two rows.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-01-01",
+                date_end="2024-12-31",
+            ),
+            _make_consolidated_event(
+                event_id=1,
+                source_version="25.1",
+                date_start="2024-01-01",
+                date_end="2024-06-30",
+            ),
+            _make_consolidated_event(
+                event_id=1,
+                source_type="dot9",
+                source_version="26.9.3",
+                date_start="2024-01-01",
+            ),
+        ]
+        events[2]["date_end"] = None
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        null_result = build_ucdp_v1(_config(tmp_path, store))
+
+        # The control: identical store, real `date_end`. Asserting
+        # against it rather than a literal means the test states the
+        # property -- the null changes nothing -- and cannot pass by
+        # agreeing with a number that is itself wrong.
+        events[2]["date_end"] = "2024-03-31"
+        control_store = _write_consolidated(
+            tmp_path / "control.parquet", events
+        )
+        control_result = build_ucdp_v1(
+            _config(tmp_path / "control", control_store)
+        )
+
+        assert null_result.n_events_input == 2
+        assert (
+            null_result.n_events_input
+            == control_result.n_events_input
+        )
 
     def test_non_numeric_annual_version_blocks_supersession(
         self, tmp_path: Path

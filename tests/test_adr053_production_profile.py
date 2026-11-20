@@ -332,7 +332,9 @@ class TestAdr053ComposedOnSyntheticGeographyGreen:
         gen = fixture["gen"]
         months = {str(row["date_month"]) for row in allocated}
         cells = tuple(sorted({row["priogrid_gid"] for row in allocated}))
-        assert len(months) == 8, sorted(months)
+        assert len(months) == len(gen.WELL_LOCATED_FATALITIES), (
+            sorted(months)
+        )
         assert cells == gen.ADMIN1_ALLOCATION_CELLS, cells
 
     def test_both_stages_marked_the_rows_they_touched(
