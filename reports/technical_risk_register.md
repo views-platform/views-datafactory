@@ -1,7 +1,7 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-11-18 — C-371 (Tier 2) registered: the annual supersession added in #595 cannot distinguish an event UCDP withdrew from one our harvest missed, so a short harvest of the newest annual release now deletes the previous release's rows instead of merely leaving stale ones. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-11-20 — C-370 gained an eighth instance: the null guard added for #595 counts annual rows only, and review on the promote PR found the same null destroying non-annual rows through `pc.or_`'s null propagation, in the new step and in the pre-existing one, so fixing only the new step would have left the behaviour unchanged (#602, residue #603). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
 **Status:** 371 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 58 open concerns (1 Tier 1, 8 Tier 2, 18 Tier 3, 25 Tier 4, 6 deferred by design; 6 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
@@ -4429,6 +4429,30 @@ execution rather than absence.
 be caught by mutating code, because the code and the test agree — only the prose overclaims. The
 partial answer is #597: a claim stated in prose beside a guard that tests less than the claim is
 the same failure, one layer down.
+
+**2026-11-20 addendum — an eighth instance, and the one where the guard's scope was the
+blind spot (#602/#603).** The null-count guard added on 2026-11-19 (`n_null_ends` in
+`build_ucdp_v1()`) refuses to supersede when an **annual** row has a null `date_end`, because
+`pc.max` skips nulls and the resulting comparison deletes every row in silence. It counts annual
+rows only. Review on the promote PR found that the same null, on a **non-annual** row, was also
+destructive, by a different mechanism the guard does not watch: `pc.or_` propagates nulls, so
+`or_(True, null)` is null and `Table.filter` drops the row — a term saying "keep this row
+unconditionally" was overridden by a null elsewhere in the expression. Both `keep` expressions now
+use `pc.or_kleene`, including the one in step (b) that predates the fix.
+
+This is instance 1's pattern, not instance 3's: the guard was written against the observed defect
+and inherited its **scope**. The observed defect was in annual rows, so the guard counts annual
+rows. Nothing was wrong with the guard as written; it simply answers a narrower question than its
+neighbourhood needs, and no amount of mutating the code it watches would say so.
+
+**Two things worth carrying forward.** First, the review reported this one severity level too low —
+as a wrong count in a log line — because its probe used a row that a later step discards in any
+case. Probing the adjacent case showed a row actually deleted. A finding's severity is a
+measurement, not a reading. Second, **fixing the new code alone would have been decorative**: the
+row survived step (a0) and was then dropped by step (b) six lines later for the identical reason,
+with no change in the delivered result. The fix was only real once both were corrected, and the
+only reason that was visible is that the probe measured the end of the filter rather than the log
+line the first fix had just made honest.
 
 Registered without fixing, found in the same window:
 

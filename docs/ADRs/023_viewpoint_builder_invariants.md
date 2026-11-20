@@ -180,6 +180,17 @@ A fourth rule, applied **before** the annual coverage boundary is derived:
   no second error path is introduced. Refusing and overcounting is preferred to deleting
   silently.
 
+**That refusal covers annual rows only, and a null `date_end` on a non-annual row was destructive
+by a second mechanism (added 2026-11-20).** `pc.or_` propagates nulls, so `or_(True, null)` is null
+and `filter` drops the row: the term that keeps every non-annual row was overridden by a null
+elsewhere in the same expression. The *Within annual period* rule, which predates this amendment,
+had the same flaw in both of its positive terms. Both expressions now use
+`pc.or_kleene`, the three-valued form, so a term asserting that a row is kept holds against a null
+in another term. Correcting only the new rule would have changed nothing, because the row was then
+dropped by the pre-existing one for the identical reason. One case remains and is open as **#603**:
+a non-annual row with a null `date_end` whose id is in no annual release is still dropped, because
+its position relative to the coverage boundary is genuinely unknown.
+
 The ordering is load-bearing. Running it first means the coverage boundary and the annual id
 set are derived from a single release, and a `.9` or candidate row for a withdrawn event is
 dropped with it. Running it last would leave that row to win survivorship and republish the

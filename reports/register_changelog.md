@@ -17,6 +17,41 @@ entry could.
 
 ---
 
+## A guard that inherited its defect's scope, and a fix that was almost decorative (2026-11-20)
+
+**C-370, eighth instance. #602, residue #603.**
+
+The 2026-11-19 null guard in `build_ucdp_v1()` refuses to supersede when an *annual* row has a
+null `date_end`. It was written because `pc.max` skips nulls, which had turned a loud `TypeError`
+into silent total data loss. Review on the promote PR to `main` found a second destructive path
+for the same null value, on *non-annual* rows, by a mechanism the guard does not watch:
+`pyarrow`'s `pc.or_` propagates nulls, so `or_(True, null)` is null and `Table.filter` treats null
+as drop. A `keep` expression opening with "keep every row that is not annual" therefore dropped
+non-annual rows whenever `date_end` was null. Both expressions in the filter now use
+`pc.or_kleene`, the three-valued form. Nothing delivered changes: `date_end` has 0 nulls in
+384,918 production rows.
+
+**Two corrections to how the finding was reported, both mine to make.**
+
+The review classified it as a wrong number in a log line. Measured against the adjacent case — a
+`.9` row whose id *is* in the latest annual release, rather than the review's candidate row that a
+later step discards anyway — it deletes the row: `n_events_input` fell from 2 to 1. Under the
+production profile's `dot9_wins` survivorship that is the row that would have won its group. The
+severity was a measurement nobody had taken, not a judgement call.
+
+And fixing the step the review named would have changed nothing. The row survived the new
+supersession step and was dropped six lines later by the pre-existing coverage step, for the
+identical reason — plain `or_` over a null. Only correcting both made the fix real. **A fix whose
+effect the next statement undoes is indistinguishable from no fix, and the log line the first
+correction made honest would have read as proof that it worked.**
+
+One case is left open as #603 rather than fixed: a non-annual row with a null `date_end` whose id
+is in no annual release is still dropped, because its position relative to the annual coverage
+boundary is genuinely unknown. Keeping it and refusing the whole filter are both defensible, they
+differ in delivered behaviour, and neither has been measured against a real UCDP file.
+
+---
+
 ## A fix that made its own failure mode destructive (2026-11-18)
 
 **C-371 (Tier 2).**

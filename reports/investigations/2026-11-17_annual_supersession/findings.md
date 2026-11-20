@@ -85,9 +85,10 @@ mis-attribution is untouched by this change and remains open.
 
 ## Verification performed
 
-- Full suite: **2,626 tests, 0 failures, 0 errors** (counted from JUnit XML, not from
-  the exit status — this repo's conftest withholds the summary line, and C-345 warns
-  that a piped status can hide a SIGKILL).
+- Full suite: **2,627 tests, 0 failures, 0 errors**, 30 skipped (counted from JUnit
+  XML, not from the exit status — this repo's conftest withholds the summary line, and
+  C-345 warns that a piped status can hide a SIGKILL). 2,626 before 2026-11-20; the
+  extra test guards the `or_kleene` correction recorded in the post-mortem.
 - `ruff check .`, `mypy src/` (91 files), `bash docs/validate_docs.sh` — all clean.
 - The two regression tests in `tests/test_viewpoint.py` were confirmed to fail with the
   source change reverted and pass with it.

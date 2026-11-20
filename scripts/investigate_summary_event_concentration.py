@@ -46,7 +46,7 @@ would risk measuring something the pipeline does not actually see.
 
    **The cells this script reports are the cells the allocator chose,
    not the cells a consumer receives.** It reads the viewpoint parquet,
-   which is the compiler's input. For every release up to v1.18.1 the
+   which is the compiler's input. For every release through v1.18.0 the
    compiler discarded the allocator's ``priogrid_gid`` and re-derived
    the cell from ``latitude``/``longitude``, so an allocation across 18
    cells arrived as one (#547, C-368). A concentration figure measured

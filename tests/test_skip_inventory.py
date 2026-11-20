@@ -46,6 +46,7 @@ Measured 2026-11-12: **61 sites across 22 files.** Issue #554 recorded
 from __future__ import annotations
 
 import ast
+import functools
 from pathlib import Path
 
 import pytest
@@ -151,8 +152,15 @@ def _skip_sites(path: Path) -> list[tuple[int, str]]:
     return sites
 
 
+@functools.cache
 def _live_inventory() -> dict[str, list[tuple[int, str]]]:
-    """Every test module with at least one skip site."""
+    """Every test module with at least one skip site.
+
+    Cached: parsing every test module takes ~265 ms, and the tests
+    below ask for the inventory about 25 times per run, in both the
+    3.11 and the 3.13 CI job. Every call site treats the result as
+    read-only, so one shared dict is safe.
+    """
     found: dict[str, list[tuple[int, str]]] = {}
     scanned = 0
     for path in sorted(_TESTS_DIR.glob("test_*.py")):
