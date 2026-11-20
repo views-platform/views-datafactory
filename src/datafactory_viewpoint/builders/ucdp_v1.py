@@ -156,6 +156,8 @@ def build_ucdp_v1(
         # For months covered by the annual, ONLY annual events
         # exist in VIEWSER — candidate and .9 events for those
         # months are replaced. We replicate this by:
+        #   a0) Letting the latest annual release supersede older
+        #       ones for the span it covers (#595)
         #   a) Determining the annual's temporal coverage
         #   b) Dropping candidate/.9 rows whose event id doesn't
         #      appear in the annual
@@ -163,6 +165,149 @@ def build_ucdp_v1(
         source_types = table.column("_source_type")
         source_versions = table.column("_source_version")
         n_before = table.num_rows
+
+        from datafactory_viewpoint.survivorship import _parse_version
+
+        # (a0) The latest annual release supersedes older ones
+        # for the span it covers (#595).
+        #
+        # UCDP does not only revise events between annual
+        # releases — it deletes and merges them. The store is
+        # append-only by design (ADR-013), so an event dropped in
+        # v26.1 still carries its v25.1 row here. Without this
+        # step that row is annual, so (b) keeps it
+        # unconditionally, (c) never looks at annual, and
+        # survivorship cannot help because the id has no
+        # competing row. The deleted event gets republished.
+        #
+        # This runs BEFORE (a) deliberately: a .9 or candidate
+        # row for a deleted event is then dropped with it,
+        # because its id is no longer among annual_ids.
+        #
+        # Supersession is bounded by the latest release's own
+        # coverage, and that bound is UPPER-ONLY: an older row
+        # whose event ends after the latest release's last event
+        # survives, because the latest release says nothing about
+        # that period and cannot be read as having withdrawn
+        # anything there. Today it selects nothing (v26.1 spans
+        # 1989-2025, v25.1 spans 1989-2024), but a release ending
+        # earlier than its predecessor must not silently delete
+        # the trailing years.
+        #
+        # There is deliberately NO lower bound, and a release
+        # whose coverage STARTS later than its predecessor's would
+        # therefore delete the earlier history (#598). The bound
+        # cannot be fixed here: max(date_end) is a sound proxy for
+        # where coverage ends because a release is dense up to its
+        # cutoff, but min(date_start) is not a proxy for where
+        # coverage begins — in a sparse store it is just the
+        # earliest event that happens to be present. The declared
+        # span is in the snapshot filename and is discarded by
+        # _ANNUAL_PATTERN during consolidation, so closing the gap
+        # means carrying it into the store. Every UCDP annual
+        # release so far starts at 1989.
+        #
+        # When the upper clause does select rows, (a)'s
+        # annual_cutoff and annual_ids then span two releases.
+        # That is correct, because the two releases legitimately
+        # cover different periods.
+        annual_mask = pc.equal(source_types, "annual")
+        annual_versions = pc.filter(source_versions, annual_mask)
+        distinct_annual = annual_versions.unique().to_pylist()
+
+        # Refuse to supersede unless the annual versions are
+        # totally ordered by _parse_version. Two ways they are not:
+        #
+        #  - a non-numeric string, which _parse_version maps to
+        #    (0,). In (c) that only loses a preference; here it
+        #    would elect the wrong release as latest and delete
+        #    the real one.
+        #  - two distinct strings that parse to the SAME tuple,
+        #    e.g. "26.1" and "26.01" both give (26, 1), because
+        #    _ANNUAL_PATTERN captures [\d.]+ from the filename.
+        #    max() would then keep whichever unique() happened to
+        #    return first, making the outcome depend on row order
+        #    in the store.
+        #
+        # Either way the ordering is not trustworthy, so overcount
+        # visibly rather than delete silently.
+        unorderable = sorted(
+            v
+            for v in distinct_annual
+            if not all(p.isdigit() for p in v.split("."))
+        )
+        # A null date_end among annual rows must not reach the
+        # span comparison. pc.max skips nulls, pc.greater against
+        # a null scalar yields null, and filter() drops null — so
+        # an all-null newest release would delete every annual row
+        # in silence, this step included. Step (a) raises TypeError
+        # on such a list, which is the behaviour ADR-011 wants, so
+        # standing aside restores it rather than inventing a second
+        # error path.
+        annual_ends = pc.filter(table.column("date_end"), annual_mask)
+        n_null_ends = (
+            pc.sum(pc.cast(pc.is_null(annual_ends), "int64")).as_py() or 0
+        )
+        parsed: dict[tuple[int, ...], list[str]] = {}
+        for v in distinct_annual:
+            parsed.setdefault(_parse_version(v), []).append(v)
+        ambiguous = sorted(
+            v
+            for versions in parsed.values()
+            if len(versions) > 1
+            for v in versions
+        )
+        if unorderable or ambiguous or n_null_ends:
+            logger.warning(
+                "Not superseding any annual release: versions not "
+                "totally ordered (non-numeric: %s; ambiguous: %s) "
+                "or %d annual rows have a null date_end. "
+                "Superseded events may remain in the output.",
+                unorderable,
+                ambiguous,
+                n_null_ends,
+            )
+        elif len(distinct_annual) > 1:
+            latest_annual = max(distinct_annual, key=_parse_version)
+            latest_mask = pc.and_(
+                annual_mask,
+                pc.equal(source_versions, latest_annual),
+            )
+            latest_end = pc.max(
+                pc.filter(table.column("date_end"), latest_mask)
+            )
+            # `or_kleene`, not `or_`: `pc.or_` propagates nulls,
+            # so `or_(True, null)` is null and `filter` drops the
+            # row. A non-annual row with a null `date_end` would
+            # therefore be deleted here even though the first term
+            # says to keep every non-annual row. The guard above
+            # counts nulls among annual rows only, by design --
+            # it defers to step (a)'s TypeError -- so this term
+            # has to survive a null on its own.
+            keep = pc.or_kleene(
+                pc.not_equal(source_types, "annual"),
+                pc.or_(
+                    pc.equal(source_versions, latest_annual),
+                    pc.greater(
+                        table.column("date_end"), latest_end,
+                    ),
+                ),
+            )
+            n_annual_before = table.num_rows
+            table = table.filter(keep)
+            superseded = sorted(
+                set(distinct_annual) - {latest_annual}
+            )
+            logger.info(
+                "Annual %s supersedes %s through %s: "
+                "dropped %d rows",
+                latest_annual,
+                superseded,
+                latest_end.as_py(),
+                n_annual_before - table.num_rows,
+            )
+            source_types = table.column("_source_type")
+            source_versions = table.column("_source_version")
 
         # (a) Find annual coverage boundary
         annual_mask = pc.equal(source_types, "annual")
@@ -192,9 +337,18 @@ def build_ucdp_v1(
             in_annual_period = pc.less_equal(
                 dates_col, pa.scalar(annual_cutoff),
             )
-            keep = pc.or_(
+            # `or_kleene` for the same reason as step (a0):
+            # `in_annual_period` is null when `date_end` is null,
+            # and plain `or_` would propagate that null through
+            # both positive terms, so a row the first two terms
+            # say to keep unconditionally would be dropped.
+            # A non-annual row with a null `date_end` whose id is
+            # in no annual release is still dropped, because its
+            # position relative to the coverage boundary is
+            # unknown; that residue is #603.
+            keep = pc.or_kleene(
                 is_annual,
-                pc.or_(
+                pc.or_kleene(
                     in_annual_ids,
                     pc.invert(in_annual_period),
                 ),
@@ -207,10 +361,6 @@ def build_ucdp_v1(
         dot9_mask = pc.equal(source_types, "dot9")
         dot9_versions = pc.filter(source_versions, dot9_mask)
         if len(dot9_versions) > 0:
-            from datafactory_viewpoint.survivorship import (
-                _parse_version,
-            )
-
             latest_dot9 = max(
                 dot9_versions.unique().to_pylist(),
                 key=_parse_version,

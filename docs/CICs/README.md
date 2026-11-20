@@ -81,6 +81,8 @@ Contracts must be clear enough that:
 - `PrecomputedData.md` -- precomputed state container for V-Dem grid verification (24 fields, per-feature temporal handling)
 - `PregriddedCompilationConfig.md` -- immutable pre-gridded compilation configuration (GHS-POP, GHS-BUILT-S)
 - `SourceEntry.md` -- immutable source registry entry (name, features, provenance paths)
+- `SpatialWeightMap.md` -- precomputed per-cell fatality shares within GAUL polygons, and the proportional-or-uniform precedence the spatial allocator resolves through them
+- `TemporalWeightMap.md` -- observed monthly fatality activity keyed by actor, and the four-level cascade the temporal allocator walks
 - `grid_to_country_month.md` -- grid-to-country-month aggregation function contract
 - `load_dataset.md` -- **the public consumer entry point** (ADR-050): region/time/feature subsetting, the three declared output formats, the `storage_options` seam, and which failures are loud
 

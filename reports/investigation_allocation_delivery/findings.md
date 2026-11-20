@@ -266,3 +266,63 @@ immediately misplaced — 685,282 deaths concentrated into roughly 1,034 cells.
 This correction was produced by a consumer asking (3) separately from (1), and it would not
 have surfaced otherwise: "the allocator never worked" and "the delivered data has always been
 wrong in this way" are different claims, and only the first one was measured.
+
+---
+
+## Appendix — the delivered-layer reader, validated before the re-run (2026-11-12, 08:12 UTC)
+
+Issue #553 asked for one script that reads the **served store** through the consumer entry
+point, and for it to be checked against values measured independently. Both done, and done
+*before* the v1.18.1 re-run replaced the store — which was the only window in which the
+pre-fix numbers could still be read.
+
+`scripts/measure_allocation_delivery.py --served http://204.168.219.108/grid.zarr`, run
+against `source_digest 6f049a5e1f5f5317` (the v1.18.0 build), reproduced all four
+independently measured values exactly:
+
+| what | measured by hand 2026-11-12 | script output |
+|---|---:|---:|
+| cell 148759, month 504, state-based | 1,782 | **1,782** |
+| month 504: largest cell's share of the slice | 37.67% | **37.67%** |
+| month 504: slice ESS | 5.30 | **5.30** |
+| cell 148759: worst cell-month across 2021 | 32,390 | **32,390** |
+
+The script is therefore the instrument the re-run is graded with, not a second opinion about
+it.
+
+Two things in that output are worth keeping, because they are the pre-fix baseline and after
+the re-run they are unrecoverable:
+
+```
+EVENT 463131   allocated cells 18 · DELIVERED cells 1
+               worst allocated cell-month 11,732 at cell 150197, 2021-06
+               worst delivered cell-month 31,937 at cell 148759, 2021-06
+EVENT 463137   allocated cells 18 · DELIVERED cells 1
+               worst allocated cell-month 29,620 at cell 150197, 2022-08
+               worst delivered cell-month 80,633 at cell 148759, 2022-08
+```
+
+And the monthly series for cell 148759 across 2021, which is the figure that exposed the
+single-month trap — December is the **second lowest** month of the twelve:
+
+```
+493 15,416 · 494 29,787 · 495 1,658 · 496 21,391 · 497 631 · 498 32,390
+499    442 · 500  3,643 · 501    76 · 502  6,320 · 503 2,121 · 504  1,782
+12-month sum 115,657 · worst 32,390 (month 498, June 2021)
+```
+
+Reading December alone reported 1,782 against a prior 113,395 and called it 64×. The honest
+figure over the span is 32,390, which is 3.5×. **A single-slice pre-registration flattered the
+result by a factor of 18**, and the rule that follows is now in the dossier harness
+(`03_harness_and_invariants.md` §E).
+
+### One correction to #553's own instructions
+
+#553 asked that `evaluate_temporal_allocation.py` be converted to *"group by the cell the
+compiler would actually use"*, preferring that over a documented warning. On reading the
+script that ask is wrong: `priogrid_gid` appears there only as a validity filter (`>= 1`), and
+every metric it computes lives in month space — `hit` share and mass-weighted month distance.
+There is no per-cell figure to convert. It takes the warning instead, and the warning states
+the asymmetry that makes the distinction necessary: the compiler reads the month field **by
+name**, so the temporal axis this script measures was never affected, while the spatial axis
+was. The same script can be sound about one axis and silent about the other.

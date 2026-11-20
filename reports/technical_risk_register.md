@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-11-12 — C-368 (Tier 1), C-369 and C-370 registered: the spatial allocator's chosen cell never reached delivered data in any release, 1,128,236 deaths misplaced with every aggregate reconciling, because two stages disagreed about which field carries a decision. Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
+**Last update:** 2026-11-20 — C-370 gained an eighth instance: the null guard added for #595 counts annual rows only, and review on the promote PR found the same null destroying non-annual rows through `pc.or_`'s null propagation, in the new step and in the pre-existing one, so fixing only the new step would have left the behaviour unchanged (#602, residue #603). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
 **Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 370 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 57 open concerns (1 Tier 1, 7 Tier 2, 18 Tier 3, 25 Tier 4, 6 deferred by design; 6 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 371 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 58 open concerns (1 Tier 1, 8 Tier 2, 18 Tier 3, 25 Tier 4, 6 deferred by design; 6 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -201,6 +201,7 @@
 | C-368 | 1 | **The spatial allocator's chosen cell never reached delivered data — in any release.** `spatial_distribution.proportional` records its decision by rewriting `priogrid_gid`; `grid_compilation._place_events` re-derived the cell from `latitude`/`longitude`, which the allocator leaves at the source centroid, and `_required_columns` did not even load the column. Every allocated row returned to the cell it came from. Measured 2026-11-12: **1,128,236 deaths across 60,105 events, 26.49% of all UCDP fatality mass**; 97.3% of the mass at `where_prec=6`, collapsing 6,896 chosen cells into 91. Totals conserve under relocation, so none of the four conservation boundaries could see it. ADR-015:102-106 chose `priogrid_gid` in June 2026 and nothing implemented it; `PregriddedCompilationConfig.pgid_field` already did exactly this for the pregridded sources | **Fired** — fixed by #562 (`pgid_field`), but the guards that prove it skip in CI until #550 lands, so a regression would be caught on a developer machine and not by branch protection | UCDP imprecision |
 | C-369 | 2 | **`CompilationConfig.date_field` defaults to a raw field while the temporal allocator writes `date_month`.** A caller taking the default on an allocated source collapses every distributed month onto the event's start month, conserving totals. Production survived only because `compile_grid.py`'s argparse default happens to be `date_month`. Closed inside this repository by `preflight.reject_ignored_allocation` plus an AST guard over every `scripts/` call site (#562); **the residual is an external library caller**, since `CompilationConfig` ships in the wheel and removing the default is a breaking change owed to a MAJOR. An auto-detecting default was rejected: inferring decision-relevant semantics is what ADR-003 forbids | **At the next MAJOR release** — make `date_field` required then. Until then, recorded as a strict xfail so that whoever makes the default safe is forced to remove the marker | UCDP imprecision |
 | C-370 | 2 | **No test crossed the viewpoint-to-compilation boundary, which is why C-368 survived four months.** 47 tests exercised spatial distribution and none called the compiler; `test_cross_layer_contracts.py` compares column *names*, so a field present in both layers and ignored by one passed, and its `UCDP_COMPILATION_COLUMNS` omitted `priogrid_gid` — the contract described the compiler rather than the requirement. ADR-045:57 certified this exact boundary as having no gap, because ADR-045:16 rules end-to-end invariants out of scope by construction. The one test that would have caught it (`test_adr053_production_profile.py:93`) is `skipif`'d on data `.gitignore` guarantees CI never has | **Before adding any further allocation strategy** — and #550 must land, or the replacement guards skip in CI exactly as their predecessor did | Testing |
+| C-371 | 2 | **A short harvest of the newest annual release now deletes the previous release's rows for every event it is missing.** The annual supersession added in #595 cannot distinguish "UCDP withdrew this event" from "our harvest did not fetch it" — both look like an id present in the old release and absent from the new one, and both are dropped. Before #595 a short harvest left the old rows in place, which overcounted but preserved the data; after it, the same shortfall destroys it. The harvest guard in `ucdp_annual.py` raises only when a shortfall exceeds **both** 1% and 1100 events, so on a 416,968-row release a shortfall of up to ~4,169 events passes silently and then deletes up to that many old rows. Nothing goes red: the dropped rows are counted into `n_stale`, so the count-conservation check still balances exactly | **At the next annual release harvest** (UCDP publishes mid-year; v27.1 expected ~July 2027), and at any re-harvest of the current annual release after a partial or interrupted fetch | UCDP schema |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -4249,6 +4250,20 @@ Cross-ref: **C-356** (the spatial half, whose claim that the temporal axis was c
 
 **Not fixed, and not fixable from here.** Setting `exclude_where_prec=()` is one of the two changes a profile switch makes, and the profile default is spread across `viewpoint_config.py`, `profiles.py` and the `build_viewpoint.py` invocation in `refresh_pipeline.sh` — C-356's trigger explains why no single edit is safe. ADR-053 is the governance for the temporal half of that switch and records this recovery as a consequence; it does not schedule it. This entry records the magnitude so that whoever switches is not surprised by it.
 
+**Confirmed 2026-11-12 (#548), not corrected.** The epic that measured the delivery defect
+asked for these figures to be replaced, on the premise that they had been derived the same
+loose way as that epic's own indicative 32.8% — last-version-wins rather than the real
+stale-version filter. **That premise was wrong.** The table above comes from three full builds
+of the same consolidated store through the same `build_viewpoint.py` the pipeline runs, not
+from a shortcut over the store. #548's independent measurement reproduces **43,933 events and
+785,626 fatalities exactly**. The entry stands as written, and now carries a second measurement
+behind it.
+
+Worth keeping: the epic's own figure was the loose one, and it corrected *downward* (32.8%
+eligible → 26.49% displaced) when measured properly. Assuming a neighbouring number shared
+that flaw was reasonable and still wrong. A premise about how a number was obtained is
+checkable, and checking it took one reading.
+
 Cross-ref: **C-356** (the spatial artifact produced by the `where_prec = 5` class this filter keeps), **C-364** (the temporal artifact in the same cell), **C-367** (the other finding from the same notebook — the opposite sign, mass invented rather than dropped), C-303 (resolved — added the `n_excluded_where_prec` counter that could have produced this number at any point since 2026-06-28), ADR-049 (§Alternatives documents the filter and its cost in words), ADR-053 (names the recovery as a consequence of the temporal decision).
 
 ---
@@ -4276,6 +4291,27 @@ Cross-ref: **C-356** (the spatial artifact produced by the `where_prec = 5` clas
 **So what is the finding.** Not the mechanism, which was written down. Two things: the **production-level number**, which had never been taken, and the **absence of any guard that would notice**. This repository enforces count conservation at four boundaries (C-258, resolved) and asserts placement conservation on exact integer equality, but every one of those checks compares a stage's output to **the stage's own input**. None compares a delivered total to the *source*. An allocator that inflates before the first conservation boundary is invisible to all of them, by construction — which is why a defect that is loud in a docstring is silent in the pipeline.
 
 **Tier 4, and the reasoning is worth keeping because it points the other way first.** By shape this is the register's Tier 1 definition: a delivered value exceeds anything the source ever recorded, with no error signal. By magnitude it is 96 of 3,473,358 deaths — **0.003%** — spread over 74 events, no one of which is large. Impact dominates likelihood and detectability here: nothing downstream turns on 96 deaths, and no consumer could act on them differently if flagged. Tier 4 also because the remedy is already specified and tested rather than needing design — largest-remainder apportionment makes inflation arithmetically impossible, and both apportioned profiles measure exactly zero — so this retires with the profile switch instead of needing its own work. **Not demoted to the tech-debt backlog**, because it is live, it is a correctness defect rather than a maintainability one, and the zero in the other two rows is the only reason anyone can see it.
+
+**Held, not retired — 2026-11-12 (#556).** The condition that made this live has gone:
+production moved to `kgi_kti_activity` on 2026-11-10, and both apportioned profiles measure
+exactly **0** events over the ceiling and **0** deaths invented. The deployed pipeline was
+re-read on the server on 2026-11-12 and names `kgi_kti_activity`, so `ceil_split` is not on the
+production path.
+
+It is held rather than retired because the defect is **dormant, not removed**. `ceil_split` is
+still a registered strategy, `production_parity` is still a registered profile, and
+`build_viewpoint.py` still defaults to it — so naming that profile reactivates the inflation
+with no warning. Retiring the entry would record that the problem was solved when what happened
+is that the configuration moved away from it.
+
+The arithmetic remedy is now covered by a test that runs in CI rather than by a notebook cell:
+composition across both allocation stages is asserted to conserve every extensive field exactly,
+on synthetic data, with no real store required (#550). That is stronger evidence than the
+measurement this hold was asked to wait for — but it is evidence about the apportioned path, and
+says nothing about `ceil_split`, which still behaves exactly as its docstring says.
+
+**Retire this entry when** `ceil_split` is removed from the registry, or when `production_parity`
+stops being reachable as a profile. Not before.
 
 Cross-ref: **C-366** (the other finding from the same notebook, opposite sign: mass dropped rather than invented), **C-364** (`date_end_only` on the annual source, which is why this number is 96 and not larger), C-258 and C-242 (resolved — the conservation boundaries that cannot see this, because they compare each stage to its own input), ADR-023 (the summary-event detection rule `best >= span` that `ceil_split` implements), ADR-040 (count conservation invariants), ADR-053 (§Decision adopts exact apportionment, under which this is impossible).
 
@@ -4359,6 +4395,65 @@ reported a reconciliation pass having compared nothing; one asserted a maximum t
 grid satisfies. All three are fixed, and the pattern is the finding: **a guard written against
 a defect tends to inherit the defect's own blind spot.**
 
+**2026-11-19 addendum — four more instances, and the process gap that let three of them
+through (#595/#596).** Four guards were written for the annual-supersession fix; every one was
+defective on first writing, which makes the count for this entry seven in two windows:
+
+1. `test_older_release_survives_beyond_the_latest_coverage` claimed the whole span property in
+   its docstring and exercised the upper half only. **Sabotage did not catch it** — mutating
+   the `pc.greater` clause turned it red, correctly. Mutation testing cannot detect an
+   *incomplete claim*; it only detects a *non-discriminating fixture*. Caught by review.
+2. `test_non_numeric_annual_version_blocks_supersession` — first fixture put the malformed
+   release's event outside the older release's span, so it survived either way. Caught by
+   reasoning before the first run.
+3. `test_later_annual_release_wins_for_a_shared_event` asserted only the output value, which
+   survivorship alone produces for an id with two annual rows. **It passed against
+   `development` with the entire supersession block absent.** Caught by review, second round.
+4. `test_ambiguous_annual_versions_block_supersession` — first fixture had the same flaw as 2.
+   Caught by own sabotage run.
+
+**The process gap is specific and worth more than the instances.** Sabotage was applied, and
+it worked where applied: 2 and 4 were caught by it. Instance 3 escaped because the mutation was
+run against a **hand-picked subset** of the affected tests — the supersession block was disabled
+and two of the four tests were executed, not the class. Had the whole `TestBuildUcdpV1Beige`
+class run under each mutation, a test staying green would have been visible immediately.
+
+**Remedy adopted, no new machinery:** when a mutation is applied, run every test in the
+enclosing class or module, not the tests believed to cover it. A guard that stays green under a
+mutation that should break it is the signal, and selecting which tests to run hides exactly that
+signal. Mutation tooling (mutmut, cosmic-ray) was considered and rejected: ongoing upkeep and
+runtime against a 2,625-test suite, to automate a discipline whose failure here was scope of
+execution rather than absence.
+
+**Instance 1 is the one with no procedural answer.** An incomplete claim in a docstring cannot
+be caught by mutating code, because the code and the test agree — only the prose overclaims. The
+partial answer is #597: a claim stated in prose beside a guard that tests less than the claim is
+the same failure, one layer down.
+
+**2026-11-20 addendum — an eighth instance, and the one where the guard's scope was the
+blind spot (#602/#603).** The null-count guard added on 2026-11-19 (`n_null_ends` in
+`build_ucdp_v1()`) refuses to supersede when an **annual** row has a null `date_end`, because
+`pc.max` skips nulls and the resulting comparison deletes every row in silence. It counts annual
+rows only. Review on the promote PR found that the same null, on a **non-annual** row, was also
+destructive, by a different mechanism the guard does not watch: `pc.or_` propagates nulls, so
+`or_(True, null)` is null and `Table.filter` drops the row — a term saying "keep this row
+unconditionally" was overridden by a null elsewhere in the expression. Both `keep` expressions now
+use `pc.or_kleene`, including the one in step (b) that predates the fix.
+
+This is instance 1's pattern, not instance 3's: the guard was written against the observed defect
+and inherited its **scope**. The observed defect was in annual rows, so the guard counts annual
+rows. Nothing was wrong with the guard as written; it simply answers a narrower question than its
+neighbourhood needs, and no amount of mutating the code it watches would say so.
+
+**Two things worth carrying forward.** First, the review reported this one severity level too low —
+as a wrong count in a log line — because its probe used a row that a later step discards in any
+case. Probing the adjacent case showed a row actually deleted. A finding's severity is a
+measurement, not a reading. Second, **fixing the new code alone would have been decorative**: the
+row survived step (a0) and was then dropped by step (b) six lines later for the identical reason,
+with no change in the delivered result. The fix was only real once both were corrected, and the
+only reason that was visible is that the probe measured the end of the filter rather than the log
+line the first fix had just made honest.
+
 Registered without fixing, found in the same window:
 
 - `builders/acled_v1.py` writes `date_month` as `YYYY-MM` while `grid_compilation.py`'s
@@ -4378,6 +4473,58 @@ Registered without fixing, found in the same window:
   independently-chosen country representatives.
 
 ---
+
+### C-371: a short annual harvest is now destructive, not merely short — [OPEN]
+
+| | |
+|---|---|
+| ID | C-371 |
+| Tier | 2 — structural fragility with a precise trigger and no error signal. Not Tier 1: it corrupts nothing today, requires a harvest shortfall to occur first, and large shortfalls do fail loudly. Re-tier to 1 if a shortfall inside the tolerance window is ever observed |
+| Source | `/code-review` of #596 (the #595 fix), 2026-11-18, finding 2 |
+| Trigger | At the next annual release harvest (v27.1, expected ~July 2027), and at any re-harvest of the current annual release after a partial or interrupted fetch |
+| Location | `src/datafactory_viewpoint/builders/ucdp_v1.py` step (a0) in `build_ucdp_v1`; `src/datafactory_harvester/sources/ucdp_annual.py` `_TOTALCOUNT_ABS_TOLERANCE` (1100), `_TOTALCOUNT_PCT_TOLERANCE` (0.01) |
+| Cross-refs | C-359 (its ACLED sibling — a short harvest recorded as success; this entry is the reason that detectability gap now has teeth), C-345 (pass/fail derived from the wrong signal) |
+
+The supersession rule is correct about what it can see and blind to why it sees it. An event id
+present in the older annual release and absent from the newer one has exactly two causes, and
+the rule cannot tell them apart:
+
+- **UCDP withdrew the event.** Dropping the old row is right. This is #594, and it is what the
+  rule was built for.
+- **Our harvest of the newer release did not fetch the event.** Dropping the old row destroys
+  data we hold and UCDP still publishes.
+
+**This change inverted the failure mode of a short harvest.** Before #595, a shortfall in the
+newest annual release was *masked*: the previous release's rows stayed, so the figures were too
+high and the data was all still there. After #595, the same shortfall is *amplified*: every
+event missing from the short harvest also takes its predecessor's row with it. A detectability
+gap became a data-loss path.
+
+**The mitigation has a quantified blind spot.** `ucdp_annual.py` raises only when a shortfall
+exceeds **both** 1% and 1100 absolute events — a dual threshold adopted deliberately in April
+2026, because the UCDP API counts `type_of_violence=4` events in `TotalCount` and omits them
+from `Result`, a consistent ~1000-event offset that would otherwise fail every small candidate
+version (`reports/post_mortems/2026-04-25_stale_zarr_store.md`). The consequence here: on the
+416,968-row v26.1 release, 1% is ~4,169 events. A shortfall anywhere below that passes the
+guard, and each missing event then deletes its predecessor's row.
+
+**No invariant can see it.** The dropped rows are counted into `n_stale`, so
+`n_read == n_input + n_stale` balances exactly, as it did throughout #594. ADR-040 conservation
+compares what entered the pipeline with what left it; this is a loss at selection, upstream of
+the comparison. The per-country-year movement table produced before a redeploy would show the
+size of the drop, but only to someone who reads it and knows what size to expect.
+
+**Not fixed, and the cheap fix is not obviously right.** The available options are to bound
+supersession by the newest release's declared row count or declared span (which means carrying
+the span into the consolidated store — see #598), to require the newest annual release's row
+count to be within some band of its predecessor's before it may supersede, or to tighten the
+harvest tolerance for annual specifically, where the ~1000-event offset is 0.26% rather than
+40-100%. The last of those is the smallest and is probably where to start: the dual threshold
+exists for small candidate versions and is loose for annual by inheritance, not by design.
+
+**Source:** `/code-review` on #596, 2026-11-18. Confirmed by reading the supersession condition
+and the harvest tolerances; the shortfall scenario itself is reasoned, not reproduced.
+
 
 ## Deferred by Design
 

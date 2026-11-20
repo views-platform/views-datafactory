@@ -40,6 +40,10 @@ def _land_gaul() -> set[int]:
     return set(json.loads((_QUERY_DIR / "land_gaul_pgids.json").read_text()))
 
 
+# Stays on real data (#550 reviewed this). The subject is whether the
+# real GAUL 2024 release assigns a gaul2_code to every real land cell.
+# A synthetic crosswalk would assert that invented cells carry the
+# codes they were invented with, which is vacuous by construction.
 @pytest.mark.skipif(not _GAUL_AVAILABLE, reason=_SKIP_REASON)
 class TestLandGaulCompletenessContract:
     """P2 (HARD): every land_gaul cell must carry complete GAUL metadata.

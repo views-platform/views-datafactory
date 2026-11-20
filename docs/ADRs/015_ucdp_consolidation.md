@@ -59,7 +59,7 @@ This is a parity target, not a design ideal. Future UCDP viewpoints should revis
 - `annual_wins` — Annual takes precedence. For months not covered by annual, the latest candidate version wins. Does not use `.9` data.
 - `dot9_wins` (production parity) — Annual takes precedence, then `.9`, then candidate. For months covered by the annual release, annual wins. For the trailing window, `.9` wins over candidate. This matches VIEWS production behavior.
 
-**Summary event handling:** Events with `date_prec=5` (spanning `date_start` to `date_end` across multiple months) are distributed across those months. Fatalities (`best`, `low`, `high`) are divided evenly across the spanned months, following the production `fix_summary_events` logic.
+**Summary event handling:** Events with `date_prec=5` (spanning `date_start` to `date_end` across multiple months) are distributed across those months. Fatalities (`best`, `low`, `high`) are divided evenly across the spanned months, following the production `fix_summary_events` logic. — **Superseded by ADR-053**, which allocates across the spanned months by observed activity rather than evenly, and by exact apportionment rather than `ceil`. Even division remains reachable as a named profile; it is no longer what production does.
 
 **Month assignment:** Uses `date_end` for month assignment, matching production behavior. This is a documented choice, not an accident — future viewpoint versions may use `date_start` or a distribution approach.
 
@@ -86,7 +86,8 @@ If UCDP discontinues `.9`, we lose access to its exclusive events but our annual
 ### Summary Events (date_prec=5)
 - 1.4% of events, 15.8% of fatalities in 2023 annual data
 - Span multiple months (`date_start` to `date_end`)
-- Production distributes fatalities evenly across spanned months
+- ~~Production distributes fatalities evenly across spanned months~~ — **Superseded by
+  ADR-053.** Production has allocated by observed activity since 2026-11-10.
 - Future viewpoint versions may use more sophisticated distribution
 
 ### Candidate Version Overlap
@@ -101,7 +102,9 @@ If UCDP discontinues `.9`, we lose access to its exclusive events but our annual
 
 ### priogrid_gid vs. Computed Cell
 - UCDP provides `priogrid_gid` for most events
-- Our current compiler computes cell from lat/lon
+- ~~Our current compiler computes cell from lat/lon~~ — **Superseded by the Amendment of
+  2026-11-12 below.** True when written and false since the compiler was given
+  `CompilationConfig.pgid_field`; it now prefers the declared cell, as this section asked.
 - These can disagree (border cells, precision issues)
 - Viewpoint v1 should prefer `priogrid_gid` to match production
 
@@ -150,3 +153,72 @@ Open questions for future viewpoint versions:
 - Should `code_status` affect survivorship (e.g., prefer "Clear" over "Unclear")?
 
 These questions are research outputs, not infrastructure decisions. They belong in future viewpoint version configurations.
+
+---
+
+## Amendment 2026-11-12 — the spatial assignment rule is now implemented (#547, #551)
+
+**The Decision above is unchanged.** This amendment records that one sentence of it went
+unimplemented from acceptance until 2026-11-12, that the disagreement it predicted did occur,
+and what it cost. Dated amendment, not a rewrite.
+
+### 1. The sentence
+
+§Decision, *Spatial assignment*: *"Uses `priogrid_gid` from UCDP when available. Falls back to
+lat/lon computation via `latlon_to_pgid` when `priogrid_gid` is missing or null."*
+
+And §Known Complexities, *priogrid_gid vs. Computed Cell*: *"These can disagree (border cells,
+precision issues) · Viewpoint v1 should prefer `priogrid_gid` to match production."*
+
+**Neither the preference nor the fallback existed anywhere in `src/`.** `CompilationConfig`
+offered `lat_field` and `lon_field` and no way to name a decided cell, and
+`grid_compilation._place_events` derived every event's cell by calling `latlon_to_pgid` on the
+coordinates. `_required_columns` did not even load `priogrid_gid` from the parquet, so the
+field this ADR designated as authoritative was never read.
+
+### 2. What it cost
+
+The gap was invisible while nothing wrote to `priogrid_gid`. It became load-bearing when
+ADR-049's spatial allocator shipped, because the allocator records its chosen cell *by
+rewriting `priogrid_gid`* and leaves `latitude`/`longitude` at the source centroid. Every
+allocated row therefore returned to the cell it came from.
+
+Measured 2026-11-12 on the production store: **1,128,236 deaths across 60,105 events — 26.49%
+of all UCDP fatality mass — delivered in a cell the allocator had not chosen.** At
+`where_prec=6`, 97.3% of the eligible mass. For the Tigray annual summary, 18 allocated cells
+arrived as 1.
+
+Totals were conserved throughout, which is why no conservation boundary reported anything:
+relocation conserves. The delivered figures are in
+`reports/investigation_allocation_delivery/findings.md`.
+
+### 3. What changed
+
+`CompilationConfig` gains `pgid_field`, defaulting to `None`. When set, `_required_columns`
+loads that column and `_place_events` uses its value when the value is present and names a
+cell inside the grid, falling back to `latlon_to_pgid` otherwise — which is this ADR's rule,
+verbatim, four months late. The fallback is counted and reported, and any unusable declared
+value warns, because a silent fallback is what made the original gap survivable.
+
+`scripts/compile_grid.py` passes `--pgid-field priogrid_gid` by default. The default stays
+`None` in the library so that existing callers are unaffected: ACLED does not allocate, so for
+ACLED `latlon_to_pgid` *is* the correct authority and there is no decision to defer to.
+
+The capability was not invented for this. `PregriddedCompilationConfig` already had
+`pgid_field`, which is why V-Dem, SHDI, GHS-POP and GHS-BUILT-S were structurally immune — their
+compiler reads the decided cell. The event compiler was simply never given the same field.
+
+### 4. One stated cause of the disagreement is refuted
+
+§Known Complexities attributes the pre-existing `priogrid_gid` ↔ coordinate disagreements to
+*"border cells, precision issues"*. Measured on the same store: of the seventy events where the
+two disagree, **zero are border-adjacent**, the median offset is **1,460 cells**, and 62 of 70
+are `where_prec=6`, where the declared cell and the coordinates are two independently chosen
+representatives of the same country. The disagreement is not a rounding artifact; it is two
+different answers to a question neither field was asked.
+
+### 5. What this amendment does not change
+
+The survivorship rules, the `.9` dual role, the month-assignment choice and the summary-event
+handling are untouched. ADR-053 superseded the even-division of summary events; this amendment
+touches only the spatial sentence.

@@ -32,6 +32,10 @@ def _gaul0(gid: int) -> int:
     ).get(gid, -1)
 
 
+# Stays on real data (#550 reviewed this). The subject is whether the
+# real GAUL 2024 L1 shapefile contains a Gnaviyani polygon. Only the
+# shipped shapefile can answer that; a synthetic one would answer
+# about itself.
 @pytest.mark.skipif(
     not _L1_SHP.exists(),
     reason="GAUL L1 shapefile not available — data/ is gitignored",

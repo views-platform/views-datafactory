@@ -955,6 +955,374 @@ class TestBuildUcdpV1Beige:
         result = build_ucdp_v1(cfg)
         assert result.n_events_output == 3
 
+    def test_later_annual_release_wins_for_a_shared_event(
+        self, tmp_path: Path
+    ) -> None:
+        """Two annual releases carry one event — the later wins.
+
+        UCDP revises events between annual releases. The store is
+        append-only (ADR-013), so both rows are present and the
+        builder has to choose.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="25.1",
+                date_start="2024-06-15",
+                best=100,
+            ),
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+                best=140,
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        # n_events_input counts rows that SURVIVED stale
+        # filtering, and is what distinguishes supersession from
+        # survivorship here. Survivorship alone would also yield
+        # best == [140], because it prefers the higher annual
+        # version among two rows for one id — so asserting on the
+        # output value only cannot fail. Supersession must remove
+        # the v25.1 row from the input entirely: 2 rows read, 1
+        # reaching survivorship.
+        assert result.n_events_input == 1
+        assert result.n_events_output == 1
+        out = pq.read_table(cfg.output_path)
+        assert out.column("best").to_pylist() == [140]
+
+    def test_event_deleted_by_a_later_release_is_dropped(
+        self, tmp_path: Path
+    ) -> None:
+        """An event only in the superseded release must not ship.
+
+        UCDP deletes and merges events between annual releases,
+        not only revises them. A deleted event's old row has no
+        competitor, so survivorship cannot discard it — the
+        stale filter has to. Regression guard for #594.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 1
+        out = pq.read_table(cfg.output_path)
+        assert out.column("id").to_pylist() == [1]
+
+    def test_deleted_event_does_not_return_through_dot9(
+        self, tmp_path: Path
+    ) -> None:
+        """A deleted event's .9 row must not resurrect it.
+
+        The annual supersession runs before the annual id set is
+        derived, so a .9 row for a deleted event is dropped with
+        it. Ordering the two the other way round would publish
+        the event from .9 instead.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_type="dot9",
+                source_version="25.9.11",
+                date_start="2023-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 1
+        out = pq.read_table(cfg.output_path)
+        assert out.column("id").to_pylist() == [1]
+
+    def test_older_release_survives_beyond_the_latest_coverage(
+        self, tmp_path: Path
+    ) -> None:
+        """The upper bound of the later release's span.
+
+        A future annual release ending earlier than the older one
+        must not silently delete the trailing history only the
+        older release holds. The lower bound is the twin test
+        below.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2020-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2024-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 2
+        out = pq.read_table(cfg.output_path)
+        assert sorted(out.column("id").to_pylist()) == [1, 2]
+
+    def test_deleted_event_does_not_return_through_candidate(
+        self, tmp_path: Path
+    ) -> None:
+        """The .9 twin, for candidate rows.
+
+        Candidate reaches the output by the same route as .9, so
+        the ordering that stops a deleted event returning through
+        .9 has to stop it returning through candidate too.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_type="candidate",
+                source_version="25.0.8",
+                date_start="2023-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 1
+        out = pq.read_table(cfg.output_path)
+        assert out.column("id").to_pylist() == [1]
+
+    def test_ambiguous_annual_versions_block_supersession(
+        self, tmp_path: Path
+    ) -> None:
+        r"""Two strings parsing to one tuple must not decide.
+
+        `_parse_version` maps "26.1" and "26.01" to the same
+        tuple, so `max` would keep whichever `unique()` returned
+        first and the outcome would depend on row order in the
+        store. `_ANNUAL_PATTERN` captures `[\d.]+` from the
+        filename, so `ucdp_ged_v26.01_1989_2025.parquet` produces
+        exactly this. Supersession is refused rather than decided
+        by row order.
+        """
+        # Row order matters, which is the defect. `unique()`
+        # returns "26.1" first, so `max` elects it; its event is
+        # the LATER of the two, so the "26.01" event falls inside
+        # its span and is deleted once supersession proceeds.
+        # Reverse the dates and the fixture cannot fail.
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2023-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="26.01",
+                date_start="2023-01-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 2
+        out = pq.read_table(cfg.output_path)
+        assert sorted(out.column("id").to_pylist()) == [1, 2]
+
+    def test_null_annual_date_end_does_not_delete_silently(
+        self, tmp_path: Path
+    ) -> None:
+        """A null `date_end` must not be swallowed by step (a0).
+
+        `pc.max` skips nulls, `pc.greater` against a null scalar
+        yields null, and `filter()` drops null — so before this
+        guard an all-null newest release deleted every annual row
+        in silence, its own rows included, with conservation still
+        balancing and nothing logged above INFO. On `development`,
+        before supersession existed, the same input raised.
+
+        The exception type below is step (a)'s own pre-existing
+        behaviour, not something (a0) invents. The property under
+        test is that (a0) stands aside and lets it fire rather
+        than returning a silently empty result. A regression would
+        show up here as no exception at all.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-06-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+        ]
+        events[0]["date_end"] = None
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        with pytest.raises(TypeError):
+            build_ucdp_v1(cfg)
+
+    def test_null_date_end_on_a_dot9_row_keeps_it(
+        self, tmp_path: Path
+    ) -> None:
+        """A null `date_end` outside annual must not delete a row.
+
+        `pc.or_` propagates nulls, so `or_(True, null)` is null and
+        `filter()` drops the row. Both the supersession step and the
+        coverage step open with a term that says "keep this row
+        unconditionally" -- "not annual" in the first, "in an annual
+        release" in the second -- and plain `or_` let a null in
+        `date_end` override both. The null-count guard counts annual
+        rows only, by design, so nothing upstream catches this.
+
+        Event 1 exists in two annual releases and as a `.9` row with
+        no `date_end`. The `.9` row is the one `dot9_wins` would
+        elect, so losing it changes the published figure for that
+        event. Measured against the same fixture with a real
+        `date_end`: both must leave two rows.
+        """
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.1",
+                date_start="2024-01-01",
+                date_end="2024-12-31",
+            ),
+            _make_consolidated_event(
+                event_id=1,
+                source_version="25.1",
+                date_start="2024-01-01",
+                date_end="2024-06-30",
+            ),
+            _make_consolidated_event(
+                event_id=1,
+                source_type="dot9",
+                source_version="26.9.3",
+                date_start="2024-01-01",
+            ),
+        ]
+        events[2]["date_end"] = None
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        null_result = build_ucdp_v1(_config(tmp_path, store))
+
+        # The control: identical store, real `date_end`. Asserting
+        # against it rather than a literal means the test states the
+        # property -- the null changes nothing -- and cannot pass by
+        # agreeing with a number that is itself wrong.
+        events[2]["date_end"] = "2024-03-31"
+        control_store = _write_consolidated(
+            tmp_path / "control.parquet", events
+        )
+        control_result = build_ucdp_v1(
+            _config(tmp_path / "control", control_store)
+        )
+
+        assert null_result.n_events_input == 2
+        assert (
+            null_result.n_events_input
+            == control_result.n_events_input
+        )
+
+    def test_non_numeric_annual_version_blocks_supersession(
+        self, tmp_path: Path
+    ) -> None:
+        """A version string we cannot order must not delete data.
+
+        `_parse_version` maps a non-numeric string to (0,), which
+        sorts below every real version. Electing the latest
+        release by that key would make a malformed new release
+        lose to its predecessor and delete the new release's own
+        rows. Supersession is refused instead, which overcounts
+        visibly rather than deleting silently.
+        """
+        # The malformed release's event sits INSIDE the older
+        # release's span. Were "25.1" elected latest, the newer
+        # release's own row would fail both keep clauses and be
+        # deleted — so this fixture fails if the guard is removed.
+        events = [
+            _make_consolidated_event(
+                event_id=1,
+                source_version="26.",
+                date_start="2023-01-15",
+            ),
+            _make_consolidated_event(
+                event_id=2,
+                source_version="25.1",
+                date_start="2023-06-15",
+            ),
+        ]
+        store = _write_consolidated(
+            tmp_path / "store.parquet", events
+        )
+        cfg = _config(tmp_path, store)
+
+        result = build_ucdp_v1(cfg)
+
+        assert result.n_events_output == 2
+        out = pq.read_table(cfg.output_path)
+        assert sorted(out.column("id").to_pylist()) == [1, 2]
+
 
 # ---- Filtering: Green ----
 

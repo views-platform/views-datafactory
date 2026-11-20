@@ -590,3 +590,62 @@ Rationale warns about in its own words.
   forensics, literature review
 - `reports/investigation_summary_event_concentration/findings.md` — the 13-month catalog
 - UCDP GED Codebook — `date_prec` field definitions
+
+---
+
+## Amendment 2026-11-12 — the temporal axis arrived; its reported figures still describe allocation (#547, #556)
+
+**The Decision and the Amendment of 2026-11-10 both stand.** This amendment records a layer
+distinction that applies unevenly to the two axes, and that unevenness is the part worth
+knowing. Dated amendment, not a rewrite.
+
+### 1. The temporal axis was never affected, and the reason matters
+
+The event compiler reads the month field **by name**: whichever column its configuration names
+is the column it bins on, and the production pipeline names the one the temporal allocator
+writes. So a month this ADR's allocator chose is a month the grid receives. Every temporal
+claim in this ADR held in delivered data, including the recovery of fatality mass that
+`production_parity` had been excluding.
+
+The spatial axis did not have that property. ADR-049's allocator records its chosen *cell* by
+rewriting a field the compiler re-derived from coordinates, so the spatial decision was
+discarded on arrival. See ADR-049's amendment of the same date.
+
+**Two stages, the same shape of decision, opposite outcomes — decided by whether the downstream
+stage reads the field or recomputes the quantity.** That is the general lesson, and it is now
+governed by ADR-045's amendment of the same date.
+
+### 2. Which of this ADR's figures are allocation figures
+
+Those measured by grouping on `priogrid_gid` — the per-cell and cell-month numbers, including
+the Tigray cell-month in §Validation & Monitoring. Those are allocator output. The per-month
+and per-month-share figures, including December's share of state-based fatalities, are
+delivered figures, because the month axis survived.
+
+The delivered values are in `reports/investigation_allocation_delivery/findings.md`.
+
+### 3. A pre-registration failure this ADR's amendment had already anticipated
+
+The 2026-11-10 amendment recorded the mechanism plainly: activity weighting moves mass toward
+months with observed fighting, so *"the event's own peak cell-month rises"* — from 3,471 under
+uniform spreading to 11,732 under activity weighting. A later verification nonetheless
+pre-registered *"worst delivered cell-month below 5,000"*, a target correct behaviour cannot
+reach, and graded a release against it.
+
+Two consequences recorded here because this ADR is where the mechanism lives:
+
+- **A bound below a value the chosen method is known to produce is not a falsifier.** It
+  manufactures a failure, and the usual repair is to widen it afterwards, which is the one thing
+  pre-registration exists to prevent. The replacement is an equality: delivery must reproduce
+  the allocation.
+- **Do not pre-register the single slice the previous defect concentrated in.** December 2021
+  was chosen as the test month because the old pipeline dumped everything there. After temporal
+  spreading December is the *second lowest* of the twelve months in that cell, so the check
+  reported a 64× improvement where the worst month across the span had improved 3.5×. A factor
+  of 18, entirely from the choice of slice.
+
+### 4. What this amendment does not change
+
+The `date_prec` semantics, the activity-weighted cascade, the uniform fallback, the profile
+production invokes, and the seasonality guard are all untouched. This amendment is about what
+the ADR's numbers mean and where a future number must be read.

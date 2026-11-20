@@ -17,6 +17,83 @@ entry could.
 
 ---
 
+## A guard that inherited its defect's scope, and a fix that was almost decorative (2026-11-20)
+
+**C-370, eighth instance. #602, residue #603.**
+
+The 2026-11-19 null guard in `build_ucdp_v1()` refuses to supersede when an *annual* row has a
+null `date_end`. It was written because `pc.max` skips nulls, which had turned a loud `TypeError`
+into silent total data loss. Review on the promote PR to `main` found a second destructive path
+for the same null value, on *non-annual* rows, by a mechanism the guard does not watch:
+`pyarrow`'s `pc.or_` propagates nulls, so `or_(True, null)` is null and `Table.filter` treats null
+as drop. A `keep` expression opening with "keep every row that is not annual" therefore dropped
+non-annual rows whenever `date_end` was null. Both expressions in the filter now use
+`pc.or_kleene`, the three-valued form. Nothing delivered changes: `date_end` has 0 nulls in
+384,918 production rows.
+
+**Two corrections to how the finding was reported, both mine to make.**
+
+The review classified it as a wrong number in a log line. Measured against the adjacent case — a
+`.9` row whose id *is* in the latest annual release, rather than the review's candidate row that a
+later step discards anyway — it deletes the row: `n_events_input` fell from 2 to 1. Under the
+production profile's `dot9_wins` survivorship that is the row that would have won its group. The
+severity was a measurement nobody had taken, not a judgement call.
+
+And fixing the step the review named would have changed nothing. The row survived the new
+supersession step and was dropped six lines later by the pre-existing coverage step, for the
+identical reason — plain `or_` over a null. Only correcting both made the fix real. **A fix whose
+effect the next statement undoes is indistinguishable from no fix, and the log line the first
+correction made honest would have read as proof that it worked.**
+
+One case is left open as #603 rather than fixed: a non-annual row with a null `date_end` whose id
+is in no annual release is still dropped, because its position relative to the annual coverage
+boundary is genuinely unknown. Keeping it and refusing the whole filter are both defensible, they
+differ in delivered behaviour, and neither has been measured against a real UCDP file.
+
+---
+
+## A fix that made its own failure mode destructive (2026-11-18)
+
+**C-371 (Tier 2).**
+
+#595 taught the UCDP viewpoint builder that the latest annual release supersedes older ones.
+It had to: UCDP withdraws events between releases, our store is append-only, and 321 withdrawn
+events were still in our published figures — 4,939 deaths across 24 years, found by an external
+reader comparing a number we sent him to UCDP's own website.
+
+The rule works by id. An event present in the older release and absent from the newer one is
+dropped. That is correct when UCDP withdrew it, and wrong when our own harvest of the newer
+release simply failed to fetch it — and the rule cannot tell the two apart, because they look
+identical in the store.
+
+**What makes this worth an entry is the inversion.** Before #595, a short harvest of the newest
+annual release was masked: the previous release's rows stayed in place, the totals came out too
+high, and nothing was lost. After #595, the same shortfall is amplified — every event missing
+from the short harvest takes its predecessor's row with it. A detectability gap acquired a
+data-loss path. C-359 recorded the detectability gap on the ACLED side and said "re-tier if a
+shortfall is ever observed"; the consequence of one is now larger than when that was written.
+
+The harvest guard is real but loose for this purpose. `ucdp_annual.py` raises only when a
+shortfall exceeds **both** 1% and 1100 absolute events. That dual threshold was adopted
+deliberately in April 2026 — the UCDP API counts `type_of_violence=4` events in `TotalCount`
+and omits them from `Result`, a ~1000-event offset that is 40-100% of a small candidate version
+and would otherwise fail every one of them. For a 416,968-row annual release the same offset is
+0.26%, so the band is loose by inheritance rather than by design: a shortfall below ~4,169
+events passes, and then deletes up to that many old rows.
+
+Nothing would go red. The dropped rows are counted into `n_stale`, so `n_read == n_input +
+n_stale` balances exactly — as it did throughout the four and a half months of #594. ADR-040
+conservation compares pipeline input with pipeline output; this is a loss at selection.
+
+Registered without fixing. The smallest candidate fix is to tighten the shortfall tolerance for
+annual specifically, where the offset is 0.26% and a 1% band buys nothing.
+
+**Found by `/code-review` on the pull request, before it merged.** The same review found that
+the new rule's span bound was one-sided, which would delete history if a release ever started
+later than its predecessor; that is #598, and the review is the reason neither shipped silently.
+
+---
+
 ## The allocation that never arrived (2026-11-12)
 
 **C-368 (Tier 1), C-369, C-370.**
@@ -102,6 +179,54 @@ same family as the defect:
 All fixed. The pattern is the finding: **a guard written against a defect tends to inherit the
 defect's own blind spot**, which is the case for having it attacked by someone other than its
 author.
+
+## Five ADRs amended, and two premises that did not survive checking (2026-11-12)
+
+**C-366 confirmed; C-367 held; no new IDs.** The governance half of the delivery defect. Five
+ADRs carried claims the defect falsified, and two of them contradicted each other for four
+months while ADR-003 required that exact contradiction to fail loudly.
+
+**ADR-015** had already decided this. Its §Decision said the compiler prefers the declared cell
+and falls back to coordinates; its §Known Complexities said the two *"can disagree"* and that
+the viewpoint *"should prefer `priogrid_gid`"*. Neither sentence existed in `src/`. The
+amendment records that the decision stood unimplemented from acceptance until 2026-11-12, that
+the disagreement it predicted did occur, and that the cost was 26.49% of UCDP fatality mass.
+It also refutes the ADR's own stated cause: of the seventy pre-existing disagreements, **zero
+are border-adjacent** and the median offset is **1,460 cells**, so *"border cells, precision
+issues"* describes none of them.
+
+**ADR-024** Invariant 2 is now conditional, and the amendment keeps its heading's warning rather
+than softening it: the invariants *"cannot be changed without breaking all downstream
+consumers"* was correct, this change does alter delivered values, which is why the three
+consumer repositories were told before it shipped. It also records a tension it deliberately
+does not resolve — Invariant 3 authorises skipping out-of-range input with only a warning,
+which is the behaviour ADR-003 forbids.
+
+**ADR-045** got the narrow doctrine amendment and a corrected gap table. Its row for spatial
+binning at the Viewpoint → Compilation boundary recorded gap *"None"* — it certified as sound
+the exact boundary where the mass was being misplaced. The row was not careless: the binning
+rule *is* tested. It recorded the absence of a gap in the thing it measured and was read as
+recording the absence of a gap. One rule follows for the table itself: a `Gap` cell saying
+*"None"* claims that no property of that boundary is unverified, which is almost never true.
+
+**ADR-049 and ADR-053** keep their decisions and lose the implied layer of their evidence. Every
+per-cell figure in both describes allocated cells. ADR-049 is the sharper case, because it wrote
+the diagnosis and missed the instance: *"a guard that cannot distinguish distribution from
+relocation is not a guard for this ADR"* was written about a mutation inside the viewpoint while
+the compiler was doing exactly that to every allocated event. **A correct diagnosis is scoped to
+where its author was looking.** ADR-053's amendment records the opposite outcome on the temporal
+axis and why — the compiler reads the month field *by name*, so that decision arrived. Two
+stages, the same shape of decision, opposite fates, decided entirely by whether the downstream
+stage reads the field or recomputes the quantity.
+
+**Two premises checked and dropped.** The epic's own issue asked for C-366's figures to be
+replaced as loosely derived and for three of six GAUL-dependent skip sites to be converted to
+synthetic fixtures. Neither survived contact: C-366's numbers came from three full viewpoint
+builds and #548 reproduced them exactly, and five of the six skip sites assert facts about real
+geography, so pointing them at invented data would have raised the CI-run count and lowered the
+evidence. Both are recorded where they were asked for rather than quietly done differently.
+**An acceptance criterion written while diagnosing is a hypothesis about the work, not a
+specification of it.**
 
 ## A named tripwire that could not fire, and the switch that found it (2026-11-10)
 
@@ -1576,6 +1701,7 @@ Moved here as part of #404; the header keeps a pointer.
 - repo-assimilation v1.3.0 2026-06-16
 - expert-code-review register-risk 2026-06-18
 - test-review v1.4.0 2026-06-24
+- code-review on #596 (annual supersession) 2026-11-18
 
 ---
 

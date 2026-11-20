@@ -90,6 +90,20 @@ def pipeline_profile() -> str:
     return match.group(1)
 
 
+# Stays on the real store and the real crosswalks, deliberately. What
+# this class asserts is a claim about *this* event in *this* geography
+# -- that event 463131's December cell-month comes down below ADR-053's
+# ceiling, and that a year across three named Ethiopian regions reaches
+# at least ten of their cells. Those are facts about the world, and a
+# synthetic polygon cannot stand in for them: a fixture asserting that
+# invented cells behave as invented would be mutation category M4,
+# conformance to a declaration nothing checks.
+#
+# The part of this that *is* a property of the code -- composition
+# conserves, both stages act, the allocation spreads on both axes --
+# is asserted on synthetic geography in
+# TestAdr053ComposedOnSyntheticGeographyGreen below, which runs in CI
+# (#550).
 @pytest.mark.skipif(
     not (STORE.exists() and GAUL1.exists() and GAUL0.exists()),
     reason="needs the consolidated store and the GAUL crosswalks",
@@ -224,9 +238,141 @@ class TestAdr053ComposedGoldenCriterion:
             "some rows carry no _temporal_distributed marker -- the "
             "temporal stage did not allocate this event"
         )
-        assert any(row.get("_spatial_distributed") for row in allocated), (
-            "no row carries _spatial_distributed -- the spatial stage did "
-            "not distribute this event off its centroid"
+        # `all`, not `any`: proportional() marks every row it emits
+        # (spatial_distribution.proportional sets the flag inside the
+        # per-cell loop), and the temporal stage carries the field
+        # through with **event. So a single unmarked row means some
+        # row reached the output by another path. `any` was the
+        # original spelling and the #555 audit showed it passes when
+        # only one row in the whole allocation is marked.
+        #
+        # This assertion has never executed. Its class is skipif'd on
+        # the real store and the GAUL crosswalks, which .gitignore
+        # keeps out of CI, so the change from `any` to `all` here is
+        # correct but unverified -- M6, recorded rather than claimed.
+        # The same change in TestAdr053ComposedOnSyntheticGeographyGreen
+        # below does run, and the re-audit confirmed it goes red when
+        # only the first row is marked.
+        assert all(row.get("_spatial_distributed") for row in allocated), (
+            "a row carries no _spatial_distributed marker -- the spatial "
+            "stage did not distribute this event off its centroid, or "
+            "some row reached the output without passing through it"
+        )
+
+
+class TestAdr053ComposedOnSyntheticGeographyGreen:
+    """The composition's own properties, in CI, on invented geography.
+
+    ``TestAdr053ComposedGoldenCriterion`` above cannot run in CI: it
+    needs the consolidated store and the GAUL crosswalks, and
+    ``.gitignore`` keeps both out. That is how the delivery defect
+    shipped -- the observers existed and never executed (#550, M6).
+
+    What is asserted here is only what does not depend on real
+    geography: that running ADR-053's temporal stage and ADR-049's
+    spatial stage in that order conserves every extensive field
+    exactly, that both stages mark the rows they touched, and that the
+    result spreads on both axes rather than one. The claims that *are*
+    about Ethiopia stay above, on real data.
+    """
+
+    @pytest.fixture
+    def fixture(self, tmp_path: Path) -> dict:
+        from conftest import load_synthetic_generator
+
+        gen = load_synthetic_generator()
+        gaul = gen.write_synthetic_gaul(tmp_path / "gaul_admin")
+        events_path = tmp_path / "events.parquet"
+        rows = gen.write_synthetic_ucdp_events(events_path)
+        table = pq.read_table(events_path)
+        return {
+            "gen": gen,
+            "event": next(
+                r for r in rows if r["id"] == gen.SUMMARY_EVENT_ID
+            ),
+            "temporal": build_temporal_weight_map(table),
+            "spatial": build_spatial_weight_map(
+                table, gaul["gaul1_code"], gaul["gaul0_code"],
+            ),
+        }
+
+    @pytest.fixture
+    def allocated(self, fixture: dict) -> list[dict]:
+        """Temporal then spatial, in ADR-053 section 5's order."""
+        temporal = get_distribution("activity_weighted")
+        spatial = get_spatial_distribution("proportional")
+        rows: list[dict] = []
+        for month_row in temporal(
+            fixture["event"], fixture["temporal"],
+        ):
+            rows.extend(spatial(month_row, fixture["spatial"]))
+        return rows
+
+    def test_composition_conserves_every_extensive_field_exactly(
+        self, fixture: dict, allocated: list[dict],
+    ) -> None:
+        for field in _EXTENSIVE:
+            expected = int(fixture["event"][field] or 0)
+            got = sum(int(row[field] or 0) for row in allocated)
+            assert got == expected, (
+                f"{field}: allocated {got:,} against the source's "
+                f"{expected:,} -- composition is not conserving"
+            )
+
+    def test_the_allocation_spreads_on_both_axes(
+        self, fixture: dict, allocated: list[dict],
+    ) -> None:
+        """Equalities, because the fixture is fully determined.
+
+        The synthetic pool holds one precise event per well-located
+        cell, dated to the first eight months of 2021, and the summary
+        event's polygon has six weighted cells. A bound would hide a
+        stage that stopped halfway; the planted numbers do not.
+        """
+        gen = fixture["gen"]
+        months = {str(row["date_month"]) for row in allocated}
+        cells = tuple(sorted({row["priogrid_gid"] for row in allocated}))
+        assert len(months) == len(gen.WELL_LOCATED_FATALITIES), (
+            sorted(months)
+        )
+        assert cells == gen.ADMIN1_ALLOCATION_CELLS, cells
+
+    def test_both_stages_marked_the_rows_they_touched(
+        self, allocated: list[dict],
+    ) -> None:
+        """A composition that silently ran one stage still conserves."""
+        assert all(
+            row.get("_temporal_distributed") for row in allocated
+        ), "the temporal stage did not allocate this event"
+        # `all`, not `any` -- see the sibling assertion in
+        # TestAdr053ComposedGoldenCriterion for why.
+        assert all(
+            row.get("_spatial_distributed") for row in allocated
+        ), "the spatial stage did not distribute off the centroid"
+
+    def test_no_cell_month_holds_the_whole_event(
+        self, fixture: dict, allocated: list[dict],
+    ) -> None:
+        """The artefact ADR-053 exists to remove, stated structurally.
+
+        The real criterion is a number about cell 148759 in December
+        2021 and belongs on real data. What holds on any geography is
+        that an event declaring a year and a multi-cell polygon must
+        not arrive as a single cell-month.
+        """
+        worst = max(
+            sum(
+                int(r["best"] or 0)
+                for r in allocated
+                if r["priogrid_gid"] == pgid
+                and str(r["date_month"]) == month
+            )
+            for pgid in {r["priogrid_gid"] for r in allocated}
+            for month in {str(r["date_month"]) for r in allocated}
+        )
+        total = int(fixture["event"]["best"] or 0)
+        assert worst < total, (
+            f"one cell-month holds {worst:,} of {total:,}"
         )
 
 
@@ -259,6 +405,13 @@ def _synthetic_event(
         "date_end": date_end,
         "date_prec": date_prec,
         "best": best,
+        # Equal to best, and deliberately left that way. This helper
+        # feeds only TestAdr053ProvenanceCounters, which asserts ledger
+        # counters and runs no conservation loop -- the _EXTENSIVE
+        # loops above take their event from the generator fixture or
+        # the real store, never from here. Making these distinct was
+        # reverted after the re-audit measured it protecting nothing:
+        # setting both to None left the class green.
         "low": best,
         "high": best,
         "type_of_violence": 1,

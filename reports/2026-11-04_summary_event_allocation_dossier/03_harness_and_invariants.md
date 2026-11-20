@@ -140,6 +140,29 @@ pre-registration must say whether that is in scope or deliberately excluded.
   accurately counted values we hold, so any remedy that quietly discounts them is masking, not
   fixing. The scale-invariant comparison (`02 §5`, metric 5) is the guard.
 - **Never run concurrently with a production pipeline run** on the same host.
+- ⭐ **A pre-registered number is evidence only if it is measured at the layer the consumer reads.**
+  Added 2026-11-12 after the v1.18.0 release was verified against eight pre-registered numbers,
+  passed all eight, and shipped a defect that made the allocation it was grading unobservable.
+  All eight were computed by grouping on `priogrid_gid` — the field the event compiler ignores,
+  because `_place_events` re-derives the cell from `latitude`/`longitude`. Every number was
+  arithmetically correct about a quantity no consumer receives. `evaluate_temporal_allocation.py`,
+  `investigate_summary_event_concentration.py`, ADR-049, ADR-053 and this dossier all measured
+  there; `11_allocator_spec.md` and this file contained **zero** mentions of `priogrid_gid`,
+  `latitude`, `longitude` or compilation, so the spec never said how a decision reaches the grid
+  and the harness never named the delivered layer as the place to look.
+
+  Two corollaries, both paid for:
+
+  - **Name the layer in the row, not in the prose.** A falsifier row that says "cell 148759 holds
+    N" must say *where it was read* — served store, compiled grid, or viewpoint parquet. The
+    delivered-layer reader here is `scripts/measure_allocation_delivery.py`, which goes through
+    `datafactory_query.load_dataset`, the same entry point a model's dataloader calls.
+  - **Never pre-register a single slice the old defect concentrated in.** December 2021 was chosen
+    as the test month because that is where the previous pipeline dumped everything. After temporal
+    spreading December holds a small share, so the cell read 1,782 — a 64× improvement — while the
+    worst cell-month across the whole span was 32,390, a 3.5× one. **The single-month check
+    flattered the result by a factor of 18.** Pre-register the extremum over the whole span.
+
 - ⭐ **Recompute every metric from its definition; never assert one from a reported number.** Added
   2026-11-05 after a threshold-decomposition conclusion was green, plausible, quotable and wrong —
   mean Brier at unequally spaced thresholds was compared as heights when `CRPS = ∫ BS(t) dt` makes
