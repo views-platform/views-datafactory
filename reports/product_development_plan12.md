@@ -1,9 +1,72 @@
-# Product Development Plan v12 — current through v1.18, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.19, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
+
+---
+
+## v1.19 Addendum (2026-11-20)
+
+**v1.19.0 (we were publishing 4,939 deaths that UCDP had withdrawn, and an external reader found
+it before we did).** One behaviour change, in one file, in the UCDP viewpoint builder. It makes the
+latest annual release supersede older ones for the span it covers (#595, #596).
+
+**What the gap was.** UCDP does not only revise events between annual releases — it **deletes and
+merges** them. Our consolidated store is append-only by design (ADR-013), so an event withdrawn in
+v26.1 keeps its v25.1 row. The viewpoint's stale filter had three rules, one of which says a newer
+monthly `.9` file supersedes an older one. **There was no equivalent rule for annual releases**, and
+ADR-023 §Decision item 3 presented the three as if they were the complete set. So a withdrawn
+event's annual row was kept unconditionally, the `.9` rule never looked at it, and survivorship
+could not discard it because the id had no competing row to lose to. The asymmetry was the bug, and
+it was visible on the page: supersession defined for one release family and not the other.
+
+That asymmetry was harmless while one annual release was on disk. It became load-bearing when v26.1
+was harvested on 2026-07-02 alongside v25.1, which is the state production has been in since.
+
+**What it cost.** Measured against UCDP release v26.1 on production data: **321 events, 4,939
+deaths, across 24 years and 45 country-years.** Global totals ran above UCDP's own by +0.03% (2022),
++0.2% (2023) and +1.3% (2024) — one-directional in every year, which is the signal that identified
+the cause. 21 country-years moved by more than 1%, 7 by more than 10%. Ukraine 2024 was **100,601
+against 98,352**.
+
+**Nothing went red, and nothing could have.** Every ADR-040 conservation invariant held throughout:
+deaths were neither created nor destroyed by the pipeline. The error entered at ingestion of a
+release that was later withdrawn, which is upstream of everything conservation watches. ADR-040
+already says so — its ownership table assigns "choose which events to filter or exclude" to the
+viewpoint builder and requires only that filters are accounted for in the conservation equation.
+Conservation proves the pipeline did not corrupt the data. It is silent on whether the data should
+have been there.
+
+**How it was found.** Håvard Hegre compared a fatality total we had mailed him to the number on
+ucdp.uu.se. Not a check of ours — and the mail that prompted him carried a global table with no
+scope label, which was our presentation error and the only reason anyone looked. **Nothing in this
+repository compares our published totals to the source's.** That is #599, and it is the gap behind
+the four and a half months.
+
+**What shipped.** A fourth stale-filtering rule, applied *before* the annual coverage boundary is
+derived, so that boundary and the annual id set come from a single release and a `.9` or candidate
+row for a withdrawn event is dropped with it. After it, all nine 2022–2024 year × violence-type
+global totals equal UCDP v26.1 **exactly**. Everything else in this release is tests and
+documentation: 12 test files, 19 docs and reports files, from #550, #553, #554, #555, #556, #571
+and #572.
+
+**What this release does not fix.** Our country totals are still not the source's country totals:
+Mexican cartel deaths in a border cell report under the United States, and Kursk reports under Sumy,
+because a grid cell belongs to whichever country holds the larger share of its area (#592, #593).
+Year and violence-type totals are unaffected. Also open: the span bound is upper-only and observed
+rather than declared (#598), and a short harvest of the newest annual release now deletes the
+previous release's rows, because the rule cannot distinguish "UCDP withdrew it" from "we failed to
+fetch it" (C-371).
+
+**The number worth remembering is not the fix.** It is 69 lines, and it took three review rounds and
+a falsification audit to get right — each of which found something real: a span bound that guarded
+one end while its docstring claimed both, a test that passed with the entire fix absent, and a null
+`date_end` path that deleted every row in silence while conservation balanced. Four guards written
+for a 69-line change, every one defective on first writing. Recorded as a dated addendum to C-370,
+whose own sentence predicted it: *a guard written against a defect tends to inherit the defect's own
+blind spot.*
 
 ---
 
