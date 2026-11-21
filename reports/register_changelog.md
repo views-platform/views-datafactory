@@ -17,6 +17,83 @@ entry could.
 
 ---
 
+## A cache that was told to be quiet, and an archive mistaken for one (2026-11-21)
+
+`/review-rr strategic`, the first full curation pass since 2026-08-04. It ran the morning after
+v1.19.0 went into production, prompted by a healthchecks.io DOWN mail at 01:42 CET, and the
+incident behind that mail supplied two of the three findings below.
+
+**Structurally the register was clean.** Every header count was exact against an independent
+recount of the 58 open rows — 1 Tier 1, 8 Tier 2, 18 Tier 3, 25 Tier 4, 6 accepted by design.
+No duplicate IDs, no dangling cross-references in twelve spot-checks, no section misordering.
+For a 4,617-line document carrying 371 concern IDs that is worth recording, because the
+alternative hypothesis going in was that it had quietly drifted.
+
+**C-224 moved from Tier 4 to Tier 2 on a measurement, not a judgement.** The entry had read,
+since May, that *"all data is rebuildable from source APIs, but a full rebuild takes ~8-12
+hours"* — which frames a backup as insurance against **time**. The 2026-11-21 harvest printed
+`70 versions served (35 no longer available)`. UCDP no longer serves 35 of the candidate
+versions our store holds. They are not re-fetchable at any price, and the same reasoning
+reaches the annual releases, whose disagreement about which events occurred is the entire
+subject of #594/#595 and is only auditable while we hold both. `data/raw/` is therefore an
+archive of record, not a cache; ADR-013 made consolidation append-only precisely so superseded
+vintages would survive, and a single un-snapshotted NVMe disk discards exactly what that
+decision exists to keep. The tier was wrong because the premise under it was wrong, and nobody
+had re-read the premise in six months.
+
+**Two clusters were added, and the second one has one member on purpose.**
+
+The first, *"a delivered number shaped by choices no consumer can see"*, binds C-356, C-364,
+C-366, C-367, C-368 and C-369. Each was found by a different audit and fixed or accepted on its
+own terms. The joint statement none of them makes: our published UCDP totals are UCDP's totals
+minus a precision filter that drops 785,626 deaths, redistributed by a temporal rule that puts
+37.4% of a four-year window's mass in four cell-months, rounded upward by 96 deaths that exist
+in no version of the source, and placed by a spatial rule that until 2026-11-12 did not run.
+Every step is defensible and every step is documented. The composition had never been written
+down, and the 79 delivered features carry no `date_prec` or `where_prec`, so no consumer can
+find any of it.
+
+The second, *"fails red"*, is the mirror of the register's existing *"mechanisms that fail
+green"* cluster and currently holds only #606. A check that reports failure while nothing is
+wrong costs what a check that reports success while something is wrong costs — it stops being
+read — plus something fails-green never costs: #606's false alarm aborted the pipeline at step
+12 of 14, so `verify_consumer_contract.py` at step 13 **never ran**. A false alarm consumed the
+real alarm. The fails-green cluster also had one member once, which is the reason for seeding
+this one rather than waiting.
+
+**C-372 registers an absence, which is the uncomfortable half.** Nothing in this repository
+compares a published total against the source's own published total. That gap let the
+annual-supersession error run four and a half months in the served store while every ADR-040
+conservation invariant held, and it was closed by an external reader comparing a number we
+mailed him to the number on ucdp.uu.se. A multi-expert panel was convened on 2026-11-17, produced
+four options, and **none was chosen and nothing was recorded.** Option 4 was *"do nothing, and
+record that as a deliberate dated decision rather than an oversight"* — the panel anticipated
+exactly this outcome and the anticipation did not prevent it. #597 exists because unrecorded
+decisions in this project get read as oversights; this one would have been.
+
+**Mechanical curation.** C-70 merged into C-360, which had been asking for that decision in its
+own cross-ref line since October. C-352 merged into C-355 (one defect, two faces, one consumer).
+C-349 merged into C-336 (identical mechanism, different thing copied). C-97, C-354, C-357, C-38
+and C-41 demoted to the tech-debt backlog on the 2026-08-04 criteria. Three triggers rewritten
+that were perpetual or symptom-shaped: C-32 had *"accepted by design"* where a reopen condition
+belongs, C-126 had a trigger true since the day it was written, C-180's summary row named a
+symptom while its detail section already named the action. D-26 annotated: Beck's position was
+that the discovery probe *"works fine"* and optimisation should wait for evidence, and the
+evidence arrived pointing the other way — the probe is the only act establishing that we still
+look at UCDP, and it leaves no record.
+
+**Two tier questions were left open deliberately.** C-29 is *"no end-to-end integration test —
+trigger fired, accepted at v1.0"*, and C-370 is the bill for that acceptance: 26.49% of all UCDP
+fatality mass in the wrong cells for four months, across precisely the boundary C-29 declined to
+test. Withdrawing an acceptance is a judgement about a past decision and belongs to the operator,
+not to a curation pass. C-359 may belong at Tier 2 beside C-371 on the same mechanism. Both were
+reported and neither was moved.
+
+Net: 58 open concerns to 51, with one new entry, three merges, five demotions, one re-tier and
+two clusters. The register got shorter and says more.
+
+---
+
 ## A guard that inherited its defect's scope, and a fix that was almost decorative (2026-11-20)
 
 **C-370, eighth instance. #602, residue #603.**
