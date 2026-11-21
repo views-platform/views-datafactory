@@ -39,6 +39,21 @@ meant to apply. A positive remainder means we serve deaths the
 source did not publish — the withdrawn-event defect's own
 signature.
 
+The exclusive term is computed from the **newest** ``.9`` version
+only, matching the viewpoint's own survivorship. That newest file
+covers recent months, so for the years an annual release covers the
+term is normally **zero** — measured 2026-11-22, ``26.9.2`` held
+25,940 rows, all exclusive of annual 25.1 and all in 2025 or 2026.
+A zero in that column is the expected reading for a settled year,
+not a broken one.
+
+Run it where the newest annual release in the store is the one the
+served grid was built from. Pointed at a store holding an older
+release than the grid, every difference is the release gap and
+says nothing about the pipeline: on 2026-11-22, a local store
+holding annual 25.1 against a 26.1-built grid gave +483 for 1989
+and +26,634 for 2024 state-based, all of it UCDP's own revisions.
+
 Usage::
 
     uv run python scripts/verify_source_parity.py
