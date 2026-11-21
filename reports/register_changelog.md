@@ -17,6 +17,56 @@ entry could.
 
 ---
 
+## Four documents described a world that had ended, all in one evening (2026-11-21)
+
+Not an audit. Four separate claims were made to the operator or to a peer session on the evening
+of 2026-11-21, each read from the top of a document, each false by the bottom of that same document
+or in the file next to it. They are recorded together because the pattern is the finding; the
+individual corrections are small.
+
+**1. "Nothing automated notices when serving fails."** Read from ADR-018's description of the gap.
+ADR-051's 2026-08-03 amendment closed it: a Better Stack monitor has polled `status.html` every
+three minutes with e-mail alerting since that date, verified live at the time, and C-335 was
+resolved on that basis. What survives is narrower and is now **C-373** — the monitor polls the status
+page, which is not the object a consumer reads, and the monitor's own existence is attested by one
+sentence in this register. A deleted monitor would be silent, which is the cluster's rule turned on
+the remedy that closed it.
+
+**2. Five "editorial choices" shaping every published UCDP figure.** Relayed from C-366, C-364,
+C-367 and C-356 as measurements of production. They are measurements of `production_parity`, retired
+2026-11-10. Production builds `kgi_kti_activity`: `exclude_where_prec=()`,
+`source_distribution_map=None`, `distribution_strategy="activity_weighted"`. A peer session measuring
+the served store found **99.8% of GED v26.1 fatalities present** against the ~77% those entries
+imply, and had the correction before publishing. C-367's own body had said production moved; its
+summary row had not. **This file states every open concern twice and only the long form was
+corrected** — the single most useful thing learned today.
+
+C-366's trigger is the sharper version: it read *"before the production profile is switched away
+from `production_parity`"*, the switch happened on 2026-11-10, and nobody checked the trigger. Marked
+fired, eleven days late.
+
+**3. C-224's re-tier.** The 4→2 move earlier the same day read the harvest line
+`70 versions served (35 no longer available)` as *"we hold 35 files UCDP will not serve again"*. A
+count of the store: 70 candidate files on disk, 70 served, no surplus. The 35 are 2018–2020 versions
+never fetched. Re-tiered 2→3 — no backup for 9.9 GB is real and costly to recover from rate-limited
+APIs, but it is recoverable, and Tier 2 claimed irreversibility that does not exist. The count took
+one command and was available before the re-tier was written.
+
+**4. C-368's "until #550 lands"**, corrected earlier the same day and recorded above.
+
+**The mechanism, registered as C-336's fifth addendum.** This repository amends rather than
+rewrites, on purpose: an ADR keeps its Decision, an entry keeps its narrative, a retired profile
+stays in `profiles.py`. The convention is right — a document that quietly drops its premise stops
+being a record of a decision. Its cost is that the top of the document is the part people quote and
+the bottom is the part that is true. The remedy clause gains a fourth: *correct the summary row and
+the entry in the same edit, or neither*; and an ADR's Decision is not a statement about today until
+its amendments have been read.
+
+Three of the four reached someone outside this session before being checked. That is the cost, not
+the errors themselves.
+
+---
+
 ## The only Tier 1 was a stale sentence (2026-11-21)
 
 Wave 0 of the #616 sprint, and the first item deleted work rather than adding it.
