@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-11-21 — `/review-rr strategic` re-tiered C-224 from 4 to 2 after the morning's harvest showed UCDP no longer serves 35 of the candidate versions we hold, which makes `data/raw/` an archive of record rather than a cache; the same pass merged C-70, C-352 and C-349 away, demoted five entries, added the "delivered number" and "fails red" clusters, and registered C-372 for the absent comparison against the source's own totals (#616). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md).
+**Last update:** 2026-11-21, two passes the same day — `/review-rr strategic` re-tiered C-224 from 4 to 2 because UCDP no longer serves 35 of the candidate versions we hold, which makes `data/raw/` an archive of record, and it merged away C-70, C-352 and C-349, demoted five entries, added two causal clusters and registered C-372; then #607 resolved C-368, leaving **no Tier 1 entry**, after finding its trigger still said the proving guards skipped in CI until #550 landed, which it had done nine days earlier (#616). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md).
 **Source:** 72 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 372 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176, C-70 merged into C-360, C-352 merged into C-355, C-349 merged into C-336): 318 resolved-or-demoted, 51 open concerns (1 Tier 1, 10 Tier 2, 17 Tier 3, 19 Tier 4, 4 deferred by design; 6 with fired trigger); 10 demoted to tech-debt backlog (5 on 2026-08-04, 5 on 2026-11-21), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 134 struck-through in active register (313 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 318 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 372 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176, C-70 merged into C-360, C-352 merged into C-355, C-349 merged into C-336): 319 resolved-or-demoted, 50 open concerns (**0 Tier 1**, 10 Tier 2, 17 Tier 3, 19 Tier 4, 4 deferred by design; 5 with fired trigger); 10 demoted to tech-debt backlog (5 on 2026-08-04, 5 on 2026-11-21), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 135 struck-through in active register (314 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 319 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -198,9 +198,9 @@
 | C-363 | 4 | **`logs/pipeline_duration.json` is written only on the success path, so after a failed run it still reports the previous success.** `refresh_pipeline.sh:336-341` writes it after the failure sentinel is cleared; a failure leaves the last good file untouched. Two operator-facing guides send an operator to it by name. The embedded `finished` timestamp is the only thing separating stale from fresh, and nothing prompts the reader to check it | **Before the duration record is used to answer whether a run got slower, or how far a failed run got** — the 21 October abort left the September duration standing as the newest answer | Operational observability |
 | C-366 | 3 | **Production drops 43,933 UCDP events carrying 785,626 fatalities — +22.6% of everything it delivers — rather than placing them imprecisely.** `profiles.py:107` sets `exclude_where_prec=(4, 6)`, so admin-1 (4) and country (6) events are filtered out while **country-or-larger (5) passes through whole** to its centroid cell — the class that produces C-356's and C-364's artifacts. ADR-049:29 documents the filter and ADR-049:81 says it *"loses real deaths"*; **neither ever stated how many.** Measured 2026-11-06: 36,608 of the dropped events are state-based | **Before the production profile is switched away from `production_parity`** — the switch *adds* 785,626 deaths rather than only moving mass, so the first thing any consumer comparing totals sees is +22.6%, and they will read it as corruption unless told first. Also before any statement that this repository's UCDP totals match UCDP's own | UCDP imprecision |
 | C-367 | 4 | **The production temporal strategy reports 96 deaths that appear in no version of the source.** `ceil_split` assigns `ceil(best/span)` to every spanned month, so a 7-death, 3-month event is delivered as 9. Measured 2026-11-06 against the per-event source maximum: **74 events over the ceiling, 96 invented deaths** live in production; both apportioned profiles measure **zero**. Documented in the strategy's own docstring as *"may inflate totals"* — what did not exist was the number, or any guard that would notice | **Before a conservation guard is added that bounds delivered per-event totals by the source** — it goes red on the current production path, and the cause is this, not a new defect. Also before any claim that the pipeline conserves fatality mass end to end | UCDP imprecision |
-| C-368 | 1 | **The spatial allocator's chosen cell never reached delivered data — in any release.** `spatial_distribution.proportional` records its decision by rewriting `priogrid_gid`; `grid_compilation._place_events` re-derived the cell from `latitude`/`longitude`, which the allocator leaves at the source centroid, and `_required_columns` did not even load the column. Every allocated row returned to the cell it came from. Measured 2026-11-12: **1,128,236 deaths across 60,105 events, 26.49% of all UCDP fatality mass**; 97.3% of the mass at `where_prec=6`, collapsing 6,896 chosen cells into 91. Totals conserve under relocation, so none of the four conservation boundaries could see it. ADR-015:102-106 chose `priogrid_gid` in June 2026 and nothing implemented it; `PregriddedCompilationConfig.pgid_field` already did exactly this for the pregridded sources | **Fired** — fixed by #562 (`pgid_field`), but the guards that prove it skip in CI until #550 lands, so a regression would be caught on a developer machine and not by branch protection | UCDP imprecision |
+| ~~C-368~~ | ~~1~~ | ~~The spatial allocator's chosen cell never reached delivered data — in any release~~ | **RESOLVED 2026-11-21 (#607).** Fixed by #562; the entry stayed open only because its trigger said the proving guards *"skip in CI until #550 lands"*. #550 closed on 2026-11-12 and nobody updated the clause, so the register's only Tier 1 was held in place by a stale sentence for nine days. Verified by mutation, not by reading: setting `declared = None` in `_place_events` re-introduces the defect and turns **five tests red**, three of them in `TestAllocationSurvivesCompilation`. Those tests carry no `skipif` and build their fixtures from the tracked `generate_synthetic_data.py`, so branch protection now catches a regression | UCDP imprecision |
 | C-369 | 2 | **`CompilationConfig.date_field` defaults to a raw field while the temporal allocator writes `date_month`.** A caller taking the default on an allocated source collapses every distributed month onto the event's start month, conserving totals. Production survived only because `compile_grid.py`'s argparse default happens to be `date_month`. Closed inside this repository by `preflight.reject_ignored_allocation` plus an AST guard over every `scripts/` call site (#562); **the residual is an external library caller**, since `CompilationConfig` ships in the wheel and removing the default is a breaking change owed to a MAJOR. An auto-detecting default was rejected: inferring decision-relevant semantics is what ADR-003 forbids | **At the next MAJOR release** — make `date_field` required then. Until then, recorded as a strict xfail so that whoever makes the default safe is forced to remove the marker | UCDP imprecision |
-| C-370 | 2 | **No test crossed the viewpoint-to-compilation boundary, which is why C-368 survived four months.** 47 tests exercised spatial distribution and none called the compiler; `test_cross_layer_contracts.py` compares column *names*, so a field present in both layers and ignored by one passed, and its `UCDP_COMPILATION_COLUMNS` omitted `priogrid_gid` — the contract described the compiler rather than the requirement. ADR-045:57 certified this exact boundary as having no gap, because ADR-045:16 rules end-to-end invariants out of scope by construction. The one test that would have caught it (`test_adr053_production_profile.py:93`) is `skipif`'d on data `.gitignore` guarantees CI never has | **Before adding any further allocation strategy** — and #550 must land, or the replacement guards skip in CI exactly as their predecessor did | Testing |
+| C-370 | 2 | **The viewpoint-to-compilation boundary is contracted by column name only — which is why C-368 survived four months.** 47 tests exercised spatial distribution and none called the compiler; `test_cross_layer_contracts.py` compares column *names*, so a field present in both layers and ignored by one passed, and its `UCDP_COMPILATION_COLUMNS` omitted `priogrid_gid` — the contract described the compiler rather than the requirement. ADR-045:57 certified this exact boundary as having no gap, because ADR-045:16 rules end-to-end invariants out of scope by construction. **2026-11-21 (#607): one seam is now covered, the mechanism is not — stays Tier 2.** `TestAllocationSurvivesCompilation` calls the compiler, runs in CI (confirmed against run 44920182095's skip list, where this module appears only as the deliberate C-369 xfail), and a mutation setting `declared = None` in `_place_events` turns five of its tests red. That covers the `priogrid_gid` seam. It does not touch what let the seam open: `test_cross_layer_contracts.py` still compares column *names*, and ADR-045:16 still rules end-to-end invariants out of scope. The next field to cross this boundary gets no more protection than `priogrid_gid` had | **Before adding any further allocation strategy** — the guards cover the one seam that exists, not a second one. (Superseded clause, discharged 2026-11-21: "#550 must land, or the replacement guards skip in CI exactly as their predecessor did." #550 closed 2026-11-12) | Testing |
 | C-371 | 2 | **A short harvest of the newest annual release now deletes the previous release's rows for every event it is missing.** The annual supersession added in #595 cannot distinguish "UCDP withdrew this event" from "our harvest did not fetch it" — both look like an id present in the old release and absent from the new one, and both are dropped. Before #595 a short harvest left the old rows in place, which overcounted but preserved the data; after it, the same shortfall destroys it. The harvest guard in `ucdp_annual.py` raises only when a shortfall exceeds **both** 1% and 1100 events, so on a 416,968-row release a shortfall of up to ~4,169 events passes silently and then deletes up to that many old rows. Nothing goes red: the dropped rows are counted into `n_stale`, so the count-conservation check still balances exactly | **At the next annual release harvest** (UCDP publishes mid-year; v27.1 expected ~July 2027), and at any re-harvest of the current annual release after a partial or interrupted fetch | UCDP schema |
 | C-372 | 2 | **Nothing in this repository compares a published total against the source's own published total.** The 2026-11-17 annual-supersession error ran for four and a half months in the served store and was found by an external reader comparing a number we mailed him to the number on ucdp.uu.se. Every ADR-040 conservation invariant held throughout, because conservation proves the pipeline did not corrupt the data and is structurally silent on whether the data should have been there at all (ADR-040 disclaims this itself). A multi-expert panel was convened on 2026-11-17 and produced four options — out-of-band comparison in the pipeline, a fail-loud assertion at viewpoint-build time, a manual runbook step, or a dated decision to do nothing — and **no option was chosen and no decision was recorded**, which is the state #597 exists to prevent being read as an oversight | **Before the next statement to anyone outside this repository that our figures agree with a source's** — including the pending follow-up to the external reviewer. Also when the panel's four options are next weighed, whichever comes first | Consumer contract |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
@@ -268,7 +268,8 @@ post-mortem documents six instances end to end.
 
 *Added by `/review-rr strategic`, 2026-11-21.*
 
-Six open entries are each individually defensible, each separately documented, and each the result of a
+Six entries — five open, with C-368 resolved on 2026-11-21 and kept in the table because the cluster's
+shape depends on it — are each individually defensible, each separately documented, and each the result of a
 deliberate decision. Read together they say something none of them says alone, and that nobody has
 written down: **the UCDP fatality figures this repository publishes are the product of at least five
 undeclared editorial choices, and no delivered feature lets a consumer detect any of them.**
@@ -278,7 +279,7 @@ undeclared editorial choices, and no delivered feature lets a consumer detect an
 | **C-366** | `exclude_where_prec=(4, 6)` drops admin-1 and country-coded events rather than placing them imprecisely | **43,933 events, 785,626 fatalities — +22.6% of everything delivered** |
 | **C-364** | `source_distribution_map={"annual": "date_end_only"}` books a whole date span to its final month | **4 cell-months carry 37.4% of all `ged_sb_best` mass** in a 48-month window |
 | **C-367** | `ceil_split` rounds each spanned month up | **74 events over the source ceiling, 96 fatalities that exist in no version of the source** |
-| **C-368** | The spatial allocator's chosen cell never reached the compiler | **1,128,236 deaths, 26.49% of all UCDP mass, returned to the cell they came from** — fixed by #562 |
+| ~~**C-368**~~ | ~~The spatial allocator's chosen cell never reached the compiler~~ | ~~**1,128,236 deaths, 26.49% of all UCDP mass, returned to the cell they came from**~~ — **resolved 2026-11-21 (#607)**, fixed by #562 and now guarded in CI |
 | **C-369** | `CompilationConfig.date_field` defaults to a raw field while the allocator writes `date_month` | Production survived on an argparse default; the residual is any external library caller |
 | **C-356** | The production distribution default is spread across three files that must stay aligned | Any single edit silently changes delivered values |
 
@@ -4479,14 +4480,43 @@ Cross-ref: **C-366** (the other finding from the same notebook, opposite sign: m
 
 ---
 
-### C-368: the spatial allocator's chosen cell never reached delivered data — [OPEN, trigger fired]
+### ~~C-368: the spatial allocator's chosen cell never reached delivered data~~ — RESOLVED 2026-11-21 (#607)
+
+**Resolved by measurement, nine days late.** The defect was fixed by #562 on 2026-11-12. This entry stayed
+open at Tier 1 for one reason: its trigger said the guards proving the fix *"skip in CI until #550 lands"*.
+**#550 closed on 2026-11-12**, the same day, and neither this entry nor C-370 was updated — so the register's
+only Tier 1 was held in place by a stale clause that nobody re-read until `/review-rr prioritize` on 2026-11-21.
+
+**What was checked, rather than reasoned.** `tests/test_falsification_spatial_allocation_delivery.py` carries no
+`skipif` on the classes that matter — its single skip is a deliberate `strict` xfail recording C-369's external-caller
+residue. It builds its fixtures from `scripts/generate_synthetic_data.py`, which is tracked and not ignored. **Confirmed
+against CI rather than inferred from the file:** in run 44920182095 the suite skipped 59 tests against 30 locally,
+and this module appears nowhere in that skip list — only as the deliberate C-369 xfail. The six skips in
+`test_adr053_production_profile.py` are the golden-criterion class and the built-viewpoint guard, neither of which
+is the synthetic one. Re-introducing the defect by setting `declared = None` in `_place_events` turned **five tests
+red** across 56 run:
+
+```
+TestAllocationSurvivesCompilation::test_spatial_allocation_reaches_the_compiled_grid
+TestAllocationSurvivesCompilation::test_no_single_cell_holds_the_whole_summary_event
+TestAllocationSurvivesCompilation::test_the_compiler_used_the_declared_cell_not_the_coordinates
+TestUnusableDeclaredCellRed::test_unusable_declared_cells_are_reported
+TestUnusableDeclaredCellRed::test_a_row_carrying_no_declared_cell_is_counted_apart
+```
+
+Branch protection therefore catches a regression, which is exactly what the trigger said it could not do.
+**The register now has no Tier 1 entry.**
+
+Original prose below, unedited. The metadata table's **Tier** and **Trigger** cells are struck and
+annotated rather than left as they were — the original trigger wording survives verbatim in the
+2026-11-21 changelog entry.
 
 | | |
 |---|---|
 | ID | C-368 |
-| Tier | 1 — silent wrong answer in delivered data, no error signal |
+| Tier | ~~1 — silent wrong answer in delivered data, no error signal~~ — resolved 2026-11-21 |
 | Source | `/falsify` claim-mode audit 2026-11-12, after the first production run under `kgi_kti_activity` |
-| Trigger | **Fired.** Fixed by #562; the guards proving it skip in CI until #550 lands |
+| Trigger | ~~**Fired.** Fixed by #562; the guards proving it skip in CI until #550 lands~~ — **discharged 2026-11-21 (#607)**: #550 closed 2026-11-12, the guards run in CI, and a mutation confirmed they go red |
 | Location | `src/datafactory_viewpoint/spatial_distribution.py` `proportional`; `src/datafactory_compilation/grid_compilation.py` `_place_events`, `_required_columns` |
 | Cross-refs | C-369 (the same seam on the temporal axis), C-370 (why nothing saw it), C-356, C-364, C-366, C-365 (a decision with no observer) |
 
@@ -4536,16 +4566,41 @@ strict xfail rather than left to memory.
 
 ---
 
-### C-370: the unobserved layer boundary — [OPEN]
+### C-370: the layer boundary is contracted by column name only — [OPEN, Tier 2]
+
+*Heading rewritten 2026-11-21 (#607). It read "the unobserved layer boundary" until a test began
+observing it; the boundary is now watched at one seam and contracted by name everywhere else.*
+
+**2026-11-21 (#607) — the historical half of this entry is discharged; the forward half is not.**
+This entry said no test crossed the viewpoint-to-compilation boundary. One now does:
+`TestAllocationSurvivesCompilation` calls the compiler, runs in CI with no `skipif`, and was shown by mutation
+to turn red when C-368 is re-introduced (see the resolved C-368 above for the five test names). The clause
+*"#550 must land, or the replacement guards skip in CI exactly as their predecessor did"* is therefore spent —
+#550 closed on 2026-11-12.
+
+**Stays Tier 2. A re-tier to 3 was drafted and withdrawn during review of this change**, because it would have
+graded the covered seam and ignored the uncovered mechanism. What is now guarded is `priogrid_gid` specifically.
+What is unchanged is the reason that seam was open at all: `test_cross_layer_contracts.py` still compares column
+*names*, so a field present in both layers and ignored by one still passes, and ADR-045:16 still rules end-to-end
+invariants out of scope by construction — which is why ADR-045:57 was able to certify this boundary as having no
+gap. Both are structural fragility with a clear trigger, which is the Tier 2 definition.
+
+The honest summary: C-368 cannot recur, and a second instance of the same class still can.
 
 | | |
 |---|---|
 | ID | C-370 |
 | Tier | 2 — the mechanism by which C-368 survived four months |
 | Source | The same audit, plus a cross-layer test survey, 2026-11-12 |
-| Trigger | Before adding any further allocation strategy; and #550 must land |
+| Trigger | **Before adding any further allocation strategy.** (Second clause discharged 2026-11-21 (#607): *"and #550 must land"* — it closed 2026-11-12, and the guards it added run in CI) |
 | Location | `tests/test_cross_layer_contracts.py`; `tests/test_adr053_production_profile.py:93`; `.gitignore`; `tests/conftest.py` marker deselection |
 | Cross-refs | C-368, C-369, C-365, C-345, C-320 |
+
+**2026-11-21 note on the two CI figures in this entry (#607).** The prose below says *"58 of 62 skip
+sites skip on a fresh CI runner"*, measured 2026-11-12. The 2026-11-21 narrative above measures a
+different quantity — 59 skipped *tests* in run 44920182095 against 30 locally. Skip **sites** and
+skipped **tests** are not the same thing, so these do not necessarily disagree, and the older figure
+was **not** re-measured by this change. Treat the 58/62 number as dated rather than current.
 
 The allocator was verified at its source and placement at its destination; the handover between
 them was unobserved. **58 of 62 skip sites skip on a fresh CI runner**, and `conftest.py`

@@ -17,6 +17,67 @@ entry could.
 
 ---
 
+## The only Tier 1 was a stale sentence (2026-11-21)
+
+Wave 0 of the #616 sprint, and the first item deleted work rather than adding it.
+
+C-368 — *the spatial allocator's chosen cell never reached delivered data*, 1,128,236 deaths,
+26.49% of all UCDP fatality mass — had been the register's only Tier 1 entry since 2026-11-12.
+The defect itself was fixed that same day by #562. The entry stayed at Tier 1 for one reason,
+written in its trigger field:
+
+> **Fired.** Fixed by #562; the guards proving it skip in CI until #550 lands.
+
+**#550 closed on 2026-11-12**, hours after that sentence was written. C-370 carried the same
+clause. Neither was updated, and for nine days the top of the severity ranking was held in
+place by a pointer to an issue that had already landed.
+
+**What the check actually found.** `tests/test_falsification_spatial_allocation_delivery.py`
+has no `skipif` on the classes that matter — its one skip is a deliberate `strict` xfail
+recording C-369's external-caller residue, which is a different entry. Its fixtures come from
+`scripts/generate_synthetic_data.py`, tracked and not ignored, so CI has what it needs. The
+file's own comment had said so all along: *"A module-level `skipif` on those files is what made
+this defect invisible for four months; #550 removed it."*
+
+**Proven by mutation rather than by reading**, because C-370 exists precisely because reasoning
+about guard coverage was wrong before. And the CI claim was checked against CI: the green run
+44920182095 skipped 59 tests where a local run skips 30, so local behaviour proves nothing — the
+module had to be confirmed absent from CI's own skip list, and it is. Setting `declared = None` in `_place_events`
+re-introduces C-368 exactly as it was, and five of 56 tests go red — three of them in a class
+called `TestAllocationSurvivesCompilation`, which is the boundary C-370 says nothing crosses.
+The mutation was reverted and the tree confirmed clean.
+
+So C-368 is resolved, and **the register has no Tier 1 entry.**
+
+C-370 stays at Tier 2, and a draft of this change had it moving to 3. The review of this change
+caught that and withdrew it. Moving it would have graded the seam that is now covered and
+ignored the mechanism that opened it: `test_cross_layer_contracts.py` still compares column
+*names*, so a field present in both layers and ignored by one still passes, and ADR-045:16 still
+rules end-to-end invariants out of scope — which is how ADR-045:57 came to certify this exact
+boundary as having no gap. C-368 cannot recur; a second instance of the same class still can.
+Both its summary-row title and its detail heading were rewritten, because "no test crossed the
+boundary" is now simply false. (A first draft rewrote only the summary row and this entry claimed
+both; review caught that too.)
+
+**The lesson is not about pyarrow or about CI.** It is that a register entry can point at an
+issue number as its reason for existing, and nothing checks that the pointer is still valid. The
+entry was honest when written and false eight hours later. That is the same mechanism as C-336,
+which is about ADRs citing code that moved.
+
+**And it is the second instance inside the register's own trigger fields in eleven days**, not
+the first — a draft of this entry claimed first-of-kind and review caught it. *"A named tripwire
+that could not fire"*, below, records C-356's trigger asserting a downstream test that could not
+fire, with the same clause copied into C-364's and C-366's triggers. That entry already named the
+failure mode as *"the register's own recurring one: a claim asserted once and never re-derived"*.
+Two instances in eleven days is an argument for a systemic answer rather than another one-off
+edit: nothing re-derives a trigger's premise, and a trigger is the field the register is read for.
+
+**Filed rather than fixed here**, because the fix is a guard or a habit and this change is a
+curation pass. It belongs with #610's audit of the fails-green cluster, which is asking the
+adjacent question.
+
+---
+
 ## A cache that was told to be quiet, and an archive mistaken for one (2026-11-21)
 
 `/review-rr strategic`, the first full curation pass since 2026-08-04. It ran the morning after
