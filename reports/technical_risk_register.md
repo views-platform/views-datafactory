@@ -4505,18 +4505,32 @@ on 2026-11-21.
 **Checked, not reasoned.** CI run 44920182095 skipped 59 tests against 30 locally, so local
 behaviour proved nothing; `tests/test_falsification_spatial_allocation_delivery.py` appears
 nowhere in that run's skip list, only as the deliberate C-369 xfail. Re-introducing the defect
-with `declared = None` in `_place_events` turns five tests red — three in
-`TestAllocationSurvivesCompilation`, two in `TestUnusableDeclaredCellRed`. Branch protection
-therefore catches a regression, which is what the trigger said it could not do. **The register
-has no Tier 1 entry.** Full narrative in the 2026-11-21 changelog entry.
+with `declared = None` in `_place_events` turns five of the eleven tests in the enclosing module
+red — three in `TestAllocationSurvivesCompilation`, two in `TestUnusableDeclaredCellRed`. Of those
+five, **three assert on delivered grid values**; the other two assert log substrings and would also
+redden for a reworded message. Branch protection catches a regression on the strength of those
+three: `test` and `test-py313` are required checks on `development` and `main` with
+`enforce_admins: true`, and the module carries no gated marker.
 
-Original text below, unedited.
+The second mandated drill is stronger still. `_required_columns` says of its own line *"reverting
+this line alone must turn the delivery tests red"* — it turns **nine** red, including the four
+out-of-range cases that survive the first drill.
+
+**And the breadth is the opposite of reassuring.** Run against all 351 tests that touch
+`compile_grid`, `grid_compilation` or `pgid_field`, the same mutation still reddens only those
+five: **346 of 351 are blind to it**, including all 39 in `test_compiler.py` and all 24 in
+`test_cross_layer_contracts.py`. One eleven-test module guards this boundary and nothing else in
+the compiler's test population would notice. That is C-370's thesis as a measurement, and it is
+why C-370 stays at Tier 2.
+
+**The register has no Tier 1 entry.** Full narrative in the 2026-11-21 changelog entry.
 
 | | |
 |---|---|
 | ID | C-368 |
 | Tier | ~~1~~ → Resolved |
 | Source | `/falsify` claim-mode audit 2026-11-12, after the first production run under `kgi_kti_activity` |
+| #607 Q5 | *"Is the comment 'this assertion has never executed' still true?"* **Yes**, checked 2026-11-21. `TestAdr053ComposedGoldenCriterion` is still `skipif`'d on the store and crosswalks, and CI run 44920182095 skips its five tests plus the built-viewpoint guard — the six skips in that file. The synthetic class covers the seam instead of it |
 | Trigger | ~~**Fired.** Fixed by #562; the guards proving it skip in CI until #550 lands~~ |
 | Location | `src/datafactory_viewpoint/spatial_distribution.py` `proportional`; `src/datafactory_compilation/grid_compilation.py` `_place_events`, `_required_columns` |
 | Cross-refs | C-369 (the same seam on the temporal axis), C-370 (why nothing saw it), C-356, C-364, C-366, C-365 (a decision with no observer), C-336 (why its trigger went stale — fourth addendum) |
@@ -4572,7 +4586,7 @@ strict xfail rather than left to memory.
 **2026-11-21 (#607) — the historical half of this entry is discharged; the forward half is not.**
 This entry said no test crossed the viewpoint-to-compilation boundary. One now does:
 `TestAllocationSurvivesCompilation` calls the compiler, runs in CI with no `skipif`, and was shown by mutation
-to turn red when C-368 is re-introduced (see the resolved C-368 above for the five test names). The clause
+to turn red when C-368 is re-introduced. The clause
 *"#550 must land, or the replacement guards skip in CI exactly as their predecessor did"* is therefore spent —
 #550 closed on 2026-11-12.
 

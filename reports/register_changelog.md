@@ -43,7 +43,8 @@ this defect invisible for four months; #550 removed it."*
 about guard coverage was wrong before. And the CI claim was checked against CI: the green run
 44920182095 skipped 59 tests where a local run skips 30, so local behaviour proves nothing — the
 module had to be confirmed absent from CI's own skip list, and it is. Setting `declared = None` in `_place_events`
-re-introduces C-368 exactly as it was, and five of 56 tests go red — three of them in a class
+re-introduces C-368's read half exactly as it was, and five of the eleven tests in the
+enclosing module go red — three of them in a class
 called `TestAllocationSurvivesCompilation`, which is the boundary C-370 says nothing crosses.
 The mutation was reverted and the tree confirmed clean.
 
