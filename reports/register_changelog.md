@@ -17,6 +17,42 @@ entry could.
 
 ---
 
+## The record of epic #547 closed, and two of its holes left open on purpose (2026-11-21)
+
+No concern registered, no tier moved. Epic #547 — the spatial allocator wrote its decision to
+`priogrid_gid` and the event compiler re-derived the cell from coordinates and never read it — had
+shipped, been verified at the delivered layer and been independently mutation-audited, and none of
+that was written anywhere git keeps. Three documents now carry it: the v1.18.0 post-mortem
+completed, a v1.18.1 post-mortem written, and the mutation audit committed under `reports/`.
+
+**What the completed v1.18.0 post-mortem now says that it did not.** Its pre-registered table
+records **three failures out of four measured bounds**, as failures, with no bound widened after the
+fact. The one bound that passed is annotated with why that was luck: December 2021 was pre-registered
+*because that is the month the old pipeline dumped everything into*, so after temporal spreading it
+was the easiest month in the year to meet a ceiling in. Cell 148759 reading 1,782 there was reported
+to the operator as a **64× improvement**; the worst cell-month for that cell across 2021 was 32,390,
+a **3.5×** improvement. The pre-registration was off by a factor of 18 and the error was in the
+choice of period, not the measurement.
+
+**Two holes that cannot be filled and are now labelled rather than blank.** The v1.18.0 production
+run's duration and peak memory were never captured, and the host's log has since been overwritten by
+two later runs. They are recorded as not captured, with the reason, instead of as a marker someone
+will later mistake for pending work.
+
+**The same shape appears in the audit record.** 48 mutations were run and every survivor named, but
+the two subagents' per-mutation tables — each mutation's prediction beside pytest's own summary line
+— were returned into a conversation and never written to a file. Three of #555's acceptance items
+are therefore met in substance and not in form, and the report says so in its own second section
+rather than presenting a reconstruction as the original.
+
+**The mechanism, which is the transferable part.** Each of these is the same failure as the register's
+own recurring one: *the record of a thing and the thing are different objects, and only one of them
+is maintained.* Here the work was done and the record was not written; in C-336's cluster the record
+is written twice and only one copy is corrected. Both are cheap to fix on the day and expensive to
+reconstruct afterwards — the per-mutation evidence from 48 mutations is simply gone.
+
+---
+
 ## Four documents described a world that had ended, all in one evening (2026-11-21)
 
 Not an audit. Four separate claims were made to the operator or to a peer session on the evening
