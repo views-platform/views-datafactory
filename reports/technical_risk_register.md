@@ -4502,9 +4502,11 @@ Tier 1 for one reason: its trigger said the proving guards *"skip in CI until #5
 #550 closed on 2026-11-12, the same day. Nobody re-read the clause until `/review-rr prioritize`
 on 2026-11-21.
 
-**Checked, not reasoned.** CI run 44920182095 skipped 59 tests against 30 locally, so local
-behaviour proved nothing; `tests/test_falsification_spatial_allocation_delivery.py` appears
-nowhere in that run's skip list, only as the deliberate C-369 xfail. Re-introducing the defect
+**Checked, not reasoned.** `tests/test_falsification_spatial_allocation_delivery.py` contains no
+`pytest.skip`, no `skipif`, no module `pytestmark` and no gated marker — its single marker is an
+`xfail(strict=True)` recording C-369's residue, which pytest reports as XFAIL and never as a skip.
+In CI run 44920182095 it appears in the XFAIL block and nowhere in the 59-line skip list, so the
+module runs there. Re-introducing the defect
 with `declared = None` in `_place_events` turns five of the eleven tests in the enclosing module
 red — three in `TestAllocationSurvivesCompilation`, two in `TestUnusableDeclaredCellRed`. Of those
 five, **three assert on delivered grid values**; the other two assert log substrings and would also

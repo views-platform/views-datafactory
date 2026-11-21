@@ -33,16 +33,16 @@ clause. Neither was updated, and for nine days the top of the severity ranking w
 place by a pointer to an issue that had already landed.
 
 **What the check actually found.** `tests/test_falsification_spatial_allocation_delivery.py`
-has no `skipif` on the classes that matter — its one skip is a deliberate `strict` xfail
-recording C-369's external-caller residue, which is a different entry. Its fixtures come from
-`scripts/generate_synthetic_data.py`, tracked and not ignored, so CI has what it needs. The
-file's own comment had said so all along: *"A module-level `skipif` on those files is what made
+has no skip of any kind — no `pytest.skip`, no `skipif`, no gated marker. Its single marker is an
+`xfail(strict=True)` recording C-369's residue, and pytest reports that as XFAIL, not as a skip. Its fixtures come from
+`scripts/generate_synthetic_data.py`, tracked and not ignored, so CI has what it needs. The file's own comment had said so for the whole
+nine-day window, though it was written five hours after the trigger it contradicts: *"A module-level `skipif` on those files is what made
 this defect invisible for four months; #550 removed it."*
 
 **Proven by mutation rather than by reading**, because C-370 exists precisely because reasoning
-about guard coverage was wrong before. And the CI claim was checked against CI: the green run
-44920182095 skipped 59 tests where a local run skips 30, so local behaviour proves nothing — the
-module had to be confirmed absent from CI's own skip list, and it is. Setting `declared = None` in `_place_events`
+about guard coverage was wrong before. And the CI claim was checked against CI rather than
+inferred from the file: run 44920182095's skip list holds 59 entries and this module is not among
+them — it appears in the XFAIL block instead. Setting `declared = None` in `_place_events`
 re-introduces C-368's read half exactly as it was, and five of the eleven tests in the
 enclosing module go red — three of them in a class
 called `TestAllocationSurvivesCompilation`, which is the boundary C-370 says nothing crosses.
@@ -60,7 +60,8 @@ boundary" is now simply false.
 
 **The lesson is not about CI.** It is that a register entry can point at an
 issue number as its reason for existing, and nothing checks that the pointer is still valid. The
-entry was honest when written and false eight hours later. That is the same mechanism as C-336,
+entry was honest when written and false **five hours and thirteen minutes** later: the clause was
+committed at 02:53:21Z and #550 closed at 08:06:54Z. That is the same mechanism as C-336,
 which is about ADRs citing code that moved.
 
 **And it is at least the third instance of a register field asserting something nobody re-derives.**
