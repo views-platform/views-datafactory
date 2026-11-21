@@ -49,32 +49,32 @@ The mutation was reverted and the tree confirmed clean.
 
 So C-368 is resolved, and **the register has no Tier 1 entry.**
 
-C-370 stays at Tier 2, and a draft of this change had it moving to 3. The review of this change
-caught that and withdrew it. Moving it would have graded the seam that is now covered and
+C-370 stays at Tier 2, and a draft of this change had it moving to 3. Moving it would have graded the seam that is now covered and
 ignored the mechanism that opened it: `test_cross_layer_contracts.py` still compares column
 *names*, so a field present in both layers and ignored by one still passes, and ADR-045:16 still
 rules end-to-end invariants out of scope — which is how ADR-045:57 came to certify this exact
 boundary as having no gap. C-368 cannot recur; a second instance of the same class still can.
 Both its summary-row title and its detail heading were rewritten, because "no test crossed the
-boundary" is now simply false. (A first draft rewrote only the summary row and this entry claimed
-both; review caught that too.)
+boundary" is now simply false.
 
-**The lesson is not about pyarrow or about CI.** It is that a register entry can point at an
+**The lesson is not about CI.** It is that a register entry can point at an
 issue number as its reason for existing, and nothing checks that the pointer is still valid. The
 entry was honest when written and false eight hours later. That is the same mechanism as C-336,
 which is about ADRs citing code that moved.
 
-**And it is the second instance inside the register's own trigger fields in eleven days**, not
-the first — a draft of this entry claimed first-of-kind and review caught it. *"A named tripwire
-that could not fire"*, below, records C-356's trigger asserting a downstream test that could not
+**And it is at least the third instance of a register field asserting something nobody re-derives.**
+*"A named tripwire that could not fire"*, below, records C-356's trigger asserting a downstream test that could not
 fire, with the same clause copied into C-364's and C-366's triggers. That entry already named the
 failure mode as *"the register's own recurring one: a claim asserted once and never re-derived"*.
-Two instances in eleven days is an argument for a systemic answer rather than another one-off
-edit: nothing re-derives a trigger's premise, and a trigger is the field the register is read for.
+C-88's 2026-07-31 addendum records its own trigger firing unnoticed, and C-322's residual records
+three clauses standing false for three weeks. Three instances over four months clears the register's
+own bar — C-358 says "two instances make it a pattern rather than an accident" — so this is a
+pattern, and a trigger is the field the register is read for.
 
-**Filed rather than fixed here**, because the fix is a guard or a habit and this change is a
-curation pass. It belongs with #610's audit of the fails-green cluster, which is asking the
-adjacent question.
+**Filed, not left in narrative.** C-336 gains a fourth addendum — it is the entry that collects this
+mechanism, and it has absorbed three copy-sites already — adding the clause *state the condition,
+never the issue number*. No guard: `test_docs_citations.py` scans `docs/` only, and this file has
+twice declined a register-grep gate because fourteen test modules already read it.
 
 ---
 
