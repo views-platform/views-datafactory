@@ -348,6 +348,32 @@ echo "── $CURRENT_STEP ──"
 uv run python scripts/verify_consumer_contract.py
 echo
 
+# Step 14: Source parity (#628)
+#
+# The only check in this pipeline that compares our output to someone
+# else's. Every other one compares a stage of ours to another stage of
+# ours, which is why withdrawn UCDP events ran in the served store for
+# four and a half months while ADR-040's conservation invariants held
+# throughout and an external reader found it.
+#
+# Deliberately here and not in CI. `data/` is gitignored and CI has no
+# fetch step, so a test asserting real totals would skip there -- the
+# C-370 pattern, a guard that cannot fire. Branch protection also has
+# enforce_admins, so anything that can fail blocks every merge.
+#
+# --skip-last-year because a mid-year annual release covers its newest
+# year only partially, and comparing a partial year would fail for a
+# reason that is not a defect. A failure here goes through on_failure
+# like any other step: the sentinel file, the operator line, and the
+# heartbeat /fail.
+#
+# It reads the SERVED store by default, not the local grid, so an
+# export that wrote nothing cannot pass it (C-313).
+CURRENT_STEP="14/14: Verify source parity"
+echo "── $CURRENT_STEP ──"
+uv run python scripts/verify_source_parity.py --skip-last-year
+echo
+
 # Success — remove any stale failure sentinel
 rm -f "$ALERT_FILE"
 

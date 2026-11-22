@@ -57,6 +57,7 @@ and +26,634 for 2024 state-based, all of it UCDP's own revisions.
 Usage::
 
     uv run python scripts/verify_source_parity.py
+    uv run python scripts/verify_source_parity.py --local-grid
     uv run python scripts/verify_source_parity.py --zarr-url http://host/grid.zarr
     uv run python scripts/verify_source_parity.py --store path/to/ucdp_store.parquet
     uv run python scripts/verify_source_parity.py --json
@@ -293,7 +294,14 @@ def main() -> int:
     )
     parser.add_argument(
         "--zarr-url", default=None,
-        help="served zarr URL; omitted reads the local assembled grid",
+        help="served zarr URL; defaults to the configured remote, the "
+             "same store scripts/verify_consumer_contract.py reads",
+    )
+    parser.add_argument(
+        "--local-grid", action="store_true",
+        help="read the local assembled grid instead of the served store. "
+             "Weaker: it cannot see an export defect, because it reads "
+             "what the export was given rather than what it wrote.",
     )
     parser.add_argument(
         "--tolerance", type=float, default=0.0,
@@ -311,6 +319,18 @@ def main() -> int:
         print(f"SKIP: no consolidated store at {args.store}", file=sys.stderr)
         return 2
 
+    # Default to the served store, not the local grid: the question is
+    # what a consumer receives, and reading the pre-export array would
+    # pass while the export wrote nothing (C-313's mechanism).
+    if args.local_grid:
+        zarr_url = None
+    elif args.zarr_url is not None:
+        zarr_url = args.zarr_url
+    else:
+        from datafactory_query.defaults import DEFAULT_REMOTE
+
+        zarr_url = DEFAULT_REMOTE.zarr_url
+
     version = latest_annual_version(args.store)
     source = source_totals(args.store, version)
     if not source:
@@ -323,7 +343,7 @@ def main() -> int:
     if args.skip_last_year and len(years) > 1:
         years = years[:-1]
 
-    served = served_totals(args.zarr_url, years)
+    served = served_totals(zarr_url, years)
     source = {k: v for k, v in source.items() if k[0] in years}
     exclusive = {k: v for k, v in exclusive.items() if k[0] in years}
 
@@ -338,8 +358,8 @@ def main() -> int:
         ))
     else:
         print(f"Source parity against UCDP annual release {version}")
-        print(f"  served read through load_dataset"
-              f"{' from ' + args.zarr_url if args.zarr_url else ' (local grid)'}")
+        where = f" from {zarr_url}" if zarr_url else " (local grid)"
+        print(f"  served read through load_dataset{where}")
         print()
         print(f"{'year':>6} {'feature':>14} {'served':>14} "
               f"{'published':>14} {'.9 excl':>12} {'unexplained':>13}")

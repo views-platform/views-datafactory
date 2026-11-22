@@ -55,6 +55,35 @@ terminal is the normal state, not a hang.
 | **Export zarr** | **4h56m–5h07m** | 17,774s / 18,427s for a 3.1 GB store — two runs |
 | Export parquet | ~12 s | 29.5M rows |
 | Health check + consumer contract | <1 min | |
+| **Source parity (step 14)** | **~3 min** | reads the served store once per year per violence type |
+
+### If step 14 fails
+
+Step 14 is `verify_source_parity.py`. It is the only step that compares our
+numbers to someone else's: our served totals against the annual UCDP release
+held in our own consolidated store, per year and per violence type.
+
+**What a failure means.** For a settled year the two should be exactly equal. A
+**negative** remainder means we serve fewer deaths than UCDP published — a short
+harvest, a dropped release, a filter nobody meant to apply. A **positive**
+remainder means we serve deaths UCDP did not — the signature of the 2026-11-17
+defect, where events UCDP had withdrawn were still being published.
+
+**What it does not mean.** It does not mean the newest release was fetched. A
+short harvest and a release that does not exist look identical from here; that
+gap is tracked separately.
+
+**Do not widen the tolerance.** The first end-to-end run of this check reported
+108 of 108 totals as failures against a store that was fine, because the script
+double-counted a release that sits in the store under two harvest vintages. The
+answer was to find that cause, not to raise a threshold. Any failure here is a
+finding until someone has read the numbers.
+
+Run it by hand, on the server, to see the table:
+
+```sh
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/verify_source_parity.py --skip-last-year'
+```
 
 **The export's share of the run is not a constant — do not plan with one.** It
 depends entirely on whether assembly ran:

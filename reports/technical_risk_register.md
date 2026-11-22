@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-11-21, third pass — four claims made that day from the top of a document were false at the bottom of it. C-373 registered: the external monitor that resolved C-335 polls the status page, not a data object, and nothing here would notice if it were deleted. C-366's trigger fired 2026-11-10 unnoticed and C-364's figures measure the retired `production_parity` profile, not the served `kgi_kti_activity`. C-224 re-tiered 2→3 after the count it rested on was actually taken. The mechanism is C-336's fifth addendum. Narrative in `register_changelog.md`.
+**Last update:** 2026-11-22 — ~~C-372~~ resolved. The gap it named, that nothing here compared a published total against the source's own, is closed: option (A) of the panel's four chosen, recorded in ADR-040's amendment, and implemented as `refresh_pipeline.sh` step 14. Observed failing on a store with 50 withdrawn events restored — it moved by exactly their 151 deaths. **C-374** registered for what was deliberately not built: this is one instance of drift detection, and the second instance is the one to write alongside it rather than abstract from.
 **Source:** 72 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 373 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176, C-70 merged into C-360, C-352 merged into C-355, C-349 merged into C-336): 319 resolved-or-demoted, 51 open concerns (**0 Tier 1**, 9 Tier 2, 19 Tier 3, 19 Tier 4, 4 deferred by design; 6 with fired trigger); 10 demoted to tech-debt backlog (5 on 2026-08-04, 5 on 2026-11-21), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 135 struck-through in active register (314 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 319 + 26 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 374 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176, C-70 merged into C-360, C-352 merged into C-355, C-349 merged into C-336): 320 resolved-or-demoted, 51 open concerns (**0 Tier 1**, 8 Tier 2, 19 Tier 3, 20 Tier 4, 4 deferred by design; 6 with fired trigger); 10 demoted to tech-debt backlog (5 on 2026-08-04, 5 on 2026-11-21), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 136 struck-through in active register (315 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 320 + 26 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -202,8 +202,9 @@
 | C-369 | 2 | **`CompilationConfig.date_field` defaults to a raw field while the temporal allocator writes `date_month`.** A caller taking the default on an allocated source collapses every distributed month onto the event's start month, conserving totals. Production survived only because `compile_grid.py`'s argparse default happens to be `date_month`. Closed inside this repository by `preflight.reject_ignored_allocation` plus an AST guard over every `scripts/` call site (#562); **the residual is an external library caller**, since `CompilationConfig` ships in the wheel and removing the default is a breaking change owed to a MAJOR. An auto-detecting default was rejected: inferring decision-relevant semantics is what ADR-003 forbids | **At the next MAJOR release** — make `date_field` required then. Until then, recorded as a strict xfail so that whoever makes the default safe is forced to remove the marker | UCDP imprecision |
 | C-370 | 2 | **The viewpoint-to-compilation boundary is contracted by column name only — which is why C-368 survived four months.** 47 tests exercised spatial distribution and none called the compiler; `test_cross_layer_contracts.py` compares column *names*, so a field present in both layers and ignored by one passed, and its `UCDP_COMPILATION_COLUMNS` omitted `priogrid_gid` — the contract described the compiler rather than the requirement. ADR-045:57 certified this exact boundary as having no gap, because ADR-045:16 rules end-to-end invariants out of scope by construction. **2026-11-21 (#607): one seam is now covered, the mechanism is not — stays Tier 2.** `TestAllocationSurvivesCompilation` calls the compiler, runs in CI (confirmed against run 44920182095's skip list, where this module appears only as the deliberate C-369 xfail), and a mutation setting `declared = None` in `_place_events` turns five tests red, three of them in this class. That covers the `priogrid_gid` seam. What it does not do is make the next one automatic: `test_cross_layer_contracts.py` still compares column *names*, so a field present in both layers and ignored by one still passes, and ADR-045's 2026-11-12 amendment states the general rule — a decision a later stage could re-derive must be verified where the consumer reads — as doctrine with **no mechanical enforcement**. Nothing asserts that a new decision-carrying field got a consumer-layer check. Also unchanged: `TestAdr053ComposedGoldenCriterion` still never runs in CI, because `.gitignore` keeps its store and crosswalks out — the synthetic class covers the seam instead of it, not as well as it | **Before adding any further allocation strategy** — the guards cover the one seam that exists, not a second one. (the "#550 must land" clause is struck in the detail Trigger cell) | Testing |
 | C-371 | 2 | **A short harvest of the newest annual release now deletes the previous release's rows for every event it is missing.** The annual supersession added in #595 cannot distinguish "UCDP withdrew this event" from "our harvest did not fetch it" — both look like an id present in the old release and absent from the new one, and both are dropped. Before #595 a short harvest left the old rows in place, which overcounted but preserved the data; after it, the same shortfall destroys it. The harvest guard in `ucdp_annual.py` raises only when a shortfall exceeds **both** 1% and 1100 events, so on a 416,968-row release a shortfall of up to ~4,169 events passes silently and then deletes up to that many old rows. Nothing goes red: the dropped rows are counted into `n_stale`, so the count-conservation check still balances exactly | **At the next annual release harvest** (UCDP publishes mid-year; v27.1 expected ~July 2027), and at any re-harvest of the current annual release after a partial or interrupted fetch | UCDP schema |
-| C-372 | 2 | **Nothing in this repository compares a published total against the source's own published total.** The 2026-11-17 annual-supersession error ran for four and a half months in the served store and was found by an external reader comparing a number we mailed him to the number on ucdp.uu.se. Every ADR-040 conservation invariant held throughout, because conservation proves the pipeline did not corrupt the data and is structurally silent on whether the data should have been there at all (ADR-040 disclaims this itself). A multi-expert panel was convened on 2026-11-17 and produced four options — out-of-band comparison in the pipeline, a fail-loud assertion at viewpoint-build time, a manual runbook step, or a dated decision to do nothing — and **no option was chosen and no decision was recorded**, which is the state #597 exists to prevent being read as an oversight | **Before the next statement to anyone outside this repository that our figures agree with a source's** — including the pending follow-up to the external reviewer. Also when the panel's four options are next weighed, whichever comes first | Consumer contract |
+| ~~C-372~~ | ~~2~~ | ~~**Nothing in this repository compares a published total against the source's own published total.** The 2026-11-17 annual-supersession error ran for four and a half months in the served store and was found by an external reader comparing a number we mailed him to the number on ucdp.uu.se. Every ADR-040 conservation invariant held throughout, because conservation proves the pipeline did not corrupt the data and is structurally silent on whether the data should have been there at all (ADR-040 disclaims this itself). A multi-expert panel was convened on 2026-11-17 and produced four options — out-of-band comparison in the pipeline, a fail-loud assertion at viewpoint-build time, a manual runbook step, or a dated decision to do nothing — and **no option was chosen and no decision was recorded**, which is the state #597 exists to prevent being read as an oversight **RESOLVED 2026-11-22 (#628): option (A) chosen, recorded in ADR-040's amendment, implemented as `refresh_pipeline.sh` step 14.**~~ | ~~**Before the next statement to anyone outside this repository that our figures agree with a source's** — including the pending follow-up to the external reviewer. Also when the panel's four options are next weighed, whichever comes first~~ | Consumer contract |
 | C-373 | 3 | **The external monitor polls the status page, not a data object — and nothing in this repository can tell whether that monitor still exists.** C-335 (resolved 2026-08-03) rested on a Better Stack check of `status.html` (unauthenticated, ADR-038) every 3 minutes. `status.html` is served from the same Caddy, but it is **not** what a consumer reads: a permissions change on the data directory, a broken route on the authenticated prefix, or an export that writes an unreadable file leaves the monitor green while every fetch fails. The monitor's existence is attested by one register sentence dated 2026-08-03 and by `monitoring.md`; if the account lapses or the check is deleted, nothing here notices — the same shape as the entry it resolves | **Before citing the Better Stack monitor as evidence that consumers can fetch data** — and whenever a release changes what is served or where it is written. First step is a two-minute look at the vendor dashboard to confirm the monitor is still live | Server hardening |
+| C-374 | 4 | **Source-parity checking is one instance of drift detection and there is no second instance to generalise from.** `verify_source_parity.py` compares one source's published aggregate against ours. The same shape plausibly applies to ACLED, V-Dem, SHDI, GHS-POP and GHS-BUILT-S, and to other references for UCDP itself — but one implementation is evidence of one case, not of a pattern, and these checks answer to different sources, change at different rates and disagree on what "the reference" even is: ACLED has no annual release to pin and V-Dem's revision discipline is different again. Registered so the **second** instance is recognised as a second instance rather than written from scratch, and the **third** is the moment to ask whether an abstraction is owed. Operator's framing, 2026-11-22: *"let's be mindful that this is a case of something"* — mark it, do not build it | **When a second data source gets its own source-comparison check** — at that point write it alongside this one and record what the two actually share. Not before: ADR-040's amendment §3 states that no component, module, base class or registry is introduced until the shape is known from more than one instance | Consumer contract |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -735,7 +736,7 @@ Cross-ref: C-336 (same failure class, one day earlier), C-334 (dependency policy
 
 ---
 
-### C-372: Nothing compares a published total against the source's own published total
+### ~~C-372: Nothing compares a published total against the source's own published total~~ — RESOLVED 2026-11-22 (#628)
 
 | Field | Value |
 |-------|-------|
@@ -791,6 +792,37 @@ Cross-ref: C-366 (its trigger fires on the same act — a statement to an outsid
 with a source's; and the +22.6% that statement would omit), C-371 (same family), C-359 and C-153 (the ACLED
 counterparts — a short harvest recorded as success), the **"a delivered number shaped by choices no consumer
 can see"** cluster, the **fails-red** cluster, ADR-027, ADR-040:137. GitHub: #597.
+
+**Resolved 2026-11-22 (#628).** The narrative above is kept; what it says about the gap was true
+until this date. Option **(A)** of the panel's four was chosen: an out-of-band comparison inside
+the monthly pipeline, signalling through the existing failure path rather than through CI.
+
+- The decision is **recorded** in ADR-040's amendment of 2026-11-22, which is the half of this
+  entry that was missing — the panel had produced four options and chosen none, and #597 exists
+  because an unrecorded choice reads as an oversight.
+- `scripts/verify_source_parity.py` compares the served grid against the annual UCDP release held
+  in our own consolidated store, per year and per violence type, reporting the remainder left
+  unexplained by the `.9`-exclusive mass. It reads the **served** store by default, so an export
+  that wrote nothing cannot pass it.
+- It runs as **`refresh_pipeline.sh` step 14**, after the consumer-contract check, with
+  `--skip-last-year`.
+- **Observed failing before being trusted.** 50 state-based 2023 events carrying **151 deaths**
+  were removed from the annual release in a copy of the store — the exact shape of the defect this
+  entry is about. The check's published figure fell by exactly 151, the unexplained remainder rose
+  by exactly 151, and it exited 1. Not merely red: red by the right amount.
+- 17 guards, and **nine mutations** applied to the script with `__pycache__` cleared around each,
+  all nine caught by the right test.
+
+Two things this does **not** resolve, stated so the resolution is not read as wider than it is.
+**C-371 is not subsumed:** comparing against the release in our store cannot detect that the
+newest release was never fetched, because a short harvest and a non-existent release look the
+same from here. And the parity reader has to replicate the viewpoint's survivorship to do its
+job; the first end-to-end run got that wrong and reported 108 of 108 totals as failures against a
+store that was fine — ADR-017's two harvest vintages of one release, double-counted. Fixed and
+guarded, but the coupling is live and is why option (C), a human reading the table by eye, was
+rejected: a tired reader widens a tolerance where a script's author goes and finds ADR-017.
+
+Generalising this shape to other sources is **C-374**, deliberately not done.
 
 ---
 
@@ -1573,6 +1605,42 @@ Cross-ref: ~~C-335~~ (the entry this is the uncovered remainder of), C-338 (the 
 ---
 
 ## Tier 4 — Accept or Defer
+
+### C-374: Source parity is one instance of drift detection, with nothing to generalise from yet
+
+**Source:** Operator, 2026-11-22, on choosing option (A) for ~~C-372~~ — *"this should be marked as a subset or an instance of a greater phenomenon that we might want to generalise or abstract later… let's be mindful that this is a case of something."*
+
+**Trigger:** **When a second data source gets its own source-comparison check.** At that point write it alongside `verify_source_parity.py` and record what the two actually share. Not before.
+
+**Location:** `scripts/verify_source_parity.py`; `tests/test_source_parity.py`; `scripts/refresh_pipeline.sh` step 14; ADR-040 amendment 2026-11-22 §3.
+
+**Tier 4, not 3.** Nothing is wrong, nothing is at risk, and no correctness or reliability property depends on this. It is a note about a decision that will be owed later, filed so that the moment to make it is recognised rather than missed. The register is the only artifact here that survives both context compaction and a six-month gap, which is why it is here and not in a comment.
+
+### The class
+
+`verify_source_parity.py` answers one question — *does our published UCDP aggregate equal UCDP's published aggregate?* — and the general shape is **drift detection**: compare what we publish against an external reference and signal when the two separate.
+
+That shape plausibly applies to every other source in this repository: ACLED, V-Dem, SHDI, GHS-POP, GHS-BUILT-S. It also plausibly applies more than once to UCDP, against references other than the annual release.
+
+### Why nothing is being built
+
+**One implementation is evidence of one case, not of a pattern.** Three concrete reasons the eventual abstraction is not yet knowable:
+
+- **The reference is not the same kind of object.** UCDP publishes a pinned annual release we can hold in our own store. ACLED has no annual release to pin — it is a continuously-revised API, which is ADR-027's subject and C-359's. V-Dem publishes a yearly dataset with a different revision discipline again. GHS-POP and GHS-BUILT-S are raster releases with no event counts at all.
+- **"Equal" is not the same relation.** For UCDP's settled years the right assertion is exact equality, because apportionment conserves `best` exactly. For a continuously-revised source it cannot be, and choosing the band is the entire difficulty — the existing harvest guard's dual threshold is loose by inheritance for a 416,968-row release, which is C-371.
+- **The survivorship replication differs per source.** This check had to reproduce the viewpoint's version-selection rule to compare anything, and got it wrong on the first run. Each source's rule is different, so the part that looks shared is the part most likely to diverge.
+
+Similar shape is not true duplication: these would answer to different sources, change at different rates, and drift apart. Unifying them is far harder to undo than never joining them.
+
+### What to do when the trigger fires
+
+Write the second one **next to** the first, deliberately duplicated, and record in this entry what the two genuinely share and what they do not. The third instance is the moment to ask whether an abstraction is owed — not the second.
+
+What would make this a Tier 3 rather than a Tier 4: three or more of these existing, each with its own copy of a survivorship rule, so that a change to the viewpoint's version selection would have to be made in three places and nothing would say so.
+
+Cross-ref: ~~C-372~~ (the gap this closed, and the decision this defers), C-371 (not subsumed — a short harvest and a non-existent release look alike from here), C-359 and C-153 (the ACLED counterparts, where the reference is not pinnable), ADR-040 (amendment 2026-11-22 §3 is the normative statement that no component is introduced yet), ADR-017 (the two-vintage duplication that bit the first run). GitHub: #628.
+
+---
 
 ### C-146: Assembly logic lives in script, not importable package — [DEFER]
 
