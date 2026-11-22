@@ -13,8 +13,15 @@ All commands below assume you are on the server.
 ## Deploy a new version
 
 **All four blocks. Step 1 alone is not a deploy (C-343)** — the pipeline's own
-`git checkout` lands a change to `refresh_pipeline.sh` one run later, and never
-runs `uv sync` at all.
+`git checkout` is to the tag pinned in `~/.views-deploy-tag`, so a change merged
+to `development` lands on **no** run until that file names a tag containing it,
+and `uv sync` never runs at all.
+
+> This sentence read *"lands a change to `refresh_pipeline.sh` one run later"*
+> until 2026-11-22. That is what would happen if the checkout tracked a branch;
+> it tracks a pinned tag, so the change lands never, not later. The wrong
+> version of this sentence is why the source-parity step did not run on the
+> 2026-11-22 release — #638.
 
 ```bash
 # 1. Set version

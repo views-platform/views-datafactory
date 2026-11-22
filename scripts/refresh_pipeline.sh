@@ -36,15 +36,33 @@
 #   If the file is missing, empty, or the tag doesn't exist, the script
 #   stops immediately (fail-loud, ADR-011). See ADR-022 for rationale.
 #
+#   STEP LABELS: "N/14" means step N of a run whose LAST step is 14.
+#   Pre-flight is step 0, so there are fifteen numbered steps and the
+#   denominator is the final step's number, not a count. The run is
+#   over when you see 14/14. Do not "fix" the denominator to 15: the
+#   quickref and ADR-040 both name source parity as step 14, and a
+#   last label reading 14/15 is what makes a finished run look one
+#   step short. Until 2026-11-22 the last label was 13/14, which
+#   promised a step that did not exist in the deployed tag — see #638.
+#
 #   DEPLOYING IS NOT ONE STEP. This comment used to say "to deploy a
 #   new version: update ~/.views-deploy-tag" and that is WRONG — it is
 #   what left the server on v1.10.0 for five days while the tag file
 #   said v1.11.0 and views-frames stayed at the frozen 1.0.0 (C-343,
 #   observed 2026-08-08). Two reasons the checkout below does not save
 #   you:
-#     1. bash has already buffered THIS FILE, so a change to
-#        refresh_pipeline.sh itself takes effect only on the NEXT run
-#        — one month away on a monthly cron.
+#     1. the checkout is to the PINNED TAG named in
+#        ~/.views-deploy-tag, so a change merged to development takes
+#        effect on NO run at all until somebody writes a new tag into
+#        that file. bash having already buffered THIS FILE is a second
+#        reason it cannot land on the current run; the pinned tag is
+#        the reason it cannot land on any later one either.
+#        Corrected 2026-11-22: this said "takes effect only on the
+#        NEXT run — one month away on a monthly cron", which is what
+#        "one run later" would mean if the checkout tracked a branch.
+#        It does not. That sentence predicted that step 14 would run
+#        on the following cron; no tag contained it, so it could not.
+#        See #638.
 #     2. `uv sync` never runs, so a dependency change never lands at
 #        all, no matter how many times the pipeline runs.
 #
