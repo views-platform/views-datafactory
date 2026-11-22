@@ -167,20 +167,25 @@ an admin-1 region or a country and distributes them instead. That recovers
 
 | Feature | Before v1.18.0 | Projected from v1.18.0 | **Measured, served** | vs projection |
 |---------|---------------:|-----------------------:|---------------------:|-------:|
-| `ged_sb_best` | ~1,956,320 | ~2,557,600 | **2,671,067** | +4.4% |
-| `ged_ns_best` | ~285,346 | ~406,500 | **417,786** | +2.8% |
-| `ged_os_best` | ~1,232,241 | ~1,294,800 | **1,300,819** | +0.5% |
+| `ged_sb_best` | ~1,956,320 | ~2,557,600 | **2,682,440** | +4.9% |
+| `ged_ns_best` | ~285,346 | ~406,500 | **419,701** | +3.2% |
+| `ged_os_best` | ~1,232,241 | ~1,294,800 | **1,302,065** | +0.6% |
 
 The "before" column is as of v1.2.7, UCDP GED v25.1, verified 2026-04-26. The
 "projected" column came from a 2026-11-06 full build under the new profile,
 whose parity build reproduced the "before" column to within 0.01%.
 
 **The "measured" column replaces the projection and is what a healthy run should
-reproduce.** Read 2026-11-21 from the served store at
+reproduce.** Read 2026-11-22 from the served store at
 `http://204.168.219.108/grid.zarr` through `load_dataset` — the consumer entry
-point, not a build-time readback — against the v1.19.0 artifact. Each lands
-above its projection by a few percent, which is the fresher-harvest drift the
-projection's own note predicted; `ged_os_best` is within 0.5%.
+point, not a build-time readback — summing years 1989–2026 of the artifact the
+2026-11-22 pipeline run built. Each lands above its projection by a few percent,
+which is the fresher-harvest drift the projection's own note predicted;
+`ged_os_best` is within 0.6%.
+
+The previous measurement, taken 2026-11-21 against the artifact of the run
+before, read 2,671,067 / 417,786 / 1,300,819. The rise is a fresher harvest, not
+a change in code: no commit between v1.19.0 and v1.20.0 touches `src/`.
 
 Re-measure and replace at the next release rather than carrying this forward: a
 figure that was measured once and then quoted for three releases is a projection
