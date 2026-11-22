@@ -1,9 +1,74 @@
-# Product Development Plan v12 — current through v1.19, 11 registry sources, 79 Features, on PyPI
+# Product Development Plan v12 — current through v1.20, 11 registry sources, 79 Features, on PyPI
 
 **Date:** 2026-06-29 (v1.10 addendum 2026-07-31)
 **Supersedes:** product_development_plan11.md (2026-05-08)
 **Status:** Active
 **Goal:** A data factory that training scripts can depend on — robust subsetting, multiple output formats, verified parity, and data across conflict, population, built environment, democracy, and human development. Counted three ways, because one number was never right: **11** harvest entries in the source registry, **8** distinct upstream providers (UCDP is three entries, one provider), **6** sources wired into `assemble_grid.py`. Earlier revisions said "9 data sources", which matched none of these — see C-164's 2026-07-31 addendum.
+
+---
+
+## v1.20 Addendum (2026-11-22)
+
+**v1.20.0 (nothing we owned ever asked whether we publish what the source published — now
+something does, and it is a pipeline step, not a test).** No behaviour change and no change to
+`src/`. This release adds an instrument: `verify_source_parity.py`, run as step 14 of
+`refresh_pipeline.sh` (#628, #629, #630).
+
+**What the gap was.** v1.19.0 fixed a defect — withdrawn UCDP annual events still being published —
+and shipped four unit tests guarding the specific rule. What it did not do is close the *class*.
+Nothing in this repository compared our published aggregate against the source's published
+aggregate. ADR-040's four conservation layers all held throughout the defect, correctly: they prove
+the pipeline neither created nor destroyed deaths, and they are **structurally silent on whether
+the data should have been there at all.** The error entered at ingestion of a release later
+withdrawn, upstream of everything conservation watches. So the missing property was never a bug in
+a guard; it was a property no guard expressed.
+
+**How the gap was found.** By a reader. Håvard Hegre compared a number we mailed him against the
+number on ucdp.uu.se. Four and a half months of served data, nine green conservation checks, and
+the discovery path was somebody else's arithmetic.
+
+**What shipped.** For a settled year, our served total per violence type must equal the source's
+published total, plus `.9`-exclusive mass, with zero unexplained remainder. Two decisions make it
+usable rather than noisy:
+
+- **It compares against the release pinned in our own store, not the live API.** UCDP revises its
+  back catalogue between releases, so "equal to UCDP's current number" is non-stationary and would
+  redden for reasons outside the repository — C-320's lesson, learned when a permanently-red check
+  became indistinguishable from a broken build. Compared against a pinned release, the check is
+  stationary.
+- **It runs out-of-band in the monthly pipeline, not in CI.** `data/` is gitignored and CI has no
+  fetch step, so a test asserting real totals would skip in CI — which is the failure already
+  registered as C-370 and C-320. Branch protection has `enforce_admins: true`, so anything that can
+  fail blocks every merge.
+
+ADR-040's amendment of 2026-11-22 records the property, where it runs, and one normative sentence:
+**no drift-detection component, module, base class or registry is introduced until the shape is
+known from more than one instance.** C-374 holds the trigger — a second data source getting its own
+source-comparison check. One instance is evidence of one case.
+
+**What it cost to get wrong once already, before the release even shipped.** The first end-to-end
+run reported **108 of 108 totals as failures** against a store that was fine, because the script's
+own copy of the survivorship rule double-counted a release held under two harvest vintages
+(ADR-017). The answer was to find the cause, not to widen a tolerance. Two guards were added for it
+and three further mutations confirmed they fire. The duplicate rule itself is filed as #631.
+
+**What this release does not fix, measured rather than assumed.**
+
+- **Step 14 has still never run in production.** The monthly run of 2026-11-22 finished green at
+  09:52 UTC and stopped at step 13, because no tag contained the new step — it merged to
+  `development` about twenty-five minutes after the run began. Two documents claimed a pipeline
+  change "lands one run later"; the checkout is to a pinned tag, so it lands never, until a tag
+  names it. Corrected in this release; the recurrence is C-343's fifth round (#638).
+- **The served data is nonetheless right.** Measured by hand from the served store on 2026-11-22
+  through `load_dataset`: 2022 = 317,936, 2023 = 170,432, 2024 = 188,209, each equal to UCDP release
+  26.1's published total across the three violence types. Globals moved to `ged_sb_best` 2,682,440,
+  `ged_ns_best` 419,701, `ged_os_best` 1,302,065 on ingesting candidate `26.9.10`.
+- **A short harvest and a non-existent release still look identical** from inside this check — it
+  cannot detect that a newer release was never fetched. That is its stated limit and the whole of
+  epic #634.
+- **Supersession is still bounded on the upper end only** (#598), and **a consumer still cannot name
+  which release produced the number they read** — `provenance.json` is served as 404 and `.zattrs`
+  carries no release identifier (#620, epic #632).
 
 ---
 
