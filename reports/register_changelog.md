@@ -17,6 +17,51 @@ entry could.
 
 ---
 
+## The check that looks outside the repository, and the abstraction deliberately not built (2026-11-22)
+
+~~C-372~~ resolved; **C-374** registered. The two halves are the point: one gap closed, one decision
+openly postponed rather than taken by accident.
+
+**The gap.** C-372 said that nothing here compares a published total against the source's own
+published total, and that a multi-expert panel had produced four options and chosen none — which
+is the state #597 exists to stop being read as an oversight. Both halves are now answered. Option
+**(A)** was chosen: an out-of-band comparison inside the monthly pipeline, signalling through the
+existing failure path rather than through CI. `data/` is gitignored and CI has no fetch step, so
+a test asserting real totals would skip there — the C-370 pattern, a guard that cannot fire — and
+branch protection carries `enforce_admins`, so anything that can fail blocks every merge.
+
+**The decision is recorded, which was the part actually missing.** ADR-040's amendment of
+2026-11-22 states the property, where it is checked, why not in CI, and why the comparison is
+against the release pinned in our own store rather than the source's live web figure: the pinned
+release makes the check **stationary**, so it cannot redden because the source revised its own
+back catalogue, and a check that reddens for reasons outside the repository trains its reader to
+ignore it.
+
+**Observed failing before being trusted, and by the right amount.** 50 state-based 2023 events
+carrying 151 deaths were removed from the annual release in a copy of the store — the exact shape
+of the defect this is about. The published figure fell by exactly 151 and the unexplained
+remainder rose by exactly 151. Nine mutations against the script, all nine caught.
+
+**The first end-to-end run reported 108 of 108 totals as failures against a store that was fine.**
+Annual 25.1 sits in the consolidated store under two harvest vintages — 769,836 rows for 384,918
+distinct ids, each exactly twice, harvested 2026-03-23 and 2026-05-21. That is ADR-017's subject.
+A check that compares our aggregate to the source's has to replicate the viewpoint's survivorship
+to do it, and replicating it loosely produces a false alarm the size of the thing it is looking
+for. That is the argument for (A) over (C): a tired reader of 108 failures widens a tolerance; the
+script's author goes and finds ADR-017.
+
+**C-374 is the restraint, written down so it survives.** Source parity is one instance of drift
+detection, and the same shape plausibly applies to ACLED, V-Dem, SHDI and both GHS rasters. No
+component, module, base class or registry is introduced, because one implementation is evidence of
+one case. Three concrete reasons the abstraction is not yet knowable: the reference is not the same
+kind of object per source, "equal" is not the same relation, and the survivorship replication —
+the part that looks shared — is the part most likely to diverge. The trigger is the **second**
+instance, to be written alongside rather than abstracted from; the **third** is when an
+abstraction is owed. The operator's own framing: *"let's be mindful that this is a case of
+something."*
+
+---
+
 ## The record of epic #547 closed, and two of its holes left open on purpose (2026-11-21)
 
 No concern registered, no tier moved. Epic #547 — the spatial allocator wrote its decision to
