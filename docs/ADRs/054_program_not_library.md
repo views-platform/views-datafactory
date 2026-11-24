@@ -37,15 +37,15 @@ in this repository's own register, and it has changed delivered fatality figures
 
 ### Evidence class 1 — what is failing now
 
-Established in the session of 2026-11-22 to 2026-11-24.
+Established 2026-11-22 to 2026-11-24.
 
 - **A paper's worth of model runs read two different datasets, and nothing could have told them.**
   Eighteen model runs in a downstream repository spanned two store builds. Their manifests recorded
   **our client library version** as the provenance of the data they read. That version says nothing
   about the values, which are compiled by the pipeline and not by the query client.
 
-  *Reported by the views-models session; the store-build dates and the fix's tag date verified
-  against git and the served store by this session.*
+  *Reported from views-models. The store-build dates and the fix's tag date were then verified
+  against git and against the served store directly.*
 
 - **Two tagged releases are unpublished, and it mattered to nobody.**
   The published distribution's latest version is 1.18.1, while `v1.19.0` and `v1.20.0` are both
@@ -65,8 +65,8 @@ Established in the session of 2026-11-22 to 2026-11-24.
   **relative** filesystem path for the rest — a path that cannot exist in an installed environment.
   Only `global`, `land` and `land_gaul` work from a plain install.
 
-  *Checked in `regions.py`. Already filed independently as issue **#590** on 2026-11-21, before this
-  ADR was drafted.*
+  *Checked in `regions.py`. Filed as issue **#590** on 2026-11-21, independently of this
+  decision.*
 
 ### Evidence class 2 — what has failed before
 
@@ -152,9 +152,9 @@ half has served numbers later than it should have, and has never changed one.
 
 ### Evidence class 3 — what the literature says
 
-Every passage below was read in the source text itself during this session, chapter by chapter, and
-not relayed from another session's summary. Edition and chapter are named at each citation and
-again in full under *References*.
+Every passage below was read in the source text itself, chapter by chapter, and not taken from a
+summary or a secondhand quotation. Edition and chapter are named at each citation and again in full
+under *References*.
 
 **We already have a name.** Hohpe & Woolf, *Enterprise Integration Patterns*, ch. 2, sets out four
 integration styles: File Transfer, Shared Database, Remote Procedure Invocation, and Messaging.
@@ -299,11 +299,6 @@ Explicitly in scope:
    `CONTRACT_VERSION 1.0.0` under ADR-050 and gains nothing new; its operator-facing surface — the
    runnable program — is what grows.
 
-   *This clause replaced an earlier one reading "publication of the Python distribution ceases to be
-   part of the release ritual". That version forbade the thing the operator asked for, and it was
-   written without checking whether the literature supported installing the program on the host. It
-   does; see Evidence class 3, "the deployable unit is a numbered component".*
-
 Explicitly out of scope:
 
 5. **This is not a decision to delete the distribution.** It cannot be deleted while consumers
@@ -352,9 +347,9 @@ Three further points, each held because a source says so rather than because it 
 - **Minimalism is a constraint, not an aesthetic.** Newman's defence of the monolith and
   Ousterhout's four complexities of subdivision both bear on a repository with one maintainer, and
   they rule out the architecturally fashionable answer.
-- **The wheel's remaining contents are a leak, not a feature.** Newman predicted server logic
-  creeping into a client library written by the server's authors; #590 is that prediction, measured,
-  filed before this ADR was drafted.
+- **The distribution's bundled contents are a leak, not a feature.** Newman predicted server logic
+  creeping into a client library written by the server's authors. Issue #590 is that prediction,
+  measured on this repository and filed independently of this decision.
 
 ---
 
