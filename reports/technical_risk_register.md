@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-11-20 — C-370 gained an eighth instance: the null guard added for #595 counts annual rows only, and review on the promote PR found the same null destroying non-annual rows through `pc.or_`'s null propagation, in the new step and in the pre-existing one, so fixing only the new step would have left the behaviour unchanged (#602, residue #603). Full narrative history, including corrections and retractions, is in [`register_changelog.md`](register_changelog.md). Keep this line to one sentence: the header is an index, and the search-window guard (`test_falsification_merge_readiness.py`, 8000 chars) is what it protects. New narrative goes in the changelog, never here (#404).
-**Source:** 71 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 371 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176): 310 resolved-or-demoted, 58 open concerns (1 Tier 1, 8 Tier 2, 18 Tier 3, 25 Tier 4, 6 deferred by design; 6 with fired trigger); 5 demoted to tech-debt backlog 2026-08-04, 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 126 struck-through in active register (305 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 310 + 32 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Last update:** 2026-11-22 — ~~C-372~~ resolved. The gap it named, that nothing here compared a published total against the source's own, is closed: option (A) of the panel's four chosen, recorded in ADR-040's amendment, and implemented as `refresh_pipeline.sh` step 14. Observed failing on a store with 50 withdrawn events restored — it moved by exactly their 151 deaths. **C-374** registered for what was deliberately not built: this is one instance of drift detection, and the second instance is the one to write alongside it rather than abstract from.
+**Source:** 72 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
+**Status:** 374 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176, C-70 merged into C-360, C-352 merged into C-355, C-349 merged into C-336): 320 resolved-or-demoted, 51 open concerns (**0 Tier 1**, 8 Tier 2, 19 Tier 3, 20 Tier 4, 4 deferred by design; 6 with fired trigger); 10 demoted to tech-debt backlog (5 on 2026-08-04, 5 on 2026-11-21), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 136 struck-through in active register (315 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 320 + 26 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -23,22 +23,22 @@
 | ~~C-37~~ | ~~4~~ | ~~`date_prec=5` semantics hardcoded~~ | Resolved 2026-06-19 (DGP validation fail-loud on unknown date_prec, #212) | UCDP schema |
 | ~~C-45~~ | ~~4~~ | ~~No Parquet schema evolution strategy~~ | Resolved 2026-06-19 (ADR-046 documents promote_options + fingerprint approach, #209) | UCDP schema |
 | ~~C-46~~ | ~~4~~ | ~~No ledger write idempotency~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): mechanical (idempotency guard on one writer), single-file scope, never fired in ~4 months; ledger corruption would be loud, not silent. Re-register if the trigger becomes concrete. | — |
-| C-32 | — | Source registry returns `Any` | Accepted by design | — |
+| C-32 | — | Source registry returns `Any` | **Deferred by design.** Reopens if a caller is added that branches on a registry field's type, or if `SourceEntry` gains a field whose type a consumer must trust | — |
 | C-29 | 4 | No end-to-end integration test — trigger fired, accepted at v1.0 | Before WDI integration (10th source) or multi-target deployment | Test infra |
-| C-70 | 4 | No circuit breaker for UCDP API | Before a second operator runs harvests concurrently, or before harvest concurrency is raised above 1 | UCDP resilience |
+| ~~C-70~~ | ~~4~~ | ~~No circuit breaker for UCDP API~~ | Merged into C-360 on 2026-11-21 (`/review-rr strategic`) — C-360's own text asked for this decision rather than leaving both deferred | — |
 | ~~C-72~~ | ~~4~~ | ~~HTTP 429 not distinguished from 500~~ | Trigger fired 2026-10-21; **RESOLVED** 2026-10-21 (#511) | — |
 | ~~C-74~~ | ~~4~~ | ~~CompilationConfig leaks strategy vocabulary~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-78~~ | ~~4~~ | ~~`_place_events` hard to test in isolation~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | ~~C-79~~ | ~~4~~ | ~~Compilation/consolidation require real Parquet I/O~~ | Demoted to tech-debt backlog 2026-06-14 (trigger permanently fired — suite at 6m38s, functioning normally) | — |
-| C-97 | 4 | Basic auth + Caddy scalability ceiling at ~30-50 users | Before consumer count exceeds 30 | — |
+| ~~C-97~~ | ~~4~~ | ~~Basic auth + Caddy scalability ceiling at ~30-50 users~~ | Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): a capacity observation with a far-future trigger — 6 logins to date against a ceiling of 30. Re-register when a consumer count above 20 is actually in prospect | — |
 | ~~C-116~~ | ~~4~~ | ~~No retry on remote zarr network failures~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): mechanical (wrap one read in the existing retry helper), never fired; a network failure here raises, it does not corrupt. Re-register if the trigger becomes concrete. | Query resilience |
 | ~~C-117~~ | ~~4~~ | ~~Remote zarr downloads all spatial cells before region filter~~ | Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`): a performance observation, not a risk — remote reads are already time/feature-subset before materialising (v1.8.0); the residual is spatial only and nobody has hit it. Re-register if the trigger becomes concrete. | Query performance |
 | ~~C-131~~ | ~~2~~ | ~~No external monitoring for cron job failure on Hetzner~~ | Resolved 2026-06-24 (heartbeat hook) — 2026-07-19 correction: HEARTBEAT_URL WAS configured and success pings were arriving (e.g. 2026-07-06 run). The real gap: success-only pings make failure = silence, detectable only after the 30-day schedule + grace lapses — so the 2026-07-02 mid-run failures alerted nobody for weeks by design. Failure-side /fail ping shipped (PR #330) closes this; live drill 2026-07-19: /fail flipped the check red in seconds | Operational monitoring |
 | ~~C-136~~ | ~~4~~ | ~~`read_last_entries()` crashes on non-UTF8 ledger files~~ | Demoted to tech-debt backlog 2026-06-16 (mechanical fix, single-file, perpetual trigger, loud failure) | — |
-| C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | Model migration requires derived features | Migration scope |
+| C-126 | 3 | No transform layer — 14 viewser transforms not replaceable | **Before telling any model repository that datafactory can replace viewser for their inputs** — that statement is what makes the gap load-bearing. (Superseded trigger, perpetual: "model migration requires derived features") | Migration scope |
 | ~~C-177~~ | ~~4~~ | ~~`_aggregate_to_prio_grid` holds source + copy simultaneously (ADR-031 P3)~~ | Demoted to tech-debt backlog 2026-06-14 (function not actively used; dead code concern) | — |
 | ~~C-179~~ | ~~4~~ | ~~Consolidation dedup uses `.to_pylist()` + Python set (ADR-031 P1)~~ | Demoted to tech-debt backlog 2026-06-24 (mechanical fix, single-file, perpetual, data volume 60x below threshold) | — |
-| C-180 | 4 | No falsification tests for non-GHS-POP compilation/viewpoint paths | Memory regression introduced in UCDP or ACLED path | Test coverage |
+| C-180 | 4 | No falsification tests for non-GHS-POP compilation/viewpoint paths | **Before changing allocation or memory behaviour in the UCDP or ACLED compilation path.** (Superseded trigger, symptom-shaped: "memory regression introduced in UCDP or ACLED path") | Test coverage |
 | ~~C-181~~ | ~~4~~ | ~~UCDP candidate/dot9 discovery probes API even when all versions cached~~ | Demoted to tech-debt backlog 2026-06-24 (optimization, single-file, no correctness impact, UCDP has not rate-limited) | — |
 | ~~C-185~~ | ~~4~~ | ~~GHS-POP caching has no digest comparison (no change detection)~~ | Demoted to tech-debt backlog 2026-06-24 (hypothetical risk, JRC releases immutable by convention) | — |
 | ~~C-186~~ | ~~3~~ | ~~Shapefile harvester lacks outcome vocabulary~~ | Resolved 2026-05-31 (outcome vocabulary added, ADR-032 updated) | Harvest correctness |
@@ -46,12 +46,12 @@
 | ~~C-261~~ | ~~3~~ | ~~No provenance ledger entry for skip events — audit trail has temporal gaps~~ | Resolved 2026-06-09 (ADR-041: ledger entries for both skip and success, --force flag added) | Artifact consistency |
 | ~~C-256~~ | ~~3~~ | ~~No definition of "data soundness" as a testable property~~ | Resolved 2026-06-18 (ADR-045 data soundness invariants, #200) | Data soundness |
 | ~~C-223~~ | ~~3~~ | ~~Compilation pipeline allocates full grid in RAM (bounded-memory R&D)~~ | Resolved 2026-06-24 (memmap implemented in pregridded_compilation.py:191 + grid_compilation.py:257, ADR-037) | Scaling headroom |
-| C-224 | 4 | No server backup or disaster recovery plan | Disk failure or accidental data deletion on Hetzner server | Server hardening |
+| C-224 | 3 | No server backup for 9.9 GB of raw harvests on a single NVMe disk — recoverable, but only by re-fetching from rate-limited APIs over days | Disk failure, accidental deletion, or Hetzner incident. **Re-tiered 4→2 and then 2→3 on 2026-11-21**: the 4→2 move read `35 no longer available` as 35 irreplaceable local files; the measurement shows 70 candidate files on disk against 70 UCDP serves | Server hardening |
 | ~~C-293~~ | ~~2~~ | ~~Three-way feature name sync only partially tested~~ | Resolved 2026-06-19 (5 guard tests in test_assemble.py, #208) | Source registry |
 | ~~C-294~~ | ~~4~~ | ~~Digest computation after lock release in event store~~ | Resolved 2026-06-24 (digest moved inside file_lock in event_store.py, #238) | Consolidation correctness |
 | ~~C-295~~ | ~~4~~ | ~~No timeout on LOCK_EX in file_lock()~~ | Resolved 2026-06-24 (LOCK_NB + retry loop with 60s timeout, #238) | Provenance locking |
 | D-23 | — | ADR-031 P1 strict columnar purity vs pragmatic materialization | Open | ADR-031 compliance |
-| D-26 | — | Discovery probing cost vs cache staleness (UCDP candidate/dot9) | Open | Harvest caching |
+| D-26 | — | Discovery probing cost vs cache staleness (UCDP candidate/dot9) | **Settled in substance by #606** (2026-11-21): that fix writes a ledger entry on the all-cached discovery path, which is a decision on this exact trade-off — the probe's cost buys a freshness signal. Close this when #606 lands | Harvest caching |
 | ~~D-29~~ | ~~—~~ | ~~Shapefile harvester retrofit depth — full outcome compliance vs organic~~ | Resolved 2026-06-24 (organic retrofit achieved — C-186 added outcome vocabulary 2026-05-31) | Harvest correctness |
 | ~~D-30~~ | ~~—~~ | ~~Config validator extraction depth — utility functions vs declarative specs~~ | Resolved 2026-06-14 (utility functions first; declarative deferred to 12+ sources) | WET-before-DRY |
 | ~~D-31~~ | ~~—~~ | ~~Harvest script consolidation — single unified script vs thin delegates~~ | Resolved 2026-06-14 (middle path: shared HarvestRunner + thin delegates. Deferred to WDI sprint.) | WET-before-DRY |
@@ -179,29 +179,32 @@
 | C-343 | 2 | Writing `~/.views-deploy-tag` is not deploying — the server ran v1.10.0 for five days while the tag file said v1.11.0 and views-frames stayed at the frozen 1.0.0. The in-script `git checkout` cannot fix the running script (bash has buffered it) and never runs `uv sync` | **At the next release** — deploy with all four `server_quickref.md` blocks, the fourth being the verification that tag file, `git describe --tags` and installed distribution all name the same version | Deployment |
 | C-347 | 3 | The required CI check exercises a different raster decoder than production — since the 3.11 floor the lock forks, so `test` decodes with `imagecodecs 2026.3.6` while the server uses `2026.5.10`. `test-py313` covers the production line but is **not a required check**, and a red nobody must satisfy is ignorable | **Fired and actioned 2026-08-13.** `test-py313` reported green on `development` and on `main`, and was then added to the required-status-check lists on both (readback verified). Re-opens if the job is renamed or the requirement dropped | Test infra |
 | C-348 | 3 | Nothing asserts which Python the production server runs, and the floor now admits one that installs a **different raster line**. `preflight.py`, `check_health.py` and `refresh_pipeline.sh` contain no `sys.version_info` check of any kind. Created by #443 — this risk did not exist under `>=3.12`. **Measured 2026-08-13: the host runs Python 3.12.3 (Ubuntu 24.04's system interpreter), so it resolves `tifffile 2026.5.15` / `imagecodecs 2026.5.10` — the current fork.** Reassuring, and it is an accident: the guide said "Install Python 3.10+" and this distro happened to hand it 3.12. Still OPEN because one observation is not an assertion | **At the next server provisioning, Python upgrade on the Hetzner host, or any runbook edit that says `apt install python3`** — pin the interpreter explicitly and record which raster fork it resolves | Server hardening |
-| C-349 | 4 | A config value restated in prose has nothing binding it back — `hetzner_deployment_guide.md` said "Install Python 3.10+" for the three months `pyproject.toml` declared `>=3.12`, an instruction producing an environment where the package could not install. The #444 pin guard binds *workflow* pins to `requires-python`; nothing binds *prose* | **When writing a Python version, or any pyproject value, into a guide or ADR** — link to the declaration instead of restating it, or accept that the copy will not be checked | Documentation drift |
+| ~~C-349~~ | ~~4~~ | ~~A config value restated in prose has nothing binding it back~~ | Merged into C-336 on 2026-11-21 (`/review-rr strategic`) — identical mechanism, a value restated with nothing binding the copy to the declaration; C-336 covers code citations, this covered config values | — |
 | ~~C-350~~ | ~~3~~ | ~~`release-topology.yml` ran **nothing** for two days: `git branch -f main origin/main` is refused when `main` is the checked-out branch, which it always is on `release`/`schedule`. The job died at step 3 of 13, skipping the deploy gates and the step that closes the tracking issue. Its own guard asserted the step *exists* and *precedes* the gates — both true throughout | Resolved 2026-08-18: fixed in #451, promoted in #452, verified by dispatch **and** by the 06:25 scheduled run; the procedural residual is now step 0b of `publishing_to_pypi.md` §C | Test infra |
 | ~~C-351~~ | ~~3~~ | ~~`serving-freshness.yml` failed every run of its existence — ten runs, ten failures from 2026-08-03. `gh` infers the repo from the git remote and the job has no `actions/checkout`, deliberately, so every `gh issue` call died~~ | Resolved 2026-08-12 (#440): `GH_REPO: ${{ github.repository }}` supplies the input that was missing; verified by the workflow's first successful run. **Registered retroactively 2026-08-18** — the ID was cited in commit `8c8d897` and the v1.12.0 release notes but never entered here | Operational monitoring |
-| C-352 | 3 | `last_valid_month_id` is **UCDP-scoped but generally named**: computed from `ged_*` features only (`export_zarr.py:280-294`) while the grid carries ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI and GAUL. Two sibling repos read it as *the store's* frontier — views-postprocessing to decide which months are marked **fabricated in the FAO delivery**, views-models to gate liveness | **Before relying on it to mean anything other than "UCDP's observed frontier"** — and before adding a source whose coverage can outrun UCDP's. Confirm with views-postprocessing whether UCDP-scoping is what their observed/fabricated split intends | Consumer contract |
+| ~~C-352~~ | ~~3~~ | ~~`last_valid_month_id` is UCDP-scoped but generally named~~ | Merged into C-355 on 2026-11-21 (`/review-rr strategic`) — one defect with two faces: the boundary is both UCDP-scoped and inferred rather than declared, and both faces reach views-postprocessing's fabricated-month split | — |
 | C-353 | 2 | **Area-majority ranks candidate GAUL polygons in square degrees, not area** (`generate_area_majority_gaul.py:157-172`). Measured 2026-08-21 over every cell above 55°N: **9 of 3,591 border cells flip** under true area. All nine are in the FAO delivery. Eight differ at `gaul2_code` only, one also at `gaul1_code`, **none at `gaul0_code`** | **Before any correction of `data/raw/gaul_admin/*.parquet`** — views-postprocessing's `test_gaul_lookup_fidelity.py` breaks loudly on a changed digest and step 4 of their correction procedure (who tells FAO, on what notice) is still open. Also when GAUL is next reharvested, which reruns the same ranking | Compilation |
-| C-354 | 4 | **Nine test modules patch `datafactory_http.retry.requests.request` directly — 63 sites, five asserting the exact kwarg set.** The mock target is an implementation detail of `request_with_retry`, so any change to *how* it issues its request (a `requests.Session` for connection pooling, urllib3-level retries, or redirect safety) breaks tests that have nothing to do with the change | **Before changing how `request_with_retry` issues its request** — introducing a `Session`, an adapter, or a transport wrapper. Budget the test churn as part of that change rather than discovering it mid-implementation, as #388 did | HTTP layer |
+| ~~C-354~~ | ~~4~~ | ~~Nine test modules patch `datafactory_http.retry.requests.request` directly — 63 sites~~ | Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): test-churn cost, no correctness impact, and the trigger is a refactor nobody has scheduled. Re-register when a `Session` or transport wrapper is actually proposed | — |
 | C-355 | 3 | **The published observation boundary is inferred from non-zero sums, not declared by the harvest** (`export_zarr.py:280-296`). A genuinely all-zero month reads as unobserved; a **partially-reported month reads as complete**. Measured: the 2026-08-21 export declared `last_valid_month_id = 560` — the month it ran in. views-postprocessing uses this value to mark months **fabricated in the FAO delivery** | **Before any consumer builds logic on `last_valid_month_ids`** (published by ADR-052), or when views-postprocessing answers C-352 — whichever first. The declared bounds already exist in the ingestion ledgers: `ucdp_candidate.max_date_start`, `acled.max_date`, `shdi.year_range` | Consumer contract |
 | C-356 | 3 | **UCDP `where_prec >= 4` events are geocoded whole into one cell — measured live 2026-09-02.** Cell **148759 (Mekelle, Tigray) holds 121,915 in its peak month and 273,035 across the war window; 96.1% of all state-based fatalities in its 5x5 neighbourhood**, against a panel 99.99th percentile of 255. ADR-049 **did** ship the mirror strategy opt-in with parity default, and production uses parity. **The default is spread across three files that must stay aligned** — `viewpoint_config.py` says `proportional`, `profiles.py` overrides to `passthrough`, `refresh_pipeline.sh` passes no `--profile` | **Before changing any one of the three:** `spatial_distribution_strategy`'s default in `viewpoint_config.py`, the `production_parity` profile in `profiles.py`, or the `build_viewpoint.py` invocation in `refresh_pipeline.sh`. Any single edit silently changes delivered values. (**Fired and actioned 2026-11-10**: the pipeline moved to `kgi_kti_activity` under ADR-053's amendment, and `refresh_pipeline.sh` now names the profile once in a variable the compile step reads. See the entry's 2026-11-10 correction for the downstream tripwire this trigger used to misname.) | Viewpoint |
-| C-357 | 4 | **UCDP's temporal assignment is a swappable strategy; ACLED's is a hardcoded one-liner.** `ucdp_v1.py` resolves `survivorship_fn`/`distribution_fn` from config through a registry with a `production_parity` profile; `acled_v1.py` calls a private `_assign_date_month()` inline. Correct today — ACLED events are single-day, so there is nothing to distribute — but the seam exists on one source only, and it exists because parity forced it, not because it was designed | **If ACLED gains multi-day or date-imprecise events, or a second temporal profile is wanted for ACLED** — the change lands inline in the builder rather than as a config value | Viewpoint |
+| ~~C-357~~ | ~~4~~ | ~~UCDP's temporal assignment is a swappable strategy; ACLED's is a hardcoded one-liner~~ | Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): correct today, asymmetry only, and the trigger needs ACLED to gain multi-day events — which its event model forbids. Re-register if ACLED's event model changes | — |
 | C-358 | 4 | **This register is public and nothing screens what it cites from sibling repositories.** On 2026-09-08 a C-353 amendment published `managers/api.py` line numbers from **views-faoapi, which is private**, into this register and a public issue. Corrected the same day. **15 of the 32 views-platform repositories are private**, and this register cites siblings constantly | **Before citing a views-platform repository by file path in this register or a public issue, check it against the visibility list in the entry.** Also when any repository changes visibility, or a new private one is added | Disclosure hygiene |
 | C-359 | 3 | **A short ACLED harvest is recorded as `outcome: "success"` — `n_events` is written to the ingestion ledger and never read back.** `compare_snapshots()` computes `n_removed` and discards it; no aggregate count check exists on the path. A *zero*-event year fails loud; any non-zero shortfall does not. Worst case is the current year, re-fetched every run: the short snapshot overwrites the good one and the next run finds it digest-consistent, making the truncation the cached truth. ADR-027 exists because this happened to UCDP (335,918 of 384,918) | **Before the next change to how any harvester terminates a fetch** — pagination, retry or cache logic. Also if ACLED's envelope starts reporting `total_count`, which would make ADR-027's existing rule applicable (see C-153) | ACLED data integrity |
 | C-333 | 4 | UCDP's custom auth header survives a cross-host redirect (`requests` strips only `Authorization`) — credential egress, not log leakage | **Before the next harvester auth review**, or if UCDP announces a host or redirect change — whichever is first | Credential hygiene |
 | C-360 | 4 | **A 429 is now waited out per request, but nothing bounds the wait across a run.** The per-request wait is capped (≤100s, two attempts), so a single request cannot stall. The pipeline-wide total is linear in request count and bounded only by the healthchecks.io grace window — ACLED alone walks ~30 years. Successor to resolved C-72, which fixed the classification without adding a budget | **Before harvest concurrency is raised above 1**, or the first run whose wall clock exceeds the monitoring grace window. Same family as C-70 — decide whether the two merge rather than both staying deferred | HTTP resilience |
 | C-361 | 3 | **The export's `scan` phase reads the whole 37.355 GB grid once per feature — 79 passes, 2.951 TB from the block device — to collect 1/79 of it each time.** The feature axis is contiguous, so `grid[:, :, :, i]` strides 316 bytes and uses 51.9 of every 4096-byte page (**1.27%**). Measured 8,434.2s, 47.5% of the export; `utime/wall = 0.0198`, so 98% of the phase is moving bytes and 2% is arithmetic. Cost is **O(F²)** in feature count. This is #501's missing *why* for `scan`; the remedy (traverse once, ~165s projected) is deliberately not implemented | **Before the 10th source's features enter the grid** (WDI, 20–50 features — same trigger as C-29): at ~120 features this code reads ~6.8 TB and `scan` alone passes 5 hours. Also before any RAM purchase is costed against export time | Export cost |
 | C-362 | 4 | **The server was rescaled on 2026-05-28 and the rescale was never recorded, so two ADRs reason from a hardware premise that is false.** Measured 8 vCPU / 16 GB RAM / 16 GB swap against a documented 4 vCPU / 8 GB. ADR-030:82 justifies the Rust raster path on *"memory predictability. The production server has 8 GB RAM"*; ADR-035:140 concludes *"No OOM risk"* for V-Dem's ~4.1 GB from the same figure. Neither conclusion is shown wrong — only its stated premise. Demonstrated cost: #516's hypothesis was written against 8 GB and would have answered a RAM-purchase question from a 4.7× overcommit that is really 1.17× | **Before any analysis, ADR or purchase decision rests on the server's RAM or vCPU figure**, and at the next rescale. Re-check ADR-030 and ADR-035 on their merits rather than assuming they survive | Hardware premise |
-| C-364 | 3 | **A UCDP annual event's whole date span is booked to its `date_end` month, so a 365-day episode becomes one cell-month.** `profiles.py:103` sets `source_distribution_map={"annual": "date_end_only"}`; the `even_split` default never applies to this source. Measured: cell 148759 month-id 504 holds **113,395**, of which **113,368 is a single event** spanning all of 2021 (UCDP 463131, `where_prec=5`, `date_prec=5`). In a 457–504 window, **4 cell-months carry 37.4% of all `ged_sb_best` mass** and no feature distinguishes them — the 79 delivered features carry no `date_prec`/`where_prec`. C-356 asserted the temporal axis *was* corrected; it is not | **When the delivered partition is extended past month-id 504** — UCDP 463137 (**121,848**, Aug–Oct 2022) lands in the same cell at month-id 512–514, larger than the one already there. Also before any change to the three-file distribution default (see C-356) | UCDP imprecision |
+| C-364 | 3 | **Corrected 2026-11-21: this measures the retired `production_parity` profile, not the served store.** Under `source_distribution_map={"annual": "date_end_only"}` a UCDP annual event's whole date span is booked to its `date_end` month, so a 365-day episode becomes one cell-month. Production has built `kgi_kti_activity` since 2026-11-10, where `source_distribution_map=None` and apportionment is activity-weighted (ADR-053), so **no figure in this row is a property of what is served.** Measured: cell 148759 month-id 504 holds **113,395**, of which **113,368 is a single event** spanning all of 2021 (UCDP 463131, `where_prec=5`, `date_prec=5`). In a 457–504 window, **4 cell-months carry 37.4% of all `ged_sb_best` mass** and no feature distinguishes them — the 79 delivered features carry no `date_prec`/`where_prec`. C-356 asserted the temporal axis *was* corrected; it was not, under that profile | **Before quoting any number in this row as a property of the served store** — re-measure against `kgi_kti_activity` first. The original trigger (**when the delivered partition is extended past month-id 504** — UCDP 463137 (**121,848**, Aug–Oct 2022) lands in the same cell at month-id 512–514, larger than the one already there. and before any change to the three-file distribution default, see C-356) is retained in the entry | UCDP imprecision |
 | C-363 | 4 | **`logs/pipeline_duration.json` is written only on the success path, so after a failed run it still reports the previous success.** `refresh_pipeline.sh:336-341` writes it after the failure sentinel is cleared; a failure leaves the last good file untouched. Two operator-facing guides send an operator to it by name. The embedded `finished` timestamp is the only thing separating stale from fresh, and nothing prompts the reader to check it | **Before the duration record is used to answer whether a run got slower, or how far a failed run got** — the 21 October abort left the September duration standing as the newest answer | Operational observability |
-| C-366 | 3 | **Production drops 43,933 UCDP events carrying 785,626 fatalities — +22.6% of everything it delivers — rather than placing them imprecisely.** `profiles.py:107` sets `exclude_where_prec=(4, 6)`, so admin-1 (4) and country (6) events are filtered out while **country-or-larger (5) passes through whole** to its centroid cell — the class that produces C-356's and C-364's artifacts. ADR-049:29 documents the filter and ADR-049:81 says it *"loses real deaths"*; **neither ever stated how many.** Measured 2026-11-06: 36,608 of the dropped events are state-based | **Before the production profile is switched away from `production_parity`** — the switch *adds* 785,626 deaths rather than only moving mass, so the first thing any consumer comparing totals sees is +22.6%, and they will read it as corruption unless told first. Also before any statement that this repository's UCDP totals match UCDP's own | UCDP imprecision |
+| C-366 | 3 | **Trigger fired 2026-11-10 and was not honoured; corrected 2026-11-21.** The retired `production_parity` profile dropped 43,933 UCDP events carrying 785,626 fatalities — 22.6% of what *that profile* delivered — via `exclude_where_prec=(4, 6)`, while **country-or-larger (5) passed through whole** to its centroid cell — the class that produces C-356's and C-364's artifacts. ADR-049:29 documents the filter and ADR-049:81 says it *"loses real deaths"*; **neither ever stated how many.** Measured 2026-11-06: 36,608 of the dropped events were state-based. **The served store does not drop them:** `kgi_kti_activity` sets `exclude_where_prec=()`, this entry's own table shows that profile carrying all 415,991 events and 4,258,880 deaths, and an independent measurement by another session on 2026-11-21 found 99.8% of GED v26.1 fatalities present | **Fired, unnoticed (C-336).** The trigger read *"before the production profile is switched away from `production_parity`"*; the switch happened 2026-11-10 and nobody checked it. What remains: before any statement that this repository's UCDP totals match UCDP's own, and before quoting +22.6% anywhere — it is not a property of the served store | UCDP imprecision |
 | C-367 | 4 | **The production temporal strategy reports 96 deaths that appear in no version of the source.** `ceil_split` assigns `ceil(best/span)` to every spanned month, so a 7-death, 3-month event is delivered as 9. Measured 2026-11-06 against the per-event source maximum: **74 events over the ceiling, 96 invented deaths** live in production; both apportioned profiles measure **zero**. Documented in the strategy's own docstring as *"may inflate totals"* — what did not exist was the number, or any guard that would notice | **Before a conservation guard is added that bounds delivered per-event totals by the source** — it goes red on the current production path, and the cause is this, not a new defect. Also before any claim that the pipeline conserves fatality mass end to end | UCDP imprecision |
-| C-368 | 1 | **The spatial allocator's chosen cell never reached delivered data — in any release.** `spatial_distribution.proportional` records its decision by rewriting `priogrid_gid`; `grid_compilation._place_events` re-derived the cell from `latitude`/`longitude`, which the allocator leaves at the source centroid, and `_required_columns` did not even load the column. Every allocated row returned to the cell it came from. Measured 2026-11-12: **1,128,236 deaths across 60,105 events, 26.49% of all UCDP fatality mass**; 97.3% of the mass at `where_prec=6`, collapsing 6,896 chosen cells into 91. Totals conserve under relocation, so none of the four conservation boundaries could see it. ADR-015:102-106 chose `priogrid_gid` in June 2026 and nothing implemented it; `PregriddedCompilationConfig.pgid_field` already did exactly this for the pregridded sources | **Fired** — fixed by #562 (`pgid_field`), but the guards that prove it skip in CI until #550 lands, so a regression would be caught on a developer machine and not by branch protection | UCDP imprecision |
+| ~~C-368~~ | ~~1~~ | ~~**The spatial allocator's chosen cell never reached delivered data — in any release.** `spatial_distribution.proportional` records its decision by rewriting `priogrid_gid`; `grid_compilation._place_events` re-derived the cell from `latitude`/`longitude`, which the allocator leaves at the source centroid, and `_required_columns` did not even load the column. Every allocated row returned to the cell it came from. Measured 2026-11-12: **1,128,236 deaths across 60,105 events, 26.49% of all UCDP fatality mass**; 97.3% of the mass at `where_prec=6`, collapsing 6,896 chosen cells into 91. Totals conserve under relocation, so none of the four conservation boundaries could see it. ADR-015:102-106 chose `priogrid_gid` in June 2026 and nothing implemented it; `PregriddedCompilationConfig.pgid_field` already did exactly this for the pregridded sources~~ | **RESOLVED 2026-11-21 (#607).** Fixed by #562; the entry stayed open only because its trigger said the proving guards skipped in CI until #550 landed, and #550 closed 2026-11-12. Confirmed against CI run 44920182095's own skip list, and by mutation | UCDP imprecision |
 | C-369 | 2 | **`CompilationConfig.date_field` defaults to a raw field while the temporal allocator writes `date_month`.** A caller taking the default on an allocated source collapses every distributed month onto the event's start month, conserving totals. Production survived only because `compile_grid.py`'s argparse default happens to be `date_month`. Closed inside this repository by `preflight.reject_ignored_allocation` plus an AST guard over every `scripts/` call site (#562); **the residual is an external library caller**, since `CompilationConfig` ships in the wheel and removing the default is a breaking change owed to a MAJOR. An auto-detecting default was rejected: inferring decision-relevant semantics is what ADR-003 forbids | **At the next MAJOR release** — make `date_field` required then. Until then, recorded as a strict xfail so that whoever makes the default safe is forced to remove the marker | UCDP imprecision |
-| C-370 | 2 | **No test crossed the viewpoint-to-compilation boundary, which is why C-368 survived four months.** 47 tests exercised spatial distribution and none called the compiler; `test_cross_layer_contracts.py` compares column *names*, so a field present in both layers and ignored by one passed, and its `UCDP_COMPILATION_COLUMNS` omitted `priogrid_gid` — the contract described the compiler rather than the requirement. ADR-045:57 certified this exact boundary as having no gap, because ADR-045:16 rules end-to-end invariants out of scope by construction. The one test that would have caught it (`test_adr053_production_profile.py:93`) is `skipif`'d on data `.gitignore` guarantees CI never has | **Before adding any further allocation strategy** — and #550 must land, or the replacement guards skip in CI exactly as their predecessor did | Testing |
+| C-370 | 2 | **The viewpoint-to-compilation boundary is contracted by column name only — which is why C-368 survived four months.** 47 tests exercised spatial distribution and none called the compiler; `test_cross_layer_contracts.py` compares column *names*, so a field present in both layers and ignored by one passed, and its `UCDP_COMPILATION_COLUMNS` omitted `priogrid_gid` — the contract described the compiler rather than the requirement. ADR-045:57 certified this exact boundary as having no gap, because ADR-045:16 rules end-to-end invariants out of scope by construction. **2026-11-21 (#607): one seam is now covered, the mechanism is not — stays Tier 2.** `TestAllocationSurvivesCompilation` calls the compiler, runs in CI (confirmed against run 44920182095's skip list, where this module appears only as the deliberate C-369 xfail), and a mutation setting `declared = None` in `_place_events` turns five tests red, three of them in this class. That covers the `priogrid_gid` seam. What it does not do is make the next one automatic: `test_cross_layer_contracts.py` still compares column *names*, so a field present in both layers and ignored by one still passes, and ADR-045's 2026-11-12 amendment states the general rule — a decision a later stage could re-derive must be verified where the consumer reads — as doctrine with **no mechanical enforcement**. Nothing asserts that a new decision-carrying field got a consumer-layer check. Also unchanged: `TestAdr053ComposedGoldenCriterion` still never runs in CI, because `.gitignore` keeps its store and crosswalks out — the synthetic class covers the seam instead of it, not as well as it | **Before adding any further allocation strategy** — the guards cover the one seam that exists, not a second one. (the "#550 must land" clause is struck in the detail Trigger cell) | Testing |
 | C-371 | 2 | **A short harvest of the newest annual release now deletes the previous release's rows for every event it is missing.** The annual supersession added in #595 cannot distinguish "UCDP withdrew this event" from "our harvest did not fetch it" — both look like an id present in the old release and absent from the new one, and both are dropped. Before #595 a short harvest left the old rows in place, which overcounted but preserved the data; after it, the same shortfall destroys it. The harvest guard in `ucdp_annual.py` raises only when a shortfall exceeds **both** 1% and 1100 events, so on a 416,968-row release a shortfall of up to ~4,169 events passes silently and then deletes up to that many old rows. Nothing goes red: the dropped rows are counted into `n_stale`, so the count-conservation check still balances exactly | **At the next annual release harvest** (UCDP publishes mid-year; v27.1 expected ~July 2027), and at any re-harvest of the current annual release after a partial or interrupted fetch | UCDP schema |
+| ~~C-372~~ | ~~2~~ | ~~**Nothing in this repository compares a published total against the source's own published total.** The 2026-11-17 annual-supersession error ran for four and a half months in the served store and was found by an external reader comparing a number we mailed him to the number on ucdp.uu.se. Every ADR-040 conservation invariant held throughout, because conservation proves the pipeline did not corrupt the data and is structurally silent on whether the data should have been there at all (ADR-040 disclaims this itself). A multi-expert panel was convened on 2026-11-17 and produced four options — out-of-band comparison in the pipeline, a fail-loud assertion at viewpoint-build time, a manual runbook step, or a dated decision to do nothing — and **no option was chosen and no decision was recorded**, which is the state #597 exists to prevent being read as an oversight **RESOLVED 2026-11-22 (#628): option (A) chosen, recorded in ADR-040's amendment, implemented as `refresh_pipeline.sh` step 14.**~~ | ~~**Before the next statement to anyone outside this repository that our figures agree with a source's** — including the pending follow-up to the external reviewer. Also when the panel's four options are next weighed, whichever comes first~~ | Consumer contract |
+| C-373 | 3 | **The external monitor polls the status page, not a data object — and nothing in this repository can tell whether that monitor still exists.** C-335 (resolved 2026-08-03) rested on a Better Stack check of `status.html` (unauthenticated, ADR-038) every 3 minutes. `status.html` is served from the same Caddy, but it is **not** what a consumer reads: a permissions change on the data directory, a broken route on the authenticated prefix, or an export that writes an unreadable file leaves the monitor green while every fetch fails. The monitor's existence is attested by one register sentence dated 2026-08-03 and by `monitoring.md`; if the account lapses or the check is deleted, nothing here notices — the same shape as the entry it resolves | **Before citing the Better Stack monitor as evidence that consumers can fetch data** — and whenever a release changes what is served or where it is written. First step is a two-minute look at the vendor dashboard to confirm the monitor is still live | Server hardening |
+| C-374 | 4 | **Source-parity checking is one instance of drift detection and there is no second instance to generalise from.** `verify_source_parity.py` compares one source's published aggregate against ours. The same shape plausibly applies to ACLED, V-Dem, SHDI, GHS-POP and GHS-BUILT-S, and to other references for UCDP itself — but one implementation is evidence of one case, not of a pattern, and these checks answer to different sources, change at different rates and disagree on what "the reference" even is: ACLED has no annual release to pin and V-Dem's revision discipline is different again. Registered so the **second** instance is recognised as a second instance rather than written from scratch, and the **third** is the moment to ask whether an abstraction is owed. Operator's framing, 2026-11-22: *"let's be mindful that this is a case of something"* — mark it, do not build it | **When a second data source gets its own source-comparison check** — at that point write it alongside this one and record what the two actually share. Not before: ADR-040's amendment §3 states that no component, module, base class or registry is introduced until the shape is known from more than one instance | Consumer contract |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -210,8 +213,8 @@
 | ~~C-308~~ | ~~4~~ | ~~Hardcoded plan path in F7 silently skips when plan renamed~~ | Resolved 2026-06-28 (glob pattern finds highest-numbered plan) | Test quality |
 | ~~C-159~~ | ~~4~~ | ~~ACLED snapshot archiving and revision comparison paths untested~~ | Demoted to tech-debt backlog 2026-06-06 | — |
 | C-10 | — | Ontology vocabulary overhead | Accepted | — |
-| C-38 | — | Version string year offset assumes 21st century | Never (2099) | — |
-| C-41 | — | Digest truncation collision risk | Records exceed 100M | — |
+| ~~C-38~~ | ~~—~~ | ~~Version string year offset assumes 21st century~~ | Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): trigger is the year 2099 | — |
+| ~~C-41~~ | ~~—~~ | ~~Digest truncation collision risk~~ | Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): trigger is 100M records against a current 2.9M. Re-register at 50M | — |
 | C-06 | — | Provenance composability | Deferred by design | — |
 | C-07 | — | Frozen dataclass pattern repeated | Deferred by design | — |
 
@@ -243,6 +246,7 @@ the table below rather than removed, so the table has ten rows. C-331 closed 202
 | ~~**C-341**~~ | ~~A skipped test is not a red test — gates that assure only whoever ran them~~ — **closed 2026-08-11** |
 | ~~**C-342**~~ | ~~`uv sync` repairs a stale lockfile in CI's checkout, so CI is green and the stale lock stays committed~~ — **closed 2026-08-11** |
 | **C-343** | The deploy tag file read correctly, the pipeline was green, and the server ran the previous release |
+| **C-373** | A monitor green because the page it polls is not the thing consumers read — and a monitor whose own absence would be silent |
 
 **Why this belongs in the register rather than a post-mortem.** The individual fixes are already
 made or tracked. What the cluster adds is a *design rule*: in this system, **absence of an error is
@@ -263,14 +267,83 @@ post-mortem documents six instances end to end.
 
 ---
 
+## Causal cluster: a delivered number shaped by choices no consumer can see
+
+*Added by `/review-rr strategic`, 2026-11-21.*
+
+Six entries — five open, with C-368 resolved on 2026-11-21 and kept in the table because the cluster's
+shape depends on it — are each individually defensible, each separately documented, and each the result of a
+deliberate decision. Read together they say something none of them says alone, and that nobody has
+written down: **the UCDP fatality figures this repository publishes are the product of at least five
+undeclared editorial choices, and no delivered feature lets a consumer detect any of them.**
+
+| ID | The choice | Measured effect on what we deliver |
+|---|---|---|
+| **C-366** | `exclude_where_prec=(4, 6)` drops admin-1 and country-coded events rather than placing them imprecisely | **43,933 events, 785,626 fatalities — +22.6% of everything delivered** |
+| **C-364** | `source_distribution_map={"annual": "date_end_only"}` books a whole date span to its final month | **4 cell-months carry 37.4% of all `ged_sb_best` mass** in a 48-month window |
+| **C-367** | `ceil_split` rounds each spanned month up | **74 events over the source ceiling, 96 fatalities that exist in no version of the source** |
+| ~~**C-368**~~ | ~~The spatial allocator's chosen cell never reached the compiler~~ | ~~**1,128,236 deaths, 26.49% of all UCDP mass, returned to the cell they came from**~~ — **resolved 2026-11-21 (#607)**, fixed by #562 and now guarded in CI |
+| **C-369** | `CompilationConfig.date_field` defaults to a raw field while the allocator writes `date_month` | Production survived on an argparse default; the residual is any external library caller |
+| **C-356** | The production distribution default is spread across three files that must stay aligned | Any single edit silently changes delivered values |
+
+**Why this is a cluster and not six entries.** Each was found separately, by a different audit, and each
+was fixed or accepted on its own terms. What none of them records is the **joint** statement, which is
+the one a consumer needs: our UCDP totals are not UCDP's totals, they are UCDP's totals minus a precision
+filter, redistributed by a temporal rule that concentrates mass, rounded upward, and placed by a spatial
+rule that until 2026-11-12 did not run. Every step is defensible. The composition has never been stated.
+
+**The reason this bit, and will bite again.** The delivered feature set carries no `date_prec` and no
+`where_prec` — 79 features and not one of them distinguishes an event placed to a village from an event
+placed to a country centroid. A modeller cannot find these artifacts even when looking straight at them,
+which is why C-364's four cell-months read as a real war rather than as a coding convention.
+
+**Cluster-level action, cheaper than six separate ones:** before any statement to an outside party that
+our figures agree with a source's, state the composition above. C-366's trigger says exactly this, and it
+fires on the pending follow-up to the external reviewer. See **C-372**, which is the missing instrument.
+
+Cross-ref: the "mechanisms that fail green" cluster above — these six are its data-layer counterpart. Every
+one of them conserved totals, so no conservation boundary could see any of them (ADR-040:137 disclaims this
+by construction).
+
+---
+
+## Causal cluster: fails red — a check that cries wolf
+
+*Added by `/review-rr strategic`, 2026-11-21. One member today. The fails-green cluster also had one once.*
+
+The cluster above this one records mechanisms that **report success while being wrong**. This records the
+mirror: mechanisms that **report failure while nothing is wrong**. The cost is the same in kind — a signal
+that is wrong in either direction stops being read — and the first member demonstrated a second cost that
+fails-green does not have.
+
+| Instance | What reported failure while nothing was wrong |
+|---|---|
+| **#606** (2026-11-21) | The pipeline's freshness check declared UCDP Candidate and UCDP `.9` stale at 31 days and 41 minutes against a 744-hour SLO. The harvest had run that morning, discovery completed, and all 70 candidate and 105 `.9` versions were already on disk — UCDP had simply published nothing since 21 October. The ledger is written only when a file actually downloads, so a fully-cached run leaves no trace; `report_ledger()` in `health.py` already accepts `"cached"` as a success, so **the reader is waiting for a signal the writer never sends.** |
+
+**The second cost, which is the reason this is a cluster and not a bug report.** The health check is step
+12 of 14. Its failure aborted the run, so step 13 — `verify_consumer_contract.py`, the check that actually
+inspects the served data — **never ran**. A false alarm suppressed the real alarm. A fails-green defect
+wastes nothing; a fails-red defect consumes the attention and the execution path of the checks downstream
+of it.
+
+**Design rule, stated alongside its fails-green sibling:** a check must measure the thing whose absence
+would hurt. The freshness SLO was written to answer *"are we still looking?"* and was implemented as
+*"has the source published?"* — a question about the world, not about us, and one we do not control. Before
+shipping a check, name the quantity it measures and confirm it is a property of this system.
+
+Cross-ref: ~~C-320~~ (a permanently-red CI is indistinguishable from a broken build — the same lesson, learned
+in CI rather than in the pipeline), C-338 (freshness detection that runs rather than alerts), **C-372**.
+
+---
+
 ## Work Packages
 
 Items that should be resolved together:
 
 | Package | Items | Trigger |
 |---------|-------|---------|
-| **Server hardening** | C-88, C-97, ~~C-148~~, C-173, C-224, C-318 (C-84, C-85, C-86, C-87 resolved; C-173 recalibrated 3→4; C-121 demoted 2026-06-10; C-97, C-148 added 2026-06-12; C-148 demoted 2026-06-16; C-318 added 2026-07-27) | Before production deployment or server migration |
-| **UCDP API resilience** | C-70, ~~C-72~~, C-360, ~~C-181~~ (C-181 added 2026-06-12; C-181 demoted 2026-06-24; C-72 resolved 2026-10-21 and succeeded by C-360) | Multi-operator deployment, or harvest concurrency raised above 1 — the rate-limiting half of this package is no longer hypothetical: it was observed 2026-10-21 |
+| **Server hardening** | C-88, ~~C-97~~, ~~C-148~~, C-173, **C-224**, C-318 (C-84, C-85, C-86, C-87 resolved; C-173 recalibrated 3→4; C-121 demoted 2026-06-10; C-97, C-148 added 2026-06-12; C-148 demoted 2026-06-16; C-318 added 2026-07-27; **C-97 demoted and C-224 re-tiered 4→2 on 2026-11-21**) | Before production deployment or server migration. **C-224 no longer waits for that trigger** — the raw store holds 35 UCDP candidate versions the upstream no longer serves, so a disk failure is an unrecoverable loss today |
+| **UCDP API resilience** | ~~C-70~~, ~~C-72~~, C-360, ~~C-181~~ (C-181 added 2026-06-12; C-181 demoted 2026-06-24; C-72 resolved 2026-10-21 and succeeded by C-360; **C-70 merged into C-360 on 2026-11-21** — the package is now the single entry C-360) | Multi-operator deployment, or harvest concurrency raised above 1 — the rate-limiting half of this package is no longer hypothetical: it was observed 2026-10-21 |
 | ~~**UCDP schema defense**~~ | ~~C-36~~, ~~C-37~~, ~~C-45~~, ~~C-175~~ | Resolved 2026-06-19 (ADR-046 + DGP validation, #209/#212) |
 | **Test infrastructure** | C-29, ~~C-79~~, C-146, ~~C-267~~, ~~C-270~~ (C-60, C-169 resolved; C-78 demoted; C-79 demoted 2026-06-14; C-146 recalibrated 3→4; C-267, C-270 resolved 2026-06-18) | Test suite growth |
 | ~~**Operational monitoring**~~ | ~~C-131~~, ~~C-136~~, ~~C-147~~, ~~C-237~~ (C-132, C-191 resolved; C-238, C-239 resolved 2026-06-06; C-265 resolved 2026-06-10; C-136 demoted 2026-06-16; C-237 resolved 2026-06-18; C-131 resolved 2026-06-24 #258; C-147 demoted 2026-08-04 — package now empty) | Before relying on Hetzner pipeline without manual checks |
@@ -292,6 +365,7 @@ Items that should be resolved together:
 | ~~**Pipeline safety**~~ | ~~C-285~~ | Resolved 2026-06-14 (commit 428e479: flock in refresh_pipeline.sh) |
 | ~~**Assembly temporal alignment**~~ | ~~C-156~~, ~~C-286~~ | Resolved 2026-06-26 (#266): ADR-047, `first_valid_*_month_id` provenance, `load_dataset()` pre-coverage warning |
 | ~~**Provenance locking**~~ | ~~C-294~~, ~~C-295~~ | Resolved 2026-06-24 (#238): digest inside lock + timeout with non-blocking poll |
+| **Cross-source agreement** | **C-372**, C-366, C-371, C-359, C-153 (added 2026-11-21 by `/review-rr strategic`) | **Before any statement to an outside party that our figures agree with a source's.** The five move together: C-372 is the missing instrument, C-366 the 785,626 deaths such a statement would omit, C-371 the UCDP shortfall that is now destructive, C-359 and C-153 the ACLED counterparts. One instrument should cover all five |
 | **Migration scope** | C-126 (C-125 resolved) | Before claiming full viewser replacement for the fleet |
 
 ---
@@ -662,6 +736,96 @@ Cross-ref: C-336 (same failure class, one day earlier), C-334 (dependency policy
 
 ---
 
+### ~~C-372: Nothing compares a published total against the source's own published total~~ — RESOLVED 2026-11-22 (#628)
+
+| Field | Value |
+|-------|-------|
+| ID | C-372 |
+| Tier | 2 |
+| Source | `/review-rr strategic` 2026-11-21, registering a blind spot the 2026-11-17 expert panel identified and left unrecorded |
+| Trigger | **Before the next statement to anyone outside this repository that our figures agree with a source's** — including the pending follow-up to the external reviewer. Also when the panel's four options are next weighed, whichever comes first |
+| Location | Absence, not a location. The nearest existing instrument is ADR-027's harvest `TotalCount` check, which compares a fetch against the API's own count and lives in production code rather than a test |
+
+**What is missing.** No test, assertion, runbook step or monitor in this repository compares a figure we
+publish against the figure the source publishes. Conservation (ADR-040) proves the pipeline neither created
+nor destroyed deaths; it is structurally silent on whether the deaths should have been there at all, and
+ADR-040:137 says so in its own words.
+
+**What that cost.** The annual-release supersession defect (#594/#595) ran in the served store for four and
+a half months. Global totals sat above UCDP's by +0.03% (2022), +0.2% (2023) and +1.3% (2024); Ukraine 2024
+read 100,601 against UCDP's 98,352. Every conservation invariant held the entire time, and **nothing went
+red, because nothing could.** It was found by an external reader comparing a number we had mailed him to
+the number on ucdp.uu.se.
+
+**Why this is registered as an absence rather than closed.** A multi-expert panel was convened on 2026-11-17
+on exactly this question and produced four options:
+
+1. an out-of-band comparison in the monthly pipeline, signalling through the existing healthchecks.io path;
+2. a fail-loud assertion at viewpoint-build time, in the manner of ADR-027's harvest check;
+3. a manual step in the redeploy runbook, reading the per-country-year movement table against UCDP's figures;
+4. nothing — accept that cross-source agreement is verified by measurement at incident time, and record that
+   as a deliberate, dated decision rather than an oversight.
+
+**No option was chosen and no decision was written down.** Option 4 is a legitimate answer and may well be
+the right one for a solo operator; what is not legitimate is arriving at it by default. #597 was filed on
+2026-11-17 precisely because enumerated lists in this project's ADRs get read as exhaustive when they are
+not, and an unrecorded decision will be read the same way — as an oversight nobody noticed, by whoever next
+asks why there is no such check.
+
+**The open design question, which is why this is hard rather than merely undone.** The property is
+non-stationary: UCDP revises its own back catalogue between releases, so *"our total equals UCDP's total"*
+is only true against a pinned release version. A check asserting agreement with a third party's *current*
+figure is a test of the world, not of this code, and will go red for reasons outside the repository —
+exactly the failure now recorded in the **fails-red** cluster. Any instrument chosen here must pin the
+release it compares against.
+
+**Tier 2, not Tier 1.** No corruption is in flight: the specific defect is fixed, verified against production
+on 2026-11-20 (2022 = 317,936; 2023 = 170,432; 2024 = 188,209; Ukraine 2024 = 91,779 on UCDP's own country
+field, all exact). This is structural fragility with a near-term trigger, which is the Tier 2 definition.
+
+**Whatever instrument is chosen should be weighed against C-371 as well.** C-371 is the same family — a short
+harvest of the newest annual release now deletes the previous release's rows, because the supersession rule
+cannot tell "UCDP withdrew it" from "we failed to fetch it". One instrument covering both is worth more than
+two.
+
+Cross-ref: C-366 (its trigger fires on the same act — a statement to an outside party that our figures agree
+with a source's; and the +22.6% that statement would omit), C-371 (same family), C-359 and C-153 (the ACLED
+counterparts — a short harvest recorded as success), the **"a delivered number shaped by choices no consumer
+can see"** cluster, the **fails-red** cluster, ADR-027, ADR-040:137. GitHub: #597.
+
+**Resolved 2026-11-22 (#628).** The narrative above is kept; what it says about the gap was true
+until this date. Option **(A)** of the panel's four was chosen: an out-of-band comparison inside
+the monthly pipeline, signalling through the existing failure path rather than through CI.
+
+- The decision is **recorded** in ADR-040's amendment of 2026-11-22, which is the half of this
+  entry that was missing — the panel had produced four options and chosen none, and #597 exists
+  because an unrecorded choice reads as an oversight.
+- `scripts/verify_source_parity.py` compares the served grid against the annual UCDP release held
+  in our own consolidated store, per year and per violence type, reporting the remainder left
+  unexplained by the `.9`-exclusive mass. It reads the **served** store by default, so an export
+  that wrote nothing cannot pass it.
+- It runs as **`refresh_pipeline.sh` step 14**, after the consumer-contract check, with
+  `--skip-last-year`.
+- **Observed failing before being trusted.** 50 state-based 2023 events carrying **151 deaths**
+  were removed from the annual release in a copy of the store — the exact shape of the defect this
+  entry is about. The check's published figure fell by exactly 151, the unexplained remainder rose
+  by exactly 151, and it exited 1. Not merely red: red by the right amount.
+- 17 guards, and **nine mutations** applied to the script with `__pycache__` cleared around each,
+  all nine caught by the right test.
+
+Two things this does **not** resolve, stated so the resolution is not read as wider than it is.
+**C-371 is not subsumed:** comparing against the release in our store cannot detect that the
+newest release was never fetched, because a short harvest and a non-existent release look the
+same from here. And the parity reader has to replicate the viewpoint's survivorship to do its
+job; the first end-to-end run got that wrong and reported 108 of 108 totals as failures against a
+store that was fine — ADR-017's two harvest vintages of one release, double-counted. Fixed and
+guarded, but the coupling is live and is why option (C), a human reading the table by eye, was
+rejected: a tired reader widens a tolerance where a script's author goes and finds ADR-017.
+
+Generalising this shape to other sources is **C-374**, deliberately not done.
+
+---
+
 ## Tier 3 — Improve Quality
 
 ### ~~C-261: No provenance ledger entry for skip events — audit trail has temporal gaps~~
@@ -704,7 +868,7 @@ See also C-253 (digest gates — component b), C-258 (conservation at all bounda
 ---
 
 ### C-126: No transform layer — models using viewser transforms cannot migrate — [DEFER]
-14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger: model migration plan requires features derived from viewser transforms.**
+14 distinct viewser transforms are in active use across the fleet: `replace_na`, `fill`, `tlag` (832 uses), `countrylag` (486), `gte` (316), `decay` (288), `time_since` (285), `ln` (233), `moving_sum`, `spatial.lag`, `sptime_dist`, `treelag`, `delta`, `moving_average`. The factory provides raw values + `fillna(0)` only. Models using any transform beyond fillna cannot migrate without reimplementing those transforms outside viewser. The transform layer will likely be a separate repo or integrated into model classes (hydranet, r2darts2, stepshifter) — too early to decide architecture. **Trigger (rewritten 2026-11-21, `/review-rr strategic`): before telling any model repository that datafactory can replace viewser for their inputs.** That statement is the act that makes this gap load-bearing — until it is made, the absence of a transform layer costs nothing. The superseded trigger, *"model migration plan requires features derived from viewser transforms"*, was perpetual: it has been true since the entry was written.
 **Source:** Falsification audit 2026-04-20 (F7). Cross-ref: S2 in `test_falsification_viewser_replacement.py`.
 
 ### ~~C-144~~: ~~Compilation `to_pydict()` materializes millions of Python objects~~ — Resolved #275
@@ -1412,7 +1576,71 @@ C-72 (429 not distinguished from 500). ADR-027, ADR-011, ADR-032. GitHub: #487, 
 
 ---
 
+### C-373: The serving monitor watches the status page, not a data object
+
+**Source:** Peer-session decision issue #621, 2026-11-21 — filed from a claim this repository's session made and then found to be false.
+
+**Trigger:** **Before citing the Better Stack monitor as evidence that a consumer can fetch data**, and whenever a release changes what is served or where it is written. The first step is not code: it is a look at the vendor dashboard to confirm the monitor still exists.
+
+**Location:** Better Stack monitor on `http://204.168.219.108/status.html` (vendor-side, no repository artifact); `docs/guides/monitoring.md`; ADR-051 (2026-08-03 amendment); ADR-038 (why the page is unauthenticated).
+
+~~C-335~~ was the unbounded failure: Caddy stops serving while the host stays up, the pipeline still succeeds, still pings, and nothing notices. It was resolved on 2026-08-03 by an external Better Stack check of `status.html` every three minutes with e-mail alerting, verified live rather than assumed. That resolution is real and this entry does not reopen it.
+
+**What it does not cover.** `status.html` is deliberately unauthenticated so that no credential goes to the vendor. The consequence is that the monitored object is not the delivered object. Three failures leave the page green and every consumer empty:
+
+- a permissions change on the data directory, so Caddy serves the page and 403s the data;
+- a route or `basicauth` change on the authenticated prefix;
+- an export that writes a file the server cannot read, or writes it to the wrong path.
+
+Each is a deploy-time mistake, which is exactly when this kind of thing happens.
+
+**The second half, which is the register's own cluster rule applied to the remedy.** The monitor lives in a third-party account. Its existence in this repository is a sentence dated 2026-08-03 and a setup note in `monitoring.md`. If the check is deleted, paused, or the free tier changes, no test fails and no document changes — *absence of an error is not evidence of success*, and the mechanism that closed C-335 has the same blind spot C-335 had. This is not hypothetical scepticism: the claim that no serving monitor existed at all was stated to the operator and to a peer session on 2026-11-21 from ADR-018's body, and the correction took reading ADR-051's amendment. A reader of this repository could not tell either way.
+
+**Tier 3, not 2.** The broad failure modes — host death, Caddy down, network path broken — are covered, with minutes of notice. What remains is a narrower class with a real but bounded consequence: consumers receive nothing while every signal is green, and the operator finds out when someone tells him. Not Tier 4, because that is the *"actively reports healthy while broken"* shape, which this register treats as worse than no signal.
+
+**Smallest change that would close it** (not proposed here; #621 owns the decision): point the existing availability check at a small served object behind the same authentication a consumer uses, or add a second check that does, and record the monitor's identity somewhere in the repository so its disappearance is visible. The second half costs one line in `monitoring.md` and is worth more than the first.
+
+Cross-ref: ~~C-335~~ (the entry this is the uncovered remainder of), C-338 (the freshness half, which lives in a GitHub workflow), C-336 (quoting a document's body past its amendment — how this was found), C-131, C-317, C-343. Cluster: *mechanisms that fail green*. ADR-051, ADR-038, ADR-018. GitHub: #621.
+
+---
+
 ## Tier 4 — Accept or Defer
+
+### C-374: Source parity is one instance of drift detection, with nothing to generalise from yet
+
+**Source:** Operator, 2026-11-22, on choosing option (A) for ~~C-372~~ — *"this should be marked as a subset or an instance of a greater phenomenon that we might want to generalise or abstract later… let's be mindful that this is a case of something."*
+
+**Trigger:** **When a second data source gets its own source-comparison check.** At that point write it alongside `verify_source_parity.py` and record what the two actually share. Not before.
+
+**Location:** `scripts/verify_source_parity.py`; `tests/test_source_parity.py`; `scripts/refresh_pipeline.sh` step 14; ADR-040 amendment 2026-11-22 §3.
+
+**Tier 4, not 3.** Nothing is wrong, nothing is at risk, and no correctness or reliability property depends on this. It is a note about a decision that will be owed later, filed so that the moment to make it is recognised rather than missed. The register is the only artifact here that survives both context compaction and a six-month gap, which is why it is here and not in a comment.
+
+### The class
+
+`verify_source_parity.py` answers one question — *does our published UCDP aggregate equal UCDP's published aggregate?* — and the general shape is **drift detection**: compare what we publish against an external reference and signal when the two separate.
+
+That shape plausibly applies to every other source in this repository: ACLED, V-Dem, SHDI, GHS-POP, GHS-BUILT-S. It also plausibly applies more than once to UCDP, against references other than the annual release.
+
+### Why nothing is being built
+
+**One implementation is evidence of one case, not of a pattern.** Three concrete reasons the eventual abstraction is not yet knowable:
+
+- **The reference is not the same kind of object.** UCDP publishes a pinned annual release we can hold in our own store. ACLED has no annual release to pin — it is a continuously-revised API, which is ADR-027's subject and C-359's. V-Dem publishes a yearly dataset with a different revision discipline again. GHS-POP and GHS-BUILT-S are raster releases with no event counts at all.
+- **"Equal" is not the same relation.** For UCDP's settled years the right assertion is exact equality, because apportionment conserves `best` exactly. For a continuously-revised source it cannot be, and choosing the band is the entire difficulty — the existing harvest guard's dual threshold is loose by inheritance for a 416,968-row release, which is C-371.
+- **The survivorship replication differs per source.** This check had to reproduce the viewpoint's version-selection rule to compare anything, and got it wrong on the first run. Each source's rule is different, so the part that looks shared is the part most likely to diverge.
+
+Similar shape is not true duplication: these would answer to different sources, change at different rates, and drift apart. Unifying them is far harder to undo than never joining them.
+
+### What to do when the trigger fires
+
+Write the second one **next to** the first, deliberately duplicated, and record in this entry what the two genuinely share and what they do not. The third instance is the moment to ask whether an abstraction is owed — not the second.
+
+What would make this a Tier 3 rather than a Tier 4: three or more of these existing, each with its own copy of a survivorship rule, so that a change to the viewpoint's version selection would have to be made in three places and nothing would say so.
+
+Cross-ref: ~~C-372~~ (the gap this closed, and the decision this defers), C-371 (not subsumed — a short harvest and a non-existent release look alike from here), C-359 and C-153 (the ACLED counterparts, where the reference is not pinnable), ADR-040 (amendment 2026-11-22 §3 is the normative statement that no component is introduced yet), ADR-017 (the two-vintage duplication that bit the first run). GitHub: #628.
+
+---
 
 ### C-146: Assembly logic lives in script, not importable package — [DEFER]
 
@@ -1464,7 +1692,11 @@ Partially addressed by `test_integration.py` (100 events, realistic pipeline). F
 **Update (2026-06-10):** Test review found pipeline consistency tests (`test_pipeline_consistency.py`) are all green-only and consumer-gated. No beige/red tests verify boundary conditions at layer transitions (e.g., empty viewpoint output → compiler, malformed viewpoint Parquet → compiler). These gaps compound the existing e2e gap.
 **Source:** Repo assimilation, Feathers, Test review 2026-04-26, ACLED compilation test review 2026-05-05, test-review 2026-06-10
 
-### C-70: No circuit breaker for UCDP API — [DEFER]
+### ~~C-70: No circuit breaker for UCDP API~~ — MERGED INTO C-360 (2026-11-21)
+
+**Merged by `/review-rr strategic` 2026-11-21.** C-360's own text asked for this decision: *"Same family as C-70 — decide whether the two merge rather than both staying deferred."* Both entries say the same thing at different scopes: nothing bounds how long this pipeline will keep talking to an unhealthy UCDP. C-70 framed it as a missing circuit breaker, C-360 as a missing wait budget; one remedy closes both. Original text below, unedited.
+
+~~[DEFER]~~
 After `max_retries` exhaustion, harvest fails immediately. If UCDP API is down for hours, every harvest attempt exhausts retries. No "open circuit" to fail fast on known-dead endpoints. Kleppmann (Ch.7 p.231) warns that retrying overload "will make the problem worse, not better" and recommends exponential backoff with distinct handling for overload vs transient errors. Ch.8 pp.281-283 discusses timeout-based fault detection and network congestion amplification. **Trigger: implement before multi-operator or automated deployment.**
 **Source:** Nygard (expert review #4). DDIA Ch.7 p.231, Ch.8 pp.281-283.
 
@@ -1507,7 +1739,10 @@ Demoted to tech-debt backlog 2026-08-04 (`/review-rr strategic`). A performance 
 `_load_grid_from_zarr` applies temporal and feature subsetting lazily (xarray isel/variable selection), but spatial subsetting (region → pgid set) happens AFTER full grid materialization in `load_dataset`. For remote stores, this means downloading all 259,200 cells even when only ~13,000 are needed (e.g., Africa). The spatial dimension is 360x720 per time step per feature — less impactful than temporal (which IS subsetted), but still ~20x more data than needed for typical region queries. xarray does not support efficient irregular spatial selection on chunked stores without rechunking. **Trigger: consumer queries a single country over a slow connection and complains about latency.**
 **Source:** Expert review #5 (M12 investigation), Kleppmann perspective, 2026-04-08.
 
-### C-97: Basic auth + Caddy scalability ceiling at ~30-50 users — [DEFER]
+### ~~C-97: Basic auth + Caddy scalability ceiling at ~30-50 users~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): a capacity observation, not a risk — 6 logins recorded to date against a ceiling of 30, and the failure mode is slow logins, not wrong data. Re-register when a consumer count above 20 is actually in prospect. Original text below, unedited.
+
 Caddy's `basic_auth` stores username/bcrypt-hash pairs in a flat Caddyfile. No audit trail (who accessed what, when), no per-user rate limiting, no credential rotation, no MFA. Acceptable for a small research team (5-20 users). Breaks down at 30-50 users when credential management, audit requirements, and revocation coordination become operational burdens. Migration path: Caddy `forward-auth` directive + oauth2-proxy with institutional SSO (PRIO/Uppsala). **Trigger: before consumer count exceeds 30, or before institutional audit/compliance requirements emerge.**
 **Note (2026-07-31):** the flat-file model is now actually in multi-user service — 6 logins (`views` + 5 colleagues), each individually revocable. The manual add/revoke recipe is written down (`docs/guides/server_operations.md`), which is what keeps this workable at this size; the audit-trail and rotation gaps the entry describes are unchanged. 6 of ~30.
 **Source:** Falsification audit 2026-04-01 (F2). Cross-ref: C-318 (transport), ~~C-323~~ (provisioning residue).
@@ -1695,7 +1930,7 @@ Cross-ref: C-145 (viewpoint full store load), C-144 (compilation to_pydict).
 | ID | C-180 |
 | Tier | 4 |
 | Source | ADR-031 compliance review (2026-05-21) |
-| Trigger | Before refactoring UCDP or ACLED compilation/viewpoint code without path-specific falsification coverage (trigger rewritten during review-rr 2026-06-19) |
+| Trigger | **Before changing allocation or memory behaviour in the UCDP or ACLED compilation path** (rewritten review-rr 2026-06-19; summary row aligned to this wording 2026-11-21, where it still read as the symptom "memory regression introduced in UCDP or ACLED path") |
 | Location | `tests/test_falsification_ghspop_memory.py` (GHS-POP only; no equivalent for UCDP/ACLED) |
 
 The GHS-POP memory falsification tests (`test_falsification_ghspop_memory.py`) use AST analysis to verify structural memory safety properties (e.g., `del` targets, no `.to_pylist()`, maxworkers=1). No equivalent tests exist for UCDP viewpoint (`ucdp_v1.py`), ACLED viewpoint (`acled_v1.py`), or grid compilation (`grid_compilation.py`). Memory regressions in those paths would not be caught by the falsification framework. Deferred: the GHS-POP path is the only one that currently operates near the memory ceiling.
@@ -1713,7 +1948,9 @@ Martin/Hickey favor strict P1 compliance: every `.to_pylist()` and dict-of-lists
 
 Nygard argues the 98+ discovery probes per run are a reliability risk: if UCDP starts rate-limiting, the pipeline fails before any useful work. A discovery cache (persist known versions, probe only the frontier) reduces API calls from 98+ to 1-3. Kleppmann counters that a discovery cache introduces a staleness window: if UCDP retracts a version or changes the available set, the cache would serve stale metadata. Beck notes the current approach "works fine" and the optimization should wait for evidence of rate-limiting. **No resolution yet — monitor for rate-limiting before investing in a discovery cache.**
 
-**Source:** Expert code review of harvest caching (2026-05-21). Cross-ref: C-181 (discovery probing).
+**2026-11-21 update (`/review-rr strategic`) — the evidence Beck asked for arrived, and it points the other way.** Beck's position was that the discovery probe *"works fine"* and the optimisation should wait for evidence of rate-limiting. The 2026-11-21 incident (#606) produced evidence of a different kind: the probe is not merely a cost, it is **the only act that establishes we are still looking at UCDP at all**, and it currently leaves no record. All 70 candidate and 105 `.9` versions came back cached, the probe did its job, and the pipeline then failed its own freshness check because nothing wrote that down. That reframes the disagreement: a discovery cache that probes only the frontier would make this worse, not better, unless it records the probe. #606's fix — write a ledger entry on the all-cached path — settles the trade-off in substance by making the probe's cost buy something. **Close this disagreement when #606 lands.**
+
+**Source:** Expert code review of harvest caching (2026-05-21). Cross-ref: ~~C-181~~ (discovery probing, demoted 2026-06-24), the **fails-red** cluster, GitHub #606.
 
 ### ~~D-29: Shapefile harvester retrofit depth — full outcome compliance vs organic~~ — RESOLVED
 
@@ -1743,19 +1980,49 @@ Cross-ref: C-189 (GHS-BUILT-S coverage parity gap), C-180 (no falsification for 
 
 ### ~~C-225~~, ~~C-226~~, ~~C-227~~, ~~C-228~~, ~~C-229~~ — Resolved 2026-05-29. See archive.
 
-### C-224: No server backup or disaster recovery plan — [DEFER]
+### C-224: No server backup — and the raw store is not rebuildable
 
 | Field | Value |
 |-------|-------|
 | ID | C-224 |
-| Tier | 4 |
-| Source | review-rr strategic blind spot (2026-05-28) |
+| Tier | 3 |
+| Source | review-rr strategic blind spot (2026-05-28); **re-tiered 4→2 by `/review-rr strategic` 2026-11-21, then 2→3 the same evening** when the measurement the 4→2 move rested on was actually taken |
 | Trigger | Disk failure, accidental `rm -rf`, or Hetzner datacenter incident causes data loss |
 | Location | Hetzner server `/home/views-deploy/views-datafactory/data/` (raw, consolidated, compiled, assembled) |
 
-The Hetzner server stores all pipeline data (raw harvests, consolidated stores, compiled grids, assembled output) on a single NVMe disk with no backup, snapshot, or disaster recovery plan. All data is rebuildable from source APIs (UCDP, ACLED, JRC, V-Dem), but a full rebuild from scratch takes ~8-12 hours and requires all API credentials. Hetzner Cloud offers automated snapshots (~€0.01/GB/month) and Volumes for incremental backups. The `data/raw/` directory is the highest-value target — everything downstream is derived.
+The Hetzner server stores all pipeline data (raw harvests, consolidated stores, compiled grids, assembled output) on a single NVMe disk with no backup, snapshot, or disaster recovery plan. Hetzner Cloud offers automated snapshots (~€0.01/GB/month) and Volumes for incremental backups.
 
-Cross-ref: C-88 (SSH access control), C-131 (no external monitoring).
+**2026-11-21 correction — the premise that justified Tier 4 is false.** This entry said *"all data is rebuildable from source APIs (UCDP, ACLED, JRC, V-Dem), but a full rebuild from scratch takes ~8-12 hours."* That framed the risk as **time**. It is not. The 2026-11-21 harvest reported `70 versions served (35 no longer available)` for UCDP candidate: **UCDP no longer serves 35 of the candidate versions our store holds.** They cannot be re-fetched at any price. The same reasoning reaches the annual releases, where v25.1 and v26.1 disagree about which events occurred — the whole subject of #594/#595 — and that disagreement is only auditable while we hold both.
+
+**So `data/raw/` is an archive of record, not a cache.** ADR-013 made consolidation append-only precisely so that superseded vintages survive; a disk failure would discard exactly the history that decision exists to keep, and no rebuild would recover it. Tier 2 rather than Tier 4 because the loss is **irreversible**, not slow.
+
+**2026-11-21, same evening — the measurement was taken, and the re-tier above is wrong.**
+The paragraph above read the harvest line `70 versions served (35 no longer available)` as *"we hold
+35 files UCDP will not serve again"*. It does not say that. A count of the store answers it
+directly: `data/raw/ucdp_candidate/` holds **70 files** spanning versions 20.0.10 to 26.0.9, and
+UCDP serves **70**. There is no surplus. The 35 are versions from 2018–2020 that this repository
+**never fetched**, so there is nothing irreplaceable in the candidate store and nothing that a
+rebuild could not recover. `data/raw/ucdp_dot9/` holds 105 files (392 MB) and `ucdp_annual/` 2 files
+(116 MB); `data/raw/` totals **9.9 GB**.
+
+**What is actually true, and why it is Tier 3 rather than 4 or 2.** Nothing in the raw store is
+known to be irreplaceable today, so the loss is not irreversible and Tier 2 is not justified. But
+the original Tier 4 framing — *"a full rebuild takes 8–12 hours"* — is also too cheap: re-fetching
+9.9 GB means UCDP's rate-limited API (ADR-027, the 2026-04-25 post-mortem) and an ACLED re-fetch
+that requires a courtesy e-mail to Katayoun first. That is days of calendar time and an external
+favour, not an overnight job. The irreplaceability argument survives only as a **future** risk:
+UCDP's documented retention is "all candidate versions from January 2018 onward", so the 2018–2020
+versions we never fetched are still offered, and the day that changes for versions we *do* hold is
+the day this returns to Tier 2. Harvesting the 35 we never took is the cheap way to make the
+question moot, and is #608's to decide.
+
+**The lesson, not the fix.** The 4→2 re-tier was made on a sentence read from a log line rather than
+on a count of the files it described, and it reached the operator through a peer session before it
+was checked. Registered as C-336's fifth addendum, with three siblings from the same day.
+
+What had **not** been checked when the re-tier was made, and has been now: whether snapshots for those 35 withdrawn versions are actually present on disk, or whether discovery is naming versions we never fetched. That measurement decides whether this is urgent or merely true.
+
+Cross-ref: C-88 (SSH access control), ~~C-131~~ (no external monitoring), C-371 (a short harvest of a newer release now deletes the older one's rows — same underlying fact, that superseded vintages are irreplaceable).
 
 ### ~~C-230: Script layer (harvest + pipeline) has zero unit tests~~ — RESOLVED 2026-06-18
 
@@ -3143,6 +3410,37 @@ Cross-ref: C-326 (why the extra exists), ADR-050 (the contract this would break)
 
 **Second addendum, 2026-08-10 (#432) — the same shape, in a guard rather than in prose.** `tests/test_heartbeat_secret.py` was written to assert that the heartbeat URL never reaches curl's argv. It went through three versions before it asserted that. v1 checked *"the line contains both `curl` and `HEARTBEAT_URL`"* and failed against the **fixed** script, because `printf … | curl …` legitimately puts both on one line. v2 checked *"the literal `HEARTBEAT_URL` appears after `curl`"* and passed a two-line reintroduction of the exact defect — `FAIL_URL="$HEARTBEAT_URL/fail"; curl "$FAIL_URL"` — caught by review, not by the author. v3 tracks assignment to a fixpoint; its first regex anchored at column 0 and matched no indented assignment, so the hardening itself did nothing until drilled. **A guard is a claim about a property, and the claim is usually narrower than the property.** Only running it against states it was *not* written for tells them apart — three times here, and all three gaps failed green.
 
+**Fourth addendum, 2026-11-21 (#607) — the same mechanism in this register's own trigger fields.**
+C-368 sat at Tier 1 for nine days because its trigger said the proving guards *"skip in CI until
+#550 lands"* and #550 had closed the same day the clause was written. That is this entry exactly:
+true when written, false later, nothing failing in between — a third copy-site after code citations
+and config values. It is not isolated. C-356's trigger named a downstream test that could not fire,
+with the clause copied into C-364's and C-366's (changelog, 2026-11-10); C-88's 2026-07-31 addendum
+records its own trigger firing unnoticed; C-322's residual records three clauses standing false for
+three weeks. **The merged remedy therefore gains a third clause: state the condition, never the
+issue number — an issue number is a pointer to a condition, and the pointer outlives the condition.**
+No guard is proposed. `tests/test_docs_citations.py` scans `docs/` only, and this file has twice
+declined a register-grep gate on the grounds that fourteen test modules already read it and each new
+gate sits on the path of every future edit.
+
+**Fifth addendum, 2026-11-21 — a document's body outliving its own amendment, four times in one day.**
+The house convention is to amend rather than rewrite: an ADR keeps its Decision and adds a dated
+amendment, an entry here keeps its narrative and adds a correction header, a retired viewpoint
+profile stays in `profiles.py`. The convention is right — a document that quietly drops its premise
+stops being a record. The cost is that **the top of every such document describes a world that may
+have ended, and the sentence saying so is at the bottom, or in another file.** On 2026-11-21 four
+claims were stated to the operator or to a peer session from the top of a document and were false at
+the bottom of it: ADR-018's serving blind spot (closed by ADR-051's 2026-08-03 amendment and
+~~C-335~~, now C-373); C-366/C-364/C-367's figures (measurements of `production_parity`, retired
+2026-11-10 — and C-367's *own body* says so while its summary row did not); C-224's "35 versions no
+longer available"; and C-370's "until #550 lands". **Two of the four were corrected in the entry body
+and left standing in the Open Items Summary row** — this file states every open concern twice, and
+only the long form gets fixed. The remedy clause gains a fourth: *correct the row and the entry in
+the same edit, or neither.* And for readers: an ADR's Decision is not a statement about today until
+its amendments have been read.
+
+**Third addendum, 2026-11-21 — ~~C-349~~ merged in (`/review-rr strategic`).** C-349 was *"a config value restated in prose has nothing binding it back"*: from 2026-05-18 to 2026-08-13 `hetzner_deployment_guide.md` said *"Install Python 3.10+"* while `pyproject.toml` declared `>=3.12`, so following the guide produced an environment in which this package could not be installed at all. Neither document was wrong on its own terms; they were never compared. That is this entry's mechanism exactly — true when written, false later, nothing failing in between — differing only in what was copied: C-336 is about **code citations**, C-349 was about **config values**. The merged remedy is the same editorial rule in two clauses: *cite the symbol, never the line; and link to the declaration, never restate its value.* C-349's own finding about why the obvious instrument is wrong is retained, because it generalises: a test that greps docs for a version string and compares it to the floor would be a C-320 machine, since prose legitimately names other versions throughout this repository — historical entries, changelog drills, the ADR-030 amendment — and a guard that cannot tell a stale instruction from an accurate history reddens constantly and stops being read. One restatement is accepted deliberately: `hetzner_deployment_guide.md` §1.3 names an interpreter because that number selects the raster fork (C-348) and must be pinned rather than derived.
+
 The audit found three distinct drift mechanisms, all fixed here.
 
 **1. Line-number citations rot silently.** Ten `file.py:NNN` references across the ADRs. Three were already wrong: ADR-026 cited `ucdp_annual.py:132-142` for `get_ucdp_token()` and line 132 had become blank; ADR-040 cited a line in `grid_compilation.py` that is now empty. Nothing detects this, because a line number is still syntactically valid when it points at whitespace. All ten replaced with symbol names — views-frames reached the same conclusion independently (their #212).
@@ -3591,7 +3889,10 @@ Cross-ref: C-347 (the CI-side half), C-343 (three sources of truth about the dep
 
 ---
 
-### C-349: A config value restated in prose has nothing binding it back
+### ~~C-349: A config value restated in prose has nothing binding it back~~ — MERGED INTO C-336 (2026-11-21)
+
+**Merged by `/review-rr strategic` 2026-11-21** into C-336: identical mechanism — a value true when written, false later, with nothing failing in between. C-336 covers code citations, this covered config values; the merged remedy is one editorial rule in two clauses. Original text below, unedited.
+
 
 **Source:** `/code-review medium` on #444 (2026-08-13), as the *residual* of the guard added in that PR.
 
@@ -3658,7 +3959,10 @@ Cross-ref: ~~C-335~~ (the serving-path gap this workflow closes), C-338 (freshne
 
 ---
 
-### C-352: `last_valid_month_id` is UCDP-scoped but generally named, and two repos read it as the store's frontier
+### ~~C-352: `last_valid_month_id` is UCDP-scoped but generally named, and two repos read it as the store's frontier~~ — MERGED INTO C-355 (2026-11-21)
+
+**Merged by `/review-rr strategic` 2026-11-21** into C-355: one defect with two faces — the published observation boundary is both UCDP-scoped and inferred rather than declared, and both faces reach views-postprocessing's fabricated-month split by the same path. The open question (confirm with views-postprocessing whether UCDP-scoping is what their observed/fabricated split intends) is carried over verbatim. Original text below, unedited.
+
 
 **Source:** `/code-review medium` on #469 (2026-08-21), while answering #453 for FAO. Found as a **wrong claim in a partner-facing document before it published** — the document is fixed; this entry is the underlying fact it exposed.
 
@@ -3768,7 +4072,10 @@ behaviour from a producer's code is the error that put this entry at Tier 3 in t
 
 Cross-ref: C-149 (the coastal gap this assignment was built to fix), ADR-039, ADR-030 (dependency floor). GitHub: #387, #465, epic #461.
 
-### C-354: The HTTP layer's tests are coupled to *how* it makes a request, not what it guarantees
+### ~~C-354: Nine test modules patch `datafactory_http.retry.requests.request` directly~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): test-churn cost with no correctness impact, and the trigger is a `request_with_retry` transport refactor nobody has scheduled. Re-register when a `Session`, adapter or transport wrapper is actually proposed — the churn should be budgeted into that change, which is the finding worth keeping. Original text below, unedited.
+
 
 **Source:** #388 item 7, while designing the cross-host redirect guard (2026-08-21). Found because the obvious fix was impossible, not by reading the tests.
 
@@ -3806,7 +4113,9 @@ Cross-ref: C-322 (the redaction this layer performs), C-345, ADR-011 (fail-loud)
 
 **Source:** Investigation of #476 (CRAF'd) and #420 (views-pipeline-core), 2026-08-24, while writing ADR-052. Found by reading the live store, not by a failing test.
 
-**Trigger:** **Before any consumer builds logic on the newly published `last_valid_month_ids`**, and when views-postprocessing answers C-352 — whichever comes first. Also fires if a new source is added whose reporting lag differs from UCDP's.
+**Trigger:** **Before any consumer builds logic on the newly published `last_valid_month_ids`**, and before adding a source whose coverage can outrun UCDP's. Also fires if a new source is added whose reporting lag differs from UCDP's.
+
+**2026-11-21 — ~~C-352~~ merged in (`/review-rr strategic`).** C-352 said the boundary is *UCDP-scoped but generally named*: computed from `ged_*` features only while the grid carries ACLED, GHS-POP, GHS-BUILT-S, V-Dem, SHDI and GAUL. This entry says the boundary is *inferred rather than declared*. They are two faces of one defect — the published frontier is neither the store's nor anybody's stated claim, it is a guess drawn from one source's zeros — and they reach the same consumer by the same path: views-postprocessing uses the value to decide which months are marked **fabricated in the FAO delivery**, and views-models uses it to gate liveness. C-352's open question is carried over unchanged: **confirm with views-postprocessing whether UCDP-scoping is what their observed/fabricated split intends.** The remedy is also shared — the declared bounds already exist in the ingestion ledgers (`ucdp_candidate.max_date_start`, `ucdp_annual.max_date_start`, `acled.max_date`, `shdi.year_range`), so reading them answers both faces at once.
 
 **Location:** `scripts/export_zarr.py:280-296` (the global boundary), `scripts/assemble_grid.py:820-822` and the four sibling blocks (the per-source ones, same method). Consumed by `views-postprocessing/delivery/observed_range.py`.
 
@@ -3914,7 +4223,10 @@ GitHub: #483. Cross-ref: ~~C-304~~ (ADR-049's table drift — the small half tha
 
 ---
 
-### C-357: The parity constraint gave UCDP a configuration seam and ACLED none
+### ~~C-357: UCDP's temporal assignment is a swappable strategy; ACLED's is a hardcoded one-liner~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): correct today and an asymmetry only. The trigger requires ACLED to gain multi-day or date-imprecise events, which its event model forbids — ACLED events are single-day atomic records. Re-register if that event model changes. Original text below, unedited.
+
 
 **Source:** `/graphify` traversal (2026-09-02), comparing the two builders' shapes after the graph flagged their rationales as related-but-unresolved.
 
@@ -3978,7 +4290,9 @@ Successor to ~~C-72~~, registered on its resolution rather than discovered separ
 
 **Location:** `src/datafactory_http/retry.py` (`_rate_limit_delay`, `_RATE_LIMIT_MAX_WAIT_S`), `scripts/refresh_pipeline.sh` (the `/start` heartbeat that is the de facto bound).
 **Source:** #511 implementation, 2026-10-21. Registered as the named residual of a fix rather than found by an audit.
-Cross-ref: **C-70** (no circuit breaker for the UCDP API — same family, also Tier 4, also deferred; a reviewer should decide whether these two merge rather than both sitting open), ~~C-72~~ (resolved predecessor), ADR-018 Timeout Policy, ADR-027's 2026-10-21 amendment.
+**2026-11-21 — ~~C-70~~ merged in (`/review-rr strategic`), answering the question the paragraph below used to ask.** C-70 was *"no circuit breaker for the UCDP API: after `max_retries` exhaustion every harvest attempt re-exhausts its retries against a known-dead endpoint."* That is this entry at a different scope — C-70 bounded the *endpoint*, this one bounds the *run* — and one remedy closes both, so they no longer sit open as two deferrals of the same decision. C-70's trigger (*before a second operator runs harvests concurrently, or before harvest concurrency is raised above 1*) is already this entry's first trigger; its source was Nygard, expert review #4, DDIA Ch.7 p.231 and Ch.8 pp.281-283, which is retained here.
+
+Cross-ref: ~~C-70~~ (merged in 2026-11-21), ~~C-72~~ (resolved predecessor), ADR-018 Timeout Policy, ADR-027's 2026-10-21 amendment.
 ### C-361: `scan` reads the grid once per feature because the feature axis is the contiguous one
 
 The residual of #501 and the finding of #516. #501 established *where* the export's five hours go; it
@@ -4166,7 +4480,7 @@ growth this series would be used to watch).
 
 ---
 
-### C-364: A UCDP annual event's whole span is booked to one month — `date_end_only`, not `even_split` — [OPEN]
+### C-364: A UCDP annual event's whole span is booked to one month under `production_parity` — `date_end_only`, not `even_split` — [OPEN]
 
 | Field | Value |
 |-------|-------|
@@ -4175,6 +4489,17 @@ growth this series would be used to watch).
 | Source | Reached this repository 2026-10-26 as a confirmation request from a downstream modelling session, relayed from **finding O-12 of a delivery-note joint review**, where it was raised by that review's *opponent* seat — not by the modelling session itself, and not by any guard or audit here. O-12's own form is worth keeping: it observed that an earlier note had asked the recipient to settle the 113,395-fatality cell *before* producing numbers from it, and that the later note produced them without mentioning it. The cell was in a delivered MCR denominator either way. |
 | Trigger | **When the delivered partition is extended past month-id 504.** UCDP 463137 (121,848, 2022-08-24 → 2022-10-24) lands in cell 148759 at month-id 512–514, larger than the artifact already present. Also before any change to the three-file distribution default (see C-356). |
 | Location | `src/datafactory_viewpoint/profiles.py:103`; `src/datafactory_viewpoint/temporal_distribution.py:103` (`date_end_only`) and `:116` (`even_split`); `src/datafactory_compilation/pregridded_compilation.py` |
+
+**Correction 2026-11-21 — everything below measures a profile the pipeline no longer selects.**
+`scripts/refresh_pipeline.sh` sets `VIEWPOINT_PROFILE="kgi_kti_activity"`, and that profile
+(`profiles.py`) sets `source_distribution_map=None` with `distribution_strategy="activity_weighted"`.
+`date_end_only` is not applied to the annual source in the served store, and has not been since
+2026-11-10. The measurement below is kept because it is a correct measurement of
+`production_parity`, and because the *delivered-feature* half of the finding survives the switch
+untouched: the 79 features still carry no `date_prec` and no `where_prec`, so a consumer still
+cannot see how any event was placed in time. Re-measure the concentration under
+`kgi_kti_activity` before quoting a number from here. This entry was read as a statement about
+production on 2026-11-21 and relayed outside the repository; see C-336's fifth addendum.
 
 **The mechanism.** `date_end_only` assigns every event to its `date_end` month regardless of span. The `production_parity` profile applies it to the UCDP **annual** source via `source_distribution_map={"annual": "date_end_only"}`, so a UCDP summary event with `date_prec=5` — a date known only to a range longer than a month — has its entire toll placed in a single cell-month. `even_split`, which would divide the span across its months, is the `ViewpointConfig` default and is **never reached for this source**.
 
@@ -4222,7 +4547,7 @@ Cross-ref: **C-356** (the spatial half, whose claim that the temporal axis was c
 
 ---
 
-### C-366: Production drops 43,933 events carrying 785,626 fatalities — 22.6% of what it delivers — and the number existed nowhere — [OPEN]
+### C-366: `production_parity` dropped 43,933 events carrying 785,626 fatalities — 22.6% of what that profile delivered — and the number existed nowhere — [OPEN]
 
 | Field | Value |
 |-------|-------|
@@ -4231,6 +4556,22 @@ Cross-ref: **C-356** (the spatial half, whose claim that the temporal axis was c
 | Source | `notebooks/summary_event_allocation.ipynb` §3, written 2026-11-06 while testing the ADR-053 allocator (#533). The notebook set out to assert that all three profiles carry the same total; they do not, and the first attempt at that assertion was wrong. This finding is what the failed assertion uncovered. Not raised by any audit, guard or review. |
 | Trigger | **Before the production profile is switched away from `production_parity`.** The switch *adds* 785,626 deaths rather than only redistributing mass, so a consumer diffing totals across the change sees +22.6% before they see anything else, and will reasonably read it as corruption. Also before any statement — in a delivery note, a README or a paper — that this repository's UCDP fatality totals match UCDP's own. |
 | Location | `src/datafactory_viewpoint/profiles.py:107` (`exclude_where_prec=(4, 6)` in `production_parity`); the filter itself at `src/datafactory_viewpoint/builders/ucdp_v1.py:94-96` and `:363-366`; `src/datafactory_viewpoint/viewpoint_config.py:88`, where the dataclass default is `()` — no exclusion at all. |
+
+**Correction 2026-11-21 — the trigger fired on 2026-11-10 and nothing checked it.**
+This entry's trigger was *"before the production profile is switched away from `production_parity`"*.
+The switch happened on 2026-11-10: `scripts/refresh_pipeline.sh` sets
+`VIEWPOINT_PROFILE="kgi_kti_activity"`, and that profile sets `exclude_where_prec=()`. **The served
+store drops nothing on precision.** The table immediately below is the proof, and it was in this
+entry all along — `kgi_kti_activity` carries all 415,991 events and 4,258,880 deaths against
+`production_parity`'s 372,058 and 3,473,358. An independent measurement by another session on
+2026-11-21, against the served store, found 99.8% of GED v26.1 fatalities present, which is what
+`exclude_where_prec=()` predicts and is incompatible with a 22.6% loss.
+
+The title and the summary row said "production drops" in the present tense for eleven days, and the
+figure was relayed to the operator and to two peer sessions, one of which nearly carried it into a
+paper. **What survives:** `where_prec` 4 and 6 events are now *placed* rather than dropped, which
+makes the imprecision visible in the data instead of absent from it — and no delivered feature says
+which events those are. That is the live question, and it is #609's.
 
 **The measurement.** Three builds of the same consolidated store, produced by the same `scripts/build_viewpoint.py` the pipeline runs:
 
@@ -4317,16 +4658,49 @@ Cross-ref: **C-366** (the other finding from the same notebook, opposite sign: m
 
 ---
 
-### C-368: the spatial allocator's chosen cell never reached delivered data — [OPEN, trigger fired]
+### ~~C-368: the spatial allocator's chosen cell never reached delivered data~~ — RESOLVED 2026-11-21 (#607)
+
+**Resolved by measurement, nine days late.** The defect was fixed by #562 on 2026-11-12 and the
+fixed allocator built the served grid in **v1.19.0, in production since 2026-11-20** — so the
+delivered-data half of this entry is discharged, not only the regression half. It stayed open at
+Tier 1 for one reason: its trigger said the proving guards *"skip in CI until #550 lands"*, and
+#550 closed on 2026-11-12, the same day. Nobody re-read the clause until `/review-rr prioritize`
+on 2026-11-21.
+
+**Checked, not reasoned.** `tests/test_falsification_spatial_allocation_delivery.py` contains no
+`pytest.skip`, no `skipif`, no module `pytestmark` and no gated marker — its single marker is an
+`xfail(strict=True)` recording C-369's residue, which pytest reports as XFAIL and never as a skip.
+In CI run 44920182095 it appears in the XFAIL block and nowhere in the 59-line skip list, so the
+module runs there. Re-introducing the defect
+with `declared = None` in `_place_events` turns five of the eleven tests in the enclosing module
+red — three in `TestAllocationSurvivesCompilation`, two in `TestUnusableDeclaredCellRed`. Of those
+five, **three assert on delivered grid values**; the other two assert log substrings and would also
+redden for a reworded message. Branch protection catches a regression on the strength of those
+three: `test` and `test-py313` are required checks on `development` and `main` with
+`enforce_admins: true`, and the module carries no gated marker.
+
+The second mandated drill is stronger still. `_required_columns` says of its own line *"reverting
+this line alone must turn the delivery tests red"* — it turns **nine** red, including the four
+out-of-range cases that survive the first drill.
+
+**And the breadth is the opposite of reassuring.** Run against all 351 tests that touch
+`compile_grid`, `grid_compilation` or `pgid_field`, the same mutation still reddens only those
+five: **346 of 351 are blind to it**, including all 39 in `test_compiler.py` and all 24 in
+`test_cross_layer_contracts.py`. One eleven-test module guards this boundary and nothing else in
+the compiler's test population would notice. That is C-370's thesis as a measurement, and it is
+why C-370 stays at Tier 2.
+
+**The register has no Tier 1 entry.** Full narrative in the 2026-11-21 changelog entry.
 
 | | |
 |---|---|
 | ID | C-368 |
-| Tier | 1 — silent wrong answer in delivered data, no error signal |
+| Tier | ~~1~~ → Resolved |
 | Source | `/falsify` claim-mode audit 2026-11-12, after the first production run under `kgi_kti_activity` |
-| Trigger | **Fired.** Fixed by #562; the guards proving it skip in CI until #550 lands |
+| #607 Q5 | *"Is the comment 'this assertion has never executed' still true?"* **Yes**, checked 2026-11-21. `TestAdr053ComposedGoldenCriterion` is still `skipif`'d on the store and crosswalks, and CI run 44920182095 skips its five tests plus the built-viewpoint guard — the six skips in that file. The synthetic class covers the seam instead of it |
+| Trigger | ~~**Fired.** Fixed by #562; the guards proving it skip in CI until #550 lands~~ |
 | Location | `src/datafactory_viewpoint/spatial_distribution.py` `proportional`; `src/datafactory_compilation/grid_compilation.py` `_place_events`, `_required_columns` |
-| Cross-refs | C-369 (the same seam on the temporal axis), C-370 (why nothing saw it), C-356, C-364, C-366, C-365 (a decision with no observer) |
+| Cross-refs | C-369 (the same seam on the temporal axis), C-370 (why nothing saw it), C-356, C-364, C-366, C-365 (a decision with no observer), C-336 (why its trigger went stale — fourth addendum) |
 
 Two stages disagreed about which field carries a decision. The allocator wrote an authority
 field; the compiler read a raw observation field and recomputed. Nothing reconciled them, and
@@ -4374,16 +4748,37 @@ strict xfail rather than left to memory.
 
 ---
 
-### C-370: the unobserved layer boundary — [OPEN]
+### C-370: the layer boundary is contracted by column name only — [OPEN, Tier 2]
+
+**2026-11-21 (#607) — the historical half of this entry is discharged; the forward half is not.**
+This entry said no test crossed the viewpoint-to-compilation boundary. One now does:
+`TestAllocationSurvivesCompilation` calls the compiler, runs in CI with no `skipif`, and was shown by mutation
+to turn red when C-368 is re-introduced. The clause
+*"#550 must land, or the replacement guards skip in CI exactly as their predecessor did"* is therefore spent —
+#550 closed on 2026-11-12.
+
+**Stays Tier 2. A re-tier to 3 was drafted and withdrawn during review of this change**, because it would have
+graded the covered seam and ignored the uncovered mechanism. What is now guarded is `priogrid_gid` specifically.
+What is unchanged is the reason that seam was open at all: `test_cross_layer_contracts.py` still compares column
+*names*, so a field present in both layers and ignored by one still passes, and ADR-045:16 still rules end-to-end
+invariants out of scope by construction — which is why ADR-045:57 was able to certify this boundary as having no
+gap. Both are structural fragility with a clear trigger, which is the Tier 2 definition.
+
+The honest summary: C-368 cannot recur, and a second instance of the same class still can.
 
 | | |
 |---|---|
 | ID | C-370 |
 | Tier | 2 — the mechanism by which C-368 survived four months |
 | Source | The same audit, plus a cross-layer test survey, 2026-11-12 |
-| Trigger | Before adding any further allocation strategy; and #550 must land |
-| Location | `tests/test_cross_layer_contracts.py`; `tests/test_adr053_production_profile.py:93`; `.gitignore`; `tests/conftest.py` marker deselection |
-| Cross-refs | C-368, C-369, C-365, C-345, C-320 |
+| Trigger | **Before adding any further allocation strategy.** Nothing fires this today — it depends on someone remembering. The cheap hook, noted 2026-11-21 (#607) and not built here: strategies are registered, so one membership assertion in the existing `TestRegistryGreen` in `tests/test_spatial_distribution.py`, naming C-370 in its failure message, would hand the entry to whoever adds the eighth temporal or second spatial strategy. (Second clause discharged 2026-11-21: *"and #550 must land"* — it closed 2026-11-12) |
+| Location | `tests/test_cross_layer_contracts.py`; `TestAdr053ComposedGoldenCriterion` in `test_adr053_production_profile.py`; `.gitignore`; `tests/conftest.py` marker deselection (line citation `:93` replaced with the symbol on 2026-11-21 — it had drifted to a comment block, and C-336's rule forbids line citations for exactly that reason) |
+| Cross-refs | C-368, C-369, C-365, C-345, C-320, C-336 (the stale-trigger mechanism, fourth addendum) |
+
+**2026-11-21 (#607): two sentences below are superseded.** *"The handover between them was
+unobserved"* — it is observed now, by `TestAllocationSurvivesCompilation`, in CI. *"58 of 62 skip
+sites"* — `test_skip_catalogue.md` records 61 sites measured 2026-11-12; the 62nd was the
+module-level `skipif` #550 deleted, which is this entry's own remedy.
 
 The allocator was verified at its source and placement at its destination; the handover between
 them was unobserved. **58 of 62 skip sites skip on a fresh CI runner**, and `conftest.py`
@@ -4596,11 +4991,17 @@ obvious fix is not proposed). Part of the **mechanisms that fail green** cluster
 Terms like "Source Nodes," "Compilation Edges," "Explicit Non-Entities" are precise but add conceptual overhead. For a 7-package project, governance is heavy. **Accepted: governance has proven itself (ADR-008 caught bugs in 3 audits). Cost is documentation maintenance, not development velocity.**
 **Source:** Ousterhout
 
-### C-38: Version string year offset assumes 21st century
+### ~~C-38: Version string year offset assumes 21st century~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): the trigger is the year 2099. Original text below, unedited.
+
 `_DOT9_YEAR_OFFSET = 2000` / `_CANDIDATE_YEAR_OFFSET = 2000` in `ucdp_dot9.py:50` and `ucdp_candidate.py:43`. Breaks silently for pre-2000 or post-2099 data. UCDP data starts 1989 (annual uses full version strings). **Trigger: never (2099 is 73 years away).**
 **Source:** Repo assimilation
 
-### C-41: Digest truncation collision risk
+### ~~C-41: Digest truncation collision risk~~ — DEMOTED
+
+Demoted to tech-debt backlog 2026-11-21 (`/review-rr strategic`): the trigger is 100M records against a current 2.9M — a 34x margin, and the failure would be a loud digest clash rather than silent corruption. Re-register at 50M. Original text below, unedited.
+
 `DIGEST_TRUNCATE = 16` hex chars = 64-bit space. 50% collision at ~4B items. Fine at ~2M events. **Trigger: consider when total records exceed 100M or digests are used as unique keys.**
 **Source:** Repo assimilation
 
@@ -4615,3 +5016,4 @@ Every module independently calls `append_ledger_entry()` with its own format. A 
 ### C-32: Source registry returns `Any`
 `fetch_source` returns `Any` (widened from `Path` for candidate's `list[dict]`). Sources, consolidators, and builders are intentionally heterogeneous — each has a different signature. The three strategy registries (aggregation, survivorship, temporal_distribution) already use precise types. Kleppmann (Ch.4 p.126) notes dynamically generated schemas are an acceptable trade-off when sources have heterogeneous structures. **Accepted: heterogeneous signatures are by design.**
 **Source:** GoF, Hickey (expert review 5). DDIA Ch.4 p.126. Reclassified 2026-04-06.
+**Reopen condition (added 2026-11-21, `/review-rr strategic`):** "Accepted by design" is a verdict, not a trigger, so this entry had nothing that could ever make it actionable again. It reopens if a caller is added that **branches on the runtime type** of a `fetch_source` return value, or if `SourceEntry` gains a field whose type a consumer must trust. Until then the heterogeneity is deliberate and the `Any` is honest about it.

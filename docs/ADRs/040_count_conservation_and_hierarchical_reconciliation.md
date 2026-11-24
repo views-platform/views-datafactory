@@ -277,6 +277,90 @@ Count conservation permits exclusions as long as they are accounted for. This cr
 
 ---
 
+## Amendment 2026-11-22 — conservation is internal; one external check added (#628)
+
+**The Decision above is unchanged.** Both invariants stand exactly as written. This amendment
+records a property the Decision does not cover, says where the check for it runs, and marks it
+as **one instance of a class we have not built**. Dated amendment, not a rewrite.
+
+### 1. What conservation cannot see, by construction
+
+Invariant 1 is an accounting identity: `placed + excluded = input`. It is evaluated **inside**
+this pipeline, against **this pipeline's own input**. It therefore cannot answer whether the
+input should have been there.
+
+That is not a weakness in the invariant. It is the invariant's scope, and the Context above
+already says the equivalent about ADR-008 — *"C-149 was not a structural error"*. The same
+sentence is now true one level out: a count that enters correctly accounted for and should
+never have entered at all satisfies every equation here.
+
+**Measured, not hypothetical.** UCDP withdraws events when it publishes a new annual release.
+Our consolidated store is append-only by design (ADR-013), and the viewpoint's stale-version
+filter had a supersession rule for monthly `.9` files and none for annual releases. Withdrawn
+events were therefore published for **four and a half months**: 2,878 deaths across 2022–2024,
+of which 2,499 were Ukraine. Every conservation check held throughout, because the error was
+upstream of all of them. It was found by an **external reader** comparing a figure we had
+mailed him to the figure on the source's own website — not by anything in this repository.
+
+### 2. The property, and where it is checked
+
+> **Source parity.** For a settled period, the aggregate we publish must equal the aggregate
+> the source published, plus any mass the source published only outside the release being
+> compared against, and that remainder must be zero.
+
+Checked by `verify_source_parity.py`, which compares the served grid against the annual UCDP
+release held in our own consolidated store, per year and per violence type, and reports the
+remainder left unexplained by the `.9`-exclusive mass ADR-015 records as legitimately ours.
+
+It runs as **step 14 of `refresh_pipeline.sh`**, after the consumer-contract check, signalling
+through the existing failure path: the sentinel file, the operator-facing line, and the
+heartbeat `/fail` (ADR-018, C-131, C-331).
+
+**Why there and not in CI.** `data/` is gitignored and CI has no fetch step, so a test
+asserting real totals would skip in CI — a guard that cannot fire, which is C-370 and C-320
+and is the same mechanism that hid the allocation defect for four months. Branch protection
+carries `enforce_admins`, so anything that can fail blocks every merge, and a permanently red
+check is indistinguishable from a broken build.
+
+**Why against our own stored release and not the source's live figure.** The release file in
+our store *is* the source's published data, so this needs no network call and no rate limit
+(ADR-027), and the comparison is **stationary**: the release is pinned, so it cannot redden
+because the source revised its own back catalogue. Asserting equality against a third party's
+current figure would fail for reasons outside this repository, and a check that does that
+trains its reader to ignore it.
+
+**What it does not cover.** It cannot detect *"the newest release was never fetched at all"* —
+a short harvest looks like a release that does not exist. That is a separate concern with its
+own entry, and this amendment does not claim it.
+
+### 3. This is one instance of a class, and the class is deliberately not built
+
+Source parity is a special case of **drift detection**: comparing what we publish against an
+external reference and signalling when the two separate. The same shape plausibly applies to
+every other source here — ACLED, V-Dem, SHDI, GHS-POP, GHS-BUILT-S — and to other references
+for UCDP itself.
+
+**No drift-detection component, module, base class or registry is introduced, and none should
+be until the shape is known from more than one instance.** One implementation is not evidence
+of a pattern; it is evidence of one case. Similar shape is not the same as true duplication,
+and these checks answer to different sources, change at different rates, and will likely
+diverge on what "the reference" even means — ACLED has no annual release to pin, and V-Dem
+publishes a yearly dataset with a different revision discipline entirely.
+
+Recorded here so that the **second** instance is recognised as a second instance rather than
+written from scratch, and so the **third** is the moment to ask whether an abstraction is
+owed. The decision to generalise is tracked, with that trigger, in
+`reports/technical_risk_register.md`.
+
+### 4. What this amendment costs in upkeep
+
+One script, one test module, one pipeline step. `scripts/verify_remote_data.py` is the
+candidate to retire against it: it compares the served store to the operator's **local** grid
+copy, which produced 62 false mismatches on 2026-07-05 while missing the defect that mattered,
+and it is already out of the nightly path. Retiring it is not done here.
+
+---
+
 ## References
 
 - `reports/postmortem_cm_unmapped_gaul_cells.md` — the C-149 incident that motivates this ADR

@@ -17,6 +17,277 @@ entry could.
 
 ---
 
+## The check that looks outside the repository, and the abstraction deliberately not built (2026-11-22)
+
+~~C-372~~ resolved; **C-374** registered. The two halves are the point: one gap closed, one decision
+openly postponed rather than taken by accident.
+
+**The gap.** C-372 said that nothing here compares a published total against the source's own
+published total, and that a multi-expert panel had produced four options and chosen none — which
+is the state #597 exists to stop being read as an oversight. Both halves are now answered. Option
+**(A)** was chosen: an out-of-band comparison inside the monthly pipeline, signalling through the
+existing failure path rather than through CI. `data/` is gitignored and CI has no fetch step, so
+a test asserting real totals would skip there — the C-370 pattern, a guard that cannot fire — and
+branch protection carries `enforce_admins`, so anything that can fail blocks every merge.
+
+**The decision is recorded, which was the part actually missing.** ADR-040's amendment of
+2026-11-22 states the property, where it is checked, why not in CI, and why the comparison is
+against the release pinned in our own store rather than the source's live web figure: the pinned
+release makes the check **stationary**, so it cannot redden because the source revised its own
+back catalogue, and a check that reddens for reasons outside the repository trains its reader to
+ignore it.
+
+**Observed failing before being trusted, and by the right amount.** 50 state-based 2023 events
+carrying 151 deaths were removed from the annual release in a copy of the store — the exact shape
+of the defect this is about. The published figure fell by exactly 151 and the unexplained
+remainder rose by exactly 151. Nine mutations against the script, all nine caught.
+
+**The first end-to-end run reported 108 of 108 totals as failures against a store that was fine.**
+Annual 25.1 sits in the consolidated store under two harvest vintages — 769,836 rows for 384,918
+distinct ids, each exactly twice, harvested 2026-03-23 and 2026-05-21. That is ADR-017's subject.
+A check that compares our aggregate to the source's has to replicate the viewpoint's survivorship
+to do it, and replicating it loosely produces a false alarm the size of the thing it is looking
+for. That is the argument for (A) over (C): a tired reader of 108 failures widens a tolerance; the
+script's author goes and finds ADR-017.
+
+**C-374 is the restraint, written down so it survives.** Source parity is one instance of drift
+detection, and the same shape plausibly applies to ACLED, V-Dem, SHDI and both GHS rasters. No
+component, module, base class or registry is introduced, because one implementation is evidence of
+one case. Three concrete reasons the abstraction is not yet knowable: the reference is not the same
+kind of object per source, "equal" is not the same relation, and the survivorship replication —
+the part that looks shared — is the part most likely to diverge. The trigger is the **second**
+instance, to be written alongside rather than abstracted from; the **third** is when an
+abstraction is owed. The operator's own framing: *"let's be mindful that this is a case of
+something."*
+
+---
+
+## The record of epic #547 closed, and two of its holes left open on purpose (2026-11-21)
+
+No concern registered, no tier moved. Epic #547 — the spatial allocator wrote its decision to
+`priogrid_gid` and the event compiler re-derived the cell from coordinates and never read it — had
+shipped, been verified at the delivered layer and been independently mutation-audited, and none of
+that was written anywhere git keeps. Three documents now carry it: the v1.18.0 post-mortem
+completed, a v1.18.1 post-mortem written, and the mutation audit committed under `reports/`.
+
+**What the completed v1.18.0 post-mortem now says that it did not.** Its pre-registered table
+records **three failures out of four measured bounds**, as failures, with no bound widened after the
+fact. The one bound that passed is annotated with why that was luck: December 2021 was pre-registered
+*because that is the month the old pipeline dumped everything into*, so after temporal spreading it
+was the easiest month in the year to meet a ceiling in. Cell 148759 reading 1,782 there was reported
+to the operator as a **64× improvement**; the worst cell-month for that cell across 2021 was 32,390,
+a **3.5×** improvement. The pre-registration was off by a factor of 18 and the error was in the
+choice of period, not the measurement.
+
+**Two holes that cannot be filled and are now labelled rather than blank.** The v1.18.0 production
+run's duration and peak memory were never captured, and the host's log has since been overwritten by
+two later runs. They are recorded as not captured, with the reason, instead of as a marker someone
+will later mistake for pending work.
+
+**The same shape appears in the audit record.** 48 mutations were run and every survivor named, but
+the two subagents' per-mutation tables — each mutation's prediction beside pytest's own summary line
+— were returned into a conversation and never written to a file. Three of #555's acceptance items
+are therefore met in substance and not in form, and the report says so in its own second section
+rather than presenting a reconstruction as the original.
+
+**The mechanism, which is the transferable part.** Each of these is the same failure as the register's
+own recurring one: *the record of a thing and the thing are different objects, and only one of them
+is maintained.* Here the work was done and the record was not written; in C-336's cluster the record
+is written twice and only one copy is corrected. Both are cheap to fix on the day and expensive to
+reconstruct afterwards — the per-mutation evidence from 48 mutations is simply gone.
+
+---
+
+## Four documents described a world that had ended, all in one evening (2026-11-21)
+
+Not an audit. Four separate claims were made to the operator or to a peer session on the evening
+of 2026-11-21, each read from the top of a document, each false by the bottom of that same document
+or in the file next to it. They are recorded together because the pattern is the finding; the
+individual corrections are small.
+
+**1. "Nothing automated notices when serving fails."** Read from ADR-018's description of the gap.
+ADR-051's 2026-08-03 amendment closed it: a Better Stack monitor has polled `status.html` every
+three minutes with e-mail alerting since that date, verified live at the time, and C-335 was
+resolved on that basis. What survives is narrower and is now **C-373** — the monitor polls the status
+page, which is not the object a consumer reads, and the monitor's own existence is attested by one
+sentence in this register. A deleted monitor would be silent, which is the cluster's rule turned on
+the remedy that closed it.
+
+**2. Five "editorial choices" shaping every published UCDP figure.** Relayed from C-366, C-364,
+C-367 and C-356 as measurements of production. They are measurements of `production_parity`, retired
+2026-11-10. Production builds `kgi_kti_activity`: `exclude_where_prec=()`,
+`source_distribution_map=None`, `distribution_strategy="activity_weighted"`. A peer session measuring
+the served store found **99.8% of GED v26.1 fatalities present** against the ~77% those entries
+imply, and had the correction before publishing. C-367's own body had said production moved; its
+summary row had not. **This file states every open concern twice and only the long form was
+corrected** — the single most useful thing learned today.
+
+C-366's trigger is the sharper version: it read *"before the production profile is switched away
+from `production_parity`"*, the switch happened on 2026-11-10, and nobody checked the trigger. Marked
+fired, eleven days late.
+
+**3. C-224's re-tier.** The 4→2 move earlier the same day read the harvest line
+`70 versions served (35 no longer available)` as *"we hold 35 files UCDP will not serve again"*. A
+count of the store: 70 candidate files on disk, 70 served, no surplus. The 35 are 2018–2020 versions
+never fetched. Re-tiered 2→3 — no backup for 9.9 GB is real and costly to recover from rate-limited
+APIs, but it is recoverable, and Tier 2 claimed irreversibility that does not exist. The count took
+one command and was available before the re-tier was written.
+
+**4. C-368's "until #550 lands"**, corrected earlier the same day and recorded above.
+
+**The mechanism, registered as C-336's fifth addendum.** This repository amends rather than
+rewrites, on purpose: an ADR keeps its Decision, an entry keeps its narrative, a retired profile
+stays in `profiles.py`. The convention is right — a document that quietly drops its premise stops
+being a record of a decision. Its cost is that the top of the document is the part people quote and
+the bottom is the part that is true. The remedy clause gains a fourth: *correct the summary row and
+the entry in the same edit, or neither*; and an ADR's Decision is not a statement about today until
+its amendments have been read.
+
+Three of the four reached someone outside this session before being checked. That is the cost, not
+the errors themselves.
+
+---
+
+## The only Tier 1 was a stale sentence (2026-11-21)
+
+Wave 0 of the #616 sprint, and the first item deleted work rather than adding it.
+
+C-368 — *the spatial allocator's chosen cell never reached delivered data*, 1,128,236 deaths,
+26.49% of all UCDP fatality mass — had been the register's only Tier 1 entry since 2026-11-12.
+The defect itself was fixed that same day by #562. The entry stayed at Tier 1 for one reason,
+written in its trigger field:
+
+> **Fired.** Fixed by #562; the guards proving it skip in CI until #550 lands.
+
+**#550 closed on 2026-11-12**, hours after that sentence was written. C-370 carried the same
+clause. Neither was updated, and for nine days the top of the severity ranking was held in
+place by a pointer to an issue that had already landed.
+
+**What the check actually found.** `tests/test_falsification_spatial_allocation_delivery.py`
+has no skip of any kind — no `pytest.skip`, no `skipif`, no gated marker. Its single marker is an
+`xfail(strict=True)` recording C-369's residue, and pytest reports that as XFAIL, not as a skip. Its fixtures come from
+`scripts/generate_synthetic_data.py`, tracked and not ignored, so CI has what it needs. The file's own comment had said so for the whole
+nine-day window, though it was written five hours after the trigger it contradicts: *"A module-level `skipif` on those files is what made
+this defect invisible for four months; #550 removed it."*
+
+**Proven by mutation rather than by reading**, because C-370 exists precisely because reasoning
+about guard coverage was wrong before. And the CI claim was checked against CI rather than
+inferred from the file: run 44920182095's skip list holds 59 entries and this module is not among
+them — it appears in the XFAIL block instead. Setting `declared = None` in `_place_events`
+re-introduces C-368's read half exactly as it was, and five of the eleven tests in the
+enclosing module go red — three of them in a class
+called `TestAllocationSurvivesCompilation`, which is the boundary C-370 says nothing crosses.
+The mutation was reverted and the tree confirmed clean.
+
+So C-368 is resolved, and **the register has no Tier 1 entry.**
+
+C-370 stays at Tier 2, and a draft of this change had it moving to 3. Moving it would have graded the seam that is now covered and
+ignored the mechanism that opened it: `test_cross_layer_contracts.py` still compares column
+*names*, so a field present in both layers and ignored by one still passes, and ADR-045:16 still
+rules end-to-end invariants out of scope — which is how ADR-045:57 came to certify this exact
+boundary as having no gap. C-368 cannot recur; a second instance of the same class still can.
+Both its summary-row title and its detail heading were rewritten, because "no test crossed the
+boundary" is now simply false.
+
+**The lesson is not about CI.** It is that a register entry can point at an
+issue number as its reason for existing, and nothing checks that the pointer is still valid. The
+entry was honest when written and false **five hours and thirteen minutes** later: the clause was
+committed at 02:53:21Z and #550 closed at 08:06:54Z. That is the same mechanism as C-336,
+which is about ADRs citing code that moved.
+
+**And it is at least the third instance of a register field asserting something nobody re-derives.**
+*"A named tripwire that could not fire"*, below, records C-356's trigger asserting a downstream test that could not
+fire, with the same clause copied into C-364's and C-366's triggers. That entry already named the
+failure mode as *"the register's own recurring one: a claim asserted once and never re-derived"*.
+C-88's 2026-07-31 addendum records its own trigger firing unnoticed, and C-322's residual records
+three clauses standing false for three weeks. Three instances over four months clears the register's
+own bar — C-358 says "two instances make it a pattern rather than an accident" — so this is a
+pattern, and a trigger is the field the register is read for.
+
+**Filed, not left in narrative.** C-336 gains a fourth addendum — it is the entry that collects this
+mechanism, and it has absorbed three copy-sites already — adding the clause *state the condition,
+never the issue number*. No guard: `test_docs_citations.py` scans `docs/` only, and this file has
+twice declined a register-grep gate because fourteen test modules already read it.
+
+---
+
+## A cache that was told to be quiet, and an archive mistaken for one (2026-11-21)
+
+`/review-rr strategic`, the first full curation pass since 2026-08-04. It ran the morning after
+v1.19.0 went into production, prompted by a healthchecks.io DOWN mail at 01:42 CET, and the
+incident behind that mail supplied two of the three findings below.
+
+**Structurally the register was clean.** Every header count was exact against an independent
+recount of the 58 open rows — 1 Tier 1, 8 Tier 2, 18 Tier 3, 25 Tier 4, 6 accepted by design.
+No duplicate IDs, no dangling cross-references in twelve spot-checks, no section misordering.
+For a 4,617-line document carrying 371 concern IDs that is worth recording, because the
+alternative hypothesis going in was that it had quietly drifted.
+
+**C-224 moved from Tier 4 to Tier 2 on a measurement, not a judgement.** The entry had read,
+since May, that *"all data is rebuildable from source APIs, but a full rebuild takes ~8-12
+hours"* — which frames a backup as insurance against **time**. The 2026-11-21 harvest printed
+`70 versions served (35 no longer available)`. UCDP no longer serves 35 of the candidate
+versions our store holds. They are not re-fetchable at any price, and the same reasoning
+reaches the annual releases, whose disagreement about which events occurred is the entire
+subject of #594/#595 and is only auditable while we hold both. `data/raw/` is therefore an
+archive of record, not a cache; ADR-013 made consolidation append-only precisely so superseded
+vintages would survive, and a single un-snapshotted NVMe disk discards exactly what that
+decision exists to keep. The tier was wrong because the premise under it was wrong, and nobody
+had re-read the premise in six months.
+
+**Two clusters were added, and the second one has one member on purpose.**
+
+The first, *"a delivered number shaped by choices no consumer can see"*, binds C-356, C-364,
+C-366, C-367, C-368 and C-369. Each was found by a different audit and fixed or accepted on its
+own terms. The joint statement none of them makes: our published UCDP totals are UCDP's totals
+minus a precision filter that drops 785,626 deaths, redistributed by a temporal rule that puts
+37.4% of a four-year window's mass in four cell-months, rounded upward by 96 deaths that exist
+in no version of the source, and placed by a spatial rule that until 2026-11-12 did not run.
+Every step is defensible and every step is documented. The composition had never been written
+down, and the 79 delivered features carry no `date_prec` or `where_prec`, so no consumer can
+find any of it.
+
+The second, *"fails red"*, is the mirror of the register's existing *"mechanisms that fail
+green"* cluster and currently holds only #606. A check that reports failure while nothing is
+wrong costs what a check that reports success while something is wrong costs — it stops being
+read — plus something fails-green never costs: #606's false alarm aborted the pipeline at step
+12 of 14, so `verify_consumer_contract.py` at step 13 **never ran**. A false alarm consumed the
+real alarm. The fails-green cluster also had one member once, which is the reason for seeding
+this one rather than waiting.
+
+**C-372 registers an absence, which is the uncomfortable half.** Nothing in this repository
+compares a published total against the source's own published total. That gap let the
+annual-supersession error run four and a half months in the served store while every ADR-040
+conservation invariant held, and it was closed by an external reader comparing a number we
+mailed him to the number on ucdp.uu.se. A multi-expert panel was convened on 2026-11-17, produced
+four options, and **none was chosen and nothing was recorded.** Option 4 was *"do nothing, and
+record that as a deliberate dated decision rather than an oversight"* — the panel anticipated
+exactly this outcome and the anticipation did not prevent it. #597 exists because unrecorded
+decisions in this project get read as oversights; this one would have been.
+
+**Mechanical curation.** C-70 merged into C-360, which had been asking for that decision in its
+own cross-ref line since October. C-352 merged into C-355 (one defect, two faces, one consumer).
+C-349 merged into C-336 (identical mechanism, different thing copied). C-97, C-354, C-357, C-38
+and C-41 demoted to the tech-debt backlog on the 2026-08-04 criteria. Three triggers rewritten
+that were perpetual or symptom-shaped: C-32 had *"accepted by design"* where a reopen condition
+belongs, C-126 had a trigger true since the day it was written, C-180's summary row named a
+symptom while its detail section already named the action. D-26 annotated: Beck's position was
+that the discovery probe *"works fine"* and optimisation should wait for evidence, and the
+evidence arrived pointing the other way — the probe is the only act establishing that we still
+look at UCDP, and it leaves no record.
+
+**Two tier questions were left open deliberately.** C-29 is *"no end-to-end integration test —
+trigger fired, accepted at v1.0"*, and C-370 is the bill for that acceptance: 26.49% of all UCDP
+fatality mass in the wrong cells for four months, across precisely the boundary C-29 declined to
+test. Withdrawing an acceptance is a judgement about a past decision and belongs to the operator,
+not to a curation pass. C-359 may belong at Tier 2 beside C-371 on the same mechanism. Both were
+reported and neither was moved.
+
+Net: 58 open concerns to 51, with one new entry, three merges, five demotions, one re-tier and
+two clusters. The register got shorter and says more.
+
+---
+
 ## A guard that inherited its defect's scope, and a fix that was almost decorative (2026-11-20)
 
 **C-370, eighth instance. #602, residue #603.**

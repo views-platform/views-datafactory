@@ -13,8 +13,15 @@ All commands below assume you are on the server.
 ## Deploy a new version
 
 **All four blocks. Step 1 alone is not a deploy (C-343)** — the pipeline's own
-`git checkout` lands a change to `refresh_pipeline.sh` one run later, and never
-runs `uv sync` at all.
+`git checkout` is to the tag pinned in `~/.views-deploy-tag`, so a change merged
+to `development` lands on **no** run until that file names a tag containing it,
+and `uv sync` never runs at all.
+
+> This sentence read *"lands a change to `refresh_pipeline.sh` one run later"*
+> until 2026-11-22. That is what would happen if the checkout tracked a branch;
+> it tracks a pinned tag, so the change lands never, not later. The wrong
+> version of this sentence is why the source-parity step did not run on the
+> 2026-11-22 release — #638.
 
 ```bash
 # 1. Set version
@@ -55,6 +62,35 @@ terminal is the normal state, not a hang.
 | **Export zarr** | **4h56m–5h07m** | 17,774s / 18,427s for a 3.1 GB store — two runs |
 | Export parquet | ~12 s | 29.5M rows |
 | Health check + consumer contract | <1 min | |
+| **Source parity (step 14)** | **~3 min** | reads the served store once per year per violence type |
+
+### If step 14 fails
+
+Step 14 is `verify_source_parity.py`. It is the only step that compares our
+numbers to someone else's: our served totals against the annual UCDP release
+held in our own consolidated store, per year and per violence type.
+
+**What a failure means.** For a settled year the two should be exactly equal. A
+**negative** remainder means we serve fewer deaths than UCDP published — a short
+harvest, a dropped release, a filter nobody meant to apply. A **positive**
+remainder means we serve deaths UCDP did not — the signature of the 2026-11-17
+defect, where events UCDP had withdrawn were still being published.
+
+**What it does not mean.** It does not mean the newest release was fetched. A
+short harvest and a release that does not exist look identical from here; that
+gap is tracked separately.
+
+**Do not widen the tolerance.** The first end-to-end run of this check reported
+108 of 108 totals as failures against a store that was fine, because the script
+double-counted a release that sits in the store under two harvest vintages. The
+answer was to find that cause, not to raise a threshold. Any failure here is a
+finding until someone has read the numbers.
+
+Run it by hand, on the server, to see the table:
+
+```sh
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/verify_source_parity.py --skip-last-year'
+```
 
 **The export's share of the run is not a constant — do not plan with one.** It
 depends entirely on whether assembly ran:
@@ -129,18 +165,31 @@ an admin-1 region or a country and distributes them instead. That recovers
 43,933 events carrying 785,626 fatalities, so every `ged_*_best` total rises.
 **The switch adds deaths; it does not only move them.**
 
-| Feature | Before v1.18.0 | Expected from v1.18.0 | Change |
-|---------|---------------:|----------------------:|-------:|
-| `ged_sb_best` | ~1,956,320 | **~2,557,600** | +30.8% |
-| `ged_ns_best` | ~285,346 | **~406,500** | +42.4% |
-| `ged_os_best` | ~1,232,241 | **~1,294,800** | +5.1% |
+| Feature | Before v1.18.0 | Projected from v1.18.0 | **Measured, served** | vs projection |
+|---------|---------------:|-----------------------:|---------------------:|-------:|
+| `ged_sb_best` | ~1,956,320 | ~2,557,600 | **2,682,440** | +4.9% |
+| `ged_ns_best` | ~285,346 | ~406,500 | **419,701** | +3.2% |
+| `ged_os_best` | ~1,232,241 | ~1,294,800 | **1,302,065** | +0.6% |
 
 The "before" column is as of v1.2.7, UCDP GED v25.1, verified 2026-04-26. The
-"expected" column is **projected**, not measured on the server: it comes from a
-2026-11-06 full build under the new profile, whose parity build reproduced the
-"before" column to within 0.01%, which is why the projection is comparable. A
-production run harvests fresher data first, so expect drift of a percent or so —
-and replace this column with a measured one at the next release.
+"projected" column came from a 2026-11-06 full build under the new profile,
+whose parity build reproduced the "before" column to within 0.01%.
+
+**The "measured" column replaces the projection and is what a healthy run should
+reproduce.** Read 2026-11-22 from the served store at
+`http://204.168.219.108/grid.zarr` through `load_dataset` — the consumer entry
+point, not a build-time readback — summing years 1989–2026 of the artifact the
+2026-11-22 pipeline run built. Each lands above its projection by a few percent,
+which is the fresher-harvest drift the projection's own note predicted;
+`ged_os_best` is within 0.6%.
+
+The previous measurement, taken 2026-11-21 against the artifact of the run
+before, read 2,671,067 / 417,786 / 1,300,819. The rise is a fresher harvest, not
+a change in code: no commit between v1.19.0 and v1.20.0 touches `src/`.
+
+Re-measure and replace at the next release rather than carrying this forward: a
+figure that was measured once and then quoted for three releases is a projection
+again, with a measurement's authority.
 
 If a run comes in near the "before" column after v1.18.0, that is the signal
 worth chasing: it means the viewpoint was built under the old profile, or the

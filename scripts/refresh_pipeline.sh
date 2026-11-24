@@ -36,15 +36,33 @@
 #   If the file is missing, empty, or the tag doesn't exist, the script
 #   stops immediately (fail-loud, ADR-011). See ADR-022 for rationale.
 #
+#   STEP LABELS: "N/14" means step N of a run whose LAST step is 14.
+#   Pre-flight is step 0, so there are fifteen numbered steps and the
+#   denominator is the final step's number, not a count. The run is
+#   over when you see 14/14. Do not "fix" the denominator to 15: the
+#   quickref and ADR-040 both name source parity as step 14, and a
+#   last label reading 14/15 is what makes a finished run look one
+#   step short. Until 2026-11-22 the last label was 13/14, which
+#   promised a step that did not exist in the deployed tag — see #638.
+#
 #   DEPLOYING IS NOT ONE STEP. This comment used to say "to deploy a
 #   new version: update ~/.views-deploy-tag" and that is WRONG — it is
 #   what left the server on v1.10.0 for five days while the tag file
 #   said v1.11.0 and views-frames stayed at the frozen 1.0.0 (C-343,
 #   observed 2026-08-08). Two reasons the checkout below does not save
 #   you:
-#     1. bash has already buffered THIS FILE, so a change to
-#        refresh_pipeline.sh itself takes effect only on the NEXT run
-#        — one month away on a monthly cron.
+#     1. the checkout is to the PINNED TAG named in
+#        ~/.views-deploy-tag, so a change merged to development takes
+#        effect on NO run at all until somebody writes a new tag into
+#        that file. bash having already buffered THIS FILE is a second
+#        reason it cannot land on the current run; the pinned tag is
+#        the reason it cannot land on any later one either.
+#        Corrected 2026-11-22: this said "takes effect only on the
+#        NEXT run — one month away on a monthly cron", which is what
+#        "one run later" would mean if the checkout tracked a branch.
+#        It does not. That sentence predicted that step 14 would run
+#        on the following cron; no tag contained it, so it could not.
+#        See #638.
 #     2. `uv sync` never runs, so a dependency change never lands at
 #        all, no matter how many times the pipeline runs.
 #
@@ -346,6 +364,32 @@ echo
 CURRENT_STEP="13/14: Verify consumer contract"
 echo "── $CURRENT_STEP ──"
 uv run python scripts/verify_consumer_contract.py
+echo
+
+# Step 14: Source parity (#628)
+#
+# The only check in this pipeline that compares our output to someone
+# else's. Every other one compares a stage of ours to another stage of
+# ours, which is why withdrawn UCDP events ran in the served store for
+# four and a half months while ADR-040's conservation invariants held
+# throughout and an external reader found it.
+#
+# Deliberately here and not in CI. `data/` is gitignored and CI has no
+# fetch step, so a test asserting real totals would skip there -- the
+# C-370 pattern, a guard that cannot fire. Branch protection also has
+# enforce_admins, so anything that can fail blocks every merge.
+#
+# --skip-last-year because a mid-year annual release covers its newest
+# year only partially, and comparing a partial year would fail for a
+# reason that is not a defect. A failure here goes through on_failure
+# like any other step: the sentinel file, the operator line, and the
+# heartbeat /fail.
+#
+# It reads the SERVED store by default, not the local grid, so an
+# export that wrote nothing cannot pass it (C-313).
+CURRENT_STEP="14/14: Verify source parity"
+echo "── $CURRENT_STEP ──"
+uv run python scripts/verify_source_parity.py --skip-last-year
 echo
 
 # Success — remove any stale failure sentinel
