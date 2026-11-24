@@ -1,0 +1,576 @@
+# ADR-054: views-datafactory is a Program that Publishes a Self-Describing Artifact, Not a Library
+
+**Status:** Proposed
+**Date:** 2026-11-24
+**Deciders:** Simon Polichinel von der Maase
+**Applies:** ADR-001 (Ontology of the Repository), ADR-011 (Fail Loud), ADR-012 (Four-Layer Data Architecture), ADR-021 (Zarr Export Format), ADR-022 (Tag-Based Deployment Gate), ADR-050 (Consumer Contract Export)
+
+> **This ADR answers a question that fifty-three ADRs left open.** Nothing in this repository
+> states whether it is a library that consumers install or a program that serves them. It has been
+> both since the server arrived, by accident of order rather than by decision, and the question has
+> been re-litigated in conversation roughly once per incident.
+
+> **The decision below is derived, not preferred.** Three evidence sources were consulted and
+> nothing else: what is failing now, what has failed before as recorded in the risk register and
+> the GitHub issues, and what seven works say: Hohpe & Woolf's *Enterprise Integration Patterns*,
+> Newman's *Building Microservices*, Kleppmann's *Designing Data-Intensive Applications*,
+> Ousterhout's *A Philosophy of Software Design*, Sculley et al.'s *Machine Learning: The
+> High-Interest Credit Card of Technical Debt*, Gebru et al.'s *Datasheets for Datasets*, and
+> Nygard's *Release It!* Each is cited by chapter at the point of use. Each claim carries
+> its source. Where the three sources agree, the decision follows; where they do not, the
+> disagreement is recorded in *Open Questions* rather than resolved by taste.
+
+---
+
+## Context
+
+### What is not working
+
+This repository pays the cost of two integration models simultaneously. It runs a monthly pipeline
+on a single host and publishes a 3.1 GB zarr store over HTTP, and it also publishes a Python
+distribution to PyPI that consumers install in order to read that store. Nothing decided that both
+should exist. The read client was written as a Python function before there was a server, and when
+the server arrived the function was not removed.
+
+The cost is not theoretical and it is not evenly distributed between the two halves. It is recorded
+in this repository's own register, and it has changed delivered fatality figures twice.
+
+### Evidence class 1 — what is failing now
+
+Established 2026-11-22 to 2026-11-24.
+
+- **A paper's worth of model runs read two different datasets, and nothing could have told them.**
+  Eighteen model runs in a downstream repository spanned two store builds. Their manifests recorded
+  **our client library version** as the provenance of the data they read. That version says nothing
+  about the values, which are compiled by the pipeline and not by the query client.
+
+  *Reported from views-models. The store-build dates and the fix's tag date were then verified
+  against git and against the served store directly.*
+
+- **Two tagged releases are unpublished, and it mattered to nobody.**
+  The published distribution's latest version is 1.18.1, while `v1.19.0` and `v1.20.0` are both
+  tagged. No consumer noticed, because publication is irrelevant to the numbers.
+
+  *Checked against the package index's JSON API and `git tag`, 2026-11-24.*
+
+- **The distribution ships nine packages; a consumer uses three.**
+  The three are the query client, the grid config and the frame adapters. The other six are pipeline
+  internals that no consumer calls.
+
+  *Checked: the wheel build list in `pyproject.toml` against the internal imports of
+  `datafactory_query`.*
+
+- **One public function answers some arguments and raises for others.**
+  `load_region_pgids` resolves some region names from JSON bundled in the distribution, and reads a
+  **relative** filesystem path for the rest — a path that cannot exist in an installed environment.
+  Only `global`, `land` and `land_gaul` work from a plain install.
+
+  *Checked in `regions.py`. Filed as issue **#590** on 2026-11-21, independently of this
+  decision.*
+
+### Evidence class 2 — what has failed before
+
+From this repository's own incident record. The entries divide cleanly by which half of the
+repository caused them. Where a cost has a GitHub issue it is named; the rest were tracked only in
+this project's internal register and are marked as such, because an internal identifier means
+nothing to a reader.
+
+**Costs caused by being a library.** Every one is a version-skew cost, and the mechanism is always
+the same: a consumer resolves a version of ours, or ours resolves a version of someone else's, at a
+moment nobody chose.
+
+- **A packaging decision here changed delivered fatality figures.**
+  A frozen lockfile pin left this repository the last constraint holding `views-frames` below 3.0.0
+  for ten weeks. The forecast lane silently resolved the reconciler that loses 2.9–7.3% of fatality
+  mass. Ten weeks, no error.
+
+  *Issues #527 and views-frames#283.*
+
+- **A loose dependency floor froze a version instead of permitting a new one.**
+  `uv lock` keeps an existing pin while it still satisfies the constraint, so `>=1.0` held 1.0.0
+  through roughly six weeks of every CI run and every local test. The guard written afterwards
+  expires its exemption only when the lockfile leaves the floor, never when upstream does.
+
+  *Same family as #527; otherwise tracked internally only.*
+
+- **Removing a runtime dependency broke a dependent that relied on it transitively.**
+  The reasoning that failed — "nothing under `src/` imports it" — is correct for a program and wrong
+  for a library. `pip install --upgrade` never reproduces it, because pip does not prune orphaned
+  transitive dependencies, so the developer's environment stays green while every clean build fails.
+
+  *Caught in review before shipping. Issue views-hydranet#215.*
+
+- **CI certifies a dependency combination that no new consumer has.**
+  The suite tests one pandas major version while a clean install of the built wheel resolves
+  another, and the optional `[pandas]` extra introduced to prevent exactly this gates nothing,
+  because `xarray` is a required dependency and carries pandas regardless.
+
+  *Issues #376 and #378, closed; #381, the open spike asking whether the store can be read without
+  xarray.*
+
+- **Live version skew on a credential fix.**
+  Consumer environments declared `>=1.9.0` while the fix that stopped a netrc credential crossing a
+  redirect to another host landed in 1.13.0. The server being one login away prevented nothing,
+  because the broken code was in the installed wheel.
+
+  *Recorded on issue #619, checked 2026-11-21.*
+
+- **The distribution makes promises it does not keep.**
+  It declares `Typing :: Typed` and ships no `py.typed`, so every consumer type-checks against
+  `Any`; and nothing checks that a package is in the wheel's build list, so an omission ships a
+  broken wheel with the suite green.
+
+  *Issues #587, #586 and #583, all open.*
+
+**Costs caused by being a program.** Every one is a staleness or identification cost.
+
+- **Writing the deploy tag is not deploying.**
+  The server ran v1.10.0 for five days while every signal said v1.11.0.
+
+  *No issue of its own; tracked internally, under the fails-green epic #421.*
+
+- **A merged change lands on no run at all.**
+  The pipeline checks out the tag pinned in a file on the host, so a change merged to `development`
+  reaches no run until somebody writes a new tag into that file. The source-parity check therefore
+  did not run on the release that introduced it.
+
+  *Issue #638, open.*
+
+- **Nothing compared a published total against the source's own published total.**
+  A defect ran four and a half months, and was found by an external reader comparing a number we
+  mailed him against the source's own website.
+
+  *Issues #594, #595 and #628, all closed.*
+
+- **A consumer cannot name what produced the number they read** — which release, which editorial
+  choices, which allocation profile.
+
+  *Issues #620, #533 and #609, all open, under epic #632.*
+
+The asymmetry is the finding. The library half has twice changed numbers we delivered. The program
+half has served numbers later than it should have, and has never changed one.
+
+### Evidence class 3 — what the literature says
+
+Every passage below was read in the source text itself, chapter by chapter, and not taken from a
+summary or a secondhand quotation. Edition and chapter are named at each citation and again in full
+under *References*.
+
+**We already have a name.** Hohpe & Woolf, *Enterprise Integration Patterns*, ch. 2, sets out four
+integration styles: File Transfer, Shared Database, Remote Procedure Invocation, and Messaging.
+Publishing a file that consumers read is **File Transfer**. Their verdict on it:
+
+> File Transfer achieves the strongest decoupling of any integration style — applications need no
+> knowledge of each other's internals and the files become each application's interface — but at
+> the cost of timeliness and consistency.
+
+Every program-half cost in Evidence class 2 is a timeliness or consistency cost. They are the
+documented price of the style, not evidence that the style was wrong.
+
+**The style is endorsed for exactly our case.** Newman, *Building Microservices*, 2nd ed., ch. 4,
+on communication through common data:
+
+> Another major sweet spot for this pattern is in sharing large volumes of data.
+
+We publish a 3.1 GB store monthly. This is the case the pattern is for.
+
+**The literature argues against the library half on precisely the mechanism our register records.**
+Newman, ch. 5, verbatim:
+
+> If your use of shared code ever leaks outside your service boundary, you have introduced a
+> potential form of coupling.
+
+> The really important point about sharing code via libraries is that you cannot update all uses of
+> the library at once. […] So if you are using libraries for code reuse across microservice
+> boundaries, you have to accept that multiple different versions of the same library might be out
+> there at the same time.
+
+> If you really do need to update that code for all users at exactly the same time, then you'll
+> actually want to look at reusing code via a dedicated microservice instead.
+
+The credential fix in Evidence class 2 is the case where we needed to update all users at once and
+could not. Newman's own test therefore returns the answer directly.
+
+**And specifically against a client library written by the server's authors**, which is our exact
+arrangement — Newman, ch. 5:
+
+> The problem, of course, is that if the same people create both the server API and the client API,
+> there is a danger that logic that should exist on the server will start leaking into the client. I
+> should know: I've done this myself. The more logic that creeps into the client library, the more
+> cohesion starts to break down, and you find yourself having to change multiple clients to roll out
+> fixes to your server.
+
+Issue #590 is that leak, already measured: the wheel carries bundled region data and a relative
+filesystem path, so region resolution is partly a client-side concern that belongs on the server.
+
+Newman's counter-model is the AWS SDK, and he names why it works:
+
+> These SDKs, though, are written by the wider community, or else by people inside AWS other than
+> those who work on the API itself. This degree of separation seems to work […] Part of the reason
+> this works so well is that the client is in charge of when the upgrade happens.
+
+Neither condition holds here. The same author writes both halves, and the ten-week version freeze
+above (#527) is the case where the client was *not* in charge of the upgrade.
+
+**The artifact must carry its own identity.** Kleppmann, *Designing Data-Intensive Applications*,
+ch. 4, on encoding and evolution, states the governing fact in four words: **data outlives code.**
+A reader's schema and a writer's schema differ, and the schema travelling with the data is what
+makes the difference survivable. Gebru et al., *Datasheets for Datasets*, gives the form: a dataset
+ships documentation of its motivation, composition, collection, preprocessing, uses, distribution
+and maintenance.
+
+**The deployable unit is a numbered component, and the host should install one.** Martin, *Clean
+Architecture*, ch. 12, opens with the definition:
+
+> Components are the units of deployment. They are the smallest entities that can be deployed as
+> part of a system. In Java, they are jar files. In Ruby, they are gem files. In .Net, they are
+> DLLs. […] In all languages, they are the granule of deployment.
+
+In Python that granule is the built distribution. By that definition this repository does not
+currently deploy a component at all: the host checks out source, discards the lockfile's local
+changes, and builds in place. The same chapter treats the language's own packaging and loading
+machinery as the right tool rather than something to route around — it calls the plugin-component
+architecture *"the culmination of 50 years of development in software deployment technology"*, and
+notes that what was once a herculean effort *"has become the casual default."*
+
+Two further supports, each weaker and named as such:
+
+- Martin, ch. 13, the Reuse/Release Equivalence Principle: components *"cannot, and will not"* be
+  used *"unless those components are tracked through a release process and are given release
+  numbers"*, because users *"need to know when new releases are coming, and which changes those new
+  releases will bring."* **Caveat:** REP argues from *reuse*, and installing on one host we control
+  is not reuse. It supports numbered releases, not specifically this deployment model.
+- Nygard, *Release It!*, ch. 14, on administration, warns that configuration mixing
+  environment-specific properties with application plumbing *"create[s] a catastrophic interface"*
+  where administrators must hand-edit files. The tag file on the host is exactly an
+  environment-specific property, hand-edited, and it is the single point where the five-day version
+  drift and #638 both originated. Installing a numbered version removes it, because the installed
+  version is the pinned version.
+- Helland, *Immutability Changes Everything*, argues that coordination is now the expensive resource
+  and that immutability recurs at every layer of the stack. A published release is immutable; a
+  checkout that is rebuilt in place is not. **Caveat:** Helland writes about data, not deployment
+  artifacts, so this is an analogy rather than a statement about this case.
+
+Newman's ch. 1 position that **independent deployability** is the single most important property
+also applies: a numbered artifact you install is the mechanism for it, and a source checkout is not.
+
+**"Something else" is not microservices.** Newman, ch. 1, holds that independent deployability is
+the only essential property of a microservice architecture, that the monolith is the sensible
+default architectural style, and that microservices are often a bad choice for small teams.
+Ousterhout, *A Philosophy of Software Design*, ch. 9, names four distinct complexities that
+subdivision adds. Sculley et al., *Machine Learning: The High-Interest Credit Card of Technical
+Debt*, records that at most 5% of a mature machine-learning system does machine learning and that
+configuration debt commonly exceeds code debt. There is one maintainer with roughly two hours a
+week for every server job in the platform. Nothing in the literature supports splitting this
+repository into services, and three sources argue against it.
+
+### Why now
+
+Issue **#619** has carried this question since 2026-11-21 without a decision. In the three days
+since, the question stopped being architectural: a downstream repository produced a paper's worth
+of model runs against two different store builds, because the only provenance a consumer could
+record was our library version, which is not provenance at all. The next monthly run is
+2026-12-21. A decision taken after it is a decision taken after the same failure can recur.
+
+---
+
+## Decision
+
+**views-datafactory is a program. It publishes one self-describing artifact over HTTP. It is not a
+library, and nothing installable from this repository is on the data path.**
+
+Explicitly in scope:
+
+1. **No consumer installs anything from this repository in order to read data.** The artifact on
+   the wire is the whole interface. This confirms as governance the decision the operator stated on
+   2026-11-22 and extends it from *fetching* to the full data path.
+2. **The artifact must be self-describing.** A consumer must be able to determine, from the served
+   store alone, which build they are reading and which code produced it. Today `.zattrs` carries
+   `source_digest` (a content digest of the assembled grid) and `export_timestamp`; it does not
+   carry the pipeline version or the deploy tag. It must.
+3. **Anything a consumer genuinely needs that is not derivable from the artifact must be served as
+   part of the artifact**, not bundled into a distribution. Region-to-cell resolution (#590) is the
+   known instance.
+4. **Consumers install nothing; the operator installs the program.** The distribution's audience is
+   the host that runs the pipeline, not anybody reading data. Publishing a numbered release is
+   therefore a **deployment mechanism** and not a consumer offer, and the target state is that
+   deploying means installing one numbered version of the component rather than checking out a tag
+   and building in place. The distribution's consumer-facing surface is frozen at
+   `CONTRACT_VERSION 1.0.0` under ADR-050 and gains nothing new; its operator-facing surface — the
+   runnable program — is what grows.
+
+Explicitly out of scope:
+
+5. **This is not a decision to delete the distribution, and retirement is planned with the
+   consumers rather than announced to them.** It cannot be deleted while consumers import
+   `load_dataset` and while the distribution carries reference data that is not yet on the wire
+   (#590, #589). Freezing it is the decision; retiring it is a later one, conditional on §3 and on
+   the consumers having a plan they agreed to.
+
+   Four repositories depend on this one, established by grep over each sibling checkout for
+   `^\s*(from|import)\s+datafactory_` and for declared dependencies; the twelve others that merely
+   mention us in prose or CI comments are not consumers. Each now holds its own notice, with its
+   measured import inventory and the proposed sequence: **views-models#753** (113 files, 108
+   requirement files), **views-pipeline-core#618** (2 files, plus the install instructions other
+   repositories copy), **views-postprocessing#342** (1 file), **views-bayesian#6** (1 file, and the
+   only consumer using `FeatureFrame` and real subsetting). Coordination is tracked here as **#644**.
+
+   Two findings from that inventory bear on the decision. **112 of views-models' 113 import sites
+   import only `DEFAULT_REMOTE`** — a frozen dataclass of three strings and two URL properties,
+   holding no credentials and no logic — so the platform's largest coupling to this distribution is
+   a URL, and across all four repositories only five sites use anything a library is needed for.
+   And the one piece that must be solved before anything retires is credential handling:
+   `get_last_valid_month_id` resolves `~/.netrc` and attaches the header with
+   `add_unredirected_header` rather than `add_header`, so a redirect cannot forward the credential
+   to another host (#388). A clean break makes every consumer reimplement that property
+   independently, and the one that gets it wrong will not fail loudly. Whether the answer is a thin
+   separately-versioned client or a published recipe plus a conformance test is put to the
+   consumers, not decided here.
+6. **This is not a decision to become microservices.** No service decomposition, no second repo, no
+   per-feature endpoint, no RPC. One program, one artifact, one unattended monthly run. The
+   literature in Evidence class 3 argues against the alternative on three independent grounds.
+7. **This does not alter ADR-022's intent, and may eventually replace its mechanism.** What
+   ADR-022 protects is that a *reviewed, named version* reaches the host and never a tracked
+   branch. Installing `views-datafactory==1.20.0` satisfies that as fully as checking out
+   `v1.20.0`, and satisfies it in one place rather than two. Until the program is installable, the
+   pinned-tag gate stands unchanged.
+8. **This does not alter ADR-050's contract** for the consumers who hold the wheel today. It
+   forbids extending that contract, not honouring it.
+
+---
+
+## Rationale
+
+The decision follows from a single asymmetry in Evidence class 2, which the literature in Evidence
+class 3 then explains.
+
+Both halves of this repository have cost us. The two costs are not the same kind. Being a program
+has made us serve data later than we should have — the five-day tag drift, #638, and the
+four-and-a-half-month parity gap — and Hohpe & Woolf name
+timeliness and consistency as exactly the price of the File Transfer style. That price is payable
+inside the style: an artifact that states its own build identity lets the consumer detect staleness
+without anyone watching, which is the only kind of check that survives two hours a week.
+
+Being a library has twice changed the numbers we delivered. The frozen pin behind #527 moved
+fatality mass by 2.9–7.3% in the forecast lane for ten weeks. The credential fix in #619 left a known-broken client in
+production consumers while the server was correct. Newman's chapter 5 explains why neither was a
+discipline failure: you cannot update all uses of a library at once, so multiple versions are
+always live, and the only remedy he offers for the case where you must update everyone at once is
+to stop using a library.
+
+So the program half has a documented price that we can pay with machinery, and the library half has
+a documented price that we cannot pay at all with one maintainer. That is the whole derivation.
+
+Three further points, each held because a source says so rather than because it is appealing:
+
+- **The artifact, not a client, carries the version.** Kleppmann's "data outlives code" is the
+  reason the fix for the 2026-11-24 incident is two fields in `.zattrs` and not a better release
+  process. The consumer that recorded our library version was doing the only thing available to it.
+- **Minimalism is a constraint, not an aesthetic.** Newman's defence of the monolith and
+  Ousterhout's four complexities of subdivision both bear on a repository with one maintainer, and
+  they rule out the architecturally fashionable answer.
+- **The distribution's bundled contents are a leak, not a feature.** Newman predicted server logic
+  creeping into a client library written by the server's authors. Issue #590 is that prediction,
+  measured on this repository and filed independently of this decision.
+
+---
+
+## Considered Alternatives
+
+### Alternative A: Keep both halves as they are
+- **Pros:** Zero work today. The dependency-floor guard written after #527 exists. Consumers are
+  unbroken.
+- **Cons:** Every entry in Evidence class 2's library table remains live, and the mechanism behind
+  the 2026-11-24 incident is untouched. Leaves the question open to be re-litigated at the next
+  incident, which is the specific failure this ADR exists to end.
+- **Reason for rejection:** it is the status quo whose cost Evidence class 2 prices at two
+  fatality-figure changes.
+
+### Alternative B: Split the distribution into a thin transport client plus a separate data package
+- **Pros:** Closest to Newman's AWS separation; confines version fan-out to the half that changes
+  rarely. Listed as option 2 on #619.
+- **Cons:** Newman's AWS model works because the client's authors are *not* the server's authors
+  and the client controls its own upgrade timing. Neither becomes true by splitting our own package
+  in two. It also multiplies release units for one maintainer, against Ousterhout ch. 9.
+- **Reason for rejection:** it buys a fraction of the benefit at more than the whole cost.
+  **Revisit if** a party outside this project maintains the client.
+
+### Alternative C: Decompose into services with per-concern endpoints
+- **Pros:** Removes bundled data from clients entirely; a query endpoint could do subsetting
+  server-side.
+- **Cons:** Newman ch. 1 holds the monolith to be the sensible default and microservices a poor
+  choice for small teams; Ousterhout ch. 9 prices subdivision; Sculley prices the surrounding
+  machinery. No source in the library supports it at this scale.
+- **Reason for rejection:** the literature argues against it on three independent grounds.
+  **Revisit if** the artifact grows past what a consumer can usefully fetch whole.
+
+### Alternative D: Retire the distribution immediately
+- **Pros:** Removes the version-pin surface at once. Option 3 on #619.
+- **Cons:** #590 and #589 record reference data living only in the wheel; a paper is mid-flight in
+  views-models; `load_dataset` is imported today. Immediate retirement breaks live consumers to fix
+  a problem that freezing already stops from growing.
+- **Reason for rejection:** correct destination, wrong sequence. It is what §3 of the Decision
+  makes reachable.
+
+---
+
+## Consequences
+
+### Positive
+- The question is settled and citable. Future sessions answer "library or service?" from this
+  document instead of improvising, which is the inconsistency this ADR was asked to end.
+- The class behind the 2026-11-24 incident closes once §2 is implemented: a consumer can detect a
+  stale read from the artifact alone, with nobody watching.
+- No new failure of the version-skew family in Evidence class 2 can arise on the data path, because
+  no consumer resolves a version of ours in order to read data.
+- Epic #576 gets an answer to its unstated premise. #577 asks whether identity lookup earns a tenth
+  package; under this decision it does not — it earns a served file.
+
+### Negative
+- Consumers who hold the wheel keep holding it, so the library costs do not vanish today. They stop
+  growing; they do not stop.
+- Served reference data is new work that only exists because of this decision (§3). Without it the
+  wheel cannot retire, so the staged plan has a real unfinished middle.
+- A consumer writing its own reader duplicates a few dozen lines of request and decode code in each
+  repository. This is accepted deliberately: Newman ch. 5 treats that duplication as the price of
+  not coupling across the boundary, and the register prices the alternative higher.
+- ADR-050's reasoning is now partly superseded. It saw this cost — it records that requiring a
+  consumer to install the wheel "for three strings is not acceptable" — and routed around it with a
+  JSON side-channel rather than deciding. That compromise stands for existing consumers and is not
+  extended.
+
+---
+
+## Implementation Notes
+
+Nothing in this ADR requires a change to `src/` on acceptance. The two code changes it implies are
+small and independently useful:
+
+1. **Add the pipeline version and the deploy tag to the served store's attributes**, beside the
+   `source_digest` and `export_timestamp` that `export_zarr.py` already writes. This is §2 and it
+   is the remedy for the 2026-11-24 incident. Tracked as **#620** inside epic **#632**.
+2. **Have the pipeline compare its pinned deploy tag against the newest release tag and fail loudly
+   through the existing heartbeat if it is behind.** This is the #638 class, and it is reported by
+   the machine rather than remembered by a person. `refresh_pipeline.sh` already pings `/start`, a
+   failure path, and success, so the channel exists.
+
+Then, in order and not before:
+
+3. **Make the program installable.** The distribution ships only `src/datafactory_*`. The pipeline
+   is 27 scripts under `scripts/` plus a bash orchestrator, and `[project.scripts]` declares no
+   entry points at all, so installing the distribution today yields nothing runnable. Packaging
+   those scripts with entry points is what turns §4 from intent into a deploy, and it is the
+   largest piece of work this ADR implies.
+4. Once 3 has landed, deploying becomes installing one numbered version, the host no longer needs a
+   git remote, and the hand-edited tag file — the origin of both the five-day version drift and
+   #638 — is deleted rather than guarded.
+5. Move region-to-cell resolution onto the wire (§3 of the Decision), which unblocks #590 and makes
+   the distribution's bundled data redundant.
+6. Remove the six pipeline-internal packages from the consumer-facing surface. No consumer imports
+   them. Whether they stay in the operator-facing distribution is a separate question, since the
+   host does need them.
+
+Guardrails against regression:
+
+- The release ritual in the server quick reference must stop naming publication as a step.
+- Any proposal to add a consumer-facing capability to the distribution is answered by §4 of the
+  Decision, and the proposal becomes a served-artifact proposal instead.
+- No check introduced under this ADR may require a human to read a number and compare it by eye.
+  ADR-027's residue is the counter-example: an expected count an operator is meant to read off
+  stdout, which with two hours a week is equivalent to no check.
+
+---
+
+## Validation & Monitoring
+
+This decision is correct if, after one full release cycle:
+
+- A consumer can name the store build it read using only the served store, and at least one
+  downstream repository asserts it the way views-models asserts its cell fingerprint today.
+- No new register entry describes a consumer resolving a version of ours at a moment nobody chose.
+- The pipeline, not a person, is what reports a deploy-tag gap.
+
+It should be reconsidered if:
+
+- A consumer demonstrates a need that cannot be met by a served file, which would make Alternative B
+  or C live again.
+- The artifact's self-description proves insufficient to detect a stale read after it exists, which
+  would mean the diagnosis in Evidence class 1 was wrong.
+- A party outside this project takes over maintenance of a client, which restores both of Newman's
+  conditions for the AWS model.
+
+---
+
+## Open Questions
+
+- **Is the distribution eventually deleted, or frozen indefinitely?** This ADR freezes it and does
+  not decide. #619's options 2 and 3 remain the live pair, and §3 of the Decision is the gate.
+- **Does region resolution become a served file or a separate data-only package?** A data-only
+  package has none of the version-skew properties argued against above, because it would carry no
+  logic. Not decided here.
+- **What are the two new attributes called, and who asserts them?** The views-models session has
+  offered to assert them downstream once named. #620 is where that is settled.
+- **Does `provenance.json` get served or get removed from the documentation?** It returns 404 on the
+  served store today while code and docs still refer to it.
+- **Does the monthly artifact need to be fetchable in parts?** Only this would make a query endpoint
+  worth its cost, and nothing has asked for it.
+- **Does installing the program on the host come from the public index or a private one?** The
+  public index is also a public offer, which is the mechanism that produced the consumer version
+  skew in Evidence class 2. A private index, or an attached release asset, gives the same numbered
+  immutable artifact without the offer. Not decided here.
+- **Does the operator-facing distribution stay one component or become two?** Martin's ch. 13
+  tension triangle is the relevant frame: the consumer-facing surface and the pipeline have
+  different reasons to change, which argues for splitting, while one maintainer argues for one
+  release unit.
+
+---
+
+## References
+
+**This repository.** Issues #619 (the open decision this answers), #620 and epic #632 (a consumer
+cannot tell what produced the number they read), #638 (a merged change lands on no run), #590 and
+#589 (bundled region data in the wheel), #587, #586, #583 (wheel-quality defects), #577 and epic
+#576 (identity lookup), #533 and #609 (the artifact does not disclose its own editorial choices).
+The library-cost and program-cost incidents are set out in Evidence class 2 with their issues;
+those without one are held in this project's internal risk register, which is not a reference a
+reader outside this machine can follow.
+
+**Prior decisions.** ADR-001 (ontology: sources, compilation edges, consumer nodes), ADR-011 (fail
+loud, no stale serving), ADR-021 (zarr export format), ADR-022 (tag-based deployment gate), ADR-050
+(consumer contract export, whose compromise this ADR declines to extend).
+
+**Literature.** Cited by chapter above; in full here.
+
+- Hohpe & Woolf, *Enterprise Integration Patterns* (2003), ch. 2 "Integration Styles" — the four
+  styles and the price of File Transfer. Also ch. 11 "System Management" on management data
+  travelling on separate channels from application data.
+- Newman, *Building Microservices*, 2nd ed. (2021), ch. 1 "What Are Microservices?", ch. 4
+  "Microservice Communication Styles" (communication through common data), ch. 5 "Implementing
+  Microservice Communication" (shared code across boundaries; client libraries; the AWS model).
+- Kleppmann, *Designing Data-Intensive Applications* (2017), ch. 4 "Encoding and Evolution" (data
+  outlives code), ch. 5 "Replication" (the consistency anomalies conflated as eventual
+  consistency).
+- Ousterhout, *A Philosophy of Software Design* (2018), ch. 9 "Better Together or Better Apart?".
+- Sculley et al., *Machine Learning: The High-Interest Credit Card of Technical Debt* (2014) — glue
+  code, data dependencies, configuration debt.
+- Gebru et al., *Datasheets for Datasets* (2021) — the form a self-describing dataset takes.
+- Nygard, *Release It!* (2007), ch. 17 "Transparency" — a system without transparency cannot survive
+  in production. Also ch. 14 "Administration" on hand-edited environment configuration as a
+  catastrophic interface.
+- Martin, *Clean Architecture* (2017), ch. 12 "Components" — components are the units of deployment.
+  Also ch. 13 "Component Cohesion" for the Reuse/Release Equivalence Principle, ch. 14 "Component
+  Coupling", ch. 17 "Boundaries: Drawing Lines", ch. 27 "Services: Great and Small", ch. 30 "The
+  Database Is a Detail".
+- Helland, "Immutability Changes Everything" (2016) — coordination is the expensive resource;
+  immutability recurs at every layer.
+
+**Literature not held, and which would strengthen or challenge this decision:**
+data-as-a-product and data mesh (Dehghani), consumer-driven contract testing, and a treatment of
+semantic versioning as a discipline. The most important absence is **Humble & Farley,
+*Continuous Delivery* (2010)**, which states the position argued above outright — build the binary
+once, and deploy that same immutable artifact everywhere — and which nothing currently held says in
+those terms. Named so they can be acquired: Humble & Farley, *Continuous Delivery* (Addison-Wesley,
+2010); Dehghani, *Data Mesh* (O'Reilly, 2022); Wilkinson et al., "The FAIR Guiding Principles for scientific data management and
+stewardship", *Scientific Data* 3 (2016); Raemaekers et al., "Semantic versioning versus breaking
+changes"; and any treatment of consumer-driven contract testing. Every "FAIR" match currently held
+is fair scoring rules for forecasts, which is a different subject entirely.

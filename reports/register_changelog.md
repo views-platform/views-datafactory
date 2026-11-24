@@ -17,6 +17,26 @@ entry could.
 
 ---
 
+## 2026-11-24 — C-375 and C-376: a guard that covers the wrong path, and a consumer that cannot name its data
+
+**Added:** C-375 (Tier 3), C-376 (Tier 2, trigger fired).
+**Merged into:** C-318 (third exposure axis for the same credential), C-336 (an ADR naming one implementation of two).
+**Source:** an operator question about where a credential invariant should be declared, which turned into a measurement.
+
+**C-375.** The invariant that the data-server credential must not leave the host it was resolved for is declared nowhere, guarded in one place, and false in another. `get_last_valid_month_id()` uses `urllib` with `add_unredirected_header` and is covered by `test_basic_auth_is_added_as_an_unredirected_header`. `_resolve_storage_options()` — the path every data read uses — hands the credential to `aiohttp` as a session-level `auth`. Measured 2026-11-24 with two local servers differing in hostname and port, against the pinned `aiohttp 3.13.5` and `fsspec 2024.12.0`, and confirmed through `fsspec` rather than only raw `aiohttp`: a session-level credential is forwarded across the redirect, a per-request one is not, and moving `auth` out of `client_kwargs` keeps authentication working on the first hop.
+
+Registered at Tier 3 rather than 2 or 4. Reads work and values are unaffected, and C-318 already records this credential as guarding ACLED redistribution courtesy rather than confidentiality while crossing plaintext HTTP on every chunk request — so the marginal exposure is small and requires our own Caddy to redirect. But a security property that an ADR documents, a test appears to guard, and the main path does not hold is more than a code-quality note, and its falseness was invisible from every angle that looked like diligence.
+
+The consequence that is not about security: five consumer notices written the same day argued for keeping a thin client wheel *because four repositories inherit this property for free*. They inherit it on one metadata read and not on the data path, so the argument is false as written and the #619 design question must be re-answered without it.
+
+**C-376.** Eighteen model runs underlying a paper were produced across two store builds. The runs of 2026-11-13 and 2026-11-17 read a store built before the annual-release supersession fix existed — merged 2026-11-19, tagged v1.19.0 on 2026-11-20 — and the run of 2026-11-24 read the 2026-11-22 build that contains it. 321 events and 4,939 deaths across 24 years separate the two.
+
+Neither consumer safeguard could detect it, and both looked like diligence. Their manifests record our library version; the three consumer-facing packages are byte-identical between v1.18.1 and v1.20.0, so that string could not have moved. Their one-cell fingerprint passed identically across the rebuild, because one cell out of roughly 24.9 million cell-months cannot see 4,939 deaths spread over 45 country-years, and the month they chose sits outside the years that moved most.
+
+Tier 2, not Tier 1: our data was correct at every point, and the 2026-11-22 build matches UCDP release 26.1 exactly in all nine measured cells. One correct dataset was silently substituted for another, which is structural fragility with a realized instance rather than silent corruption.
+
+**Skipped, and why.** The session also produced a tooling error of this assistant's — a `pkill` pattern that matched its own shell and killed a render before it ran — and a claim-hygiene failure, the false inheritance argument above. The first is not a project risk. The second is recorded inside C-375 as a consequence and corrected in the five notices, rather than given an entry of its own.
+
 ## The check that looks outside the repository, and the abstraction deliberately not built (2026-11-22)
 
 ~~C-372~~ resolved; **C-374** registered. The two halves are the point: one gap closed, one decision
