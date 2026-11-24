@@ -12,7 +12,11 @@
 
 > **The decision below is derived, not preferred.** Three evidence sources were consulted and
 > nothing else: what is failing now, what has failed before as recorded in the risk register and
-> the GitHub issues, and what the literature in `/home/simon/dev/library` says. Each claim carries
+> the GitHub issues, and what seven works say: Hohpe & Woolf's *Enterprise Integration Patterns*,
+> Newman's *Building Microservices*, Kleppmann's *Designing Data-Intensive Applications*,
+> Ousterhout's *A Philosophy of Software Design*, Sculley et al.'s *Machine Learning: The
+> High-Interest Credit Card of Technical Debt*, Gebru et al.'s *Datasheets for Datasets*, and
+> Nygard's *Release It!* Each is cited by chapter at the point of use. Each claim carries
 > its source. Where the three sources agree, the decision follows; where they do not, the
 > disagreement is recorded in *Open Questions* rather than resolved by taste.
 
@@ -74,8 +78,9 @@ half has twice served numbers later than it should have, and has never changed o
 
 ### Evidence class 3 — what the literature says
 
-All passages below were read in `/home/simon/dev/library` during this session, in the extracted
-text, not relayed.
+Every passage below was read in the source text itself during this session, chapter by chapter, and
+not relayed from another session's summary. Edition and chapter are named at each citation and
+again in full under *References*.
 
 **We already have a name.** Hohpe & Woolf, *Enterprise Integration Patterns*, ch. 2, sets out four
 integration styles: File Transfer, Shared Database, Remote Procedure Invocation, and Messaging.
@@ -377,7 +382,7 @@ costs), C-320 (a permanently red check is indistinguishable from a broken build)
 loud, no stale serving), ADR-021 (zarr export format), ADR-022 (tag-based deployment gate), ADR-050
 (consumer contract export, whose compromise this ADR declines to extend).
 
-**Literature**, all in `/home/simon/dev/library`:
+**Literature.** Cited by chapter above; in full here.
 
 - Hohpe & Woolf, *Enterprise Integration Patterns* (2003), ch. 2 "Integration Styles" — the four
   styles and the price of File Transfer. Also ch. 11 "System Management" on management data
@@ -395,7 +400,10 @@ loud, no stale serving), ADR-021 (zarr export format), ADR-022 (tag-based deploy
 - Nygard, *Release It!* (2007), ch. 17 "Transparency" — a system without transparency cannot survive
   in production.
 
-**Literature the library does not have**, and which would strengthen or challenge this decision:
+**Literature not held, and which would strengthen or challenge this decision:**
 data-as-a-product and data mesh (Dehghani), consumer-driven contract testing, and a treatment of
-semantic versioning as a discipline. The library's "FAIR" matches are all fair scoring rules for
-forecasts, a different subject; the FAIR data principles (Wilkinson et al., 2016) are absent.
+semantic versioning as a discipline. Named so they can be acquired: Dehghani, *Data Mesh*
+(O'Reilly, 2022); Wilkinson et al., "The FAIR Guiding Principles for scientific data management and
+stewardship", *Scientific Data* 3 (2016); Raemaekers et al., "Semantic versioning versus breaking
+changes"; and any treatment of consumer-driven contract testing. Every "FAIR" match currently held
+is fair scoring rules for forecasts, which is a different subject entirely.
