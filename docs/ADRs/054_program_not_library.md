@@ -219,6 +219,41 @@ makes the difference survivable. Gebru et al., *Datasheets for Datasets*, gives 
 ships documentation of its motivation, composition, collection, preprocessing, uses, distribution
 and maintenance.
 
+**The deployable unit is a numbered component, and the host should install one.** Martin, *Clean
+Architecture*, ch. 12, opens with the definition:
+
+> Components are the units of deployment. They are the smallest entities that can be deployed as
+> part of a system. In Java, they are jar files. In Ruby, they are gem files. In .Net, they are
+> DLLs. […] In all languages, they are the granule of deployment.
+
+In Python that granule is the built distribution. By that definition this repository does not
+currently deploy a component at all: the host checks out source, discards the lockfile's local
+changes, and builds in place. The same chapter treats the language's own packaging and loading
+machinery as the right tool rather than something to route around — it calls the plugin-component
+architecture *"the culmination of 50 years of development in software deployment technology"*, and
+notes that what was once a herculean effort *"has become the casual default."*
+
+Two further supports, each weaker and named as such:
+
+- Martin, ch. 13, the Reuse/Release Equivalence Principle: components *"cannot, and will not"* be
+  used *"unless those components are tracked through a release process and are given release
+  numbers"*, because users *"need to know when new releases are coming, and which changes those new
+  releases will bring."* **Caveat:** REP argues from *reuse*, and installing on one host we control
+  is not reuse. It supports numbered releases, not specifically this deployment model.
+- Nygard, *Release It!*, ch. 14, on administration, warns that configuration mixing
+  environment-specific properties with application plumbing *"create[s] a catastrophic interface"*
+  where administrators must hand-edit files. The tag file on the host is exactly an
+  environment-specific property, hand-edited, and it is the single point where the five-day version
+  drift and #638 both originated. Installing a numbered version removes it, because the installed
+  version is the pinned version.
+- Helland, *Immutability Changes Everything*, argues that coordination is now the expensive resource
+  and that immutability recurs at every layer of the stack. A published release is immutable; a
+  checkout that is rebuilt in place is not. **Caveat:** Helland writes about data, not deployment
+  artifacts, so this is an analogy rather than a statement about this case.
+
+Newman's ch. 1 position that **independent deployability** is the single most important property
+also applies: a numbered artifact you install is the mechanism for it, and a source checkout is not.
+
 **"Something else" is not microservices.** Newman, ch. 1, holds that independent deployability is
 the only essential property of a microservice architecture, that the monolith is the sensible
 default architectural style, and that microservices are often a bad choice for small teams.
@@ -256,9 +291,18 @@ Explicitly in scope:
 3. **Anything a consumer genuinely needs that is not derivable from the artifact must be served as
    part of the artifact**, not bundled into a distribution. Region-to-cell resolution (#590) is the
    known instance.
-4. **Publication of the Python distribution ceases to be part of the release ritual.** The existing
-   distribution is frozen at its current contract — `CONTRACT_VERSION 1.0.0` under ADR-050 — and
-   receives no new consumer-facing capability.
+4. **Consumers install nothing; the operator installs the program.** The distribution's audience is
+   the host that runs the pipeline, not anybody reading data. Publishing a numbered release is
+   therefore a **deployment mechanism** and not a consumer offer, and the target state is that
+   deploying means installing one numbered version of the component rather than checking out a tag
+   and building in place. The distribution's consumer-facing surface is frozen at
+   `CONTRACT_VERSION 1.0.0` under ADR-050 and gains nothing new; its operator-facing surface — the
+   runnable program — is what grows.
+
+   *This clause replaced an earlier one reading "publication of the Python distribution ceases to be
+   part of the release ritual". That version forbade the thing the operator asked for, and it was
+   written without checking whether the literature supported installing the program on the host. It
+   does; see Evidence class 3, "the deployable unit is a numbered component".*
 
 Explicitly out of scope:
 
@@ -268,8 +312,11 @@ Explicitly out of scope:
 6. **This is not a decision to become microservices.** No service decomposition, no second repo, no
    per-feature endpoint, no RPC. One program, one artifact, one unattended monthly run. The
    literature in Evidence class 3 argues against the alternative on three independent grounds.
-7. **This does not alter ADR-022.** The pinned-tag deployment gate stands; a reviewed tag, not a
-   tracked branch, is what reaches the host.
+7. **This does not alter ADR-022's intent, and may eventually replace its mechanism.** What
+   ADR-022 protects is that a *reviewed, named version* reaches the host and never a tracked
+   branch. Installing `views-datafactory==1.20.0` satisfies that as fully as checking out
+   `v1.20.0`, and satisfies it in one place rather than two. Until the program is installable, the
+   pinned-tag gate stands unchanged.
 8. **This does not alter ADR-050's contract** for the consumers who hold the wheel today. It
    forbids extending that contract, not honouring it.
 
@@ -392,11 +439,19 @@ small and independently useful:
 
 Then, in order and not before:
 
-3. Move region-to-cell resolution onto the wire (§3), which unblocks #590 and makes the wheel's
-   bundled data redundant.
-4. Remove the six pipeline-internal packages from the distribution's build list. No consumer
-   imports them.
-5. Stop publishing on release, once 3 and 4 have landed.
+3. **Make the program installable.** The distribution ships only `src/datafactory_*`. The pipeline
+   is 27 scripts under `scripts/` plus a bash orchestrator, and `[project.scripts]` declares no
+   entry points at all, so installing the distribution today yields nothing runnable. Packaging
+   those scripts with entry points is what turns §4 from intent into a deploy, and it is the
+   largest piece of work this ADR implies.
+4. Once 3 has landed, deploying becomes installing one numbered version, the host no longer needs a
+   git remote, and the hand-edited tag file — the origin of both the five-day version drift and
+   #638 — is deleted rather than guarded.
+5. Move region-to-cell resolution onto the wire (§3 of the Decision), which unblocks #590 and makes
+   the distribution's bundled data redundant.
+6. Remove the six pipeline-internal packages from the consumer-facing surface. No consumer imports
+   them. Whether they stay in the operator-facing distribution is a separate question, since the
+   host does need them.
 
 Guardrails against regression:
 
@@ -442,6 +497,14 @@ It should be reconsidered if:
   served store today while code and docs still refer to it.
 - **Does the monthly artifact need to be fetchable in parts?** Only this would make a query endpoint
   worth its cost, and nothing has asked for it.
+- **Does installing the program on the host come from the public index or a private one?** The
+  public index is also a public offer, which is the mechanism that produced the consumer version
+  skew in Evidence class 2. A private index, or an attached release asset, gives the same numbered
+  immutable artifact without the offer. Not decided here.
+- **Does the operator-facing distribution stay one component or become two?** Martin's ch. 13
+  tension triangle is the relevant frame: the consumer-facing surface and the pipeline have
+  different reasons to change, which argues for splitting, while one maintainer argues for one
+  release unit.
 
 ---
 
@@ -475,12 +538,22 @@ loud, no stale serving), ADR-021 (zarr export format), ADR-022 (tag-based deploy
   code, data dependencies, configuration debt.
 - Gebru et al., *Datasheets for Datasets* (2021) — the form a self-describing dataset takes.
 - Nygard, *Release It!* (2007), ch. 17 "Transparency" — a system without transparency cannot survive
-  in production.
+  in production. Also ch. 14 "Administration" on hand-edited environment configuration as a
+  catastrophic interface.
+- Martin, *Clean Architecture* (2017), ch. 12 "Components" — components are the units of deployment.
+  Also ch. 13 "Component Cohesion" for the Reuse/Release Equivalence Principle, ch. 14 "Component
+  Coupling", ch. 17 "Boundaries: Drawing Lines", ch. 27 "Services: Great and Small", ch. 30 "The
+  Database Is a Detail".
+- Helland, "Immutability Changes Everything" (2016) — coordination is the expensive resource;
+  immutability recurs at every layer.
 
 **Literature not held, and which would strengthen or challenge this decision:**
 data-as-a-product and data mesh (Dehghani), consumer-driven contract testing, and a treatment of
-semantic versioning as a discipline. Named so they can be acquired: Dehghani, *Data Mesh*
-(O'Reilly, 2022); Wilkinson et al., "The FAIR Guiding Principles for scientific data management and
+semantic versioning as a discipline. The most important absence is **Humble & Farley,
+*Continuous Delivery* (2010)**, which states the position argued above outright — build the binary
+once, and deploy that same immutable artifact everywhere — and which nothing currently held says in
+those terms. Named so they can be acquired: Humble & Farley, *Continuous Delivery* (Addison-Wesley,
+2010); Dehghani, *Data Mesh* (O'Reilly, 2022); Wilkinson et al., "The FAIR Guiding Principles for scientific data management and
 stewardship", *Scientific Data* 3 (2016); Raemaekers et al., "Semantic versioning versus breaking
 changes"; and any treatment of consumer-driven contract testing. Every "FAIR" match currently held
 is fair scoring rules for forecasts, which is a different subject entirely.
