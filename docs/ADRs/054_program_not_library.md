@@ -301,9 +301,31 @@ Explicitly in scope:
 
 Explicitly out of scope:
 
-5. **This is not a decision to delete the distribution.** It cannot be deleted while consumers
-   import `load_dataset` and while the wheel carries reference data that is not yet on the wire
-   (#590, #589). Freezing it is the decision; retiring it is a later one, conditional on §3.
+5. **This is not a decision to delete the distribution, and retirement is planned with the
+   consumers rather than announced to them.** It cannot be deleted while consumers import
+   `load_dataset` and while the distribution carries reference data that is not yet on the wire
+   (#590, #589). Freezing it is the decision; retiring it is a later one, conditional on §3 and on
+   the consumers having a plan they agreed to.
+
+   Four repositories depend on this one, established by grep over each sibling checkout for
+   `^\s*(from|import)\s+datafactory_` and for declared dependencies; the twelve others that merely
+   mention us in prose or CI comments are not consumers. Each now holds its own notice, with its
+   measured import inventory and the proposed sequence: **views-models#753** (113 files, 108
+   requirement files), **views-pipeline-core#618** (2 files, plus the install instructions other
+   repositories copy), **views-postprocessing#342** (1 file), **views-bayesian#6** (1 file, and the
+   only consumer using `FeatureFrame` and real subsetting). Coordination is tracked here as **#644**.
+
+   Two findings from that inventory bear on the decision. **112 of views-models' 113 import sites
+   import only `DEFAULT_REMOTE`** — a frozen dataclass of three strings and two URL properties,
+   holding no credentials and no logic — so the platform's largest coupling to this distribution is
+   a URL, and across all four repositories only five sites use anything a library is needed for.
+   And the one piece that must be solved before anything retires is credential handling:
+   `get_last_valid_month_id` resolves `~/.netrc` and attaches the header with
+   `add_unredirected_header` rather than `add_header`, so a redirect cannot forward the credential
+   to another host (#388). A clean break makes every consumer reimplement that property
+   independently, and the one that gets it wrong will not fail loudly. Whether the answer is a thin
+   separately-versioned client or a published recipe plus a conformance test is put to the
+   consumers, not decided here.
 6. **This is not a decision to become microservices.** No service decomposition, no second repo, no
    per-feature endpoint, no RPC. One program, one artifact, one unattended monthly run. The
    literature in Evidence class 3 argues against the alternative on three independent grounds.
