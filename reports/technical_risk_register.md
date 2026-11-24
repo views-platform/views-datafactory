@@ -1,9 +1,9 @@
 # Technical Risk Register
 
 **Date:** 2026-03-17 (updated 2026-07-27)
-**Last update:** 2026-11-22 — ~~C-372~~ resolved. The gap it named, that nothing here compared a published total against the source's own, is closed: option (A) of the panel's four chosen, recorded in ADR-040's amendment, and implemented as `refresh_pipeline.sh` step 14. Observed failing on a store with 50 withdrawn events restored — it moved by exactly their 151 deaths. **C-374** registered for what was deliberately not built: this is one instance of drift detection, and the second instance is the one to write alongside it rather than abstract from.
+**Last update:** 2026-11-24 — **C-375** and **C-376** registered. C-375: the redirect guard on the data-server credential covers the metadata read and is absent from the data read — measured, a session-level `aiohttp` auth is forwarded across a cross-host redirect while a per-request one is not, and the one-line fix keeps authentication working. C-376 (Tier 2, trigger fired): eighteen model runs spanned two store builds because a consumer's only provenance was our library version, which is byte-identical across the releases in question. C-318 gains the propagation axis; C-336 gains the ADR naming one netrc implementation of two.
 **Source:** 72 audits, reviews, and incidents — multi-expert engineering review, repo assimilation, falsification audits, test reviews, security sweeps, and production incidents. Full list in [`register_changelog.md`](register_changelog.md#where-the-findings-came-from). Add new sources there, not here (#404).
-**Status:** 374 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176, C-70 merged into C-360, C-352 merged into C-355, C-349 merged into C-336): 320 resolved-or-demoted, 51 open concerns (**0 Tier 1**, 8 Tier 2, 19 Tier 3, 20 Tier 4, 4 deferred by design; 6 with fired trigger); 10 demoted to tech-debt backlog (5 on 2026-08-04, 5 on 2026-11-21), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 136 struck-through in active register (315 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 320 + 26 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
+**Status:** 376 concern IDs assigned (C-28 merged into C-31, C-107 merged into C-60, C-183 merged into C-44, C-44 merged into C-164, C-03 merged into C-176, C-70 merged into C-360, C-352 merged into C-355, C-349 merged into C-336): 320 resolved-or-demoted, 53 open concerns (**0 Tier 1**, 9 Tier 2, 20 Tier 3, 20 Tier 4, 4 deferred by design; 7 with fired trigger); 10 demoted to tech-debt backlog (5 on 2026-08-04, 5 on 2026-11-21), 8 open disagreements. 168 resolved concerns as full entries + 19 early-archive reference rows + 136 struck-through in active register (315 unique after dedup — 8 appear in both archive and active), plus 5 struck as detail sections with no summary row = 320 + 26 resolved disagreements in archive. 42 disagreement IDs total: 34 resolved, 8 open.
 **Archive:** Resolved concerns and disagreements are in `archive/technical_risk_register_resolved.md`.
 
 **Ranking criteria:** Impact if wrong x likelihood x detectability. Items marked **[DEFER]** are accepted risks or wait for a specific trigger condition. See ADR-020 for governance rationale.
@@ -205,6 +205,8 @@
 | ~~C-372~~ | ~~2~~ | ~~**Nothing in this repository compares a published total against the source's own published total.** The 2026-11-17 annual-supersession error ran for four and a half months in the served store and was found by an external reader comparing a number we mailed him to the number on ucdp.uu.se. Every ADR-040 conservation invariant held throughout, because conservation proves the pipeline did not corrupt the data and is structurally silent on whether the data should have been there at all (ADR-040 disclaims this itself). A multi-expert panel was convened on 2026-11-17 and produced four options — out-of-band comparison in the pipeline, a fail-loud assertion at viewpoint-build time, a manual runbook step, or a dated decision to do nothing — and **no option was chosen and no decision was recorded**, which is the state #597 exists to prevent being read as an oversight **RESOLVED 2026-11-22 (#628): option (A) chosen, recorded in ADR-040's amendment, implemented as `refresh_pipeline.sh` step 14.**~~ | ~~**Before the next statement to anyone outside this repository that our figures agree with a source's** — including the pending follow-up to the external reviewer. Also when the panel's four options are next weighed, whichever comes first~~ | Consumer contract |
 | C-373 | 3 | **The external monitor polls the status page, not a data object — and nothing in this repository can tell whether that monitor still exists.** C-335 (resolved 2026-08-03) rested on a Better Stack check of `status.html` (unauthenticated, ADR-038) every 3 minutes. `status.html` is served from the same Caddy, but it is **not** what a consumer reads: a permissions change on the data directory, a broken route on the authenticated prefix, or an export that writes an unreadable file leaves the monitor green while every fetch fails. The monitor's existence is attested by one register sentence dated 2026-08-03 and by `monitoring.md`; if the account lapses or the check is deleted, nothing here notices — the same shape as the entry it resolves | **Before citing the Better Stack monitor as evidence that consumers can fetch data** — and whenever a release changes what is served or where it is written. First step is a two-minute look at the vendor dashboard to confirm the monitor is still live | Server hardening |
 | C-374 | 4 | **Source-parity checking is one instance of drift detection and there is no second instance to generalise from.** `verify_source_parity.py` compares one source's published aggregate against ours. The same shape plausibly applies to ACLED, V-Dem, SHDI, GHS-POP and GHS-BUILT-S, and to other references for UCDP itself — but one implementation is evidence of one case, not of a pattern, and these checks answer to different sources, change at different rates and disagree on what "the reference" even is: ACLED has no annual release to pin and V-Dem's revision discipline is different again. Registered so the **second** instance is recognised as a second instance rather than written from scratch, and the **third** is the moment to ask whether an abstraction is owed. Operator's framing, 2026-11-22: *"let's be mindful that this is a case of something"* — mark it, do not build it | **When a second data source gets its own source-comparison check** — at that point write it alongside this one and record what the two actually share. Not before: ADR-040's amendment §3 states that no component, module, base class or registry is introduced until the shape is known from more than one instance | Consumer contract |
+| C-375 | 3 | **The documented redirect guard on the data-server credential protects the metadata read and is absent from the data read.** `get_last_valid_month_id()` attaches the netrc credential with `add_unredirected_header` (#388) and a test proves it. `_resolve_storage_options()` — the path `load_dataset` and therefore every data read goes through — hands the credential to `aiohttp` as a session-level `auth`, and a session-level credential **is** forwarded across a redirect to another host while a per-request one is not. Measured 2026-11-24 against the pinned `aiohttp 3.13.5` and `fsspec 2024.12.0`, through `fsspec` itself and not only raw `aiohttp`; the one-line fix is measured to keep authentication working on the first hop. Severity bounded by C-318: this credential guards ACLED redistribution courtesy rather than confidentiality and already crosses plaintext HTTP on every chunk request. The consequence that is not about security is that five consumer notices argue for keeping a client wheel *because consumers inherit this property*, which is false as written | **Before publishing a credential recipe for consumers to implement, before citing "the client holds this property" in the #619 decision, and at any `aiohttp` or `fsspec` upgrade** — the measured behaviour is version-dependent | Server hardening |
+| C-376 | 2 | **A consumer cannot tell which store build it read, and the fingerprint consumers chose instead cannot see a change.** Eighteen model runs underlying a paper were produced across two different store builds: the runs of 2026-11-13 and 2026-11-17 read a store predating the annual-release supersession fix, which was tagged v1.19.0 on 2026-11-20, and the run of 2026-11-24 read the 2026-11-22 build that contains it. 321 events and 4,939 deaths across 24 years separate the two. Neither of the consumer's two safeguards could see it: their manifests record our **library version**, and the three consumer-facing packages are byte-identical between v1.18.1 and v1.20.0, so that string cannot move; and their one-cell fingerprint (cell 148759, month 504) passed identically across the rebuild, because one cell out of ~24.9M cell-months cannot see 4,939 deaths over 45 country-years. `source_digest` in the served attributes would have caught it and is already there; what is missing is the pipeline version that wrote a build | **Fired** — it fires again on every consumer run until the store carries a build identity (#620) and a consumer asserts it (#753) | Consumer contract |
 | ~~C-303~~ | ~~4~~ | ~~ADR-049 §Validation mandates 3 provenance counters; builder logs only 1~~ | Resolved 2026-06-28 (added `n_excluded_where_prec` and `n_passthrough_where_prec` to builder ledger entry) | ADR-049 provenance |
 | ~~C-304~~ | ~~4~~ | ~~ADR-049 §2 table says `adm_1` field lookup for where_prec 4/5; code uses pgid→gaul1 crosswalk~~ | Resolved 2026-06-28 (ADR-049 §2 table updated to document crosswalk approach) | ADR-049 documentation |
 | ~~C-305~~ | ~~4~~ | ~~ViewpointConfig default crosswalk paths point to `gaul_admin_area_majority/`; pipeline writes to `gaul_admin/`~~ | Resolved 2026-06-28 (config defaults changed to `gaul_admin/`) | ADR-049 pipeline alignment |
@@ -1642,6 +1644,87 @@ Cross-ref: ~~C-372~~ (the gap this closed, and the decision this defers), C-371 
 
 ---
 
+### C-375: The redirect guard on the data server credential protects the metadata read and not the data read
+
+**Source:** Operator question on where the credential invariant should be declared (2026-11-24), which turned into a measurement rather than a documentation answer.
+
+**Trigger:** **Before publishing a credential-handling recipe for consumers to implement, and before citing "the client holds this property" as a reason to keep a client wheel.** Both were about to happen: the argument appears in five consumer notices written on 2026-11-24. Also fires on any `aiohttp` or `fsspec` upgrade, since the behaviour measured below is version-dependent.
+
+**Location:** `_resolve_storage_options()` in `backends_zarr.py` — the leaking path. `get_last_valid_month_id()` in `defaults.py` — the protected path. `tests/test_query.py`, `test_basic_auth_is_added_as_an_unredirected_header` — the guard that covers only the protected path. ADR-026 §Implementation, which names one netrc implementation.
+
+**Tier 3, not 2 and not 4.** Not Tier 2: no structural fragility and no failure under realistic change — reads work, values are unaffected, and the exposure requires our own server to issue a redirect. Not Tier 4: a security property that is declared in an ADR, guarded by a test, and *false on the path every data read uses* is more than a code-quality observation. The escalating factor is that the falseness was invisible: the guard passes, the ADR reads as satisfied, and nothing connects the two paths.
+
+### Measured, 2026-11-24
+
+Two local servers, dummy credentials, this repository's pinned `aiohttp 3.13.5` and `fsspec 2024.12.0`. Server A issues a 302 to server B, which differs in both hostname and port. Four runs:
+
+| Configuration | Credential to our server | Credential to the other host |
+|---|---|---|
+| `client_kwargs={"auth": BasicAuth(...)}` — what the code does today | sent | **forwarded** |
+| `auth=BasicAuth(...)` outside `client_kwargs` | sent | not sent |
+
+Confirmed through the real plumbing, not only raw `aiohttp`: `fsspec.filesystem("http", client_kwargs=...)` builds the session, and `fs.open()` across the redirect handed the credential over. `aiohttp` 3.13.5 drops a per-request credential on redirect and forwards a session-level one.
+
+So the candidate fix is to move `auth` out of `client_kwargs`, and it is measured to keep authentication working on the first hop. One line.
+
+### Why this is the third axis of the same credential, not a new credential problem
+
+C-318 separates the auth **transport** (cleartext on bare-IP HTTP) from C-97's auth **model** (shared basic auth). This is the auth **propagation** axis, and it is the first of the three with a measured defect rather than an accepted trade-off.
+
+Its severity is bounded by C-318's own reasoning: that entry records the password as guarding *"ACLED redistribution courtesy, not confidentiality"*, already base64 over plaintext on every chunk request, to six accounts, accepted at Tier 4 since 2026-07-27. A credential already transmitted in the clear gains little additional exposure from being forwarded, and the forwarding requires our own Caddy to redirect, which it does not do.
+
+### The consequence that is not about security
+
+On 2026-11-24 five GitHub notices (#753, #618, #342, #6, #644) argued that a thin client should perhaps be kept *because four consumer repositories inherit this property for free*. That argument is false as written: they inherit it on one metadata read and not on the data path. The notices need correcting, and the design question in #619 and ADR-054 must be re-answered without that argument.
+
+### What would close this
+
+1. Move `auth` out of `client_kwargs`.
+2. A guard that fails if the credential is forwarded, written as the two-server probe rather than a mock — C-370's lesson is that a guard written against a defect inherits the defect's blind spot, and a mock of `aiohttp` would assert our model of `aiohttp` rather than its behaviour.
+3. A dated amendment to **ADR-026** stating the invariant once: a resolved credential must not leave the host it was resolved for. ADR-026 today declares where credentials live and who resolves them, and is silent on this.
+
+Ousterhout's chapter on pulling complexity downwards is the reason the invariant belongs in one place rather than in a recipe four repositories implement — a decision pushed to every caller is *"a decision that the module developer was too lazy to make"*. His chapter on defining errors out of existence is the reason the better end state is a data path carrying no shared secret at all, which is a licensing question about ACLED redistribution rather than an engineering one.
+
+Cross-ref: C-318 (transport axis; this entry is the propagation axis), ~~C-97~~ (model axis, demoted), C-370 (guards that inherit the defect's blind spot), C-320 (a signal that looks like assurance and is not), C-336 (the ADR naming one implementation of two), ADR-026, ADR-011, ADR-038. GitHub: #645, #388, #619, #643, #644, #646 (three sprint-era guards that can no longer pass, found while running the enclosing set for this entry — one of them has been silently reading the wrong number).
+
+---
+
+### C-376: A consumer cannot tell which store build it read, and the fingerprint they chose instead cannot see a change
+
+**Source:** Reported by the views-models session, 2026-11-24, after three model runs were found to span two store builds; store-build dates and the fix's tag date then verified against git and the served store.
+
+**Trigger:** **Fired.** Eighteen model runs underlying a paper were produced across two different datasets. It fires again on every consumer run until the store carries a build identity and a consumer asserts it.
+
+**Location:** The served store's `.zattrs` (carries `source_digest` and `export_timestamp`; carries no pipeline version and no deploy tag); `provenance.json` on the served store, which returns 404; `export_zarr.py`, which writes the attribute set.
+
+**Tier 2.** Not Tier 1: nothing here corrupts our data, and at no point were our published numbers wrong in the way the consumer feared — the 2026-11-22 build is correct against UCDP release 26.1 in all nine measured cells. The defect is that one correct dataset was silently substituted for another correct dataset, and no consumer could detect it. That is structural fragility with a realized instance, which is Tier 2. It is not Tier 3 because the consequence landed on published research rather than on cost of change.
+
+### What happened
+
+Three model runs, on 2026-11-13, 2026-11-17 and 2026-11-24, produced an eighteen-model comparison set. The first two read a store built before the annual-release supersession fix existed — that fix was merged 2026-11-19 and tagged v1.19.0 on 2026-11-20, so no store built on either earlier date could contain it. The third read the 2026-11-22 build, which does. The set therefore mixes pre-fix and post-fix data, and the movement between them is 321 events and 4,939 deaths across 24 years, with a documented single-cell example of 2,205 deaths falling to 752.
+
+### Why nothing detected it
+
+Two mechanisms, both worth recording because each looks like diligence.
+
+**The consumer recorded our library version as data provenance.** Their manifests carry `views-datafactory 1.18.1`. The values are compiled by the pipeline and not by the query client, so that string says nothing about the data. Measured on 2026-11-24: the three consumer-facing packages are byte-identical between v1.18.1 and v1.20.0, so the version could not have moved even in principle.
+
+**The consumer asserted a one-cell fingerprint.** PRIO-grid cell 148759, month 504, `ged_sb_best` == 240, checked at the start of every run. It passed identically on all three dates, including across a rebuild that demonstrably changed values. One cell out of roughly 24.9 million cell-months cannot see 4,939 deaths spread over 45 country-years, and month 504 is 2021-12, outside the years that moved most.
+
+### What exists already and what is missing
+
+`source_digest` is a content digest of the whole assembled grid, written by `export_zarr.py` from `compute_file_digest()` over `grid.npy`, and it is already in the served attributes. Any change to a served value changes it. A consumer recording that one string would have caught this with no work on our side.
+
+What is missing is the code version that produced a build: `source_digest` says the content changed, not which pipeline wrote it. `last_valid_month_id` is not a substitute — it is the data extent, currently 563, and two builds covering the same months share it.
+
+### What would close this
+
+The pipeline version and deploy tag added to the served attributes (#620, epic #632), and at least one consumer asserting `source_digest` in place of a single-cell fingerprint. The second half is theirs, and is recorded in #753.
+
+Cross-ref: ~~C-372~~ (the defect whose fix moved the numbers), C-373 (the serving monitor watches the page, not a data object), C-355 (a boundary inferred rather than declared), C-320 (a signal that looks like assurance), ADR-050, ADR-021. GitHub: #620, #632, #533, #609, #753, #643, #644.
+
+---
+
 ### C-146: Assembly logic lives in script, not importable package — [DEFER]
 
 | Field | Value |
@@ -2661,7 +2744,9 @@ The data server (`204.168.219.108`) serves the zarr/parquet endpoints over plain
 
 **Trigger partially fired (2026-07-31):** five per-user credentials were added for VIEWS colleagues (dylan, haavard, haakon, martina, sonja), taking the data server from one shared login to six. That is still the *trusted circle*, not external consumers, and the passwords were issued as throwaways precisely because of this entry — but the credential count is no longer 1, and five more people now type a cleartext-transported password on untrusted networks. The line stays where it was drawn: **onboarding anyone outside the trusted circle triggers the domain + Caddy auto-HTTPS move first** (~1 hour). Add/revoke procedure now documented in `docs/guides/server_operations.md` (PR #371).
 
-Cross-ref: C-97 (basic-auth scalability ceiling — the auth *model*; this entry is the auth *transport*), C-88 (SSH exposure — same server, same hardening cluster), ~~C-323~~ (the cleartext password file the provisioning step left behind — resolved 2026-08-23).
+**A third axis, measured 2026-11-24 — C-375.** This entry covers *transport* and C-97 covered the *model*. The third is *propagation*: `_resolve_storage_options()` passes the netrc credential to `aiohttp` as a session-level `auth`, and a session-level credential is forwarded across a redirect to another host, while a per-request one is not. Measured against the pinned `aiohttp 3.13.5` and `fsspec 2024.12.0` with two local servers. Registered separately as **C-375** because the remedy is a one-line code change rather than this entry's deferred domain-plus-TLS move, and because C-375 carries a consequence that is not about security at all. The severity reasoning above is what bounds it: a credential already sent base64 over plaintext on every chunk request gains little from being forwarded.
+
+Cross-ref: C-97 (basic-auth scalability ceiling — the auth *model*; this entry is the auth *transport*), C-375 (the auth *propagation* axis), C-88 (SSH exposure — same server, same hardening cluster), ~~C-323~~ (the cleartext password file the provisioning step left behind — resolved 2026-08-23).
 ---
 
 ### ~~C-319: In-process writer main() in tests holds the production pipeline lock for pytest lifetime~~ — RESOLVED
@@ -3405,6 +3490,8 @@ Cross-ref: C-326 (why the extra exists), ADR-050 (the contract this would break)
 **Trigger:** **Before citing code in any ADR or CIC.** Cite the symbol (`get_ucdp_token()` in `ucdp_annual.py`), never the line (`ucdp_annual.py:132-142`). And before deleting a cross-repo reference as stale, open the sibling repo — one that looked dead was not.
 
 **Location:** `docs/ADRs/006_intent_contracts_for_non_trivial_classes.md`, `docs/ADRs/010_gridconfig_spatial_only.md`, `docs/CICs/grid_to_country_month.md`, and eight other ADRs. Guarded by `tests/test_docs_citations.py`.
+
+**Addendum 2026-11-24 — an ADR names one implementation where there are two.** ADR-026's implementation notes cite `_resolve_storage_options()` in `backends_zarr.py` as *"the netrc implementation"*. There are two: that one, and `get_last_valid_month_id()` in `defaults.py`. They use different HTTP libraries, and the credential invariant documented for one is false for the other — measured, and registered as C-375. This is the same mechanism as the entries below, with a sharper consequence: the single-implementation phrasing is why nobody looked at the second path for seven months. The citation guard cannot catch it, because the symbol it names does exist; what is wrong is the definite article.
 
 **Addendum 2026-08-10 — it happened in this file.** The "mechanisms that fail green" cluster's prose said *"three of the eight"* and *"cheaper than eight separate ones"* while the table below it held nine entries, and then ten. Nothing failed: the header count and the per-tier sums are guarded, the **prose** is not. Found by `/code-review medium` on #431 — an agent counting rows, not a test. The counts there are now deliberately qualitative, because a tally no guard protects is a claim that will go stale again. Registered here rather than as a new concern: same mechanism, new location.
 
