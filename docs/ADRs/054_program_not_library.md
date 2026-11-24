@@ -39,42 +39,116 @@ in this repository's own register, and it has changed delivered fatality figures
 
 Established in the session of 2026-11-22 to 2026-11-24.
 
-| Finding | How established |
-|---|---|
-| Eighteen model runs in a downstream repository spanned two different store builds without anyone noticing. The runs recorded **our client library version** in their manifests as the provenance of the data they read. That version says nothing about the data: the values are compiled by the pipeline, not by the query client. | Reported by the views-models session; the store-build dates and the fix's tag date verified against git and the served store by this session |
-| PyPI's latest release is **1.18.1**, while `v1.19.0` and `v1.20.0` are both tagged. Two tagged releases are unpublished, and no consumer noticed, because publication is irrelevant to the numbers. | Checked against the PyPI JSON API and `git tag`, 2026-11-24 |
-| The wheel ships **nine** packages. A consumer uses **three**: the query client, the grid config, and the frame adapters. The other six are pipeline internals that no consumer calls. | Checked: `[tool.hatch.build.targets.wheel]` in `pyproject.toml` against the internal imports of `datafactory_query` |
-| `load_region_pgids` resolves some arguments from JSON bundled in the wheel and raises for others, reading a **relative** path that cannot exist in an installed environment. Only `global`, `land` and `land_gaul` work from a plain install. | Checked in `regions.py`; already recorded independently as **#590**, filed 2026-11-21 |
+- **A paper's worth of model runs read two different datasets, and nothing could have told them.**
+  Eighteen model runs in a downstream repository spanned two store builds. Their manifests recorded
+  **our client library version** as the provenance of the data they read. That version says nothing
+  about the values, which are compiled by the pipeline and not by the query client.
+
+  *Reported by the views-models session; the store-build dates and the fix's tag date verified
+  against git and the served store by this session.*
+
+- **Two tagged releases are unpublished, and it mattered to nobody.**
+  The published distribution's latest version is 1.18.1, while `v1.19.0` and `v1.20.0` are both
+  tagged. No consumer noticed, because publication is irrelevant to the numbers.
+
+  *Checked against the package index's JSON API and `git tag`, 2026-11-24.*
+
+- **The distribution ships nine packages; a consumer uses three.**
+  The three are the query client, the grid config and the frame adapters. The other six are pipeline
+  internals that no consumer calls.
+
+  *Checked: the wheel build list in `pyproject.toml` against the internal imports of
+  `datafactory_query`.*
+
+- **One public function answers some arguments and raises for others.**
+  `load_region_pgids` resolves some region names from JSON bundled in the distribution, and reads a
+  **relative** filesystem path for the rest — a path that cannot exist in an installed environment.
+  Only `global`, `land` and `land_gaul` work from a plain install.
+
+  *Checked in `regions.py`. Already filed independently as issue **#590** on 2026-11-21, before this
+  ADR was drafted.*
 
 ### Evidence class 2 — what has failed before
 
-From the risk register and the GitHub issues, open and closed. The entries divide cleanly by which
-half of the repository caused them.
+From this repository's own incident record. The entries divide cleanly by which half of the
+repository caused them. Where a cost has a GitHub issue it is named; the rest were tracked only in
+this project's internal register and are marked as such, because an internal identifier means
+nothing to a reader.
 
 **Costs caused by being a library.** Every one is a version-skew cost, and the mechanism is always
-that a consumer resolves a version of ours, or ours resolves a version of someone else's, at a
+the same: a consumer resolves a version of ours, or ours resolves a version of someone else's, at a
 moment nobody chose.
 
-| Entry | Cost |
-|---|---|
-| **C-365** (Tier 2, fired 2026-11-02) | A frozen lockfile pin in this repository left it the last constraint holding `views-frames` below 3.0.0 for ten weeks. The forecast lane silently resolved the reconciler that loses 2.9–7.3% of fatality mass. A packaging decision here changed delivered fatality figures. |
-| **C-337** (resolved, with a 2026-11-02 addendum) | A loose dependency floor *froze* an estimator version for roughly six weeks: `uv lock` keeps an existing pin while it still satisfies the constraint. The guard written to resolve it expires an exemption only when the lock leaves the floor, never when upstream does. Ten weeks, no error. |
-| **C-334** (Tier 3) | Removing a runtime dependency from a published library breaks dependents that relied on it transitively. The reasoning that failed — "nothing under `src/` imports it" — is correct for a program and wrong for a library. `pip install --upgrade` never reproduces the failure, because pip does not prune orphaned transitive dependencies. |
-| **C-325 / C-326** (Tier 4) | CI tests one pandas major version while a clean consumer install resolves another, and the `[pandas]` extra introduced to prevent this gates nothing, because `xarray` is a required dependency and carries pandas regardless. |
-| **#619**, checked 2026-11-21 | Live version skew on a **credential fix**: consumer environments declared `>=1.9.0` while the fix that stopped a netrc credential crossing a redirect landed in 1.13.0. The server being one login away prevented nothing, because the broken code was in the installed wheel. |
-| **#587, #586, #583** | The wheel declares `Typing :: Typed` and ships no `py.typed`, so every consumer type-checks against `Any`; and nothing checks that a package is in the wheel's build list, so an omission ships a broken wheel with the suite green. |
+- **A packaging decision here changed delivered fatality figures.**
+  A frozen lockfile pin left this repository the last constraint holding `views-frames` below 3.0.0
+  for ten weeks. The forecast lane silently resolved the reconciler that loses 2.9–7.3% of fatality
+  mass. Ten weeks, no error.
+
+  *Issues #527 and views-frames#283.*
+
+- **A loose dependency floor froze a version instead of permitting a new one.**
+  `uv lock` keeps an existing pin while it still satisfies the constraint, so `>=1.0` held 1.0.0
+  through roughly six weeks of every CI run and every local test. The guard written afterwards
+  expires its exemption only when the lockfile leaves the floor, never when upstream does.
+
+  *Same family as #527; otherwise tracked internally only.*
+
+- **Removing a runtime dependency broke a dependent that relied on it transitively.**
+  The reasoning that failed — "nothing under `src/` imports it" — is correct for a program and wrong
+  for a library. `pip install --upgrade` never reproduces it, because pip does not prune orphaned
+  transitive dependencies, so the developer's environment stays green while every clean build fails.
+
+  *Caught in review before shipping. Issue views-hydranet#215.*
+
+- **CI certifies a dependency combination that no new consumer has.**
+  The suite tests one pandas major version while a clean install of the built wheel resolves
+  another, and the optional `[pandas]` extra introduced to prevent exactly this gates nothing,
+  because `xarray` is a required dependency and carries pandas regardless.
+
+  *Issues #376 and #378, closed; #381, the open spike asking whether the store can be read without
+  xarray.*
+
+- **Live version skew on a credential fix.**
+  Consumer environments declared `>=1.9.0` while the fix that stopped a netrc credential crossing a
+  redirect to another host landed in 1.13.0. The server being one login away prevented nothing,
+  because the broken code was in the installed wheel.
+
+  *Recorded on issue #619, checked 2026-11-21.*
+
+- **The distribution makes promises it does not keep.**
+  It declares `Typing :: Typed` and ships no `py.typed`, so every consumer type-checks against
+  `Any`; and nothing checks that a package is in the wheel's build list, so an omission ships a
+  broken wheel with the suite green.
+
+  *Issues #587, #586 and #583, all open.*
 
 **Costs caused by being a program.** Every one is a staleness or identification cost.
 
-| Entry | Cost |
-|---|---|
-| **C-343** (Tier 2) | Writing the deploy tag is not deploying. The server ran v1.10.0 for five days while every signal said v1.11.0. |
-| **#638** (open) | A change merged to `development` lands on **no** run until somebody writes a new tag into the pinned tag file. The source-parity check therefore did not run on the release that introduced it. |
-| **C-372** (resolved 2026-11-22) | Nothing compared a published total against the source's own published total. A defect ran four and a half months and was found by an external reader. |
-| **#620, #632, #533, #609** (open) | A consumer cannot name which release produced the grid they read, which editorial choices shaped it, or which profile built it. |
+- **Writing the deploy tag is not deploying.**
+  The server ran v1.10.0 for five days while every signal said v1.11.0.
+
+  *No issue of its own; tracked internally, under the fails-green epic #421.*
+
+- **A merged change lands on no run at all.**
+  The pipeline checks out the tag pinned in a file on the host, so a change merged to `development`
+  reaches no run until somebody writes a new tag into that file. The source-parity check therefore
+  did not run on the release that introduced it.
+
+  *Issue #638, open.*
+
+- **Nothing compared a published total against the source's own published total.**
+  A defect ran four and a half months, and was found by an external reader comparing a number we
+  mailed him against the source's own website.
+
+  *Issues #594, #595 and #628, all closed.*
+
+- **A consumer cannot name what produced the number they read** — which release, which editorial
+  choices, which allocation profile.
+
+  *Issues #620, #533 and #609, all open, under epic #632.*
 
 The asymmetry is the finding. The library half has twice changed numbers we delivered. The program
-half has twice served numbers later than it should have, and has never changed one.
+half has served numbers later than it should have, and has never changed one.
 
 ### Evidence class 3 — what the literature says
 
@@ -135,8 +209,8 @@ Newman's counter-model is the AWS SDK, and he names why it works:
 > those who work on the API itself. This degree of separation seems to work […] Part of the reason
 > this works so well is that the client is in charge of when the upgrade happens.
 
-Neither condition holds here. The same author writes both halves, and C-365 is the case where the
-client was *not* in charge of the upgrade.
+Neither condition holds here. The same author writes both halves, and the ten-week version freeze
+above (#527) is the case where the client was *not* in charge of the upgrade.
 
 **The artifact must carry its own identity.** Kleppmann, *Designing Data-Intensive Applications*,
 ch. 4, on encoding and evolution, states the governing fact in four words: **data outlives code.**
@@ -207,13 +281,14 @@ The decision follows from a single asymmetry in Evidence class 2, which the lite
 class 3 then explains.
 
 Both halves of this repository have cost us. The two costs are not the same kind. Being a program
-has made us serve data later than we should have — C-343, #638, C-372 — and Hohpe & Woolf name
+has made us serve data later than we should have — the five-day tag drift, #638, and the
+four-and-a-half-month parity gap — and Hohpe & Woolf name
 timeliness and consistency as exactly the price of the File Transfer style. That price is payable
 inside the style: an artifact that states its own build identity lets the consumer detect staleness
 without anyone watching, which is the only kind of check that survives two hours a week.
 
-Being a library has twice changed the numbers we delivered. C-365 moved fatality mass by 2.9–7.3%
-in the forecast lane for ten weeks. The credential fix in #619 left a known-broken client in
+Being a library has twice changed the numbers we delivered. The frozen pin behind #527 moved
+fatality mass by 2.9–7.3% in the forecast lane for ten weeks. The credential fix in #619 left a known-broken client in
 production consumers while the server was correct. Newman's chapter 5 explains why neither was a
 discipline failure: you cannot update all uses of a library at once, so multiple versions are
 always live, and the only remedy he offers for the case where you must update everyone at once is
@@ -239,7 +314,8 @@ Three further points, each held because a source says so rather than because it 
 ## Considered Alternatives
 
 ### Alternative A: Keep both halves as they are
-- **Pros:** Zero work today. C-365's guard exists. Consumers are unbroken.
+- **Pros:** Zero work today. The dependency-floor guard written after #527 exists. Consumers are
+  unbroken.
 - **Cons:** Every entry in Evidence class 2's library table remains live, and the mechanism behind
   the 2026-11-24 incident is untouched. Leaves the question open to be re-litigated at the next
   incident, which is the specific failure this ADR exists to end.
@@ -281,8 +357,8 @@ Three further points, each held because a source says so rather than because it 
   document instead of improvising, which is the inconsistency this ADR was asked to end.
 - The class behind the 2026-11-24 incident closes once §2 is implemented: a consumer can detect a
   stale read from the artifact alone, with nobody watching.
-- No new entry of the C-365 / C-337 / C-334 / C-325 family can arise on the data path, because no
-  consumer resolves a version of ours to read data.
+- No new failure of the version-skew family in Evidence class 2 can arise on the data path, because
+  no consumer resolves a version of ours in order to read data.
 - Epic #576 gets an answer to its unstated premise. #577 asks whether identity lookup earns a tenth
   package; under this decision it does not — it earns a served file.
 
@@ -375,8 +451,9 @@ It should be reconsidered if:
 cannot tell what produced the number they read), #638 (a merged change lands on no run), #590 and
 #589 (bundled region data in the wheel), #587, #586, #583 (wheel-quality defects), #577 and epic
 #576 (identity lookup), #533 and #609 (the artifact does not disclose its own editorial choices).
-Register entries C-365, C-337, C-334, C-325, C-326 (the library costs), C-343, C-372 (the program
-costs), C-320 (a permanently red check is indistinguishable from a broken build).
+The library-cost and program-cost incidents are set out in Evidence class 2 with their issues;
+those without one are held in this project's internal risk register, which is not a reference a
+reader outside this machine can follow.
 
 **Prior decisions.** ADR-001 (ontology: sources, compilation edges, consumer nodes), ADR-011 (fail
 loud, no stale serving), ADR-021 (zarr export format), ADR-022 (tag-based deployment gate), ADR-050
