@@ -325,21 +325,37 @@ views-datafactory/
 
 ---
 
-## Installation
+## Reading our data
 
-**As a consumer** (you want `load_dataset()` and the adapters):
+**You do not need to install anything.** This repository is a program that
+builds a dataset and publishes it as files over HTTP. The files are the
+interface (ADR-054). Fetch what you need; install nothing from us.
 
-```bash
-pip install views-datafactory                # FeatureFrame output
-pip install "views-datafactory[pandas]"      # + DataFrame / country-month output
-```
+Everything a consumer needs is served:
 
-pandas is an **optional extra**, because `output_format="dataframe"` and
-`"country_month"` are the only things that need it — importing the package
-never loads pandas (guarded by `tests/test_import_purity.py`). Across
-views_platform pandas is being phased out in favour of views-frames, and a
-library that *requires* it forces every consumer to negotiate a version they
-may not want.
+| What | Where |
+|---|---|
+| The grid | `http://204.168.219.108/grid.zarr` |
+| The same data as a table | `http://204.168.219.108/dataframe.parquet` |
+| What each code means, which cells are in which region | `http://204.168.219.108/reference/index.json` |
+| Which release built what you read | the `build_*` keys in `grid.zarr/.zattrs` |
+
+`reference/index.json` names every other reference file and states three
+things about country coding that surprise people — see it before trusting a
+country total.
+
+Reading the grid needs an `~/.netrc` entry for the data server; ask the data
+factory administrator. The reference files need the same.
+
+> **The wheel on PyPI is what the operator installs on the server to run the
+> pipeline.** It is not a consumer offer. It bundles nine packages and pulls
+> in matplotlib, shapely, tifffile, imagecodecs, xarray and zarr — a large
+> dependency for reading files, which is why ADR-050 and ADR-054 both say
+> consumers should not be asked to carry it.
+
+Some consumers still import `datafactory_query` today. That is being retired;
+the plan and its dates are in `reports/roadmap_clean_enough_to_copy.md`, and
+the tracking issue is #644.
 
 **As a developer** (you want the tests, scripts, and docs):
 
