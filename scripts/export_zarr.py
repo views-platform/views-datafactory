@@ -38,6 +38,8 @@ from pathlib import Path
 
 import zarr
 
+from datafactory_provenance.build_identity import resolve_build_identity
+
 
 def _attrs_from_provenance(prov: dict) -> dict:
     """Coverage bounds and feature lists, mirrored from assembly provenance.
@@ -306,6 +308,15 @@ def main() -> int:
             "feature_order": feature_names,
             "source_digest": grid_digest,
         }
+
+        # Build identity (#620, #632): which release produced this
+        # store. Without it a consumer can say when they read the
+        # data but not what they read, so two results cannot be shown
+        # to have used the same build (#648). Resolved from the
+        # checkout this run is executing from; never raises.
+        attrs.update(
+            resolve_build_identity(Path(__file__).resolve().parent.parent, "export"),
+        )
 
         # Freshness indicator (D-03): consumers can check when data
         # was last exported. ISO 8601 UTC timestamp.

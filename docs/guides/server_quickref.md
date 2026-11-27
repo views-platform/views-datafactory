@@ -257,6 +257,45 @@ claims and the grid does not have.
 
 Re-run step 1 after any GAUL re-harvest. Step 2 is once only.
 
+## Stamp build identity onto the current store
+
+The store records when it was exported but not **which release built it**, so
+a consumer can say when they read the data and not what they read. That gap
+cost real work on 2026-11-25 (#648) and is tracked in #620 and #656.
+
+`export_zarr.py` now writes the identity as it writes the store — but only on
+an export, and the pipeline exports on the 21st. To put it on the store that
+is being served today, without a five-hour re-export:
+
+```bash
+# Look first — this changes nothing
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/stamp_build_identity.py --dry-run'
+```
+
+```bash
+# Then write
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/stamp_build_identity.py'
+```
+
+```bash
+# Verify from your laptop
+curl -s -n http://204.168.219.108/grid.zarr/.zattrs | python3 -m json.tool | grep build_
+```
+
+`.zattrs` gains keys and loses none. Every reader in this repository reads
+named keys, and the ADR-041 export-skip gate reads only `source_digest`,
+which is untouched — verified by running the gate against a stamped store
+and against a deliberately broken one.
+
+A stamp is marked `build_identity_source: "stamped"` rather than `"export"`,
+because it reports the checkout **as it is now**, not provably the one that
+built the store. Values written during an export say `"export"` and are the
+trustworthy ones. Consumers can tell them apart.
+
+If the checkout is not on an exact tag, `build_tag` is `null` and
+`build_identity_detail` says why. It does not guess at the nearest tag — a
+near tag would read as the release and would be wrong.
+
 ## Check health
 
 ```bash
