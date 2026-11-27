@@ -170,6 +170,27 @@ def build_index(written: dict[str, int]) -> dict:
             "A code of -1 means the cell has no administrative unit — "
             "ocean, or outside GAUL coverage."
         ),
+        "choosing_a_region": {
+            "land": (
+                "all 64,818 land cells. 76 of them have no country at all "
+                "(empty gaul0_name): sub-Antarctic islands outside FAO GAUL "
+                "polygon coverage — Macquarie, the Auckland Islands, the "
+                "Antipodes, Prince Edward and Marion."
+            ),
+            "land_gaul": (
+                "the 64,742 land cells that do have a country. A strict "
+                "subset of land: the same cells minus those 76."
+            ),
+            "which_to_use": (
+                "land_gaul if every cell must carry a country, which is "
+                "what country-level aggregation needs. land if you want all "
+                "land and can tolerate 76 cells with no country."
+            ),
+            "africa_me_legacy_and_africa_me_gaul": (
+                "Africa and the Middle East, 13,110 and 13,105 cells. The "
+                "same distinction: _gaul excludes cells with no country."
+            ),
+        },
         "derivable_without_a_file": {
             "global": (
                 "every cell, priogrid_id 1 to 259200 inclusive. Not served "
