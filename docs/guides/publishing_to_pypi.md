@@ -12,6 +12,18 @@ the cheat sheet is enough.
 
 ---
 
+## Who this package is for (read first)
+
+**The wheel is what the operator installs on the server to run the pipeline.
+It is not a consumer offer.** ADR-054 decides that consumers install nothing
+and read served files instead; ADR-050 had already argued the same, that
+requiring a consumer to install this for three strings "is not acceptable
+(Common Reuse Principle violation)".
+
+So publishing a release is a **deployment mechanism**, not an invitation.
+Nothing below should be read as instructions to give a data consumer. Three
+consumer packages are still shipped and are tracked for retirement in #644.
+
 ## What is special about this package (read once)
 
 | Thing | What | Why it matters |

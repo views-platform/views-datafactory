@@ -113,14 +113,23 @@ Errors you might see, all self-describing:
 
 You don't need a model to look at the data:
 
+The data is served as files, so the lightest way to look is to fetch one.
+These need an `~/.netrc` entry for the data server:
+
 ```bash
-pip install "views-datafactory[pandas]"
+curl -s -n http://204.168.219.108/reference/index.json
 ```
 
-The `[pandas]` part is needed because the example below asks for
-`output_format="dataframe"`. If you work with FeatureFrames instead
-(`output_format="feature_frame"`), plain `pip install views-datafactory`
-is enough — pandas is an optional extra, not a requirement.
+```bash
+curl -s -n http://204.168.219.108/reference/gaul0_countries.csv | grep -E '^223,'
+```
+
+The second prints `223,Afghanistan,AFG`. That is the whole dependency list
+for reading our reference data: a tool that can fetch a URL.
+
+The example below uses `datafactory_query` instead, which some consumers
+still have installed. It is being retired (#644, ADR-054); new work should
+read the served files.
 
 ```python
 from datafactory_query import load_dataset
