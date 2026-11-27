@@ -198,6 +198,40 @@ compile step read a stale viewpoint parquet.
 The script also prints `ged_sb_count`, `ged_ns_count`, `ged_os_count`
 — compare against prior runs rather than a fixed reference value.
 
+## Publish the reference tables
+
+The grid serves `gaul0_code`, `gaul1_code` and `gaul2_code` as bare integers.
+Nothing else served explains them, so a consumer who installs nothing cannot
+turn 223 into "Afghanistan". `export_reference_data.py` writes the keys as CSV
+from the already-harvested GAUL tables.
+
+CSV, not parquet, on purpose: these are keys, and their job is to be readable
+by anything — including `grep`.
+
+```bash
+# 1. Generate (needs data/raw/gaul_admin, written by harvest_gaul.py)
+sudo -u views-deploy bash -c 'source ~/.profile && cd ~/views-datafactory && uv run python scripts/export_reference_data.py'
+```
+
+```bash
+# 2. Serve — one symlink, same pattern as the zarr store
+sudo ln -sfn /home/views-deploy/views-datafactory/data/reference /srv/views-data/reference
+```
+
+```bash
+# 3. Verify from your laptop — no package, not even Python
+curl -s -n http://204.168.219.108/reference/gaul0_countries.csv | grep -E '^223,'
+```
+
+That last command must print `223,Afghanistan,AFG`. If it prints nothing, the
+symlink or the generation step did not happen.
+
+Four files are written: `gaul0_countries.csv` (256 rows, code → name → ISO3),
+`gaul1_admin1.csv` (2,551 rows), `gaul2_admin2.csv` (15,890 rows), and
+`index.json`, which names the others so a consumer can discover them.
+
+Re-run step 1 after any GAUL re-harvest. Step 2 is once only.
+
 ## Check health
 
 ```bash
